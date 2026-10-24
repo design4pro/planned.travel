@@ -69,7 +69,7 @@ const messages = {
   'trip.tab.files': 'Berkas',
   'trip.tab.collab': 'Bersama',
 
-  'account.menu': 'Menu akun',
+  'account.menu': '{name}, menu akun',
   'account.settings': 'Pengaturan',
   'account.billing': 'Paket dan tagihan',
   'account.admin': 'Administrator',

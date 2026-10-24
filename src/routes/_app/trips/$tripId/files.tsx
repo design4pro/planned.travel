@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
+import { requireFound } from '#/lib/absence'
 import { useTranslate } from '#/lib/i18n'
 import { FileImage, HardDrive, Ticket } from 'lucide-react'
 
@@ -29,7 +30,8 @@ export const Route = createFileRoute('/_app/trips/$tripId/files')({
       .optional()
       .catch(undefined),
   }),
-  loader: ({ params }) => loadTripFiles({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) =>
+    requireFound(await loadTripFiles({ data: { tripId: params.tripId } })),
   pendingComponent: FilesPending,
   errorComponent: ({ error }) => (
     <AppFrame>

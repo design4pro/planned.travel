@@ -58,6 +58,7 @@ import {
 import { useAction } from '../shared'
 import { formatGap } from './connections'
 import { modeIcon } from './mode-icon'
+import { TransportGoneAlert, useGoneSentence } from './transport-gone'
 import { MODE_LABELS } from './vocabulary'
 
 import type { ComboboxOption } from '#/components/ui'
@@ -252,8 +253,9 @@ export interface AnchoredJourney {
  * they sit on the old anchor day. For a saved journey the field therefore starts, in this order, on:
  *
  * 1. the date of the day the journey is anchored to - the first leg's departure day, and the
- *    record's own only when it has no legs, which is the rule `carryAnchors` applies; an id the trip
- *    no longer has is no anchor;
+ *    record's own only when it has no legs (`carryAnchors` also falls back to the record's day when
+ *    the legs name none, which this field does not mirror yet, #969); an id the trip no longer has
+ *    is no anchor;
  * 2. the journey's own recorded departure date, when the anchor says nothing;
  * 3. the first dated day, as for a journey that is not saved yet.
  *
@@ -502,12 +504,14 @@ function ConnectionRow({
   connection,
   expanded,
   saving,
+  blocked,
   onToggle,
   onSave,
 }: {
   connection: TransitConnection
   expanded: boolean
   saving: boolean
+  blocked: boolean
   onToggle: () => void
   onSave: () => void
 }) {
@@ -577,7 +581,7 @@ function ConnectionRow({
             variant="secondary"
             size="sm"
             shape="pill"
-            disabled={tooLong}
+            disabled={tooLong || blocked}
             loading={saving}
             loadingLabel={t('modules.transports.connection.saving')}
             onClick={onSave}
@@ -712,6 +716,7 @@ export function SearchOutcome({
   results,
   expanded,
   saving,
+  saveBlocked = false,
   onToggle,
   onSave,
 }: {
@@ -720,6 +725,8 @@ export function SearchOutcome({
   results: ReadonlyArray<TransitConnection>
   expanded: string | null
   saving: boolean
+  /** No connection can be saved: the save could only be refused again. */
+  saveBlocked?: boolean
   onToggle: (id: string) => void
   onSave: (connection: TransitConnection) => void
 }) {
@@ -775,6 +782,7 @@ export function SearchOutcome({
             connection={connection}
             expanded={expanded === connection.id}
             saving={saving}
+            blocked={saveBlocked}
             onToggle={() => onToggle(connection.id)}
             onSave={() => onSave(connection)}
           />
@@ -818,6 +826,11 @@ export interface ConnectionSearchProps {
   /** Called once a connection has been written, so the dialog can close. */
   onSaved: () => void
   onWriteError?: (cause: unknown) => void
+  /**
+   * The journey being re-searched was deleted elsewhere (the dialog owns this state, since the
+   * form tab can find it out too): the alert says so and no connection can be saved over it.
+   */
+  transportGone?: boolean
 }
 
 export function ConnectionSearch({
@@ -827,8 +840,10 @@ export function ConnectionSearch({
   days,
   onSaved,
   onWriteError,
+  transportGone = false,
 }: ConnectionSearchProps) {
   const t = useTranslate()
+  const goneSentence = useGoneSentence()
   const dated = useMemo(() => datedDays(days), [days])
   const [origin, setOrigin] = useState<StationMatch | null>(null)
   const [destination, setDestination] = useState<StationMatch | null>(null)
@@ -856,6 +871,8 @@ export function ConnectionSearch({
         : 'modules.transports.connection.replacedBody',
     ),
     failure: t('modules.transports.connection.saveFailed'),
+    fallback: t('modules.transports.error.saveFallback'),
+    refusal: goneSentence,
     onError: onWriteError,
   })
 
@@ -1006,7 +1023,7 @@ export function ConnectionSearch({
           data-part="connection-search-run"
           variant="primary"
           shape="pill"
-          disabled={!ready}
+          disabled={!ready || transportGone}
           loading={search.pending}
           loadingLabel={t('modules.transports.connection.searching')}
           onClick={() => void run()}
@@ -1044,6 +1061,7 @@ export function ConnectionSearch({
           results={results}
           expanded={expanded}
           saving={save.pending}
+          saveBlocked={transportGone}
           onToggle={(id) =>
             setExpanded((current) => (current === id ? null : id))
           }
@@ -1060,14 +1078,16 @@ export function ConnectionSearch({
         </Alert>
       )}
 
-      {save.error === null ? null : (
+      {transportGone ? <TransportGoneAlert /> : null}
+
+      {!transportGone && save.error !== null ? (
         <Alert
           tone="danger"
           title={t('modules.transports.connection.saveError')}
         >
           {save.error}
         </Alert>
-      )}
+      ) : null}
     </div>
   )
 }

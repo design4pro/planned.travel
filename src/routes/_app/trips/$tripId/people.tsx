@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { Card } from '#/components/ui'
+import { requireFound } from '#/lib/absence'
 import { useTranslate } from '#/lib/i18n'
 import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
 import { PeopleScreen } from './-ui/people-screen'
@@ -16,7 +17,8 @@ import { loadTripPeople } from './-server/people'
  * and link sharing joins it when `COL-10`/`COL-11` land, so "Share" stays honest.
  */
 export const Route = createFileRoute('/_app/trips/$tripId/people')({
-  loader: ({ params }) => loadTripPeople({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) =>
+    requireFound(await loadTripPeople({ data: { tripId: params.tripId } })),
   pendingComponent: PeoplePending,
   errorComponent: PeopleError,
   component: PeoplePage,

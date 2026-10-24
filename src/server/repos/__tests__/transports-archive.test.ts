@@ -16,12 +16,13 @@ import {
   deleteTransport,
   listTripTransports,
   listTripLegs,
-  replaceTransportChain,
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
+  TransportRefusalError,
 } from '../transports'
-import { createHarness } from './harness'
+import { replaceChain } from './edit-transport'
+import { captureError, createHarness } from './harness'
 import type { TenantScope } from '../base'
 import type { Trip } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -97,7 +98,7 @@ describe('archived transport write boundary', () => {
       case 'delete':
         return deleteTransport(scope, id)
       case 'chain':
-        return replaceTransportChain(scope, id, chain)
+        return replaceChain(scope, requestedTrip, id, chain)
       case 'save-new':
       case 'save-edit':
         return saveTransport(scope, {
@@ -178,8 +179,13 @@ describe('archived transport write boundary', () => {
     '%s preserves missing-id errors on an archived trip',
     async (kind) => {
       await archiveTrip(tenant.scope, trip.id)
+      // An edit of an id the scope does not hold is the "this transport is gone" refusal.
+      const refusal =
+        kind === 'chain' || kind === 'save-edit' || kind === 'search-edit'
+          ? TransportRefusalError
+          : NotFoundError
       await expect(write(kind, tenant.scope, 'missing')).rejects.toBeInstanceOf(
-        NotFoundError,
+        refusal,
       )
     },
   )
@@ -191,11 +197,11 @@ describe('archived transport write boundary', () => {
       await archiveTrip(tenant.scope, other.id)
       await expect(
         write(kind, tenant.scope, transportId, other.id),
-      ).rejects.toBeInstanceOf(NotFoundError)
+      ).rejects.toBeInstanceOf(TransportRefusalError)
       await archiveTrip(tenant.scope, trip.id)
       await expect(
         write(kind, tenant.scope, transportId, other.id),
-      ).rejects.toBeInstanceOf(NotFoundError)
+      ).rejects.toBeInstanceOf(TransportRefusalError)
     },
   )
   it.each(['save-edit', 'search-edit'] as const)(
@@ -210,16 +216,23 @@ describe('archived transport write boundary', () => {
       )
       await archiveTrip(tenant.scope, trip.id)
       const before = await snapshot()
-      await expect(
+      // The outsider cannot read the trip the transport sits on, so naming its id must read like
+      // naming an id that never existed: same class, code and message.
+      const named = await captureError(() =>
         write(kind, outsider, transportId, readable.id),
-      ).rejects.toBeInstanceOf(NotFoundError)
+      )
+      const absent = await captureError(() =>
+        write(kind, outsider, 'never-existed', readable.id),
+      )
+      expect(named).toBeInstanceOf(TransportRefusalError)
+      expect(named).toEqual(absent)
       const foreign = await harness.seedTenant('foreign-mismatch')
       const foreignTrip = await createTrip(foreign.scope, {
         title: 'Foreign readable',
       })
       await expect(
         write(kind, foreign.scope, transportId, foreignTrip.id),
-      ).rejects.toBeInstanceOf(NotFoundError)
+      ).rejects.toBeInstanceOf(TransportRefusalError)
       expect(await snapshot()).toEqual(before)
     },
   )

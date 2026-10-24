@@ -83,6 +83,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'El estado no cambió',
   'transports.toast.statusFailed.body':
     'El trayecto sigue en su estado anterior.',
+  'transports.refusal.gone':
+    'Se eliminó mientras esta ventana estaba abierta, así que tus cambios no se pueden guardar. Cierra la ventana para ver la lista actualizada.',
+  'transports.refusal.goneTitle': 'Este trayecto ya no existe',
+  'transports.error.saveFallback': 'Vuelve a intentarlo en un momento.',
   'transports.toast.removed': 'Trayecto eliminado',
   'transports.toast.removeFailed': 'El trayecto no se eliminó',
 

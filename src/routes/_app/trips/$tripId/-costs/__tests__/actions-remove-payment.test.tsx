@@ -129,7 +129,11 @@ describe('removing a payment from the costs screen', () => {
   describe('when the server refuses because the payment is not there any more', () => {
     it('reads the trip again and treats a payment that is gone as deleted, not as a failure to retry', async () => {
       vi.mocked(deletePaymentFn).mockRejectedValue(new Error('not found'))
-      vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, settlements: [] })
+      vi.mocked(loadCosts).mockResolvedValue({
+        ...PAYLOAD,
+        found: true,
+        settlements: [],
+      })
       const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
 
       await act(async () => {
@@ -149,7 +153,7 @@ describe('removing a payment from the costs screen', () => {
       vi.mocked(deletePaymentFn).mockRejectedValue(new Error('refused'))
       const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
 
-      vi.mocked(loadCosts).mockResolvedValueOnce(PAYLOAD)
+      vi.mocked(loadCosts).mockResolvedValueOnce({ ...PAYLOAD, found: true })
       await expect(
         act(() => result.current.removePayment(PAYMENT)),
       ).rejects.toThrow('refused')
@@ -159,7 +163,12 @@ describe('removing a payment from the costs screen', () => {
         act(() => result.current.removePayment(PAYMENT)),
       ).rejects.toThrow('refused')
 
-      expect(toast.error).toHaveBeenCalledTimes(2)
+      vi.mocked(loadCosts).mockResolvedValueOnce({ found: false })
+      await expect(
+        act(() => result.current.removePayment(PAYMENT)),
+      ).rejects.toThrow('refused')
+
+      expect(toast.error).toHaveBeenCalledTimes(3)
       expect(toast.success).not.toHaveBeenCalled()
     })
   })

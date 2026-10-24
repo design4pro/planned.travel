@@ -113,6 +113,25 @@ export function shareOf(row: CostsExpense, userId: string): number {
   return row.shares.find((share) => share.userId === userId)?.shareMinor ?? 0
 }
 
+/** What an expense's stored shares add up to, or `null` for a line that carries none. */
+export function shareTotalOf(row: CostsExpense): number | null {
+  if (row.shares.length === 0) {
+    return null
+  }
+  return row.shares.reduce((total, share) => total + share.shareMinor, 0)
+}
+
+/**
+ * Whether a line's stored shares miss its total, to the minor unit. A line with no shares is not
+ * wrong, it is unsplit. The currency rebase refuses on the same test in SQL
+ * (`shareTotalOf` in `server/repos/trip-currency.ts`); this is its screen-side reading of the
+ * stored rows, never of an editor's draft (#883).
+ */
+export function sharesDoNotAddUp(row: CostsExpense): boolean {
+  const total = shareTotalOf(row)
+  return total !== null && total !== row.amountMinor
+}
+
 /**
  * The people a picker may offer for a money write: every trip member still in the workspace, and a
  * member who has left it only when the expense or payment being edited already carries them (#1034).

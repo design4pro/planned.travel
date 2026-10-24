@@ -144,6 +144,7 @@ const messages = {
   'plan.stop.menu.moveToDay': '다른 날로 이동',
   'plan.stop.menu.backToUnplanned': '미계획으로 되돌리기',
   'plan.stop.menu.delete': '여행에서 삭제',
+  'plan.stop.visited': '방문함',
   'plan.delete.title': '{name}을(를) 삭제할까요?',
   'plan.delete.titleUnnamed': '이 장소를 삭제할까요?',
   'plan.delete.bodyUnplanned':

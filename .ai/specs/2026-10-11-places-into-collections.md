@@ -66,7 +66,7 @@ Verified against the repository at HEAD:
   to this stage; ticket #1106 retires the two options at creation without adding a read filter and says enforcement belongs here.
   Stored `private` and `public` rows exist and keep their values. `createCollectionInput` and `updateCollectionInput` also still carry
   `visibility` (`collections.ts:68`, `:80`), so an admin can rewrite it through the update path, and `loadCollectionDetail` answers an
-  unknown collection with a plain `Error` (`library.ts`) that would reach the error panel as `unexpected`.
+  unknown collection with `{ found: false }` (`library.ts`, #953), which the route loader turns into the router's not-found.
 - **`saveTripPlaceToCollection` can read a private trip.** It resolves the place with `placesRepository.requireById`, a tenant filter
   only, and never `requireTrip` (`collections.ts`), so a member could copy a place out of a private trip they are not on, by id. It is
   harmless while nothing calls it; this stage gives it callers.
@@ -98,8 +98,8 @@ Verified against the repository at HEAD:
 - **`addCollectionPlaceInput` and `updateCollectionPlaceInput` are not strict objects** and expose `source`, `externalId` and
   `sortOrder` (`collections.ts`); the boundary of this stage must not.
 - **The admin meter reads a different number from the one the quota enforces.** `loadAdmin` shows `collections: listCollectionsWithCounts(scope).length`
-  and `places: summary.counts.places` (`src/routes/_app/-server/overview.ts`), the second counting trip places only
-  (`placesRepository.count` in `dashboard.ts`); 08-S9b makes the second read `countSavedPlaces`.
+  and `places` from `placesMeter(scope)` (`src/routes/_app/-server/overview.ts`, #951), the second counting trip places only
+  (`placesRepository.count`, which `placesMeter` wraps); 08-S9b makes that count `countSavedPlaces`.
 
 ## 📝 Proposed Solution
 
@@ -202,8 +202,9 @@ Modelled on `readableJourneyFilter`, `inReadableJourney` and `countedJourneyFilt
   `listCollectionPlaces`, `listCollectionPlacesWithLabels`, `listLabels`, `countCollectionPlacesByCountry` (the "Where they are" panel
   must not count a private list's places for a non-owner), `nextCollectionPlaceSortOrder` and `collectionDeleteSummary`; every reader this
   spec adds (`listCollectionPlacesFiltered`, `listCollectionPins`, the duplicate lookups, `listTripPlacesForSaving`, `listPlaceLists`, the
-  sharing summary) joins the list when it is written. `loadCollectionDetail` starts from `requireReadableCollection` and turns
-  `NotFoundError` into the route's `notFound()`, so the existing `notFoundComponent` renders instead of the plain `Error` it throws today.
+  sharing summary) joins the list when it is written. `loadCollectionDetail` starts from `requireReadableCollection` and
+  reports a `NotFoundError` as the plain `{ found: false }` result (`OrAbsent`, `src/lib/absence.ts`, #953), which the route loader turns into the
+  router's `notFound()`, so the existing `notFoundComponent` renders instead of the error panel.
 - Every writer keyed by a **collection id, a place id or a label id** goes through it too (`addCollectionPlace` resolves its collection with `requireById` today, a workspace check only; the others never resolve one): `addCollectionPlace`, `updateCollectionPlace`, `setCollectionPlaceStatus`, `deleteCollectionPlace`, `setCollectionPlaceLabels`, and the label writers
   (`createLabel` and `deleteLabel`, which exist at HEAD, and `updateLabel` from the change-a-collection spec). A member must not be able to write into a private list by passing a place id.
 - `countCollectionsAgainstPlan(scope)`: `collectionsRepository.count(scope, not(strandedCollectionFilter(scope)))`, where a stranded collection is the exact negation of the read rule's workspace half - `NOT (visibility IN ('organization', 'public'))` and `NOT stillInWorkspace(scope, collections.ownerUserId)`, never `visibility = 'private'` - so the quota exemption and the read rule cannot drift apart (`strandedTripFilter` uses `ne(visibility, 'organization')` for the same reason) (`src/server/repos/members.ts`).
@@ -241,7 +242,7 @@ A neutral module, so the places-and-maps plan's later writer can import it witho
   still count `places` alone. The safe direction holds: nobody can exceed the
   ceiling by saving into collections. Making those three call sites symmetric is a small change in files this stage does not edit; a follow-up
   issue is filed (Risks). The admin "places used" meter would otherwise show room while a collection write is refused, so 08-S9b makes
-  `loadAdmin` report `countSavedPlaces` (`overview.ts`).
+  `placesMeter` (which `loadAdmin` reads for its places entry) count `countSavedPlaces`.
 
 ### One copy rule (`src/lib/collections/dedupe.ts`, Resolved assumption 12)
 

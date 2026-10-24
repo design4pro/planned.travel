@@ -800,6 +800,107 @@ describe('the people a new line of money may name, once someone has left the wor
   })
 })
 
+describe('the expense dialog on a stored split that does not add up (#883)', () => {
+  const TITLE = 'The saved shares don’t add up'
+  const OFF = expenseRow({
+    amountMinor: 6_000,
+    splitMethod: 'equal',
+    shares: [
+      { userId: 'u1', shareMinor: 2_000, weight: 1, isSettled: false },
+      { userId: 'u2', shareMinor: 2_000, weight: 1, isSettled: false },
+    ],
+  })
+
+  it('says what the shares add up to and what to do, though the editor reads balanced', () => {
+    open(undefined, { expense: OFF })
+
+    expect(screen.getByText(TITLE)).toBeTruthy()
+    expect(
+      screen.getByText(/add up to .*40.*, but the total is .*60.*/),
+    ).toBeTruthy()
+    // The editor re-derives an equal split from the amount, which is why the alert exists.
+    expect(screen.getByText('Balanced')).toBeTruthy()
+  })
+
+  it('words the figures in the line’s own currency, not the trip’s', () => {
+    open(undefined, {
+      expense: expenseRow({
+        currency: 'JPY',
+        amountMinor: 24_000,
+        splitMethod: 'exact',
+        shares: [
+          { userId: 'u1', shareMinor: 10_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 10_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(
+      screen.getByText(/add up to .*20,000.*, but the total is .*24,000/),
+    ).toBeTruthy()
+  })
+
+  it('is read with the dialog’s description, so a screen reader hears it on open', () => {
+    open(undefined, { expense: OFF })
+
+    const described = screen
+      .getByRole('dialog')
+      .getAttribute('aria-describedby')
+      ?.split(' ')
+    expect(described).toHaveLength(2)
+    const text = described?.map(
+      (id) => document.getElementById(id)?.textContent,
+    )
+    expect(text).not.toContain(undefined)
+    expect(text?.join(' ')).toContain('Changing the amount re-splits it')
+    expect(text?.join(' ')).toContain(TITLE)
+  })
+
+  it('keeps the dialog described by its description when there is no warning', () => {
+    open(undefined)
+    const added = screen.getByRole('dialog').getAttribute('aria-describedby')
+    expect(document.getElementById(added ?? '')?.textContent).toContain(
+      'Amounts are held in EUR',
+    )
+    cleanup()
+
+    open(undefined, {
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+    const edited = screen.getByRole('dialog').getAttribute('aria-describedby')
+    expect(document.getElementById(edited ?? '')?.textContent).toContain(
+      'Changing the amount re-splits it',
+    )
+  })
+
+  it('stays quiet when the stored shares add up', () => {
+    open(undefined, {
+      expense: expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3_000, weight: 1, isSettled: false },
+        ],
+      }),
+    })
+
+    expect(screen.queryByText(TITLE)).toBeNull()
+  })
+
+  it('stays quiet for an expense with no shares and for a new one', () => {
+    open(undefined, { expense: expenseRow({ shares: [] }) })
+    expect(screen.queryByText(TITLE)).toBeNull()
+    cleanup()
+
+    open(undefined)
+    expect(screen.queryByText(TITLE)).toBeNull()
+  })
+})
+
 describe('the expense dialog when the save fails', () => {
   async function failWith(cause: Error): Promise<void> {
     const user = hand()

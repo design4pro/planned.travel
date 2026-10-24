@@ -353,7 +353,9 @@ as `07-S2` does.
   sessions and a password change that revokes the others also delete the cached session blob of each
   ended session by name, so the reconnect is refused within the KV convergence window (about 60
   seconds; a refresh in another colo inside it can re-cache a blob, which a second revoke of all
-  sessions clears; only a D1 check closes it, #1085) (#1176). The close is
+  sessions clears; only a D1 check closes it, #1085) (#1176); a revoke of the other sessions reads
+  the person's other live session rows after it ran and ends each through Better Auth's adapter,
+  row and blob, whether or not the per-user session index named it (#1240). The close is
   best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
   the room after the close, leaves the old role for at most the maximum socket age plus the
   alarm interval (15 + 5 minutes, about 20 minutes). Refusing a connect minted before a

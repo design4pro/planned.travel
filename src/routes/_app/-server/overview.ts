@@ -28,6 +28,7 @@ import {
   markAllRead,
   markRead,
   notificationsRepository,
+  placesMeter,
   readTripCardFacts,
   resolveQuotas,
 } from '#/server/repos'
@@ -616,7 +617,7 @@ export interface AdminPayload {
  * that runs after the data has been sent is not a gate (`docs/SPEC.md` §5:
  * authorisation is never the client's decision).
  *
- * Nine repository reads sit behind this check, so refusing early is also the
+ * Ten repository reads sit behind this check, so refusing early is also the
  * cheaper path.
  */
 export const loadAdmin = createServerFn({ method: 'GET' }).handler(
@@ -636,6 +637,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       actionCounts,
       collections,
       journeysUsed,
+      places,
     ] = await Promise.all([
       getOrganization(scope),
       getDashboardSummary(scope, { today: serverToday() }),
@@ -646,6 +648,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
       countAuditActions(scope, { limit: 8 }),
       listCollectionsWithCounts(scope),
       countQuotaJourneys(scope),
+      placesMeter(scope),
     ])
 
     return {
@@ -663,11 +666,7 @@ export const loadAdmin = createServerFn({ method: 'GET' }).handler(
           used: summary.trips.total,
           limit: overTheWire(quotas.limits.trips),
         },
-        {
-          metric: 'places',
-          used: summary.counts.places,
-          limit: overTheWire(quotas.limits.places),
-        },
+        { metric: 'places', ...places },
         {
           metric: 'members',
           used: summary.counts.members,

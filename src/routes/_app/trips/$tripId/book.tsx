@@ -13,6 +13,7 @@ import {
   bookImportsOwner,
 } from '#/components/modules/book'
 import { Alert, Card, ProgressRing, StatCard } from '#/components/ui'
+import { requireFound } from '#/lib/absence'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadBookingDeskFn } from '#/server/fns/reservations'
 import { loadDisplayPreferences } from '../../-server/settings'
@@ -42,7 +43,7 @@ export const Route = createFileRoute('/_app/trips/$tripId/book')({
       loadBookingDeskFn({ data: { tripId: params.tripId } }),
       loadDisplayPreferences(),
     ])
-    return { ...desk, maskCodes: display.maskConfirmationCodes }
+    return { ...requireFound(desk), maskCodes: display.maskConfirmationCodes }
   },
   pendingComponent: BookPending,
   errorComponent: BookError,

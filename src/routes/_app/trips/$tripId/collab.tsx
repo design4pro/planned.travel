@@ -12,13 +12,15 @@ import { CollabScreen } from '#/components/modules/collab/collab-screen'
 import { CollabSectionsMenu } from '#/components/modules/collab/collab-sections-menu'
 import { collabSummary } from '#/components/modules/collab/collab-summary'
 import { CollabSkeletons } from '#/components/modules/collab/collab-skeletons'
+import { requireFound } from '#/lib/absence'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadTripCollab, setCollabSectionFn } from './-server/collab'
 import { HeaderSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/collab')({
-  loader: ({ params }) => loadTripCollab({ data: { tripId: params.tripId } }),
+  loader: async ({ params }) =>
+    requireFound(await loadTripCollab({ data: { tripId: params.tripId } })),
   pendingComponent: CollabPending,
   errorComponent: CollabError,
   component: CollabPage,

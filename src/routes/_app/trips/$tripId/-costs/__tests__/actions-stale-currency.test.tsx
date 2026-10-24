@@ -12,6 +12,7 @@ import { useCostsActions } from '../actions'
 import type { ReactNode } from 'react'
 import type { Catalogue } from '#/lib/i18n'
 import type { ExpenseFormValue } from '#/components/costs'
+import type { OrAbsent } from '#/lib/absence'
 import type { CostsPayload } from '#/server/fns/costs'
 
 /**
@@ -106,7 +107,11 @@ describe('the costs write runner on a stale trip currency', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     refresh.invalidate.mockResolvedValue(undefined)
-    vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, currency: 'JPY' })
+    vi.mocked(loadCosts).mockResolvedValue({
+      ...PAYLOAD,
+      found: true,
+      currency: 'JPY',
+    })
     vi.mocked(createExpenseFn).mockRejectedValue(
       new Error('costs.refusal.tripCurrencyChanged'),
     )
@@ -148,7 +153,11 @@ describe('the costs write runner on a stale trip currency', () => {
   })
 
   it('falls back to the plain toast when the currency is the one the save was made under', async () => {
-    vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, currency: 'EUR' })
+    vi.mocked(loadCosts).mockResolvedValue({
+      ...PAYLOAD,
+      found: true,
+      currency: 'EUR',
+    })
 
     await refusedAdd()
 
@@ -156,9 +165,9 @@ describe('the costs write runner on a stale trip currency', () => {
   })
 
   it('does not show the refused row while the live currency is fetched', async () => {
-    let answer: (payload: CostsPayload) => void = () => {}
+    let answer: (payload: OrAbsent<CostsPayload>) => void = () => {}
     vi.mocked(loadCosts).mockReturnValue(
-      new Promise<CostsPayload>((resolve) => {
+      new Promise<OrAbsent<CostsPayload>>((resolve) => {
         answer = resolve
       }),
     )
@@ -172,7 +181,7 @@ describe('the costs write runner on a stale trip currency', () => {
     expect(result.current.snapshot.expenses).toHaveLength(0)
 
     await act(async () => {
-      answer({ ...PAYLOAD, currency: 'JPY' })
+      answer({ ...PAYLOAD, found: true, currency: 'JPY' })
       await pending
     })
   })

@@ -57,7 +57,7 @@ const messages = {
   'trip.tab.collab': 'Grupo',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Menu da conta',
+  'account.menu': '{name}, menu da conta',
   'account.settings': 'Configurações',
   'account.billing': 'Plano e pagamento',
   'account.admin': 'Administração',

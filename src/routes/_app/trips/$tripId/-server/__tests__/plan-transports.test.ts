@@ -28,9 +28,9 @@ import {
   createTrip,
   listDayAssignments,
   listTripDays,
-  replaceTransportChain,
   saveSearchedConnection,
 } from '#/server/repos'
+import { replaceChain } from '#/server/repos/__tests__/edit-transport'
 import { createHarness } from '#/server/repos/__tests__/harness'
 
 import type { TripPatch } from '#/server/do'
@@ -203,7 +203,7 @@ describe('the journeys a day can draw', () => {
       mode: 'train',
       status: 'confirmed',
     })
-    await replaceTransportChain(scope, chained.id, {
+    await replaceChain(scope, fixture.tripId, chained.id, {
       stations: [{ name: 'Shin-Osaka' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [
         { departureDayId: fixture.dayId, departureTime: '09:00' },
@@ -233,7 +233,7 @@ describe('the journeys a day can draw', () => {
       stations,
       legs: [{}],
     })
-    await replaceTransportChain(scope, saved.transport.id, {
+    await replaceChain(scope, fixture.tripId, saved.transport.id, {
       stations,
       legs: [{ departureDayId: fixture.secondDayId }],
     })

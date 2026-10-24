@@ -13,7 +13,7 @@
  * quiet detail shares the second, which is a designed small screen rather than a
  * squeezed large one.
  */
-import { Pencil, StickyNote, Trash2 } from 'lucide-react'
+import { AlertTriangle, Pencil, StickyNote, Trash2 } from 'lucide-react'
 
 import {
   Avatar,
@@ -26,7 +26,12 @@ import {
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
-import { groupByDay, isOptimisticId, shareOf } from '#/components/costs'
+import {
+  groupByDay,
+  isOptimisticId,
+  shareOf,
+  sharesDoNotAddUp,
+} from '#/components/costs'
 import { Panel } from '../../../-ui/scaffold'
 import { ConvertedFigure } from './converted-figure'
 import { CategoryGlyph, categoryLabel } from './categories'
@@ -205,6 +210,21 @@ function ExpenseRow({
                 })}
           </span>
         </div>
+
+        {sharesDoNotAddUp(row) ? (
+          // Its own line, like the converted figure: the quiet line is the narrowest column of a
+          // 360px row, and the longer locales do not fit one line beside the share figure.
+          <div className="flex">
+            <Badge
+              tone="warning"
+              size="sm"
+              icon={<AlertTriangle />}
+              className="h-auto min-w-0 shrink whitespace-normal py-0.5 text-start"
+            >
+              {t('costs.row.splitOff')}
+            </Badge>
+          </div>
+        ) : null}
 
         {display.mode === 'fixed' && !locked ? (
           // Its own line, under the amount it converts: beside the share it would take the width

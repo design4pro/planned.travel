@@ -23,8 +23,10 @@ import {
   requireTripDay,
   requireWritableTrip,
 } from '#/server/repos'
+import { orAbsent } from '#/server/fns/-lib/absence'
 import { appScope } from '../../../-server/context'
 
+import type { OrAbsent } from '#/lib/absence'
 import type { TenantScope } from '#/server/repos'
 import type { Transport, TransportLeg } from '#/server/db/types'
 
@@ -164,9 +166,9 @@ const id = z.string().trim().min(1).max(64)
 
 export const loadPlanTransports = createServerFn({ method: 'GET' })
   .validator(z.object({ tripId: id }))
-  .handler(async ({ data }): Promise<PlanTransportsPayload> => {
+  .handler(async ({ data }): Promise<OrAbsent<PlanTransportsPayload>> => {
     const scope = await appScope()
-    return readPlanTransports(scope, data.tripId)
+    return orAbsent(data.tripId, () => readPlanTransports(scope, data.tripId))
   })
 
 /**

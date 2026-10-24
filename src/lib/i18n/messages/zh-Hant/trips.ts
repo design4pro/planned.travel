@@ -136,6 +136,7 @@ const messages = {
   'plan.stop.menu.moveToDay': '移到其他日期',
   'plan.stop.menu.backToUnplanned': '移回未安排',
   'plan.stop.menu.delete': '從行程中刪除',
+  'plan.stop.visited': '去過',
   'plan.delete.title': '刪除「{name}」？',
   'plan.delete.titleUnnamed': '刪除此地點？',
   'plan.delete.bodyUnplanned': '它會從行程的地點中徹底移除。此操作無法復原。',

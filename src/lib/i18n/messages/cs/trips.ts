@@ -147,6 +147,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Přesunout na jiný den',
   'plan.stop.menu.backToUnplanned': 'Zpět mezi nenaplánovaná',
   'plan.stop.menu.delete': 'Smazat z výletu',
+  'plan.stop.visited': 'Navštíveno',
   'plan.delete.title': 'Smazat „{name}“?',
   'plan.delete.titleUnnamed': 'Smazat toto místo?',
   'plan.delete.bodyUnplanned':

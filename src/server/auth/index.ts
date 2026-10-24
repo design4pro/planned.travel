@@ -442,7 +442,8 @@ function buildAuth() {
 
     // Closes a person's open trip-room sockets once they lose their place in a workspace (#1073) or
     // end their own session (#1093; its `before` half is the `roomEvictionPrepare` plugin below), and
-    // deletes the cached session blobs a password reset, revoke-all or revoking password change ended (#1176).
+    // deletes the cached session blobs a password reset, revoke-all or revoking password change ended (#1176),
+    // and ends the other sessions a revoke-other-sessions missed because the per-user index did not name them (#1240).
     hooks: { before: twoFactorEnableGuard, after: roomEvictionHook },
 
     databaseHooks: {

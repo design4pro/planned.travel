@@ -142,6 +142,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Chuyển sang ngày khác',
   'plan.stop.menu.backToUnplanned': 'Đưa về chưa lên kế hoạch',
   'plan.stop.menu.delete': 'Xóa khỏi chuyến đi',
+  'plan.stop.visited': 'Đã tới',
   'plan.delete.title': 'Xóa {name}?',
   'plan.delete.titleUnnamed': 'Xóa địa điểm này?',
   'plan.delete.bodyUnplanned':

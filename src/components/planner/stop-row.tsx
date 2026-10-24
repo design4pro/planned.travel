@@ -1,10 +1,11 @@
 import * as React from 'react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Clock, GripVertical, MapPinOff, Star } from 'lucide-react'
+import { Check, Clock, GripVertical, MapPinOff, Star } from 'lucide-react'
 
 import { cn } from '#/lib/cn'
 import { Badge, focusRing, transitionBase } from '#/components/ui'
+import { useTranslate } from '#/lib/i18n'
 import { PlaceThumb } from './place-thumb'
 
 import type { BadgeTone } from '#/components/ui'
@@ -99,6 +100,7 @@ export function StopRow({
   onHoverChange,
   actions,
 }: StopRowProps) {
+  const t = useTranslate()
   const {
     attributes,
     listeners,
@@ -119,6 +121,9 @@ export function StopRow({
   const tone = RESERVATION_TONE[row.reservationStatus]
   const label = RESERVATION_LABEL[row.reservationStatus]
   const unmapped = row.lng === null || row.lat === null
+  // The mark belongs to the place, so every row of it carries it. One string serves
+  // the badge and the button's name, which keeps the visible word inside the name.
+  const visited = row.visited ? t('trips.plan.stop.visited') : null
 
   // Everything the row shows, folded into one string. A screen reader hears the
   // stop once and completely, instead of hearing "Sensō-ji, button" and having to
@@ -133,6 +138,7 @@ export function StopRow({
     row.location,
     typeof row.rating === 'number' ? `rated ${row.rating} out of 5` : null,
     label,
+    visited,
     unmapped ? 'no map position' : null,
   ]
     .filter((part) => typeof part === 'string' && part !== '')
@@ -262,7 +268,8 @@ export function StopRow({
 
           {row.duration === null &&
           typeof row.rating !== 'number' &&
-          tone === undefined ? null : (
+          tone === undefined &&
+          visited === null ? null : (
             <span className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
               {row.duration === null ? null : (
                 <span className="inline-flex items-center gap-1 text-caption tabular-nums text-ink-3">
@@ -284,6 +291,15 @@ export function StopRow({
               {tone === undefined || label === undefined ? null : (
                 <Badge tone={tone} size="sm">
                   {label}
+                </Badge>
+              )}
+              {visited === null ? null : (
+                <Badge
+                  tone="outline"
+                  size="sm"
+                  icon={<Check strokeWidth={2.5} />}
+                >
+                  {visited}
                 </Badge>
               )}
             </span>

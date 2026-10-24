@@ -144,7 +144,6 @@ import {
   getTransport,
   listTransportLegs,
   listTripDayTransports,
-  replaceTransportChain,
   requireTransportOfTrip,
   setTransportStatus,
 } from '../transports'
@@ -154,6 +153,7 @@ import {
   rowWriters,
   seedCollabRows,
 } from './collab-writers'
+import { replaceChain } from './edit-transport'
 import {
   captureError,
   createHarness,
@@ -2165,7 +2165,7 @@ describe('member isolation', () => {
         ['deleting a transport', () => deleteTransport(scope, transportId)],
         [
           'replacing a transport’s chain',
-          () => replaceTransportChain(scope, transportId, chain),
+          () => replaceChain(scope, fixture.tripId, transportId, chain),
         ],
         [
           'updating a booking',
