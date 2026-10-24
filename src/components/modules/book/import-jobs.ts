@@ -253,9 +253,17 @@ export interface BookImportSnapshot {
 /** What a server render and the first client render see: no register, because there is no browser. */
 const EMPTY_SNAPSHOT: BookImportSnapshot = { entries: [] }
 
-/** How a drop ended. A failure names the file the drop stopped at; the jobs before it keep running. */
+/**
+ * How a drop ended. A failure names the file the drop stopped at; the jobs before it keep running.
+ *
+ * `started` means every file was uploaded and its job started, whatever the caller's hook did:
+ * `refreshFailures` holds each rejection of it, for the caller to word.
+ */
 export type StartDropOutcome =
-  | { readonly kind: 'started' }
+  | {
+      readonly kind: 'started'
+      readonly refreshFailures: ReadonlyArray<unknown>
+    }
   | { readonly kind: 'uploadFailed'; readonly filename: string }
   | {
       readonly kind: 'startFailed'
@@ -268,14 +276,20 @@ export interface StartDropInput {
   readonly files: ReadonlyArray<File>
   /** `0`–`1` across the whole drop, not one file. */
   readonly onProgress?: (fraction: number) => void
-  /** Awaited after each accepted start, once its job is registered — the loaders' refresh. */
+  /**
+   * Awaited after each accepted start, once its job is registered — the loaders' refresh. A
+   * rejection does not stop the drop: it is collected in the `started` outcome's `refreshFailures`.
+   */
   readonly afterStart?: () => Promise<void>
 }
 
 export interface ConfirmInput {
   readonly tripId: string
   readonly selection: ImportSelection
-  /** Awaited after the last write and before the jobs are re-read or forgotten. */
+  /**
+   * Awaited after the last write and before the jobs are re-read or forgotten. A rejection does not
+   * make `confirm` throw: it is appended to the outcome's `failures`.
+   */
   readonly afterWritten?: () => Promise<void>
 }
 
@@ -283,7 +297,10 @@ export interface ConfirmOutcome {
   readonly written: number
   /** Accepted rows still to write, the ones whose call was rejected included. */
   readonly left: number
-  /** Why each rejected call failed, for the caller to word. */
+  /**
+   * Why each rejected call failed, for the caller to word, then the `afterWritten` hook's rejection
+   * when it had one. It never changes `written` or `left`.
+   */
   readonly failures: ReadonlyArray<unknown>
 }
 
@@ -575,6 +592,7 @@ export function createBookImportJobs(
 
     async startDrop({ tripId, files, onProgress, afterStart }) {
       const started: Array<BookImportJob> = []
+      const refreshFailures: Array<unknown> = []
       for (const [index, file] of files.entries()) {
         const uploaded = await port
           .upload({
@@ -598,7 +616,8 @@ export function createBookImportJobs(
         // Registered as each one starts, not after the loop: a file that fails to upload returns
         // early, and the jobs already enqueued have spent the workspace's reading allowance. A
         // register written only on the way out would leave them running and invisible. For the same
-        // reason it comes before the caller's hook: a hook that fails does not un-start the job.
+        // reason it comes before the caller's hook: a hook that fails does not un-start the job, so
+        // it is collected and the drop goes on rather than stopping at a file that did start.
         // The stagger goes into the register too: the stall budget is measured from the job's
         // scheduled start, and the server's answer is the only place that states it.
         started.push({
@@ -611,10 +630,10 @@ export function createBookImportJobs(
         try {
           await afterStart?.()
         } catch (cause) {
-          return { kind: 'startFailed', filename: file.name, cause }
+          refreshFailures.push(cause)
         }
       }
-      return { kind: 'started' }
+      return { kind: 'started', refreshFailures }
     },
 
     async confirm({ tripId, selection, afterWritten }) {
@@ -643,6 +662,10 @@ export function createBookImportJobs(
 
       try {
         await afterWritten?.()
+      } catch (cause) {
+        // Handed back, not thrown: the rows were written, and the caller still has to be told how
+        // many.
+        failures.push(cause)
       } finally {
         // Settled whether or not the hook worked: the writes happened, and the register has to
         // say so.
