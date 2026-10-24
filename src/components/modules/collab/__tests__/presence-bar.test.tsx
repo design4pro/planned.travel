@@ -209,6 +209,14 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
   })
 
   describe('with text the reader has not sent', () => {
+    // Only the clock is faked: the confirmation ignores a press for a moment after it appears.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
     function typeUnsent(): HTMLTextAreaElement {
       const field = document.createElement('textarea')
       field.value = 'See you at the station at 9'
@@ -259,6 +267,45 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       ).toBeTruthy()
     })
 
+    it('moves focus to Cancel on the first press, and back to the opener when Cancel is pressed', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const [cancel] = screen.getAllByRole('button')
+      expect(document.activeElement).toBe(cancel)
+      fireEvent.click(cancel)
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+    })
+
+    it('does not confirm on a press that follows the first at once (double click, double tap, held Enter)', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const confirm = screen.getByRole('button', {
+        name: En['presence.workspaceChanged.confirm'],
+      })
+      fireEvent.click(confirm)
+      vi.setSystemTime(Date.now() + 200)
+      fireEvent.click(confirm)
+
+      expect(assign).not.toHaveBeenCalled()
+    })
+
     it('reloads on the second, explicit press', () => {
       typeUnsent()
       mountStale()
@@ -268,6 +315,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
         }),
       )
 
+      vi.setSystemTime(Date.now() + 600)
       fireEvent.click(
         screen.getByRole('button', {
           name: En['presence.workspaceChanged.confirm'],

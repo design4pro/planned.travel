@@ -14,6 +14,8 @@ import {
 } from '#/server/do/protocol'
 
 interface SocketOptions {
+  onOpen: () => void
+  onMessage: (event: { data: string }) => void
   onClose: (event: { code: number; reason: string }) => void
   onError: () => void
   shouldReconnectOnClose: (event: { code: number; reason: string }) => boolean
@@ -116,6 +118,30 @@ describe('useTripRoom - a tab whose workspace was changed in another tab', () =>
         reason: TRIP_ROOM_WORKSPACE_CHANGED_REASON,
       }),
     ).toBe(false)
+  })
+
+  it("is not live on an open the door closes at once, only on the room's welcome", () => {
+    const { result } = renderHook(() => useTripRoom('trip-1'))
+    const options = captured.options as SocketOptions
+
+    act(() => options.onOpen())
+    expect(result.current.status).not.toBe('live')
+
+    closeForChangedWorkspace()
+    expect(result.current.status).toBe('workspace-changed')
+
+    act(() => options.onOpen())
+    act(() =>
+      options.onMessage({
+        data: JSON.stringify({
+          t: 'welcome',
+          you: { id: 'u', name: 'U', image: null, tabs: 1 },
+          peers: [],
+          version: 0,
+        }),
+      }),
+    )
+    expect(result.current.status).toBe('live')
   })
 
   it('keeps reconnecting after every other close', () => {

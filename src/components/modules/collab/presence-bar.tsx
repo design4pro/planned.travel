@@ -14,11 +14,14 @@
  * background socket event must not take focus from a field the reader is typing in, and the
  * reload it offers never starts by itself.
  */
-import { useCallback, useId, useMemo } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { ArrowRightLeft, RotateCw, Wifi, WifiOff } from 'lucide-react'
 
-import { useOpenCurrentWorkspace } from '#/components/layout/use-open-current-workspace'
+import {
+  CURRENT_WORKSPACE_BUTTON_CLASS,
+  useOpenCurrentWorkspace,
+} from '#/components/layout/use-open-current-workspace'
 import { Avatar, Button, Tooltip } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -138,6 +141,18 @@ export function PresenceBar({
   const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
   const workspaceChanged = room.status === 'workspace-changed'
   const captionId = useId()
+  const cancelButton = useRef<HTMLButtonElement>(null)
+  const openButton = useRef<HTMLButtonElement>(null)
+  const wasConfirming = useRef(false)
+  const { confirming } = currentWorkspace
+
+  // The confirmation takes focus to the safe choice, so Enter pressed twice backs out; Cancel
+  // unmounts while focused, so focus goes back to the button it came from.
+  useEffect(() => {
+    if (confirming) cancelButton.current?.focus()
+    else if (wasConfirming.current) openButton.current?.focus()
+    wasConfirming.current = confirming
+  }, [confirming])
 
   return (
     <div className={cn('flex min-w-0 flex-wrap items-center gap-3', className)}>
@@ -146,7 +161,8 @@ export function PresenceBar({
           tabIndex={0}
           role="status"
           className={cn(
-            'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-caption font-semibold focus-ring',
+            // Wraps instead of overflowing: a translated title is several times the English one.
+            'inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-caption font-semibold focus-ring',
             PILL_TONE[room.status],
           )}
         >
@@ -228,8 +244,10 @@ export function PresenceBar({
             // The safe choice sits where the first press was, so a second quick tap on the same
             // spot backs out instead of discarding the draft.
             <Button
+              ref={cancelButton}
               variant="secondary"
               shape="pill"
+              className={CURRENT_WORKSPACE_BUTTON_CLASS}
               aria-describedby={captionId}
               onClick={currentWorkspace.cancel}
             >
@@ -237,8 +255,10 @@ export function PresenceBar({
             </Button>
           ) : null}
           <Button
+            ref={openButton}
             variant={currentWorkspace.confirming ? 'danger' : 'secondary'}
             shape="pill"
+            className={CURRENT_WORKSPACE_BUTTON_CLASS}
             aria-describedby={captionId}
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}

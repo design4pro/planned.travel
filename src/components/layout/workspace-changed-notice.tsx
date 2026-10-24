@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import {
   Button,
@@ -16,7 +16,10 @@ import {
   useWorkspaceClaim,
 } from '#/lib/workspace-claim-store'
 
-import { useOpenCurrentWorkspace } from './use-open-current-workspace'
+import {
+  CURRENT_WORKSPACE_BUTTON_CLASS,
+  useOpenCurrentWorkspace,
+} from './use-open-current-workspace'
 
 /**
  * What a tab says when the session's workspace is no longer the one it is showing.
@@ -47,6 +50,12 @@ export function WorkspaceChangedNotice({
   const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
   const dismiss = useRef<HTMLButtonElement>(null)
   const opener = useRef<Element | null>(null)
+
+  // The confirmation takes focus to the safe choice, so Enter pressed twice backs out.
+  const { confirming } = currentWorkspace
+  useEffect(() => {
+    if (confirming) dismiss.current?.focus()
+  }, [confirming])
 
   // Closing also forgets a pending "are you sure": the next time it opens it asks afresh.
   const closeNotice = () => {
@@ -103,9 +112,12 @@ export function WorkspaceChangedNotice({
           <DialogTitle>{t('shell.session.workspaceChangedTitle')}</DialogTitle>
           <DialogDescription dir="auto">
             {body}
-            {currentWorkspace.confirming
-              ? ` ${t('modules.presence.workspaceChanged.discard')}`
-              : null}
+            {/* Mounted before the first press, so the warning added to it is announced. */}
+            <span aria-live="polite">
+              {currentWorkspace.confirming
+                ? ` ${t('modules.presence.workspaceChanged.discard')}`
+                : null}
+            </span>
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -121,6 +133,7 @@ export function WorkspaceChangedNotice({
           <Button
             variant={currentWorkspace.confirming ? 'danger' : 'primary'}
             shape="pill"
+            className={CURRENT_WORKSPACE_BUTTON_CLASS}
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}
           >

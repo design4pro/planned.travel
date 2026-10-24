@@ -130,7 +130,8 @@ export function useTripRoom(
       minReconnectionDelay: 500,
       maxReconnectionDelay: 15_000,
       onOpen: () => {
-        setStatus('live')
+        // Not `live` yet: a stale tab's socket is accepted and closed at once (the door cannot
+        // refuse an upgrade a browser can read), so the first sign of a working room is `welcome`.
         socketRef.current?.send(
           JSON.stringify({
             t: 'hello',

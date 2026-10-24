@@ -231,7 +231,13 @@ describe('WorkspaceChangedNotice', () => {
       return field
     }
 
+    // Only the clock is faked: the confirmation ignores a press for a moment after it appears.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+    })
+
     afterEach(() => {
+      vi.useRealTimers()
       document.body.querySelectorAll('textarea').forEach((f) => f.remove())
     })
 
@@ -261,6 +267,7 @@ describe('WorkspaceChangedNotice', () => {
         screen.getByRole('button', { name: 'Open the current workspace' }),
       )
 
+      vi.setSystemTime(Date.now() + 600)
       fireEvent.click(
         screen.getByRole('button', {
           name: Modules['presence.workspaceChanged.confirm'],
@@ -268,6 +275,28 @@ describe('WorkspaceChangedNotice', () => {
       )
 
       expect(assign).toHaveBeenCalledWith('/dashboard')
+    })
+
+    it('puts focus on "Not now" and ignores a press that follows the first at once', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Not now' }),
+      )
+      const confirm = screen.getByRole('button', {
+        name: Modules['presence.workspaceChanged.confirm'],
+      })
+      fireEvent.click(confirm)
+      vi.setSystemTime(Date.now() + 200)
+      fireEvent.click(confirm)
+
+      expect(assign).not.toHaveBeenCalled()
     })
 
     it('"Not now" backs out of the question without reloading, and it asks afresh next time', async () => {

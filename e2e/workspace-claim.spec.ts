@@ -114,17 +114,22 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   expect(await tripTitles(other)).not.toContain(title)
 
   // The way out is a reload into whatever the session now says; B just switched back to FIRST. The
-  // trip name typed into A's creation dialog is unsent text, so the first press asks before it
-  // discards that and the tab stays where it is until the second press.
+  // trip name typed into A's creation dialog is unsent text, so the press asks before it discards
+  // that, and takes focus to the safe choice.
   await notice
     .getByRole('button', { name: 'Open the current workspace' })
     .click()
   await expect(
     notice.getByText('Text you have not sent in this tab will be lost.'),
   ).toBeVisible()
+  await expect(notice.getByRole('button', { name: 'Not now' })).toBeFocused()
   await expect(page).toHaveURL(/\/trips$/)
-  await notice.getByRole('button', { name: 'Open anyway' }).click()
-  await expect(page).toHaveURL(/\/dashboard$/)
+  // A deliberate press goes on once the question has settled; one made inside that moment is
+  // ignored, so the press is retried until the reload starts.
+  await expect(async () => {
+    await notice.getByRole('button', { name: 'Open anyway' }).click()
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 2_000 })
+  }).toPass({ timeout: 20_000 })
   // A full reload into the workspace B just switched back to.
   await expectActive(page, FIRST)
 })
@@ -198,7 +203,25 @@ test('a trip tab whose workspace changed says why live updates stopped and stops
   await page.waitForTimeout(5_000)
   expect(sockets.length, 'a stale tab must stop reconnecting').toBe(attempts)
 
-  // The way out is a reload into whatever the session now says: tab B switched to SECOND.
+  // The way out is a reload into whatever the session now says: tab B switched to SECOND. A
+  // half-written message in the conversation is unsent text, so the press only asks, with focus on
+  // Cancel, and Cancel keeps the tab (and the message) as it is, with focus back on the button.
+  const composer = page.getByPlaceholder('Say something to the group…')
+  await composer.fill('A half-written message')
+  await page.getByRole('button', { name: 'Open the current workspace' }).click()
+  await expect(
+    page.getByText('Text you have not sent in this tab will be lost.'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await expect(page).toHaveURL(/\/collab$/)
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(composer).toHaveValue('A half-written message')
+  await expect(
+    page.getByRole('button', { name: 'Open the current workspace' }),
+  ).toBeFocused()
+
+  // With nothing left to lose the way out goes straight through.
+  await composer.fill('')
   await page.getByRole('button', { name: 'Open the current workspace' }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
   await expectActive(page, SECOND)
