@@ -171,6 +171,10 @@ export function TransportsTimeline({
 
   const router = useRouter()
   const noticeRef = useRef<HTMLDivElement>(null)
+  // What is still on the page once a transport deleted elsewhere is gone from the list: the
+  // list's container, or the empty state's action when the list is empty.
+  const listFocusRef = useRef<HTMLElement | null>(null)
+  const closeFocusTarget = () => listFocusRef.current
   const currentTripId = useRef(tripId)
   currentTripId.current = tripId
   const [recovery, setRecovery] = useState<
@@ -340,7 +344,10 @@ export function TransportsTimeline({
       </Alert>
     ) : null
 
-  if (transports.length === 0) {
+  // A transport being edited that was the trip's last one, and was deleted elsewhere, leaves the
+  // list empty under an open dialog. The dialog stays where it is, with its gone state, until the
+  // reader closes it; the empty state below is a different tree and would unmount it.
+  if (transports.length === 0 && editing === null) {
     return (
       <>
         {archiveNotice}
@@ -354,6 +361,9 @@ export function TransportsTimeline({
           action={
             writable ? (
               <Button
+                ref={(node) => {
+                  listFocusRef.current = node
+                }}
                 variant="primary"
                 shape="pill"
                 onClick={() => onNewTransportOpenChange(true)}
@@ -379,7 +389,13 @@ export function TransportsTimeline({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div
+      ref={(node) => {
+        listFocusRef.current = node
+      }}
+      tabIndex={-1}
+      className="flex min-w-0 flex-col gap-5 focus-visible:outline-2 focus-visible:outline-ring"
+    >
       {archiveNotice}
       {summary.impossible === 0 ? null : (
         <Alert
@@ -430,7 +446,7 @@ export function TransportsTimeline({
         </FilterRow>
       )}
 
-      {visible.length === 0 ? (
+      {visible.length === 0 && transports.length > 0 ? (
         <EmptyState
           variant="filled"
           size="md"
@@ -506,6 +522,7 @@ export function TransportsTimeline({
             days={days}
             currency={currency}
             open={newTransportOpen || editing !== null}
+            closeFocusTarget={closeFocusTarget}
             onOpenChange={(next) => {
               if (!next) {
                 setEditing(null)

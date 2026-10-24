@@ -52,6 +52,7 @@ import {
   CHAIN_MIN_STATIONS,
   chainShapeIssue,
 } from '#/lib/transport-chain'
+import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
 import { TRANSPORT_SAVE_INTENTS } from '#/lib/transport-save-intent'
 import { arrivesBeforeDeparts } from '#/lib/transport-timing'
 import {
@@ -69,6 +70,8 @@ import {
   timeSchema,
   titleSchema,
 } from './validation'
+import type { TransportRefusalKey } from '#/lib/transport-refusals'
+import type { TransportSaveIntent } from '#/lib/transport-save-intent'
 import type { Transport, TransportLeg } from '#/server/db/types'
 import type { LegClocks, LegZones } from '#/lib/transport-timing'
 import type { BatchStatement } from './batch'
@@ -752,6 +755,42 @@ function planChain(
  * ---------------------------------------------------------------------------------------------- */
 
 /**
+ * Thrown when a save names a Transport this workspace no longer has: an `edit` of a row that was
+ * deleted in another tab, or a re-search of one.
+ *
+ * The `message` is a catalogue key from `TRANSPORT_REFUSAL_KEYS`, never a sentence, and the class is
+ * deliberately **not** in `AUTHORED_ERROR_NAMES` (`src/server/errors/public.ts`): that list is
+ * closed by `docs/SPEC.md` §9 rule 10 because each of its entries reaches the reader in English.
+ * A key is resolved by the dialog in the reader's own locale instead, and `classifyFailure` lets it
+ * through by exact match on the key, not on this class - so a row of another workspace, which the
+ * scope cannot tell from a deleted one, and a row of another trip, which the lookup would
+ * otherwise tell from one, get the same answer and confirm nothing.
+ *
+ * It is thrown only where "the row is gone" is the whole story, and only for an `edit`. A trip that
+ * is not there, a `create` of the id of a row on another trip and a clash with the id of another
+ * workspace's row stay {@link NotFoundError} diagnostics.
+ */
+export class TransportRefusalError extends RepositoryError {
+  constructor(key: TransportRefusalKey = TRANSPORT_REFUSAL_KEYS[0]) {
+    super(key, 'TRANSPORT_REFUSED')
+  }
+}
+
+/**
+ * What a save answers for a row that is no longer there after it was read: the gone refusal for an
+ * `edit`, which is the traveller's own transport vanishing under them, and the plain diagnostic for
+ * a `create`, whose id the caller invented and whose row nobody else could have known to delete.
+ */
+function goneError(
+  intent: TransportSaveIntent,
+  transportId: string,
+): RepositoryError {
+  return intent === 'edit'
+    ? new TransportRefusalError()
+    : new NotFoundError('transport', transportId)
+}
+
+/**
  * Whether the row is no longer there, asked after a failed save.
  *
  * A read that fails too answers "not known", so the caller rethrows the failure that mattered
@@ -788,7 +827,8 @@ async function isGone(
  *
  * `intent` says what the caller means, and it only chooses between two outcomes that are both
  * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
- * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
+ * (deleted in another tab, or never the caller's) with a {@link TransportRefusalError} instead of
+ * writing it back, and `create` of an id
  * the caller already wrote stays an edit, which is what makes a double press safe. Whether the row
  * exists is still decided here, inside the caller's scope, and never from the caller's say-so.
  */
@@ -850,12 +890,16 @@ function requireNewTitle(title: string | undefined): string {
  * **Every refusal comes before the batch.** The trip, the role, the existence of the record an
  * `edit` names and its agreement with that trip, both orderings and every day reference are
  * checked first, so a refused save has written nothing; the batch then covers what only the
- * database can refuse. The existence check comes ahead of every ordering rule, so a row of another
- * workspace is a `NotFoundError` and never a timing refusal that would confirm it exists.
+ * database can refuse. The existence check comes ahead of every ordering rule, so an `edit` of a
+ * row of another workspace gets the answer an absent id gets, a {@link TransportRefusalError}, and
+ * never a timing refusal that would confirm it exists.
  *
- * **An `edit` never inserts.** A row that is not there is a `NotFoundError`, and a row deleted
- * between the read and the batch is one too: the update then matches nothing, and a chain that
- * could not be attached to the vanished parent is answered the same way.
+ * **An `edit` never inserts.** A row that is not there is a {@link TransportRefusalError}, and a row
+ * deleted between the read and the batch is one too: the update then matches nothing, and a chain
+ * that could not be attached to the vanished parent is answered the same way. So is the id of a row
+ * that belongs to another trip, since the lookup is by workspace and any other answer would tell a
+ * member who cannot read that trip that the row exists. A `create` of such an id stays a
+ * `NotFoundError`.
  */
 export async function saveTransport(
   scope: TenantScope,
@@ -866,10 +910,14 @@ export async function saveTransport(
   await requireTrip(scope, tripId)
 
   const existing = await transportsRepository.findById(scope, transportId)
-  if (
-    (existing === null && intent === 'edit') ||
-    (existing !== null && existing.tripId !== tripId)
-  ) {
+  const elsewhere = existing !== null && existing.tripId !== tripId
+  // An edit of a row that is not on this trip is answered as one that is not there at all: the
+  // lookup is by workspace, so a different answer would tell a member who cannot read the trip a
+  // row sits on that the row exists.
+  if (intent === 'edit' && (existing === null || elsewhere)) {
+    throw new TransportRefusalError()
+  }
+  if (elsewhere) {
     throw new NotFoundError('transport', transportId)
   }
   // Only a row the scope has not seen is inserted, so only then is the id the caller's invention.
@@ -946,15 +994,18 @@ export async function saveTransport(
     // An update of a row deleted since the read matches nothing, and the legs that were to hang off
     // it then fail on their foreign key. That is the same "not there" the read would have said.
     if (existing !== null && (await isGone(scope, transportId))) {
-      throw new NotFoundError('transport', transportId)
+      throw goneError(intent, transportId)
     }
     throw cause
   }
 
-  return {
-    transport: await transportsRepository.requireById(scope, transportId),
-    legs: await listTransportLegs(scope, transportId),
+  // An update of a row deleted since the read can match nothing without any statement failing, so
+  // the row read back is where that shows.
+  const saved = await transportsRepository.findById(scope, transportId)
+  if (saved === null) {
+    throw goneError(intent, transportId)
   }
+  return { transport: saved, legs: await listTransportLegs(scope, transportId) }
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -1123,10 +1174,11 @@ async function carryAnchors(
  * **The transport is resolved before the writer is asked.** Two ids arrive from the browser and a
  * well-formed one is not an authorised one, and the writer would take an id it cannot find as the
  * identity of a new row. Resolving it here inside the caller's scope is what makes a transport of
- * another workspace a `NotFoundError` rather than a journey created under a client-chosen id; the
- * agreement of the transport with the trip is checked here too, and again by the writer, because
- * within one workspace a transport of *another* trip would otherwise be re-routed by a caller who
- * named a trip they can see and a transport they can also see.
+ * another workspace a {@link TransportRefusalError}, the answer an absent id gets, rather than a
+ * journey created under a client-chosen id; the agreement of the transport with the trip is checked
+ * here too, and again by the writer, because within one workspace a transport of *another* trip
+ * would otherwise be re-routed by a caller who named a trip they can see and a transport they can
+ * also see.
  *
  * **No day reference is invented, and none is lost.** A timetable knows dates and clocks; it does
  * not know which day of the trip they are. The legs carry the wall clocks the provider stated and
@@ -1142,13 +1194,19 @@ export async function saveSearchedConnection(
 ): Promise<SavedConnection> {
   const values = searchedConnectionInput.parse(input)
 
+  // The trip first, as the writer does: a trip the caller cannot see is a diagnostic, and only a
+  // journey missing from a trip they can see is the gone refusal.
+  await requireTrip(scope, values.tripId)
   const requested = values.transportId ?? null
   const existing =
     requested === null
       ? null
-      : await transportsRepository.requireById(scope, requested)
-  if (existing !== null && existing.tripId !== values.tripId) {
-    throw new NotFoundError('transport', existing.id)
+      : await transportsRepository.findById(scope, requested)
+  if (
+    requested !== null &&
+    (existing === null || existing.tripId !== values.tripId)
+  ) {
+    throw new TransportRefusalError()
   }
 
   return saveTransport(scope, {

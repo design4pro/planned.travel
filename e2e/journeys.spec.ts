@@ -2717,7 +2717,7 @@ test.describe('switching workspace', () => {
       ),
       'every child of the open menu is an item, a group, a separator or hidden',
     ).toEqual([])
-    await expect(menu).toHaveAccessibleName('Account menu')
+    await expect(menu).toHaveAccessibleName(/account menu$/i)
     await expect(menu).toHaveAccessibleDescription(
       // The name, then the email.
       new RegExp(`\\S\\s+${DEMO_EMAIL.replaceAll('.', '\\.')}$`),

@@ -103,7 +103,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
             transitionBase,
             'hover:border-edge hover:bg-surface-2 active:bg-surface-inset sm:pe-2.5',
           )}
-          aria-label={t('shell.account.menu')}
+          aria-label={t('shell.account.menu', { name: user.name })}
         >
           <Avatar name={user.name} src={user.image} />
           <span className="hidden min-w-0 truncate sm:block">{user.name}</span>
