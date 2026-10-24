@@ -885,9 +885,8 @@ describe('a long list', () => {
   it('scrolls inside its own bounded container and bounds the account menu to the viewport', async () => {
     await mount(sessionOf(TEN))
 
-    const scroller = screen.getByRole('group', {
-      name: 'Workspace',
-    }).parentElement
+    // The group is the scroller itself: a wrapper around it would be a bare child of the menu.
+    const scroller = screen.getByRole('group', { name: 'Workspace' })
     expect(scroller?.classList.contains('max-h-64')).toBe(true)
     expect(scroller?.classList.contains('overflow-y-auto')).toBe(true)
     expect(screen.getAllByRole('menuitemradio')).toHaveLength(10)
@@ -1276,6 +1275,127 @@ describe('creating a workspace', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('')
+  })
+})
+
+describe('the account menu header', () => {
+  // What ARIA 1.2 lets a `menu` own: groups, the three kinds of item and separators.
+  const MENU_CHILD_ROLES = [
+    'group',
+    'menuitem',
+    'menuitemcheckbox',
+    'menuitemradio',
+    'separator',
+  ]
+
+  function withPhoto(image: string | null): ShellSession {
+    const session = sessionOf([ALPHA, BETA])
+    return { ...session, user: { ...session.user, image } }
+  }
+
+  it.each([
+    ['without a photo', null],
+    ['with a photo', 'https://example.test/kasia.jpg'],
+  ])(
+    'leaves no direct child of the open menu outside ARIA 1.2, %s',
+    async (_, image) => {
+      await mount(withPhoto(image))
+
+      const strays = Array.from(screen.getByRole('menu').children).filter(
+        (child) =>
+          child.getAttribute('aria-hidden') !== 'true' &&
+          !MENU_CHILD_ROLES.includes(child.getAttribute('role') ?? ''),
+      )
+
+      expect(strays.map((child) => child.outerHTML.slice(0, 80))).toEqual([])
+    },
+  )
+
+  it('hides the loaded photo with the rest of the header', async () => {
+    // Radix mounts the `<img>` only once the browser reports the image loaded; jsdom never does.
+    vi.stubGlobal(
+      'Image',
+      class extends EventTarget {
+        complete = false
+        naturalWidth = 0
+        set src(_: string) {
+          queueMicrotask(() => {
+            this.complete = true
+            this.naturalWidth = 1
+            this.dispatchEvent(new Event('load'))
+          })
+        }
+      },
+    )
+    try {
+      await mount(withPhoto('https://example.test/kasia.jpg'))
+
+      const photo = await within(screen.getByRole('menu')).findByRole('img', {
+        name: 'Kasia Nowak',
+        hidden: true,
+      })
+
+      expect(photo.closest('[aria-hidden="true"]')).not.toBeNull()
+      expect(
+        within(screen.getByRole('menu')).queryByRole('img', {
+          name: 'Kasia Nowak',
+        }),
+      ).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it.each([
+    ['without a photo', null],
+    ['with a photo', 'https://example.test/kasia.jpg'],
+  ])('describes the menu by the name and the email, %s', async (_, image) => {
+    await mount(withPhoto(image))
+
+    const menu = screen.getByRole('menu')
+    const identity = menu.getAttribute('aria-describedby') ?? ''
+    const element = document.getElementById(identity)
+
+    expect(element?.textContent).toContain('Kasia Nowak')
+    expect(element?.textContent).toContain('kasia@example.com')
+    // The description is the text people see, not a hidden copy of it.
+    expect(element?.closest('.sr-only')).toBeNull()
+    expect(element?.closest('[hidden]')).toBeNull()
+    // The menu keeps the name Radix gives it from the trigger.
+    expect(menu.getAttribute('aria-label')).toBeNull()
+    expect(
+      screen.getByRole('menu', { name: 'Kasia Nowak, account menu' }),
+    ).toBe(menu)
+  })
+
+  it('keeps the keyboard behaviour: Enter lands on the first item, arrows walk the items, Escape returns to the trigger', async () => {
+    const user = userEvent.setup()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <UserMenu session={sessionOf([ALPHA, BETA])} />
+      </I18nProvider>,
+    )
+    const trigger = screen.getByRole('button', { name: /account menu/i })
+
+    await user.tab()
+    expect(document.activeElement).toBe(trigger)
+    await user.keyboard('{Enter}')
+    expect(document.activeElement).toBe(
+      screen.getByRole('menuitemradio', { name: 'Alpha Travel' }),
+    )
+
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(
+      screen.getByRole('menuitemradio', { name: 'Beta Family' }),
+    )
+    await user.keyboard('{ArrowDown}')
+    expect(document.activeElement).toBe(
+      screen.getByRole('menuitem', { name: 'Create workspace' }),
+    )
+
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('menu')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
   })
 })
 

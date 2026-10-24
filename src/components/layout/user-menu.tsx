@@ -70,6 +70,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
 
   const switchingWorkspace = pendingId !== null
   const switchStatusId = useId()
+  const identityId = useId()
 
   async function signOut(): Promise<void> {
     setSigningOut(true)
@@ -113,10 +114,18 @@ export function UserMenu({ session }: { session: ShellSession }) {
           />
         </MenuTrigger>
 
-        <MenuContent className="max-h-[var(--radix-dropdown-menu-content-available-height)] max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-64 overflow-y-auto">
-          <div className="flex items-center gap-3 px-2.5 py-2.5">
+        <MenuContent
+          // ARIA 1.2 lets a menu own only groups, items and separators, so the header below is
+          // hidden from assistive technology and the menu is described by the text it holds.
+          aria-describedby={identityId}
+          className="max-h-[var(--radix-dropdown-menu-content-available-height)] max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-64 overflow-y-auto"
+        >
+          <div
+            aria-hidden="true"
+            className="flex items-center gap-3 px-2.5 py-2.5"
+          >
             <Avatar name={user.name} src={user.image} size="lg" />
-            <div className="min-w-0">
+            <div id={identityId} className="min-w-0">
               <p className="truncate text-label font-semibold text-ink">
                 {user.name}
               </p>

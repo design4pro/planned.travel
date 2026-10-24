@@ -188,48 +188,51 @@ export function WorkspaceSwitcher({
 
   return (
     <>
-      <MenuLabel id={labelId}>{t('shell.workspace.label')}</MenuLabel>
-      <div className="max-h-64 overflow-y-auto overscroll-contain">
-        <MenuRadioGroup
-          aria-labelledby={labelId}
-          aria-busy={pendingId !== null}
-          value={activeId ?? ''}
-          onValueChange={onSwitch}
-        >
-          {organizations.map((organization) => (
-            <MenuRadioItem
-              key={organization.id}
-              value={organization.id}
-              className="min-h-11"
-              disabled={pendingId !== null && pendingId !== organization.id}
-              aria-describedby={
-                pendingId === organization.id ? statusId : undefined
-              }
-              onSelect={(event) => {
-                // Choosing the active workspace changes nothing, so the menu may close as usual.
-                if (organization.id !== activeId) event.preventDefault()
-              }}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block break-words">
-                  <bdi>{organization.name}</bdi>
-                </span>
-                {(nameCounts.get(foldWorkspaceName(organization.name)) ?? 0) >
-                1 ? (
-                  <span className="block text-micro text-ink-3 [overflow-wrap:anywhere]">
-                    <span dir="ltr">{organization.slug}</span>
-                  </span>
-                ) : null}
+      {/* A menu may not own a bare label, so it is hidden; the group is still named by it, because
+          `aria-labelledby` reaches a hidden element. */}
+      <MenuLabel id={labelId} aria-hidden="true">
+        {t('shell.workspace.label')}
+      </MenuLabel>
+      <MenuRadioGroup
+        aria-labelledby={labelId}
+        aria-busy={pendingId !== null}
+        value={activeId ?? ''}
+        onValueChange={onSwitch}
+        className="max-h-64 overflow-y-auto overscroll-contain"
+      >
+        {organizations.map((organization) => (
+          <MenuRadioItem
+            key={organization.id}
+            value={organization.id}
+            className="min-h-11"
+            disabled={pendingId !== null && pendingId !== organization.id}
+            aria-describedby={
+              pendingId === organization.id ? statusId : undefined
+            }
+            onSelect={(event) => {
+              // Choosing the active workspace changes nothing, so the menu may close as usual.
+              if (organization.id !== activeId) event.preventDefault()
+            }}
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block break-words">
+                <bdi>{organization.name}</bdi>
               </span>
-              {pendingId === organization.id ? (
-                <span className="absolute end-2.5 flex items-center">
-                  <Spinner size="sm" label={null} />
+              {(nameCounts.get(foldWorkspaceName(organization.name)) ?? 0) >
+              1 ? (
+                <span className="block text-micro text-ink-3 [overflow-wrap:anywhere]">
+                  <span dir="ltr">{organization.slug}</span>
                 </span>
               ) : null}
-            </MenuRadioItem>
-          ))}
-        </MenuRadioGroup>
-      </div>
+            </span>
+            {pendingId === organization.id ? (
+              <span className="absolute end-2.5 flex items-center">
+                <Spinner size="sm" label={null} />
+              </span>
+            ) : null}
+          </MenuRadioItem>
+        ))}
+      </MenuRadioGroup>
       {/* Visible and enabled for every role and plan: a refusal is explained in the dialog. */}
       <MenuItem disabled={pendingId !== null} onSelect={onCreate}>
         <Plus aria-hidden className="size-4 text-ink-4" />
