@@ -61,7 +61,7 @@ const messages = {
   'trip.tab.collab': 'التعاون',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'قائمة الحساب',
+  'account.menu': '{name}، قائمة الحساب',
   'account.settings': 'الإعدادات',
   'account.billing': 'الخطة والفواتير',
   'account.admin': 'الإدارة',

@@ -102,7 +102,8 @@ const messages = {
   'trip.tab.collab': 'Collab',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Account menu',
+  /** Starts with the visible name, so it stays contained in the accessible name (WCAG 2.5.3). */
+  'account.menu': '{name}, account menu',
   'account.settings': 'Settings',
   'account.billing': 'Plan and billing',
   'account.admin': 'Admin',

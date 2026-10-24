@@ -131,7 +131,7 @@ async function mount(session: ShellSession) {
     </I18nProvider>,
   )
   const open = () =>
-    user.click(screen.getByRole('button', { name: 'Account menu' }))
+    user.click(screen.getByRole('button', { name: /account menu/i }))
   await open()
   return { user, open }
 }
@@ -309,7 +309,7 @@ describe('switching', () => {
       expect(screen.queryByRole('menu', { hidden: true })).toBeNull()
       expect(
         screen
-          .getByRole('button', { name: 'Account menu' })
+          .getByRole('button', { name: /account menu/i })
           .closest('[aria-hidden="true"]'),
       ).toBeNull()
       calls.push('menu closed', 'toast')
@@ -1035,7 +1035,7 @@ describe('creating a workspace', () => {
       expect(screen.queryByRole('dialog')).toBeNull()
     })
     expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Account menu' }),
+      screen.getByRole('button', { name: /account menu/i }),
     )
   })
 
@@ -1264,7 +1264,7 @@ describe('creating a workspace', () => {
       expect(screen.queryByRole('dialog')).toBeNull()
     })
 
-    await user.click(screen.getByRole('button', { name: 'Account menu' }))
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
     await user.click(screen.getByRole('menuitem', { name: 'Create workspace' }))
 
     await screen.findByRole('dialog', { name: 'Create a workspace' })
@@ -1276,5 +1276,35 @@ describe('creating a workspace', () => {
         }) as HTMLInputElement
       ).value,
     ).toBe('')
+  })
+})
+
+describe('the account menu trigger', () => {
+  function renderTrigger() {
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <UserMenu session={sessionOf([ALPHA])} />
+      </I18nProvider>,
+    )
+  }
+
+  it('starts its accessible name with the visible user name (WCAG 2.5.3) and still says what it opens', () => {
+    renderTrigger()
+
+    const trigger = screen.getByRole('button', {
+      name: 'Kasia Nowak, account menu',
+    })
+    expect(trigger.textContent).toContain('Kasia Nowak')
+  })
+
+  it('names the open menu after the trigger without reducing it to the user name', async () => {
+    const user = userEvent.setup()
+    renderTrigger()
+
+    await user.click(screen.getByRole('button', { name: /account menu/i }))
+
+    expect(
+      screen.getByRole('menu', { name: 'Kasia Nowak, account menu' }),
+    ).not.toBeNull()
   })
 })

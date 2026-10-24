@@ -56,7 +56,7 @@ const messages = {
   'trip.tab.collab': 'Overleg',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Accountmenu',
+  'account.menu': '{name}, accountmenu',
   'account.settings': 'Instellingen',
   'account.billing': 'Abonnement en facturen',
   'account.admin': 'Beheer',

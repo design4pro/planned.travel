@@ -58,7 +58,7 @@ const messages = {
   'trip.tab.collab': 'Ekip',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Hesap menüsü',
+  'account.menu': '{name}, hesap menüsü',
   'account.settings': 'Ayarlar',
   'account.billing': 'Paket ve ödeme',
   'account.admin': 'Yönetim',

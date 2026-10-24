@@ -40,7 +40,7 @@ const messages = {
   'trip.tab.costs': '花費',
   'trip.tab.files': '檔案',
   'trip.tab.collab': '協作',
-  'account.menu': '帳號選單',
+  'account.menu': '{name}，帳號選單',
   'account.settings': '設定',
   'account.billing': '方案與帳務',
   'account.admin': '管理',

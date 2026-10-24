@@ -60,7 +60,7 @@ const messages = {
   'trip.tab.collab': 'Spolupráce',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Nabídka účtu',
+  'account.menu': '{name}, nabídka účtu',
   'account.settings': 'Nastavení',
   'account.billing': 'Tarif a platby',
   'account.admin': 'Správa',

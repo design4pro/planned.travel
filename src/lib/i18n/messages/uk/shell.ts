@@ -57,7 +57,7 @@ const messages = {
   'trip.tab.collab': 'Обговорення',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Меню акаунта',
+  'account.menu': '{name}, меню акаунта',
   'account.settings': 'Налаштування',
   'account.billing': 'Тариф і оплата',
   'account.admin': 'Адміністрування',
