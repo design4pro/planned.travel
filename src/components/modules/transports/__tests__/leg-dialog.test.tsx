@@ -325,6 +325,39 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     expect(onWriteError).not.toHaveBeenCalled()
   })
 
+  it('hands focus to Close once Save is turned off, whichever way the save was started', async () => {
+    await refusedSave()
+
+    // The footer button, not the corner icon: it is the one that reads "Close" as text.
+    const footerClose = screen
+      .getAllByRole('button', { name: 'Close' })
+      .find((button) => button.textContent === 'Close')
+    expect(footerClose).toBeDefined()
+    expect(document.activeElement).toBe(footerClose)
+  })
+
+  it('ignores a refusal that settles after the dialog was closed and opened again', async () => {
+    const onOpenChange = vi.fn()
+    let refuse: (cause: unknown) => void = () => {}
+    save.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        refuse = reject
+      }),
+    )
+    const view = render(dialog(true, onOpenChange))
+    submitTheForm()
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+
+    view.rerender(dialog(false, onOpenChange))
+    view.rerender(dialog(true, onOpenChange))
+    refuse(goneRefusal())
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+
+    expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+    expect(saveButton().getAttribute('disabled')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  })
+
   it('starts clean when it is opened again', async () => {
     const onOpenChange = vi.fn()
     const view = await refusedSave(onOpenChange)

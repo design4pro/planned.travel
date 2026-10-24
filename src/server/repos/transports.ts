@@ -868,7 +868,8 @@ async function isGone(
  *
  * `intent` says what the caller means, and it only chooses between two outcomes that are both
  * inside the caller's own scope, so it widens no access: `edit` refuses a row that is not there
- * (deleted in another tab, or never the caller's) instead of writing it back, and `create` of an id
+ * (deleted in another tab, or never the caller's) with a {@link TransportRefusalError} instead of
+ * writing it back, and `create` of an id
  * the caller already wrote stays an edit, which is what makes a double press safe. Whether the row
  * exists is still decided here, inside the caller's scope, and never from the caller's say-so.
  */
@@ -922,8 +923,9 @@ export interface SavedTransport {
  * **Every refusal comes before the batch.** The trip, the role, the existence of the record an
  * `edit` names and its agreement with that trip, both orderings and every day reference are
  * checked first, so a refused save has written nothing; the batch then covers what only the
- * database can refuse. The existence check comes ahead of every ordering rule, so a row of another
- * workspace is a `NotFoundError` and never a timing refusal that would confirm it exists.
+ * database can refuse. The existence check comes ahead of every ordering rule, so an `edit` of a
+ * row of another workspace gets the answer an absent id gets, a {@link TransportRefusalError}, and
+ * never a timing refusal that would confirm it exists.
  *
  * **An `edit` never inserts.** A row that is not there is a {@link TransportRefusalError}, and a row
  * deleted between the read and the batch is one too: the update then matches nothing, and a chain

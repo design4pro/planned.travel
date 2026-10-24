@@ -37,7 +37,7 @@
  * the draft stays editable, Save is off because it could only be refused again, and Close ends the
  * dialog. The loaders are re-run so the list behind it drops the transport.
  */
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { ArrowRight, Plus } from 'lucide-react'
 
@@ -188,11 +188,6 @@ export function TransportDialog({
   const [chain, setChain] = useState<ChainDraft>(() => chainFor(transport))
   const [touched, setTouched] = useState(false)
   const [fillMode, setFillMode] = useState<DialogMode>('form')
-  /**
-   * Set once a save was refused because the transport is gone. It outlives the tab switch, since
-   * the form and the connection search both read it, and it ends with the dialog.
-   */
-  const [gone, setGone] = useState(false)
   const router = useRouter()
   const goneSentence = useGoneSentence()
   /**
@@ -204,6 +199,15 @@ export function TransportDialog({
    */
   const [draftId, setDraftId] = useState(mintId)
   const transportId = transport?.id ?? draftId
+  /**
+   * The open a save was refused in, when it was refused because the transport is gone. It is keyed
+   * by `draftId`, which is minted afresh on every open, so a refusal that settles after the reader
+   * closed this dialog and opened another one belongs to a state that no longer exists and shows
+   * nothing. It outlives the tab switch, since the form and the connection search both read it.
+   */
+  const [goneIn, setGoneIn] = useState<string | null>(null)
+  const gone = goneIn === draftId
+  const closeRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) {
@@ -217,7 +221,7 @@ export function TransportDialog({
     setChain(chainFor(transport))
     setTouched(false)
     setFillMode('form')
-    setGone(false)
+    setGoneIn(null)
     setDraftId(mintId())
   }, [open, transport, currency])
 
@@ -243,9 +247,19 @@ export function TransportDialog({
       onWriteError?.(cause)
       return
     }
-    setGone(true)
+    // `onError` is the one this render handed to `useAction`, so `draftId` is the open the press
+    // happened in, not the open the answer arrives in.
+    setGoneIn(draftId)
     void router.invalidate()
   }
+
+  // The control the reader pressed (Save, or a result row's button) has just become disabled, and
+  // a disabled button cannot keep focus: hand it to Close, the one action left, rather than to body.
+  useEffect(() => {
+    if (gone) {
+      closeRef.current?.focus()
+    }
+  }, [gone])
 
   const save = useAction(
     saveTransportFn,
@@ -863,6 +877,7 @@ export function TransportDialog({
 
         <DialogFooter>
           <Button
+            ref={closeRef}
             type="button"
             variant="ghost"
             shape="pill"
