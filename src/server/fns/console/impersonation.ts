@@ -85,6 +85,12 @@ export interface ImpersonationStarted {
 
 const impersonationResultSchema = z.object({
   session: z.object({
+    // The workspace `session.create.before` landed the new session in. Absent or empty reads as
+    // none, so a body that omits it still parses and the row says `null` rather than failing.
+    activeOrganizationId: z
+      .string()
+      .nullish()
+      .transform((value) => (value ? value : null)),
     expiresAt: z
       .union([z.date(), z.string(), z.number()])
       .transform((value) => new Date(value))
@@ -98,6 +104,11 @@ const impersonationResultSchema = z.object({
 
 /**
  * Starts impersonating an account. `platform.user.impersonation_started`.
+ *
+ * `changes.after.organizationId` is the workspace the new session was landed in, an id and never a
+ * name, `null` when it has none (docs/ACCESS.md §6.4). Later switches are
+ * `platform.user.impersonation_workspace_changed`; the per-request fallback of `requireOrg` is not
+ * recorded at all.
  *
  * The audit row is appended after the cookies are on the response, which is docs/ACCESS.md §4.3's
  * ordering applied to an action whose "row change" is a cookie: the swap has happened by then, so
@@ -172,6 +183,7 @@ export const startImpersonationFn = createServerFn({ method: 'POST' })
           after: {
             impersonating: parsed.user.id,
             targetRole: resolvePlatformRole(parsed.user.role ?? null),
+            organizationId: parsed.session.activeOrganizationId,
             expiresAt: expiresAt.toISOString(),
           },
         },
