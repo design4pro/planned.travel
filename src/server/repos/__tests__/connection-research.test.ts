@@ -336,7 +336,7 @@ describe('a saved connection that is searched again', () => {
       title: 'Osaka to Tokyo',
       ...recordDays,
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations,
       legs: stations.slice(1).map(() => ({})),
     })
@@ -415,7 +415,7 @@ describe('a saved connection that is searched again', () => {
 
   it('takes the first departure and the last arrival the old legs name when only inner legs were anchored', async () => {
     const transportId = await saveUnanchored(3)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, KYOTO, TOKYO],
       legs: [
         {},
@@ -437,7 +437,7 @@ describe('a saved connection that is searched again', () => {
 
   it('never costs a leg its own arrival day for a departure borrowed from another leg', async () => {
     const transportId = await saveUnanchored(2)
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{ arrivalDayId: days[1].id }, { departureDayId: days[2].id }],
     })
@@ -457,7 +457,7 @@ describe('a saved connection that is searched again', () => {
       dayId: days[0].id,
       arrivalDayId: days[4].id,
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, NAGOYA, TOKYO],
       legs: [{}, { departureDayId: days[2].id, arrivalDayId: days[3].id }],
     })
@@ -490,7 +490,7 @@ describe('a saved connection that is searched again', () => {
       title: 'Osaka to Tokyo',
       arrivalDayId: days[1].id,
     })
-    await replaceTransportChain(tenant.scope, transportId, {
+    await replaceChain(tenant.scope, tripId, transportId, {
       stations: [OSAKA, TOKYO],
       legs: [{ departureDayId: days[3].id }],
     })
