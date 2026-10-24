@@ -81,6 +81,7 @@ const messages = {
   'workspace.createDescription':
     'Un espacio aparte con sus propios viajes, lugares y personas. Empieza en el plan Gratis y no comparte el plan del espacio en el que estás.',
   'workspace.createName': 'Nombre del espacio',
+  'workspace.createNameRequired': 'Escribe un nombre para el espacio.',
   'workspace.createUpgrade':
     '«{workspace}» está en el plan Gratis y solo un espacio con un plan de pago puede crear otro. Si alguno de tus otros espacios tiene un plan de pago, cambia a él y crea desde allí. Si no, mejora el plan de «{workspace}».',
   'workspace.createLimitReached':

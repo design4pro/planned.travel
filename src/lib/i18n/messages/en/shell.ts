@@ -126,6 +126,7 @@ const messages = {
   'workspace.createDescription':
     'A separate space for its own trips, places and people. It starts on the Free plan and does not share the plan of the workspace you are in.',
   'workspace.createName': 'Workspace name',
+  'workspace.createNameRequired': 'Enter a workspace name.',
   'workspace.createUpgrade':
     '“{workspace}” is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade “{workspace}”.',
   'workspace.createLimitReached':

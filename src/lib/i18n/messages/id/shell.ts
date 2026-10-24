@@ -92,6 +92,7 @@ const messages = {
   'workspace.createDescription':
     'Ruang terpisah untuk perjalanan, tempat, dan orangnya sendiri. Dimulai dengan paket Gratis dan tidak berbagi paket dengan ruang kerja tempat Anda berada.',
   'workspace.createName': 'Nama ruang kerja',
+  'workspace.createNameRequired': 'Masukkan nama ruang kerja.',
   'workspace.createUpgrade':
     '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',
   'workspace.createLimitReached':

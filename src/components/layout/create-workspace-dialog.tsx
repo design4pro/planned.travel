@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -23,6 +23,7 @@ import {
   endWorkspaceSwitch,
   reopenNoticeFor,
 } from '#/lib/workspace-claim-store'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createWorkspaceFn } from '#/server/fns/workspace'
 import { useWorkspaceResync } from './workspace-switcher'
 
@@ -81,15 +82,16 @@ export function CreateWorkspaceDialog({
   const [name, setName] = useState('')
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
+  const [nameMissing, setNameMissing] = useState(false)
+  const nameRef = useRef<HTMLInputElement>(null)
 
   // Re-seeded on open, so the dialog never shows the last name typed or the last refusal.
   useEffect(() => {
     if (!open) return
     setName('')
     setNotice(null)
+    setNameMissing(false)
   }, [open])
-
-  const canSubmit = name.trim().length > 0 && !pending
 
   // Creating a workspace activates it on the session, so this tab changes workspace itself: the
   // re-read after it must not be refused for the claim it has not re-read yet (as in the switcher).
@@ -177,9 +179,18 @@ export function CreateWorkspaceDialog({
           <form
             id={formId}
             className="flex flex-col gap-4"
+            // The catalogue error below replaces the browser's validation bubble, which is in the
+            // browser's language; `required` stays on the input, for the state it gives assistive technology.
+            noValidate
             onSubmit={(event) => {
               event.preventDefault()
-              if (canSubmit) void create()
+              if (pending) return
+              if (!hasVisibleCharacter(name)) {
+                setNameMissing(true)
+                nameRef.current?.focus()
+                return
+              }
+              void create()
             }}
           >
             {notice === null ? null : (
@@ -190,10 +201,20 @@ export function CreateWorkspaceDialog({
               />
             )}
 
-            <Field label={t('shell.workspace.createName')} required>
+            <Field
+              label={t('shell.workspace.createName')}
+              required
+              error={
+                nameMissing ? t('shell.workspace.createNameRequired') : null
+              }
+            >
               <Input
+                ref={nameRef}
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value)
+                  setNameMissing(false)
+                }}
                 maxLength={NAME_MAX_LENGTH}
                 autoComplete="off"
                 required
@@ -208,7 +229,6 @@ export function CreateWorkspaceDialog({
             form={formId}
             variant="primary"
             shape="pill"
-            disabled={!canSubmit}
             loading={pending}
           >
             {t('shell.workspace.create')}

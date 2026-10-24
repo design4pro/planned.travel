@@ -77,6 +77,7 @@ const messages = {
   'workspace.createDescription':
     'En separat yta med egna resor, platser och personer. Den startar i planen Gratis och delar inte plan med arbetsytan du är i.',
   'workspace.createName': 'Arbetsytans namn',
+  'workspace.createNameRequired': 'Ange ett namn på arbetsytan.',
   'workspace.createUpgrade':
     '”{workspace}” är på planen Gratis, och bara en arbetsyta med en betald plan kan skapa en till. Har någon av dina andra arbetsytor en betald plan, byt till den och skapa därifrån. Annars uppgraderar du ”{workspace}”.',
   'workspace.createLimitReached':

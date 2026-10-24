@@ -81,6 +81,7 @@ const messages = {
   'workspace.createDescription':
     'Kendi gezileri, yerleri ve kişileri olan ayrı bir alan. Ücretsiz planla başlar ve içinde bulunduğunuz çalışma alanının planını paylaşmaz.',
   'workspace.createName': 'Çalışma alanı adı',
+  'workspace.createNameRequired': 'Çalışma alanı için bir ad girin.',
   'workspace.createUpgrade':
     '“{workspace}” Ücretsiz planda; yeni bir çalışma alanını yalnızca ücretli planı olan bir çalışma alanı oluşturabilir. Diğer çalışma alanlarınızdan birinin ücretli planı varsa ona geçin ve oradan oluşturun. Aksi halde “{workspace}” alanını ücretli plana yükseltin.',
   'workspace.createLimitReached':

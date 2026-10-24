@@ -78,6 +78,7 @@ const messages = {
   'workspace.createDescription':
     'Un espace distinct avec ses propres voyages, lieux et personnes. Il démarre avec l’offre Gratuite et ne partage pas l’offre de l’espace où vous êtes.',
   'workspace.createName': 'Nom de l’espace',
+  'workspace.createNameRequired': 'Saisissez un nom pour l’espace.',
   'workspace.createUpgrade':
     '« {workspace} » est dans l’offre Gratuite, et seul un espace avec une offre payante peut en créer un autre. Si l’un de vos autres espaces a une offre payante, passez-y et créez depuis celui-ci. Sinon, faites passer « {workspace} » à une offre payante.',
   'workspace.createLimitReached':

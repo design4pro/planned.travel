@@ -81,6 +81,7 @@ const messages = {
   'workspace.createDescription':
     'Een aparte ruimte met eigen reizen, plekken en mensen. Begint met het abonnement Gratis en deelt het abonnement van de werkruimte waarin je zit niet.',
   'workspace.createName': 'Naam van de werkruimte',
+  'workspace.createNameRequired': 'Geef de werkruimte een naam.',
   'workspace.createUpgrade':
     '“{workspace}” heeft het abonnement Gratis, en alleen een werkruimte met een betaald abonnement kan er nog een maken. Heeft een van je andere werkruimtes een betaald abonnement, wissel daar dan naartoe en maak de nieuwe werkruimte vanaf daar. Anders upgrade je “{workspace}”.',
   'workspace.createLimitReached':
