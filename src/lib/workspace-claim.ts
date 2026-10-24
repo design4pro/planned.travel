@@ -22,6 +22,15 @@ import { readPublicFailure } from '#/lib/errors'
 export const WORKSPACE_CLAIM_HEADER = 'x-planned-workspace'
 
 /**
+ * Where a WebSocket upgrade states the claim: a query parameter, because a browser cannot set a
+ * header on `new WebSocket(url)`. Same value, same meaning, compared and never used
+ * (`serveTripRoom`, `src/routes/api/trip-room/-lib/connect.ts`). One difference: the door treats a
+ * malformed or empty claim as absent where a server function refuses it. A garbage claim only
+ * turns the stale-tab notice off and never widens access, so the two are not to be "aligned".
+ */
+export const WORKSPACE_CLAIM_QUERY = 'workspace'
+
+/**
  * The refusal, as the catalogue key it travels as.
  *
  * Same shape as `SHELL_STATE_KEYS` (`src/components/layout/session.ts`): the server throws the key

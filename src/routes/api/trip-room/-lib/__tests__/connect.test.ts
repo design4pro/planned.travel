@@ -7,10 +7,12 @@
  * the repositories are real, over the migrated in-memory database, so the role comes from a stored
  * `trip_members` row and the trip is resolved inside the caller's workspace.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   TRIP_ROOM_IDENTITY_HEADER,
+  TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+  TRIP_ROOM_WORKSPACE_CHANGED_REASON,
   decodeTripRoomIdentity,
   encodeTripRoomIdentity,
 } from '#/server/do/protocol'
@@ -18,6 +20,8 @@ import {
   addTripMember,
   archiveTrip,
   createTrip,
+  getTrip,
+  tripRoleFor,
   updateTripMember,
 } from '#/server/repos'
 import {
@@ -27,6 +31,7 @@ import {
 
 import { serveTripRoom } from '../connect'
 
+import type * as Repos from '#/server/repos'
 import type { TripRoomIdentity } from '#/server/do/protocol'
 import type { TripRoomNamespace } from '#/server/do'
 import type { TenantContext } from '#/server/auth/session'
@@ -68,31 +73,102 @@ vi.mock('#/server/auth/session', async () => {
 
 vi.mock('#/server/db/client', () => ({ getDb: () => stubs.db }))
 
+// Real repositories, observed: the claim comparison must come before either lookup.
+vi.mock('#/server/repos', async (importOriginal) => {
+  const actual = await importOriginal<typeof Repos>()
+  return {
+    ...actual,
+    getTrip: vi.fn(actual.getTrip),
+    tripRoleFor: vi.fn(actual.tripRoleFor),
+  }
+})
+
 /** A namespace that records the identity each connection is handed, and answers 101-less 200. */
 function recordingNamespace(): {
   namespace: TripRoomNamespace
   identities: Array<TripRoomIdentity>
+  reached: () => number
 } {
   const identities: Array<TripRoomIdentity> = []
+  let gets = 0
   const namespace: TripRoomNamespace = {
     idFromName: (name) => ({ name }) as unknown as DurableObjectId,
-    get: () => ({
-      fetch: async (request: Request) => {
-        const decoded = decodeTripRoomIdentity(
-          request.headers.get(TRIP_ROOM_IDENTITY_HEADER),
-        )
-        if (decoded.ok) identities.push(decoded.value)
-        return new Response('upgraded', { status: 200 })
-      },
-    }),
+    get: () => {
+      gets += 1
+      return {
+        fetch: async (request: Request) => {
+          const decoded = decodeTripRoomIdentity(
+            request.headers.get(TRIP_ROOM_IDENTITY_HEADER),
+          )
+          if (decoded.ok) identities.push(decoded.value)
+          return new Response('upgraded', { status: 200 })
+        },
+      }
+    },
   }
-  return { namespace, identities }
+  return { namespace, identities, reached: () => gets }
 }
 
-function upgrade(tripId: string): Request {
-  return new Request(`https://planned.travel/api/trip-room/${tripId}`, {
+function upgrade(tripId: string, query = ''): Request {
+  return new Request(`https://planned.travel/api/trip-room/${tripId}${query}`, {
     headers: { upgrade: 'websocket' },
   })
+}
+
+interface FakeServerSocket {
+  accepted: number
+  closed: Array<{ code: number; reason: string }>
+  accept: () => void
+  close: (code: number, reason: string) => void
+}
+
+/**
+ * The Worker's own end of a socket it answers itself. `WebSocketPair` and a 101 `Response` exist
+ * only in workerd, so both are stubbed: the pair hands out recording sockets, and the response
+ * keeps the client end it was given.
+ */
+function stubWebSocketPair(): {
+  server: FakeServerSocket
+  client: object
+  restore: () => void
+} {
+  const server: FakeServerSocket = {
+    accepted: 0,
+    closed: [],
+    accept: () => {
+      server.accepted += 1
+    },
+    close: (code, reason) => {
+      server.closed.push({ code, reason })
+    },
+  }
+  const client = { role: 'client' }
+  const NativeResponse = Response
+  vi.stubGlobal(
+    'WebSocketPair',
+    class {
+      0 = client
+      1 = server
+    },
+  )
+  vi.stubGlobal(
+    'Response',
+    class extends NativeResponse {
+      readonly webSocket: WebSocket | null
+      constructor(
+        body: BodyInit | null,
+        init: ResponseInit & { webSocket?: unknown },
+      ) {
+        super(body, {
+          ...init,
+          status: init.status === 101 ? 200 : init.status,
+        })
+        this.webSocket =
+          (init.webSocket as WebSocket | null | undefined) ?? null
+      }
+    },
+  )
+  return { server, client, restore: () => vi.unstubAllGlobals() }
 }
 
 describe('the trip room connection role', () => {
@@ -144,6 +220,8 @@ describe('the trip room connection role', () => {
   }
 
   beforeEach(async () => {
+    vi.mocked(getTrip).mockClear()
+    vi.mocked(tripRoleFor).mockClear()
     harness = await createHarness()
     stubs.db = harness.db
     stubs.signedIn = true
@@ -335,6 +413,240 @@ describe('the trip room connection role', () => {
 
     expect(response.status).toBe(426)
     expect(get).not.toHaveBeenCalled()
+  })
+
+  describe('a tab that states the workspace it is showing', () => {
+    let pair: ReturnType<typeof stubWebSocketPair>
+
+    beforeEach(() => {
+      pair = stubWebSocketPair()
+    })
+
+    afterEach(() => {
+      pair.restore()
+    })
+
+    function claiming(workspaceId: string, id: string = tripId): Request {
+      return upgrade(id, `?workspace=${encodeURIComponent(workspaceId)}`)
+    }
+
+    /** Asserts the room was never reached and nothing about the trip was looked up. */
+    function expectRoomUntouched(room: {
+      identities: Array<TripRoomIdentity>
+      reached: () => number
+    }): void {
+      expect(room.reached()).toBe(0)
+      expect(room.identities).toEqual([])
+      expect(vi.mocked(getTrip)).not.toHaveBeenCalled()
+      expect(vi.mocked(tripRoleFor)).not.toHaveBeenCalled()
+    }
+
+    it('accepts the upgrade itself and closes it at once when the claim is another workspace', async () => {
+      actAs(alpha.ownerUserId)
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      const response = (await serveTripRoom(
+        namespace,
+        claiming('some-other-workspace-id'),
+        tripId,
+      )) as Response & { webSocket?: unknown }
+
+      expect(response.webSocket).toBe(pair.client)
+      expect(pair.server.accepted).toBe(1)
+      expect(pair.server.closed).toEqual([
+        {
+          code: TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+          reason: TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+        },
+      ])
+      expectRoomUntouched(room)
+    })
+
+    it('uses a close code in the application range and a reason that names nothing', () => {
+      expect(TRIP_ROOM_WORKSPACE_CHANGED_CODE).toBeGreaterThanOrEqual(4000)
+      expect(TRIP_ROOM_WORKSPACE_CHANGED_CODE).toBeLessThan(5000)
+      expect(TRIP_ROOM_WORKSPACE_CHANGED_REASON).not.toContain(
+        alpha.organizationId,
+      )
+      expect(TRIP_ROOM_WORKSPACE_CHANGED_REASON).not.toContain(tripId)
+    })
+
+    it('connects as before when the claim is the workspace the session is in', async () => {
+      actAs(alpha.ownerUserId)
+      const { namespace, identities } = recordingNamespace()
+
+      const response = await serveTripRoom(
+        namespace,
+        claiming(alpha.organizationId),
+        tripId,
+      )
+
+      expect(response.status).toBe(200)
+      expect(identities).toHaveLength(1)
+      expect(identities[0]?.orgId).toBe(alpha.organizationId)
+      expect(pair.server.closed).toEqual([])
+    })
+
+    it.each([
+      ['missing', ''],
+      ['empty', '?workspace='],
+      ['too long', `?workspace=${'a'.repeat(65)}`],
+      ['outside the id alphabet', '?workspace=not%20an%20id%21'],
+    ])(
+      'behaves exactly as today when the claim is %s',
+      async (_name, query) => {
+        actAs(alpha.ownerUserId)
+        const { namespace, identities } = recordingNamespace()
+
+        const response = await serveTripRoom(
+          namespace,
+          upgrade(tripId, query),
+          tripId,
+        )
+
+        expect(response.status).toBe(200)
+        expect(identities).toHaveLength(1)
+        expect(pair.server.accepted).toBe(0)
+        expect(pair.server.closed).toEqual([])
+      },
+    )
+
+    it('still answers 404 for a trip of another workspace when the claim matches', async () => {
+      const beta = await harness.seedTenant('beta')
+      stubs.ctx = {
+        userId: beta.ownerUserId,
+        organizationId: beta.organizationId,
+        role: 'owner',
+        impersonatedBy: null,
+      }
+      const { namespace, identities } = recordingNamespace()
+
+      const response = await serveTripRoom(
+        namespace,
+        claiming(beta.organizationId),
+        tripId,
+      )
+
+      expect(response.status).toBe(404)
+      expect(identities).toEqual([])
+      expect(pair.server.accepted).toBe(0)
+    })
+
+    it('answers a mismatching claim the same for a trip that exists elsewhere and one that exists nowhere', async () => {
+      const beta = await harness.seedTenant('beta')
+      stubs.ctx = {
+        userId: beta.ownerUserId,
+        organizationId: beta.organizationId,
+        role: 'owner',
+        impersonatedBy: null,
+      }
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      // `tripId` exists only in alpha; the caller is in beta and claims alpha.
+      const existing = await serveTripRoom(
+        namespace,
+        claiming(alpha.organizationId),
+        tripId,
+      )
+      const unknown = await serveTripRoom(
+        namespace,
+        claiming(alpha.organizationId, 'no-such-trip'),
+        'no-such-trip',
+      )
+
+      expect(existing.status).toBe(unknown.status)
+      expect(pair.server.closed).toEqual([
+        {
+          code: TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+          reason: TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+        },
+        {
+          code: TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+          reason: TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+        },
+      ])
+      expectRoomUntouched(room)
+    })
+
+    it('closes a claim naming a workspace the caller is not in like any other mismatch', async () => {
+      actAs(alpha.ownerUserId)
+      const stranger = await harness.seedTenant('stranger')
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      await serveTripRoom(namespace, claiming(stranger.organizationId), tripId)
+
+      expect(pair.server.closed).toEqual([
+        {
+          code: TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+          reason: TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+        },
+      ])
+      expectRoomUntouched(room)
+    })
+
+    it('never lets the claim choose the workspace the room is addressed in', async () => {
+      const beta = await harness.seedTenant('beta')
+      actAs(alpha.ownerUserId)
+      const { namespace, identities } = recordingNamespace()
+
+      await serveTripRoom(namespace, claiming(beta.organizationId), tripId)
+
+      expect(identities).toEqual([])
+      expect(vi.mocked(getTrip)).not.toHaveBeenCalled()
+    })
+
+    it('answers 401 before it compares anything when signed out', async () => {
+      stubs.signedIn = false
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      const response = await serveTripRoom(
+        namespace,
+        claiming('some-other-workspace-id'),
+        tripId,
+      )
+
+      expect(response.status).toBe(401)
+      expect(pair.server.accepted).toBe(0)
+      expectRoomUntouched(room)
+    })
+
+    it('answers 403 before it compares anything when the caller has no workspace', async () => {
+      stubs.ctx = null
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      const response = await serveTripRoom(
+        namespace,
+        claiming('some-other-workspace-id'),
+        tripId,
+      )
+
+      expect(response.status).toBe(403)
+      expect(pair.server.accepted).toBe(0)
+      expectRoomUntouched(room)
+    })
+
+    it('answers 426 before it compares anything when the request is not an upgrade', async () => {
+      actAs(alpha.ownerUserId)
+      const room = recordingNamespace()
+      const { namespace } = room
+
+      const response = await serveTripRoom(
+        namespace,
+        new Request(
+          `https://planned.travel/api/trip-room/${tripId}?workspace=some-other-workspace-id`,
+        ),
+        tripId,
+      )
+
+      expect(response.status).toBe(426)
+      expect(pair.server.accepted).toBe(0)
+      expectRoomUntouched(room)
+    })
   })
 
   describe('who the room is told the person is', () => {

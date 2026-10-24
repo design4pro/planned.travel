@@ -8,12 +8,20 @@
  * every panel updates from the database rather than from a socket frame.
  *
  * The status is stated plainly. A collaborative screen that has quietly stopped
- * listening is worse than one that says it is reconnecting.
+ * listening is worse than one that says it is reconnecting. A tab whose workspace was changed in
+ * another tab says the one thing that is true there - live updates stopped here, and a retry cannot
+ * fix it - and offers the way out (`workspace-changed`). It is a pill and a button, not a modal: a
+ * background socket event must not take focus from a field the reader is typing in, and the
+ * reload it offers never starts by itself.
  */
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { RotateCw, Wifi, WifiOff } from 'lucide-react'
+import { ArrowRightLeft, RotateCw, Wifi, WifiOff } from 'lucide-react'
 
+import {
+  CURRENT_WORKSPACE_BUTTON_CLASS,
+  useOpenCurrentWorkspace,
+} from '#/components/layout/use-open-current-workspace'
 import { Avatar, Button, Tooltip } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -45,6 +53,42 @@ const STATUS_COPY: {
     labelKey: 'modules.presence.offline.title',
     hintKey: 'modules.presence.offline.body',
   },
+  'workspace-changed': {
+    labelKey: 'modules.presence.workspaceChanged.title',
+    hintKey: 'modules.presence.workspaceChanged.body',
+  },
+}
+
+/** Each state has its own tone, so none of them reads as another (grey is `offline` alone). */
+const PILL_TONE: { readonly [K in RoomStatus]: string } = {
+  connecting: 'bg-warning-soft text-warning',
+  live: 'bg-success-soft text-success',
+  reconnecting: 'bg-warning-soft text-warning',
+  offline: 'bg-surface-2 text-ink-3',
+  'workspace-changed': 'bg-info-soft text-info',
+}
+
+function StatusGlyph({ status }: { status: RoomStatus }) {
+  if (status === 'offline') return <WifiOff aria-hidden className="size-3.5" />
+  if (status === 'workspace-changed') {
+    return <ArrowRightLeft aria-hidden className="size-3.5" />
+  }
+  return (
+    <span className="relative grid size-3.5 place-items-center">
+      <Wifi aria-hidden className="size-3.5" />
+      {status === 'live' ? null : (
+        <span
+          aria-hidden
+          className="absolute inset-0 animate-pulse-soft rounded-full bg-current/20"
+          // This ring is the whole difference between "connecting" and
+          // "connected": it is drawn only while the room is not live.
+          // Frozen, it becomes a halo that means nothing, and the bar
+          // claims a settled state it has not reached.
+          data-motion-loop=""
+        />
+      )}
+    </span>
+  )
 }
 
 interface Person {
@@ -94,6 +138,22 @@ export function PresenceBar({
   const copy = STATUS_COPY[room.status]
   const unnamed = t('modules.collab.presence.unnamed')
 
+  const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
+  const workspaceChanged = room.status === 'workspace-changed'
+  const captionId = useId()
+  const cancelButton = useRef<HTMLButtonElement>(null)
+  const openButton = useRef<HTMLButtonElement>(null)
+  const wasConfirming = useRef(false)
+  const { confirming } = currentWorkspace
+
+  // The confirmation takes focus to the safe choice, so Enter pressed twice backs out; Cancel
+  // unmounts while focused, so focus goes back to the button it came from.
+  useEffect(() => {
+    if (confirming) cancelButton.current?.focus()
+    else if (wasConfirming.current) openButton.current?.focus()
+    wasConfirming.current = confirming
+  }, [confirming])
+
   return (
     <div className={cn('flex min-w-0 flex-wrap items-center gap-3', className)}>
       <Tooltip content={t(copy.hintKey)}>
@@ -101,32 +161,12 @@ export function PresenceBar({
           tabIndex={0}
           role="status"
           className={cn(
-            'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-caption font-semibold focus-ring',
-            room.status === 'live'
-              ? 'bg-success-soft text-success'
-              : room.status === 'offline'
-                ? 'bg-surface-2 text-ink-3'
-                : 'bg-warning-soft text-warning',
+            // Wraps instead of overflowing: a translated title is several times the English one.
+            'inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-caption font-semibold focus-ring',
+            PILL_TONE[room.status],
           )}
         >
-          {room.status === 'offline' ? (
-            <WifiOff aria-hidden className="size-3.5" />
-          ) : (
-            <span className="relative grid size-3.5 place-items-center">
-              <Wifi aria-hidden className="size-3.5" />
-              {room.status === 'live' ? null : (
-                <span
-                  aria-hidden
-                  className="absolute inset-0 animate-pulse-soft rounded-full bg-current/20"
-                  // This ring is the whole difference between "connecting" and
-                  // "connected": it is drawn only while the room is not live.
-                  // Frozen, it becomes a halo that means nothing, and the bar
-                  // claims a settled state it has not reached.
-                  data-motion-loop=""
-                />
-              )}
-            </span>
-          )}
+          <StatusGlyph status={room.status} />
           {t(copy.labelKey)}
         </span>
       </Tooltip>
@@ -185,6 +225,51 @@ export function PresenceBar({
           <RotateCw aria-hidden />
           {t('modules.presence.reconnect')}
         </Button>
+      ) : null}
+
+      {workspaceChanged ? (
+        <>
+          {/* The reason as text, readable without hovering: a phone cannot open the tooltip. */}
+          <span
+            id={captionId}
+            aria-live="polite"
+            className="min-w-0 basis-full text-caption text-ink-2 sm:basis-auto"
+          >
+            {t('modules.presence.workspaceChanged.body')}
+            {currentWorkspace.confirming
+              ? ` ${t('modules.presence.workspaceChanged.discard')}`
+              : null}
+          </span>
+          {currentWorkspace.confirming ? (
+            // The safe choice comes first and takes focus, and the confirming press is ignored for
+            // a moment, so one gesture repeated cannot discard the draft. Once the reload has
+            // started it cannot be taken back, so Cancel is disabled like the dialog's "Not now".
+            <Button
+              ref={cancelButton}
+              variant="secondary"
+              shape="pill"
+              className={CURRENT_WORKSPACE_BUTTON_CLASS}
+              aria-describedby={captionId}
+              disabled={currentWorkspace.opening}
+              onClick={currentWorkspace.cancel}
+            >
+              {t('modules.action.cancel')}
+            </Button>
+          ) : null}
+          <Button
+            ref={openButton}
+            variant={currentWorkspace.confirming ? 'danger' : 'secondary'}
+            shape="pill"
+            className={CURRENT_WORKSPACE_BUTTON_CLASS}
+            aria-describedby={captionId}
+            onClick={currentWorkspace.open}
+            loading={currentWorkspace.opening}
+          >
+            {currentWorkspace.confirming
+              ? t('modules.presence.workspaceChanged.confirm')
+              : t('shell.session.openCurrentWorkspace')}
+          </Button>
+        </>
       ) : null}
     </div>
   )

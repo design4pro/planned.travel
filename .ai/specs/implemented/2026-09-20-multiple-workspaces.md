@@ -354,7 +354,9 @@ read wrongly on the already-checked item.
   _workspace claim_, header `x-planned-workspace`), `requireOrg` refuses a call whose claim differs
   from the session's workspace with `workspace-changed` before any role check or write, and the stale
   tab shows a notice that reloads into the current workspace. A call with no claim (MCP, `/api/*`, a
-  call before the shell loaded) behaves as before.
+  call before the shell loaded) behaves as before. The trip room's WebSocket door reads the claim from
+  `?workspace=` and answers a mismatch with an accepted-then-closed socket (code 4001), which the
+  presence pill shows as `workspace-changed` (#979).
 - **KV session cache.** Sessions live in `SESSIONS` KV (`src/server/auth/secondary-storage.ts`), and
   `getSession()` passes `disableCookieCache: true` **as a query parameter**
   (`src/server/auth/session.ts:70`) - the file warns at `:51-52` that the sibling-option spelling is

@@ -35,6 +35,12 @@ const messages = {
   'presence.offline.body':
     'As atualizações ao vivo estão desligadas. Tudo continua salvando; recarregue ou tente de novo para se atualizar.',
   'presence.reconnect': 'Reconectar',
+  'presence.workspaceChanged.title': 'As atualizações ao vivo pararam',
+  'presence.workspaceChanged.body':
+    'Esta aba pertence a um espaço de trabalho que foi trocado em outra aba ou janela. As alterações feitas aqui não serão salvas.',
+  'presence.workspaceChanged.discard':
+    'O texto que você não enviou nesta aba será perdido.',
+  'presence.workspaceChanged.confirm': 'Abrir mesmo assim',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Todos os deslocamentos',
   'transports.empty.title': 'Ainda sem deslocamentos',

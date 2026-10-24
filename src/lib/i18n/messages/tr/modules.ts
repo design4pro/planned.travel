@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Canlı güncellemeler kapalı. Kayıt sürüyor; yakalamak için sayfayı yenile ya da yeniden dene.',
   'presence.reconnect': 'Yeniden bağlan',
+  'presence.workspaceChanged.title': 'Canlı güncellemeler durdu',
+  'presence.workspaceChanged.body':
+    'Bu sekme, başka bir sekmede veya pencerede değiştirilen bir çalışma alanına ait. Burada yaptığın değişiklikler kaydedilmez.',
+  'presence.workspaceChanged.discard':
+    'Bu sekmede göndermediğiniz metin kaybolacak.',
+  'presence.workspaceChanged.confirm': 'Yine de aç',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Tüm yolculuklar',
   'transports.empty.title': 'Henüz yolculuk yok',

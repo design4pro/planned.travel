@@ -60,6 +60,18 @@ export const TRIP_ROOM_MAX_SOCKET_AGE_MS = 15 * 60 * 1000
 export const TRIP_ROOM_CLOSED_CODE = 1012
 export const TRIP_ROOM_CLOSED_REASON = 'Room closed'
 
+/**
+ * The close the app Worker itself sends, before the room is involved, when a tab's workspace claim
+ * (`?workspace=`, see `src/lib/workspace-claim.ts`) is not the session's workspace. A browser
+ * WebSocket cannot read the status of a refused upgrade, so the answer travels as an accepted
+ * socket that is closed at once: the only place a close code and reason reach the page. The code is
+ * in the 4xxx application range, and the reason is fixed text that names nothing - not the
+ * workspace the session is in, not the trip. The client matches on the reason, as it does for
+ * `TRIP_ROOM_CLOSED_REASON`, and stops reconnecting: no retry can succeed from a stale tab.
+ */
+export const TRIP_ROOM_WORKSPACE_CHANGED_CODE = 4001
+export const TRIP_ROOM_WORKSPACE_CHANGED_REASON = 'Workspace changed'
+
 /** Client keepalive interval. The room answers pings without leaving hibernation. */
 export const TRIP_ROOM_PING_INTERVAL_MS = 25_000
 

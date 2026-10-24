@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Живі оновлення вимкнені. Збереження працює; оновіть сторінку або повторіть, щоб наздогнати.',
   'presence.reconnect': 'Перепідключитися',
+  'presence.workspaceChanged.title': 'Оновлення наживо зупинено',
+  'presence.workspaceChanged.body':
+    'Ця вкладка належить до простору, який змінили в іншій вкладці або вікні. Зміни, зроблені тут, не збережуться.',
+  'presence.workspaceChanged.discard':
+    'Текст, який ви не надіслали в цій вкладці, буде втрачено.',
+  'presence.workspaceChanged.confirm': 'Усе одно відкрити',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Усі переїзди',
   'transports.empty.title': 'Поки немає переїздів',

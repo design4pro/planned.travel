@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Liveuppdateringar är av. Allt sparas fortfarande; ladda om eller försök igen för att hämta upp.',
   'presence.reconnect': 'Återanslut',
+  'presence.workspaceChanged.title': 'Liveuppdateringarna har stoppats',
+  'presence.workspaceChanged.body':
+    'Den här fliken hör till en arbetsyta som byttes i en annan flik eller ett annat fönster. Ändringar du gör här sparas inte.',
+  'presence.workspaceChanged.discard':
+    'Text som du inte har skickat i den här fliken går förlorad.',
+  'presence.workspaceChanged.confirm': 'Öppna ändå',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Alla färder',
   'transports.empty.title': 'Inga färder än',

@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Živé aktualizace jsou vypnuté. Ukládá se dál; obnov stránku nebo to zkus znovu, ať doženeš zbytek.',
   'presence.reconnect': 'Připojit znovu',
+  'presence.workspaceChanged.title': 'Živé aktualizace se zastavily',
+  'presence.workspaceChanged.body':
+    'Tato karta patří k prostoru, který byl změněn v jiné kartě nebo okně. Změny provedené zde se neuloží.',
+  'presence.workspaceChanged.discard':
+    'Text, který jste v této kartě neodeslali, se ztratí.',
+  'presence.workspaceChanged.confirm': 'Přesto otevřít',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Všechny přesuny',
   'transports.empty.title': 'Zatím žádné přesuny',

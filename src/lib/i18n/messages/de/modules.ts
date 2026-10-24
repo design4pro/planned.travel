@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Live-Aktualisierungen sind aus. Gespeichert wird weiterhin; lade neu oder versuche es erneut, um aufzuholen.',
   'presence.reconnect': 'Neu verbinden',
+  'presence.workspaceChanged.title': 'Live-Updates wurden angehalten',
+  'presence.workspaceChanged.body':
+    'Dieser Tab gehört zu einem Arbeitsbereich, der in einem anderen Tab oder Fenster gewechselt wurde. Änderungen, die du hier vornimmst, werden nicht gespeichert.',
+  'presence.workspaceChanged.discard':
+    'Text, den du in diesem Tab nicht gesendet hast, geht verloren.',
+  'presence.workspaceChanged.confirm': 'Trotzdem öffnen',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Alle Transfers',
   'transports.empty.title': 'Noch keine Transfers',

@@ -15,6 +15,11 @@
  * - **It reconnects, and says so.** `partysocket` handles the backoff; the status
  *   is surfaced so the screen can be honest about being behind rather than quietly
  *   stale, and a manual retry is always available.
+ * - **It stops when retrying cannot win.** A tab whose workspace was changed in another tab states
+ *   the workspace it shows on the socket URL; the door answers with a dedicated close
+ *   (`TRIP_ROOM_WORKSPACE_CHANGED_*`) instead of a refusal the browser cannot read. That close is the
+ *   `workspace-changed` status and ends the retries: every later attempt would be closed the same
+ *   way, and a pulsing "reconnecting" would promise the opposite.
  * - **It never leaks a socket.** The hook closes on unmount and clears its
  *   keepalive with it. It must only be mounted on the client — see `PresenceBar`,
  *   which is the component that owns that decision.
@@ -22,17 +27,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useWebSocket from 'partysocket/use-ws'
 
+import { WORKSPACE_CLAIM_QUERY } from '#/lib/workspace-claim'
+import { workspaceClaimState } from '#/lib/workspace-claim-store'
 import {
   TRIP_ROOM_CLOSED_REASON,
   TRIP_ROOM_PING_INTERVAL_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
+  TRIP_ROOM_WORKSPACE_CHANGED_REASON,
   parseServerMessage,
 } from '#/server/do/protocol'
 
 import type { WebSocket as ReconnectingWebSocket } from 'partysocket'
 import type { PresenceMember } from '#/server/do/protocol'
 
-export type RoomStatus = 'connecting' | 'live' | 'reconnecting' | 'offline'
+export type RoomStatus =
+  'connecting' | 'live' | 'reconnecting' | 'offline' | 'workspace-changed'
 
 export interface TripRoomConnection {
   readonly status: RoomStatus
@@ -50,6 +59,15 @@ export interface TripRoomConnection {
 
 /** How many failed attempts before the hook stops trying on its own. */
 const MAX_RETRIES = 8
+
+/** Statuses a failed connect or a late close must not overwrite: they already say why. */
+function settled(status: RoomStatus): boolean {
+  return status === 'offline' || status === 'workspace-changed'
+}
+
+function isWorkspaceChangedClose(event: { reason: string }): boolean {
+  return event.reason === TRIP_ROOM_WORKSPACE_CHANGED_REASON
+}
 
 export function useTripRoom(
   tripId: string,
@@ -82,10 +100,23 @@ export function useTripRoom(
    */
   const socketRef = useRef<ReconnectingWebSocket | null>(null)
 
+  /** Read by `reconnect`, which must not start another attempt once the workspace has changed. */
+  const statusRef = useRef<RoomStatus>('connecting')
+  statusRef.current = status
+
   const socket = useWebSocket(
     () => {
       const scheme = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      return `${scheme}//${window.location.host}/api/trip-room/${encodeURIComponent(tripId)}`
+      const url = new URL(
+        `${scheme}//${window.location.host}/api/trip-room/${encodeURIComponent(tripId)}`,
+      )
+      // The workspace this tab shows, read at every attempt: a tab that re-read its shell since
+      // the last one states the new workspace. Compared by the door, never used to choose one.
+      const { organizationId } = workspaceClaimState()
+      if (organizationId !== null) {
+        url.searchParams.set(WORKSPACE_CLAIM_QUERY, organizationId)
+      }
+      return url.toString()
     },
     undefined,
     {
@@ -93,10 +124,14 @@ export function useTripRoom(
       // Long enough that a slow cold start is not read as a failure, short enough
       // that a genuinely dead route is reported rather than spun on.
       connectionTimeout: 8000,
+      // Every attempt from a stale tab is closed the same way; give up on the first.
+      shouldReconnectOnClose: (event: CloseEvent) =>
+        !isWorkspaceChangedClose(event),
       minReconnectionDelay: 500,
       maxReconnectionDelay: 15_000,
       onOpen: () => {
-        setStatus('live')
+        // Not `live` yet: a stale tab's socket is accepted and closed at once (the door cannot
+        // refuse an upgrade a browser can read), so the first sign of a working room is `welcome`.
         socketRef.current?.send(
           JSON.stringify({
             t: 'hello',
@@ -162,14 +197,14 @@ export function useTripRoom(
         }
         setPeers([])
         setYou(null)
-        setStatus((current) =>
-          current === 'offline' ? 'offline' : 'reconnecting',
-        )
+        if (isWorkspaceChangedClose(event)) {
+          setStatus('workspace-changed')
+          return
+        }
+        setStatus((current) => (settled(current) ? current : 'reconnecting'))
       },
       onError: () => {
-        setStatus((current) =>
-          current === 'offline' ? 'offline' : 'reconnecting',
-        )
+        setStatus((current) => (settled(current) ? current : 'reconnecting'))
       },
     },
   )
@@ -196,11 +231,16 @@ export function useTripRoom(
    */
   useEffect(() => {
     if (socket.retryCount >= MAX_RETRIES) {
-      setStatus('offline')
+      setStatus((current) =>
+        current === 'workspace-changed' ? current : 'offline',
+      )
     }
   }, [socket.retryCount])
 
   const reconnect = useCallback(() => {
+    // Reconnecting from a stale tab would be closed the same way: the way out is the
+    // current workspace, not another attempt.
+    if (statusRef.current === 'workspace-changed') return
     setStatus('connecting')
     socket.reconnect()
   }, [socket])
