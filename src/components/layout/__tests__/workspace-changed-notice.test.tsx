@@ -13,6 +13,7 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import {
   markWorkspaceStale,
   resetWorkspaceClaim,
+  resumeWorkspaceClaim,
   setWorkspaceClaim,
   workspaceClaimState,
 } from '#/lib/workspace-claim-store'
@@ -313,6 +314,26 @@ describe('WorkspaceChangedNotice', () => {
       expect(assign).not.toHaveBeenCalled()
       refuse()
       await screen.findByRole('alertdialog')
+      expect(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      ).toBeTruthy()
+    })
+
+    it('asks afresh after a navigation closed it from the store while it was asking', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+      expect(screen.getByRole('button', { name: 'Open anyway' })).toBeTruthy()
+
+      act(() => resumeWorkspaceClaim())
+      refuse()
+
+      await screen.findByRole('alertdialog')
+      expect(screen.queryByRole('button', { name: 'Open anyway' })).toBeNull()
       expect(
         screen.getByRole('button', { name: 'Open the current workspace' }),
       ).toBeTruthy()

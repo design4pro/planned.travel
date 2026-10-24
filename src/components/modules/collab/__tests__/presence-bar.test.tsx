@@ -246,7 +246,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       expect(field.value).toBe('See you at the station at 9')
     })
 
-    it('puts Cancel where the first press was, and Cancel keeps the tab as it is', () => {
+    it('puts Cancel first, and Cancel keeps the tab as it is', () => {
       typeUnsent()
       mountStale()
       fireEvent.click(
@@ -323,6 +323,26 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       )
 
       expect(assign).toHaveBeenCalledTimes(1)
+    })
+
+    it('disables Cancel once the reload has started, since it cannot be taken back', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+      vi.setSystemTime(Date.now() + 600)
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: En['presence.workspaceChanged.confirm'],
+        }),
+      )
+
+      const [cancel] = screen.getAllByRole('button')
+      expect(cancel.textContent).toBe(En['action.cancel'])
+      expect(cancel.hasAttribute('disabled')).toBe(true)
     })
 
     it('does not ask when the only fields are empty', () => {

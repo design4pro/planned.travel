@@ -57,9 +57,15 @@ export function WorkspaceChangedNotice({
     if (confirming) dismiss.current?.focus()
   }, [confirming])
 
-  // Closing also forgets a pending "are you sure": the next time it opens it asks afresh.
+  // Closing also forgets a pending "are you sure": the next time it opens it asks afresh. The
+  // store closes the notice too (a navigation resumes the claim), so the reset follows `noticeOpen`
+  // rather than only the "Not now" press.
+  const { cancel } = currentWorkspace
+  useEffect(() => {
+    if (!noticeOpen) cancel()
+  }, [noticeOpen, cancel])
   const closeNotice = () => {
-    currentWorkspace.cancel()
+    cancel()
     dismissWorkspaceNotice()
   }
 

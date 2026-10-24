@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { hasUnsentText } from './has-unsent-text'
 
@@ -47,6 +47,8 @@ export function useOpenCurrentWorkspace({
   const [opening, setOpening] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const confirmingSince = useRef(0)
+  // Stable, so a caller can reset the question from an effect that must not rerun on every render.
+  const cancel = useCallback(() => setConfirming(false), [])
 
   return {
     opening,
@@ -63,6 +65,6 @@ export function useOpenCurrentWorkspace({
       setOpening(true)
       window.location.assign(CURRENT_WORKSPACE_HREF)
     },
-    cancel: () => setConfirming(false),
+    cancel,
   }
 }

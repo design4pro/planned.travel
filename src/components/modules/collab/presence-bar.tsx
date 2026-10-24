@@ -241,14 +241,16 @@ export function PresenceBar({
               : null}
           </span>
           {currentWorkspace.confirming ? (
-            // The safe choice sits where the first press was, so a second quick tap on the same
-            // spot backs out instead of discarding the draft.
+            // The safe choice comes first and takes focus, and the confirming press is ignored for
+            // a moment, so one gesture repeated cannot discard the draft. Once the reload has
+            // started it cannot be taken back, so Cancel is disabled like the dialog's "Not now".
             <Button
               ref={cancelButton}
               variant="secondary"
               shape="pill"
               className={CURRENT_WORKSPACE_BUTTON_CLASS}
               aria-describedby={captionId}
+              disabled={currentWorkspace.opening}
               onClick={currentWorkspace.cancel}
             >
               {t('modules.action.cancel')}
