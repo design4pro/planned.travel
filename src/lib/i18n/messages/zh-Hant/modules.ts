@@ -72,6 +72,10 @@ const messages = {
   'transports.noTime': '還沒有時間',
   'transports.toast.statusFailed.title': '狀態沒有改變',
   'transports.toast.statusFailed.body': '這段交通仍處於原來的狀態。',
+  'transports.refusal.gone':
+    '它在此視窗開啟期間被刪除，因此無法儲存你的變更。關閉視窗即可查看最新清單。',
+  'transports.refusal.goneTitle': '這段交通已不存在',
+  'transports.error.saveFallback': '請稍後再試一次。',
   'transports.toast.removed': '已刪除這段交通',
   'transports.toast.removeFailed': '未能刪除這段交通',
 

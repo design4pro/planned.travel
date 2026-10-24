@@ -268,6 +268,7 @@ import {
   summariseTripTransports,
   totalTripDistanceMetres,
   transportLegsRepository,
+  TransportRefusalError,
   transportsRepository,
   unlinkTransportsFromDays,
 } from '../transports'
@@ -3022,29 +3023,51 @@ describe('tenant isolation', () => {
         arrivalTime: '08:00',
       }
 
-      const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () =>
-          editTransport(scope, alpha.tripId, beta.transportId, {
-            title: 'Hijacked',
-          }),
+      // An edit of B's id under A's trip reads as a transport that is not there, which is the
+      // refusal an absent id gets; every other write is a plain not-found.
+      const attempts: ReadonlyArray<
+        readonly [
+          () => Promise<unknown>,
+          typeof NotFoundError | typeof TransportRefusalError,
+        ]
+      > = [
+        [
+          () =>
+            editTransport(scope, alpha.tripId, beta.transportId, {
+              title: 'Hijacked',
+            }),
+          TransportRefusalError,
+        ],
         // An inverted write is still a row A cannot see, not a timing refusal that confirms it.
-        () =>
-          editTransport(scope, alpha.tripId, beta.transportId, {
-            title: 'Hijacked',
-            ...inverted,
-          }),
-        () =>
-          replaceChain(scope, alpha.tripId, beta.transportId, {
-            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
-            legs: [inverted],
-          }),
-        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
-        () => deleteTransport(scope, beta.transportId),
+        [
+          () =>
+            editTransport(scope, alpha.tripId, beta.transportId, {
+              title: 'Hijacked',
+              ...inverted,
+            }),
+          TransportRefusalError,
+        ],
+        [
+          () =>
+            replaceChain(scope, alpha.tripId, beta.transportId, {
+              stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+              legs: [inverted],
+            }),
+          TransportRefusalError,
+        ],
+        [
+          () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+          NotFoundError,
+        ],
+        [() => deleteTransport(scope, beta.transportId), NotFoundError],
         // B's transport under B's own trip still resolves to nothing from A.
-        () => requireTransportOfTrip(scope, beta.tripId, beta.transportId),
+        [
+          () => requireTransportOfTrip(scope, beta.tripId, beta.transportId),
+          NotFoundError,
+        ],
       ]
-      for (const attempt of attempts) {
-        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      for (const [attempt, refusal] of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(refusal)
       }
 
       expect(await getTransport(beta.tenant.scope, beta.transportId)).toEqual(
@@ -3136,29 +3159,48 @@ describe('tenant isolation', () => {
       const before = await listTripTransports(beta.tenant.scope, beta.tripId)
       const daysBefore = await listTripDays(beta.tenant.scope, beta.tripId)
 
-      const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () =>
-          createTransport(scope, {
-            tripId: beta.tripId,
-            title: 'Stolen journey',
-            mode: 'train',
-          }),
-        () =>
-          createTransport(scope, {
-            tripId: alpha.tripId,
-            title: 'Cross-parented',
-            mode: 'train',
-            arrivalDayId: beta.dayId,
-          }),
-        () =>
-          editTransport(scope, alpha.tripId, beta.transportId, {
-            title: 'Hijacked',
-          }),
-        () => setTransportStatus(scope, beta.transportId, 'cancelled'),
-        () => deleteTransport(scope, beta.transportId),
+      // An edit of B's id under A's trip reads as a transport that is not there, which is the
+      // refusal an absent id gets; every other write is a plain not-found.
+      const attempts: ReadonlyArray<
+        readonly [
+          () => Promise<unknown>,
+          typeof NotFoundError | typeof TransportRefusalError,
+        ]
+      > = [
+        [
+          () =>
+            createTransport(scope, {
+              tripId: beta.tripId,
+              title: 'Stolen journey',
+              mode: 'train',
+            }),
+          NotFoundError,
+        ],
+        [
+          () =>
+            createTransport(scope, {
+              tripId: alpha.tripId,
+              title: 'Cross-parented',
+              mode: 'train',
+              arrivalDayId: beta.dayId,
+            }),
+          NotFoundError,
+        ],
+        [
+          () =>
+            editTransport(scope, alpha.tripId, beta.transportId, {
+              title: 'Hijacked',
+            }),
+          TransportRefusalError,
+        ],
+        [
+          () => setTransportStatus(scope, beta.transportId, 'cancelled'),
+          NotFoundError,
+        ],
+        [() => deleteTransport(scope, beta.transportId), NotFoundError],
       ]
-      for (const attempt of attempts) {
-        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+      for (const [attempt, refusal] of attempts) {
+        expect(await captureError(attempt)).toBeInstanceOf(refusal)
       }
 
       expect(await listTripTransports(beta.tenant.scope, beta.tripId)).toEqual(
@@ -3241,15 +3283,19 @@ describe('tenant isolation', () => {
       const before = await betaWorld()
       expect(before.legs).toHaveLength(2)
 
-      // B's transport under A's own trip reads as a row that is not there; under B's trip the
-      // trip itself is not there. A chain and no chain at all are refused alike.
-      for (const tripId of [alpha.tripId, beta.tripId]) {
+      // B's transport under A's own trip is the gone refusal, the answer for a row that is not
+      // there; under B's trip the trip itself is not there. A chain and no chain at all are
+      // refused alike.
+      for (const [tripId, refusal] of [
+        [alpha.tripId, TransportRefusalError],
+        [beta.tripId, NotFoundError],
+      ] as const) {
         for (const chain of [HIJACK, EMPTY]) {
           expect(
             await captureError(() =>
               replaceChain(scope, tripId, beta.transportId, chain),
             ),
-          ).toBeInstanceOf(NotFoundError)
+          ).toBeInstanceOf(refusal)
         }
       }
 
@@ -3404,8 +3450,12 @@ describe('tenant isolation', () => {
 
       // A's scope cannot see B's row, so the id reads as unused. A `create` reaches the insert,
       // the primary key refuses it, the batch takes the chain with it, and the refusal is a
-      // NotFoundError like any other foreign id. An `edit` never reaches a write at all.
-      for (const intent of ['create', 'edit'] as const) {
+      // NotFoundError like any other foreign id. An `edit` never reaches a write at all, and reads
+      // as the transport being gone, the answer an id that never existed gets.
+      for (const [intent, refusal] of [
+        ['create', NotFoundError],
+        ['edit', TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveTransport(alpha.tenant.scope, {
@@ -3416,7 +3466,7 @@ describe('tenant isolation', () => {
               chain: CHAIN,
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
 
       expect(await betaWorld()).toEqual(before)
@@ -3527,12 +3577,13 @@ describe('tenant isolation', () => {
           }),
         )
 
-      const foreign = (await refuse(beta.transportId)) as NotFoundError
-      const absent = (await refuse('never-existed')) as NotFoundError
+      const foreign = (await refuse(beta.transportId)) as RepositoryError
+      const absent = (await refuse('never-existed')) as RepositoryError
 
-      expect(foreign).toBeInstanceOf(NotFoundError)
-      expect(absent).toBeInstanceOf(NotFoundError)
+      expect(foreign).toBeInstanceOf(TransportRefusalError)
+      expect(absent).toBeInstanceOf(TransportRefusalError)
       expect(foreign.code).toBe(absent.code)
+      expect(foreign.message).toBe(absent.message)
     })
 
     it('refuses a leg day or a record day belonging to B, and writes nothing', async () => {
@@ -3581,7 +3632,12 @@ describe('tenant isolation', () => {
         alpha.transportId,
       )
 
-      for (const intent of ['create', 'edit'] as const) {
+      // An edit reads as a transport that is not there, the answer an absent id gets, so the
+      // lookup by workspace tells nobody that a row of a trip they cannot read exists.
+      for (const [intent, refusal] of [
+        ['create', NotFoundError],
+        ['edit', TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveTransport(alpha.tenant.scope, {
@@ -3592,7 +3648,7 @@ describe('tenant isolation', () => {
               chain: CHAIN,
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
 
       expect(
@@ -4394,7 +4450,12 @@ describe('tenant isolation', () => {
       )
       expect(before).toHaveLength(2)
 
-      for (const tripId of [beta.tripId, alpha.tripId]) {
+      // B's trip is not A's to see, so it is refused as a trip; B's transport named under A's own
+      // trip reads as a transport that is not there, which is the answer an absent id gets.
+      for (const [tripId, refusal] of [
+        [beta.tripId, NotFoundError],
+        [alpha.tripId, TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveSearchedConnection(alpha.tenant.scope, {
@@ -4405,8 +4466,23 @@ describe('tenant isolation', () => {
               legs: [{}],
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
+      const absent = await captureError(() =>
+        saveSearchedConnection(alpha.tenant.scope, {
+          ...CONNECTION,
+          tripId: alpha.tripId,
+          transportId: 'never-existed',
+        }),
+      )
+      const foreign = await captureError(() =>
+        saveSearchedConnection(alpha.tenant.scope, {
+          ...CONNECTION,
+          tripId: alpha.tripId,
+          transportId: beta.transportId,
+        }),
+      )
+      expect(foreign).toEqual(absent)
 
       expect(
         await listTransportLegs(beta.tenant.scope, beta.transportId),
@@ -4428,7 +4504,7 @@ describe('tenant isolation', () => {
             transportId: alpha.transportId,
           }),
         ),
-      ).toBeInstanceOf(NotFoundError)
+      ).toBeInstanceOf(TransportRefusalError)
       expect(
         await listTransportLegs(alpha.tenant.scope, alpha.transportId),
       ).toEqual([])

@@ -5,6 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -218,3 +219,226 @@ it.each([
     expect(screen.getByLabelText(/^Name/u)).toBeTruthy()
   },
 )
+
+describe('TransportDialog after the transport was deleted elsewhere', () => {
+  const GONE = 'modules.transports.refusal.gone'
+  const GENERIC = 'Try again in a moment.'
+
+  function goneRefusal(): Error {
+    return new Error(encodePublicFailure({ kind: 'refusal', message: GONE }))
+  }
+
+  function dialog(
+    open: boolean,
+    onOpenChange: (next: boolean) => void,
+    onWriteError?: (cause: unknown) => void,
+    closeFocusTarget?: () => HTMLElement | null,
+  ) {
+    return (
+      <I18nProvider locale="en" messages={EN}>
+        <TransportDialog
+          tripId="trip-1"
+          transport={TRANSPORT}
+          days={[DAY_1]}
+          canSearchConnections
+          currency="EUR"
+          open={open}
+          onOpenChange={onOpenChange}
+          onWriteError={onWriteError}
+          closeFocusTarget={closeFocusTarget}
+        />
+      </I18nProvider>
+    )
+  }
+
+  async function refusedSave(
+    onOpenChange = vi.fn(),
+    onWriteError = vi.fn(),
+  ): Promise<ReturnType<typeof render>> {
+    save.mockRejectedValueOnce(goneRefusal())
+    const view = render(dialog(true, onOpenChange, onWriteError))
+    fireEvent.change(screen.getByLabelText(/^Name/u), {
+      target: { value: 'Typed after it was deleted' },
+    })
+    submitTheForm()
+    await vi.waitFor(() =>
+      expect(document.querySelector('[data-part="transport-gone"]')).not.toBe(
+        null,
+      ),
+    )
+    return view
+  }
+
+  function saveButton(): HTMLElement {
+    return screen.getByRole('button', { name: 'Save transport' })
+  }
+
+  it('says the transport no longer exists, in words, and never prints the key or the generic fallback', async () => {
+    await refusedSave()
+
+    const alert = document.querySelector('[data-part="transport-gone"]')
+    expect(alert?.getAttribute('role')).toBe('alert')
+    expect(alert?.textContent).toContain('This transport no longer exists')
+    expect(alert?.textContent).toContain(
+      'It was deleted while this window was open',
+    )
+    expect(document.body.textContent).not.toContain(GONE)
+    expect(document.body.textContent).not.toContain(GENERIC)
+    expect(document.body.textContent).not.toContain('That did not save')
+  })
+
+  it('turns Save off, because it could only be refused again, and sends one request', async () => {
+    await refusedSave()
+
+    expect(saveButton().getAttribute('disabled')).not.toBeNull()
+    submitTheForm()
+    await Promise.resolve()
+    expect(save).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps what was typed, editable', async () => {
+    await refusedSave()
+
+    const name = screen.getByLabelText(/^Name/u)
+    if (!(name instanceof HTMLInputElement)) {
+      throw new Error('the name field is not an input')
+    }
+    expect(name.value).toBe('Typed after it was deleted')
+    expect(name.disabled).toBe(false)
+    fireEvent.change(name, { target: { value: 'Still editable' } })
+    expect(name.value).toBe('Still editable')
+  })
+
+  it('offers Close, which ends the dialog', async () => {
+    const onOpenChange = vi.fn()
+    await refusedSave(onOpenChange)
+
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull()
+    const closers = screen.getAllByRole('button', { name: 'Close' })
+    fireEvent.click(closers[closers.length - 1])
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('re-runs the loaders, and keeps the refusal away from the desk recovery owner that would close the dialog', async () => {
+    const onWriteError = vi.fn()
+    await refusedSave(vi.fn(), onWriteError)
+
+    expect(router.invalidate).toHaveBeenCalled()
+    expect(onWriteError).not.toHaveBeenCalled()
+  })
+
+  it('hands focus to Close once Save is turned off, whichever way the save was started', async () => {
+    await refusedSave()
+
+    // The footer button, not the corner icon: it is the one that reads "Close" as text.
+    const footerClose = screen
+      .getAllByRole('button', { name: 'Close' })
+      .find((button) => button.textContent === 'Close')
+    expect(footerClose).toBeDefined()
+    expect(document.activeElement).toBe(footerClose)
+    // Focus lands on it, so what it announces is the alert and not just "Close".
+    const alert = document.querySelector('[data-part="transport-gone"]')
+    expect(footerClose?.getAttribute('aria-describedby')).toBe(
+      alert?.getAttribute('id'),
+    )
+  })
+
+  it('hands focus to the target the owner names when it closes from the gone state, since the row it was opened from is gone', async () => {
+    const target = document.createElement('div')
+    target.tabIndex = -1
+    document.body.appendChild(target)
+    const onOpenChange = vi.fn()
+    save.mockRejectedValueOnce(goneRefusal())
+    const view = render(dialog(true, onOpenChange, vi.fn(), () => target))
+    submitTheForm()
+    await vi.waitFor(() =>
+      expect(
+        document.querySelector('[data-part="transport-gone"]'),
+      ).not.toBeNull(),
+    )
+
+    view.rerender(dialog(false, onOpenChange, vi.fn(), () => target))
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(target))
+    target.remove()
+  })
+
+  it('leaves the hand-back to the opener alone when the dialog was not in its gone state', async () => {
+    const target = document.createElement('div')
+    target.tabIndex = -1
+    document.body.appendChild(target)
+    const view = render(dialog(true, vi.fn(), vi.fn(), () => target))
+
+    view.rerender(dialog(false, vi.fn(), vi.fn(), () => target))
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(document.activeElement).not.toBe(target)
+    target.remove()
+  })
+
+  it('ignores a refusal that settles after the dialog was closed and opened again', async () => {
+    const onOpenChange = vi.fn()
+    let refuse: (cause: unknown) => void = () => {}
+    save.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        refuse = reject
+      }),
+    )
+    const view = render(dialog(true, onOpenChange))
+    submitTheForm()
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+
+    view.rerender(dialog(false, onOpenChange))
+    view.rerender(dialog(true, onOpenChange))
+    refuse(goneRefusal())
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+
+    // Neither the gone state nor the inline error that refusal set before it was recognised.
+    expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+    expect(document.body.textContent).not.toContain('deleted while this window')
+    expect(saveButton().getAttribute('disabled')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  })
+
+  it('starts clean when it is opened again', async () => {
+    const onOpenChange = vi.fn()
+    const view = await refusedSave(onOpenChange)
+
+    view.rerender(dialog(false, onOpenChange))
+    view.rerender(dialog(true, onOpenChange))
+
+    expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+    expect(saveButton().getAttribute('disabled')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy()
+  })
+
+  it('shows the same state on the connection search tab', async () => {
+    await refusedSave()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search again' }))
+
+    const alert = document.querySelector('[data-part="transport-gone"]')
+    expect(alert?.textContent).toContain('This transport no longer exists')
+    expect(document.querySelector('[data-part="connection-search"]')).not.toBe(
+      null,
+    )
+  })
+
+  it('leaves any other refusal to the desk recovery owner and shows no gone state', async () => {
+    const onWriteError = vi.fn()
+    const other = new Error(
+      encodePublicFailure({
+        kind: 'refusal',
+        message: 'This trip is archived.',
+      }),
+    )
+    save.mockRejectedValueOnce(other)
+    render(dialog(true, vi.fn(), onWriteError))
+    submitTheForm()
+
+    await vi.waitFor(() => expect(onWriteError).toHaveBeenCalledWith(other))
+    expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+    expect(saveButton().getAttribute('disabled')).toBeNull()
+  })
+})
