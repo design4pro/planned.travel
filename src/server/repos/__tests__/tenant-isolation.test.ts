@@ -260,7 +260,6 @@ import {
   listTripLegs,
   listTripTransports,
   nextDeparture,
-  replaceTransportChain,
   requireTransportOfTrip,
   saveSearchedConnection,
   CLIENT_ID_WINDOW_MS,
@@ -357,7 +356,7 @@ import {
   suggestedRatesForTrip,
 } from '../rates'
 import { changeTripCurrency, previewCurrencyChange } from '../trip-currency'
-import { editTransport } from './edit-transport'
+import { editTransport, replaceChain } from './edit-transport'
 import {
   collabRows,
   creatingWriters,
@@ -3035,7 +3034,7 @@ describe('tenant isolation', () => {
             ...inverted,
           }),
         () =>
-          replaceTransportChain(scope, beta.transportId, {
+          replaceChain(scope, alpha.tripId, beta.transportId, {
             stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
             legs: [inverted],
           }),
@@ -3178,16 +3177,19 @@ describe('tenant isolation', () => {
    * from A by transport id and by trip id, and a leg may not be parented onto B's
    * day even when the parent transport is A's own.
    *
-   * The second is destructive and belongs to this writer alone. `replaceTransportChain`
-   * **deletes before it inserts**, so "refused" is not enough: a call that threw
+   * The second is destructive and belongs to this writer alone. `saveTransport`
+   * **deletes the chain before it inserts**, so "refused" is not enough: a call that threw
    * after the delete and before the insert would leave B's journey with no legs
    * and every other assertion in this file still green. B's rows are therefore
-   * counted before and after and must be identical.
+   * read before and after and must be identical.
    *
    * The third is not a tenant boundary at all. A trip role is a role *inside* one
    * workspace, so it is asserted in both directions on one trip: a viewer on
    * their own trip is refused and an editor on that same trip is allowed, which
    * proves the guard discriminates rather than merely throws.
+   *
+   * Every attempt names a Transport that **exists**, and the chain-only ones send an empty
+   * record: `saveTransport` takes that without a title for a row that is already there.
    */
   describe('a transport’s station chain', () => {
     /** Three stations, so a refusal that dropped one leg would still be visible. */
@@ -3199,9 +3201,26 @@ describe('tenant isolation', () => {
       ],
       legs: [{ serviceNumber: 'Hikari 500' }, { serviceNumber: 'Nozomi 24' }],
     }
+    const HIJACK = {
+      stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
+      legs: [{}],
+    }
+    const EMPTY = { stations: [], legs: [] }
+
+    async function betaWorld() {
+      return {
+        record: await getTransport(beta.tenant.scope, beta.transportId),
+        legs: await listTripLegs(beta.tenant.scope, beta.tripId),
+      }
+    }
 
     beforeEach(async () => {
-      await replaceTransportChain(beta.tenant.scope, beta.transportId, CHAIN)
+      await replaceChain(
+        beta.tenant.scope,
+        beta.tripId,
+        beta.transportId,
+        CHAIN,
+      )
     })
 
     it('answers nothing when asked, from A, about B’s legs', async () => {
@@ -3217,19 +3236,35 @@ describe('tenant isolation', () => {
       expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toHaveLength(2)
     })
 
-    it('refuses to replace the chain of a B transport from A’s scope', async () => {
-      expect(
-        await captureError(() =>
-          replaceTransportChain(alpha.tenant.scope, beta.transportId, {
-            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
-            legs: [{}],
-          }),
-        ),
-      ).toBeInstanceOf(NotFoundError)
+    it('refuses to replace the chain of a B transport from A’s scope, whichever trip it names', async () => {
+      const scope = alpha.tenant.scope
+      const before = await betaWorld()
+      expect(before.legs).toHaveLength(2)
+
+      // B's transport under A's own trip reads as a row that is not there; under B's trip the
+      // trip itself is not there. A chain and no chain at all are refused alike.
+      for (const tripId of [alpha.tripId, beta.tripId]) {
+        for (const chain of [HIJACK, EMPTY]) {
+          expect(
+            await captureError(() =>
+              replaceChain(scope, tripId, beta.transportId, chain),
+            ),
+          ).toBeInstanceOf(NotFoundError)
+        }
+      }
+
+      // Byte-identical: the record and every leg, not merely the count of them.
+      expect(await betaWorld()).toEqual(before)
+      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(
+        before.legs.length,
+      )
     })
 
     it('refuses a leg parented onto a B day even on A’s own transport', async () => {
       const scope = alpha.tenant.scope
+      await replaceChain(scope, alpha.tripId, alpha.transportId, CHAIN)
+      const before = await listTransportLegs(scope, alpha.transportId)
+      expect(before).toHaveLength(2)
 
       for (const leg of [
         { departureDayId: beta.dayId },
@@ -3237,7 +3272,7 @@ describe('tenant isolation', () => {
       ]) {
         expect(
           await captureError(() =>
-            replaceTransportChain(scope, alpha.transportId, {
+            replaceChain(scope, alpha.tripId, alpha.transportId, {
               stations: [{ name: 'Lisbon' }, { name: 'Porto' }],
               legs: [leg],
             }),
@@ -3245,35 +3280,8 @@ describe('tenant isolation', () => {
         ).toBeInstanceOf(NotFoundError)
       }
 
-      // Not one row landed: a dropped reference would have written a leg anyway.
-      expect(await listTransportLegs(scope, alpha.transportId)).toEqual([])
-    })
-
-    it('deletes nothing of B’s while refusing', async () => {
-      const scope = alpha.tenant.scope
-      const before = await listTripLegs(beta.tenant.scope, beta.tripId)
-      expect(before).toHaveLength(2)
-
-      const attempts: ReadonlyArray<() => Promise<unknown>> = [
-        () =>
-          replaceTransportChain(scope, beta.transportId, {
-            stations: [{ name: 'Hijacked' }, { name: 'Elsewhere' }],
-            legs: [{}],
-          }),
-        () =>
-          replaceTransportChain(scope, beta.transportId, {
-            stations: [],
-            legs: [],
-          }),
-      ]
-      for (const attempt of attempts) {
-        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
-      }
-
-      expect(await listTripLegs(beta.tenant.scope, beta.tripId)).toEqual(before)
-      expect(await transportLegsRepository.count(beta.tenant.scope)).toBe(
-        before.length,
-      )
+      // Not one row landed and none was dropped: the delete is in the same batch as the insert.
+      expect(await listTransportLegs(scope, alpha.transportId)).toEqual(before)
     })
 
     /**
@@ -3281,7 +3289,7 @@ describe('tenant isolation', () => {
      * not a role, and the collaborative session already refuses a viewer the
      * equivalent edit (`src/server/do/trip-room.ts:358`).
      */
-    it('refuses a viewer and admits an editor on the same trip', async () => {
+    it('refuses a viewer and admits an editor on the same existing transport', async () => {
       const viewerId = await alpha.tenant.addUser('Viewer of A')
       const editorId = await alpha.tenant.addUser('Editor of A')
       await addTripMember(alpha.tenant.scope, {
@@ -3294,27 +3302,41 @@ describe('tenant isolation', () => {
         userId: editorId,
         role: 'editor',
       })
+      const titleBefore = (
+        await getTransport(alpha.tenant.scope, alpha.transportId)
+      )?.title
 
-      expect(
-        await captureError(() =>
-          replaceTransportChain(
-            alpha.tenant.scopeFor(viewerId),
-            alpha.transportId,
-            { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+      for (const record of [{}, { title: 'Renamed by a viewer' }]) {
+        expect(
+          await captureError(() =>
+            editTransport(
+              alpha.tenant.scopeFor(viewerId),
+              alpha.tripId,
+              alpha.transportId,
+              record,
+              { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+            ),
           ),
-        ),
-      ).toBeInstanceOf(TripRoleError)
+        ).toBeInstanceOf(TripRoleError)
+      }
+      expect(
+        (await getTransport(alpha.tenant.scope, alpha.transportId))?.title,
+      ).toBe(titleBefore)
       expect(
         await listTransportLegs(alpha.tenant.scope, alpha.transportId),
       ).toEqual([])
 
+      // A title-less update is a write like any other: the editor on the same row is let through.
+      const legs = await replaceChain(
+        alpha.tenant.scopeFor(editorId),
+        alpha.tripId,
+        alpha.transportId,
+        { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
+      )
+      expect(legs).toHaveLength(1)
       expect(
-        await replaceTransportChain(
-          alpha.tenant.scopeFor(editorId),
-          alpha.transportId,
-          { stations: [{ name: 'Lisbon' }, { name: 'Porto' }], legs: [{}] },
-        ),
-      ).toHaveLength(1)
+        (await getTransport(alpha.tenant.scope, alpha.transportId))?.title,
+      ).toBe(titleBefore)
     })
   })
   /**
@@ -3340,7 +3362,7 @@ describe('tenant isolation', () => {
     }
 
     beforeEach(async () => {
-      await replaceTransportChain(beta.tenant.scope, beta.transportId, {
+      await replaceChain(beta.tenant.scope, beta.tripId, beta.transportId, {
         stations: [{ name: 'Shin-Osaka' }, { name: 'Tokyo' }],
         legs: [{ serviceNumber: 'Nozomi 24' }],
       })
@@ -3449,6 +3471,36 @@ describe('tenant isolation', () => {
       expect(
         await listTripTransports(alpha.tenant.scope, alpha.tripId),
       ).toEqual(alphaBefore)
+      expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
+    })
+
+    /**
+     * A title-less save is the one that cannot reach the primary-key clash, so it must not become
+     * a second probe: B's real id and an id nobody has used get the same refusal, to the class,
+     * the code and the words, and nothing of B's moves.
+     */
+    it('answers a title-less create of B’s real id as it answers one nobody has used', async () => {
+      const before = await betaWorld()
+      const refuse = (transportId: string) =>
+        captureError(() =>
+          saveTransport(alpha.tenant.scope, {
+            tripId: alpha.tripId,
+            transportId,
+            intent: 'create',
+            record: {},
+            chain: CHAIN,
+          }),
+        )
+
+      const foreign = (await refuse(beta.transportId)) as RepositoryError
+      const unused = (await refuse(mintId())) as RepositoryError
+
+      expect(unused).toBeInstanceOf(RepositoryError)
+      expect(unused.code).toBe('TITLE_REQUIRED')
+      expect(foreign).toBeInstanceOf(unused.constructor)
+      expect(foreign.code).toBe(unused.code)
+      expect(foreign.message).toBe(unused.message)
+      expect(await betaWorld()).toEqual(before)
       expect(await listTripLegs(alpha.tenant.scope, alpha.tripId)).toEqual([])
     })
 
@@ -5762,7 +5814,7 @@ describe('tenant isolation', () => {
 
     beforeEach(async () => {
       // B's journey is a chain, so both tables carry a row the reorder could write.
-      await replaceTransportChain(beta.tenant.scope, beta.transportId, {
+      await replaceChain(beta.tenant.scope, beta.tripId, beta.transportId, {
         stations: [{ name: 'Shin-Osaka' }, { name: 'Tokyo' }],
         legs: [{ departureDayId: beta.dayId, sortOrder: 3.25 }],
       })

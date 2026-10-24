@@ -16,11 +16,11 @@ import {
   deleteTransport,
   listTripTransports,
   listTripLegs,
-  replaceTransportChain,
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
 } from '../transports'
+import { replaceChain } from './edit-transport'
 import { createHarness } from './harness'
 import type { TenantScope } from '../base'
 import type { Trip } from '#/server/db/types'
@@ -97,7 +97,7 @@ describe('archived transport write boundary', () => {
       case 'delete':
         return deleteTransport(scope, id)
       case 'chain':
-        return replaceTransportChain(scope, id, chain)
+        return replaceChain(scope, requestedTrip, id, chain)
       case 'save-new':
       case 'save-edit':
         return saveTransport(scope, {

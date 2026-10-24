@@ -19,11 +19,8 @@ import {
 } from '../itinerary'
 import { createPlace } from '../places'
 import { addTripMember, createTrip } from '../trips'
-import {
-  createTransport,
-  listTransportLegs,
-  replaceTransportChain,
-} from '../transports'
+import { createTransport, listTransportLegs } from '../transports'
+import { replaceChain } from './edit-transport'
 import { captureError, createHarness } from './harness'
 import type { Day } from '#/server/db/types'
 import type { Harness, SeededTenant } from './harness'
@@ -127,7 +124,7 @@ describe('a day reordered in one write', () => {
       title: 'The Hikari',
       mode: 'train',
     })
-    await replaceTransportChain(tenant.scope, chained.id, {
+    await replaceChain(tenant.scope, tripId, chained.id, {
       stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
       legs: [{ departureDayId: dayId }, { departureDayId: days[1].id }],
     })
@@ -285,7 +282,7 @@ describe('a day reordered in one write', () => {
       title: 'The Hikari',
       mode: 'train',
     })
-    await replaceTransportChain(tenant.scope, chained.id, {
+    await replaceChain(tenant.scope, tripId, chained.id, {
       stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }],
       legs: [{ departureDayId: dayId }],
     })
@@ -330,7 +327,7 @@ describe('a day reordered in one write', () => {
       title: 'The Hikari',
       mode: 'train',
     })
-    await replaceTransportChain(tenant.scope, chained.id, {
+    await replaceChain(tenant.scope, tripId, chained.id, {
       stations: [{ name: 'Kyoto' }, { name: 'Nagoya' }],
       legs: [{ departureDayId: dayId }],
     })
