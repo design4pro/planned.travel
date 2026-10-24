@@ -418,7 +418,7 @@ describe('starting a drop', () => {
       onProgress: (fraction) => progress.push(fraction),
     })
 
-    expect(outcome).toEqual({ kind: 'started' })
+    expect(outcome).toEqual({ kind: 'started', refreshFailures: [] })
     // The index is the dialog’s half of the stagger; the server turns it into the delay.
     expect(port.start).toHaveBeenNthCalledWith(1, {
       tripId: TRIP,
@@ -525,27 +525,78 @@ describe('starting a drop', () => {
     expect(readBookImports(OWNER)).toHaveLength(1)
   })
 
-  it('keeps the job registered when the hook after its start rejects', async () => {
-    // The start went through and spent the allowance: a hook that fails does not un-start it, and
-    // a register that skipped it would leave a reading running where nothing can reach it.
+  it('starts every file of a drop when the hook after a start rejects, and hands the rejections back', async () => {
+    // The start went through and spent the allowance: a hook that fails does not un-start the job,
+    // nor does it make the rest of the drop "not uploaded". Stopping there would leave the other
+    // files unread, and a retry of the drop would spend the allowance twice on the first one.
     const port = fakePort()
-    const cause = new Error('invalidate failed')
-    port.upload.mockResolvedValue({ fileId: 'file-1' })
+    const first = new Error('invalidate failed')
+    port.upload.mockResolvedValue({ fileId: 'file-x' })
+    port.start
+      .mockResolvedValueOnce({ jobId: jobId('1'), delaySeconds: 0 })
+      .mockResolvedValueOnce({ jobId: jobId('2'), delaySeconds: 20 })
+    const jobs = watched(port)
+    const afterStart = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(first)
+      .mockResolvedValueOnce(undefined)
+
+    const outcome = await jobs.startDrop({
+      tripId: TRIP,
+      files: [file('first.ics'), file('second.ics')],
+      afterStart,
+    })
+
+    expect(outcome).toEqual({ kind: 'started', refreshFailures: [first] })
+    expect(afterStart).toHaveBeenCalledTimes(2)
+    expect(port.start).toHaveBeenCalledTimes(2)
+    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([
+      jobId('1'),
+      jobId('2'),
+    ])
+  })
+
+  it('collects the rejection of each hook, one per start', async () => {
+    const port = fakePort()
+    const causes = [new Error('one'), new Error('two')]
+    port.upload.mockResolvedValue({ fileId: 'file-x' })
     port.start.mockResolvedValue({ jobId: jobId('1'), delaySeconds: 0 })
+    const jobs = watched(port)
+    const afterStart = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(causes[0])
+      .mockRejectedValueOnce(causes[1])
+
+    const outcome = await jobs.startDrop({
+      tripId: TRIP,
+      files: [file('first.ics'), file('second.ics')],
+      afterStart,
+    })
+
+    expect(outcome).toEqual({ kind: 'started', refreshFailures: causes })
+  })
+
+  it('still stops at a rejected start call after an earlier hook rejection', async () => {
+    const port = fakePort()
+    const refused = new Error('allowance spent')
+    port.upload.mockResolvedValue({ fileId: 'file-x' })
+    port.start
+      .mockResolvedValueOnce({ jobId: jobId('1'), delaySeconds: 0 })
+      .mockRejectedValueOnce(refused)
     const jobs = watched(port)
 
     const outcome = await jobs.startDrop({
       tripId: TRIP,
-      files: [file('first.ics')],
-      afterStart: () => Promise.reject(cause),
+      files: [file('first.ics'), file('second.ics')],
+      afterStart: () => Promise.reject(new Error('invalidate failed')),
     })
 
     expect(outcome).toEqual({
       kind: 'startFailed',
-      filename: 'first.ics',
-      cause,
+      filename: 'second.ics',
+      cause: refused,
     })
-    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([jobId('1')])
+    expect(readBookImports(OWNER)).toHaveLength(1)
   })
 
   it('treats a start answer from before the delay existed as no delay', async () => {
@@ -741,21 +792,42 @@ describe('confirming', () => {
     expect(readBookImports(OWNER)).toHaveLength(0)
   })
 
-  it('settles the register even when the caller’s hook rejects', async () => {
+  it('settles the register and resolves when the caller’s hook rejects, handing the error back', async () => {
     const port = fakePort()
     const jobs = await readyStore(port)
     port.confirm.mockResolvedValue({ written: 2, failed: 0, remaining: 0 })
+    const cause = new Error('invalidate failed')
 
-    await expect(
-      jobs.confirm({
-        tripId: TRIP,
-        selection: new Map([[jobId('a'), new Set([0, 1])]]),
-        afterWritten: () => Promise.reject(new Error('invalidate failed')),
-      }),
-    ).rejects.toThrow('invalidate failed')
+    const outcome = await jobs.confirm({
+      tripId: TRIP,
+      selection: new Map([[jobId('a'), new Set([0, 1])]]),
+      afterWritten: () => Promise.reject(cause),
+    })
 
-    // The rows were written, so the jobs are forgotten all the same.
+    // The rows were written, so the counts say so and the jobs are forgotten all the same.
+    expect(outcome).toEqual({ written: 2, left: 0, failures: [cause] })
     expect(readBookImports(OWNER)).toHaveLength(0)
+  })
+
+  it('appends the hook’s rejection after the write rejections and re-reads what is left', async () => {
+    const port = fakePort()
+    const jobs = await readyStore(port)
+    const writeCause = new Error('write failed')
+    const hookCause = new Error('invalidate failed')
+    port.confirm.mockRejectedValue(writeCause)
+
+    const outcome = await jobs.confirm({
+      tripId: TRIP,
+      selection: new Map([[jobId('a'), new Set([0, 1])]]),
+      afterWritten: () => Promise.reject(hookCause),
+    })
+
+    expect(outcome).toEqual({
+      written: 0,
+      left: 2,
+      failures: [writeCause, hookCause],
+    })
+    expect(readBookImports(OWNER)).toHaveLength(2)
   })
 
   it('confirms only the files of the trip it is asked about', async () => {
