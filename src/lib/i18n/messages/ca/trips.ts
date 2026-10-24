@@ -146,6 +146,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'Mou a un altre dia',
   'plan.stop.menu.backToUnplanned': 'Torna a sense planificar',
   'plan.stop.menu.delete': 'Elimina del viatge',
+  'plan.stop.visited': 'Visitat',
   'plan.delete.title': 'Vols eliminar «{name}»?',
   'plan.delete.titleUnnamed': 'Vols eliminar aquest lloc?',
   'plan.delete.bodyUnplanned':
