@@ -106,7 +106,7 @@ export function describeAuditActor(
  * The fields a platform action's `changes` payload can move, named the way the screens name them.
  *
  * The first seven are `auditUserState`'s fixed key set. The rest are what the impersonation and
- * session verbs record (`organizationId` is the workspace id a switch inside an impersonated session moves), and they are here because an unlabelled key is printed as the column stored
+ * session verbs record (`organizationId` is a workspace id: the one an impersonated session starts in, and the ones a switch inside it moves between), and they are here because an unlabelled key is printed as the column stored
  * it — `EXPIRESAT` in tracked capitals, which is a variable name where a reader expected English.
  */
 const FIELD_KEYS: Readonly<Record<string, MessageKey | undefined>> = {
