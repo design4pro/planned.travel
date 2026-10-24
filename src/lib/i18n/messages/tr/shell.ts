@@ -81,7 +81,7 @@ const messages = {
   'workspace.createDescription':
     'Kendi gezileri, yerleri ve kişileri olan ayrı bir alan. Ücretsiz planla başlar ve içinde bulunduğunuz çalışma alanının planını paylaşmaz.',
   'workspace.createPermanent':
-    'planned.travel’da henüz bir çalışma alanını silme seçeneği yok. Her çalışma alanı, bir hesabın üye olabileceği {limit} çalışma alanı sınırına dahildir; davet edildiğiniz alanlar da buna dahildir.',
+    'planned.travel’da henüz bir çalışma alanını silme seçeneği yok. Oluşturduğunuz veya katıldığınız her çalışma alanı sınıra dahildir: {limit} çalışma alanına üye olduğunuzda yenisini oluşturamazsınız.',
   'workspace.createName': 'Çalışma alanı adı',
   'workspace.createUpgrade':
     '“{workspace}” Ücretsiz planda; yeni bir çalışma alanını yalnızca ücretli planı olan bir çalışma alanı oluşturabilir. Diğer çalışma alanlarınızdan birinin ücretli planı varsa ona geçin ve oradan oluşturun. Aksi halde “{workspace}” alanını ücretli plana yükseltin.',

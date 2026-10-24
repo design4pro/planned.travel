@@ -86,7 +86,7 @@ const messages = {
   'workspace.createDescription':
     'Ein eigener Bereich mit eigenen Reisen, Orten und Personen. Er startet im Tarif Gratis und teilt den Tarif des Arbeitsbereichs, in dem du bist, nicht.',
   'workspace.createPermanent':
-    'In planned.travel gibt es noch keine Möglichkeit, einen Arbeitsbereich zu löschen. Jeder Arbeitsbereich zählt zu den {limit} Arbeitsbereichen, denen ein Konto angehören kann, auch die, zu denen du eingeladen wurdest.',
+    'In planned.travel gibt es noch keine Möglichkeit, einen Arbeitsbereich zu löschen. Jeder Arbeitsbereich, den du erstellst oder dem du beitrittst, zählt zum Limit: Gehörst du {limit} Arbeitsbereichen an, kannst du keinen weiteren erstellen.',
   'workspace.createName': 'Name des Arbeitsbereichs',
   'workspace.createUpgrade':
     '„{workspace}“ ist im Tarif Gratis, und nur ein Arbeitsbereich mit Bezahltarif kann einen weiteren erstellen. Hat einer deiner anderen Arbeitsbereiche einen Bezahltarif, wechsle zu ihm und erstelle von dort aus. Andernfalls stelle „{workspace}“ auf einen Bezahltarif um.',

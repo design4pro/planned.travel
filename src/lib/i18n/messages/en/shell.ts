@@ -125,7 +125,7 @@ const messages = {
   'workspace.createDescription':
     'A separate space for its own trips, places and people. It starts on the Free plan and does not share the plan of the workspace you are in.',
   'workspace.createPermanent':
-    'There is no option to delete a workspace in planned.travel yet. Each workspace counts toward the {limit} workspaces an account can belong to, including those you are invited to.',
+    'There is no option to delete a workspace in planned.travel yet. Each workspace you create or join counts toward your limit: once you belong to {limit} workspaces, you cannot create another.',
   'workspace.createName': 'Workspace name',
   'workspace.createUpgrade':
     '“{workspace}” is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade “{workspace}”.',

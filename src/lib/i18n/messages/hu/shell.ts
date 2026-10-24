@@ -81,7 +81,7 @@ const messages = {
   'workspace.createDescription':
     'Külön terület a saját utazásoknak, helyeknek és embereknek. Az Ingyenes csomaggal indul, és nem osztozik annak a munkaterületnek a csomagján, amelyben éppen van.',
   'workspace.createPermanent':
-    'A planned.travel még nem kínál lehetőséget munkaterület törlésére. Minden munkaterület beleszámít abba a {limit} munkaterületbe, amelynek egy fiók tagja lehet, a meghívással csatlakozottakat is beleértve.',
+    'A planned.travel még nem kínál lehetőséget munkaterület törlésére. Minden munkaterület, amelyet létrehozol vagy amelyhez csatlakozol, beleszámít a korlátba: ha {limit} munkaterület tagja vagy, nem hozhatsz létre újat.',
   'workspace.createName': 'A munkaterület neve',
   'workspace.createUpgrade':
     '„{workspace}” az Ingyenes csomagon van, és csak fizetős csomagon lévő munkaterület hozhat létre újat. Ha valamelyik másik munkaterülete fizetős csomagon van, váltson arra, és onnan hozza létre. Egyébként állítsa át fizetős csomagra a(z) „{workspace}” munkaterületet.',

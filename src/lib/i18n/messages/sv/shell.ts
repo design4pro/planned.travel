@@ -77,7 +77,7 @@ const messages = {
   'workspace.createDescription':
     'En separat yta med egna resor, platser och personer. Den startar i planen Gratis och delar inte plan med arbetsytan du är i.',
   'workspace.createPermanent':
-    'I planned.travel finns det ännu inget sätt att ta bort en arbetsyta. Varje arbetsyta räknas med bland de {limit} arbetsytor som ett konto kan tillhöra, även de du har blivit inbjuden till.',
+    'I planned.travel finns det ännu inget sätt att ta bort en arbetsyta. Varje arbetsyta du skapar eller går med i räknas mot gränsen: när du tillhör {limit} arbetsytor kan du inte skapa fler.',
   'workspace.createName': 'Arbetsytans namn',
   'workspace.createUpgrade':
     '”{workspace}” är på planen Gratis, och bara en arbetsyta med en betald plan kan skapa en till. Har någon av dina andra arbetsytor en betald plan, byt till den och skapa därifrån. Annars uppgraderar du ”{workspace}”.',

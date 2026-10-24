@@ -192,7 +192,13 @@ export function CreateWorkspaceDialog({
               />
             )}
 
-            <Field label={t('shell.workspace.createName')} required>
+            <Field
+              label={t('shell.workspace.createName')}
+              hint={t('shell.workspace.createPermanent', {
+                limit: formatNumber(WORKSPACE_LIMIT, locale),
+              })}
+              required
+            >
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -201,12 +207,6 @@ export function CreateWorkspaceDialog({
                 required
               />
             </Field>
-
-            <p className="text-caption text-ink-3">
-              {t('shell.workspace.createPermanent', {
-                limit: formatNumber(WORKSPACE_LIMIT, locale),
-              })}
-            </p>
           </form>
         </DialogBody>
 

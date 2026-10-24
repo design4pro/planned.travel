@@ -60,6 +60,10 @@ describe('src/server/auth/provisioning.ts', () => {
       'eq',
     ])
     expect(source).not.toMatch(/\bimport\(/)
+    expect(source).not.toMatch(/\brequire\(/)
+    // A side-effect or double-quoted import would slip past the specifier scan above.
+    expect(source).not.toMatch(/^\s*import\s+['"]/m)
+    expect(source).not.toMatch(/from\s+"/)
   })
 
   it('reaches the tenant layer only through the participation anchor', () => {

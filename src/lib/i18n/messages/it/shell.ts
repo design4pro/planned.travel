@@ -75,7 +75,7 @@ const messages = {
   'workspace.createDescription':
     'Uno spazio separato con i suoi viaggi, luoghi e persone. Parte dal piano Gratuito e non condivide il piano dello spazio in cui ti trovi.',
   'workspace.createPermanent':
-    'In planned.travel non c’è ancora un’opzione per eliminare uno spazio. Ogni spazio conta nei {limit} spazi a cui può appartenere un account, compresi quelli a cui sei stato invitato.',
+    'In planned.travel non c’è ancora un’opzione per eliminare uno spazio. Ogni spazio che crei o a cui ti unisci conta per il limite: quando appartieni a {limit} spazi, non puoi crearne altri.',
   'workspace.createName': 'Nome dello spazio',
   'workspace.createUpgrade':
     '«{workspace}» è nel piano Gratuito e solo uno spazio con un piano a pagamento può crearne un altro. Se un altro dei tuoi spazi ha un piano a pagamento, passa a quello e crea da lì. Altrimenti, passa «{workspace}» a un piano a pagamento.',
