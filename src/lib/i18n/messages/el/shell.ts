@@ -51,7 +51,7 @@ const messages = {
   'trip.tab.collab': 'Ομάδα',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Μενού λογαριασμού',
+  'account.menu': '{name}, μενού λογαριασμού',
   'account.settings': 'Ρυθμίσεις',
   'account.billing': 'Πλάνο και χρεώσεις',
   'account.admin': 'Διαχείριση',

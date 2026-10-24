@@ -57,7 +57,7 @@ const messages = {
   'trip.tab.collab': 'Csapat',
 
   /* ------------------------------------------------------------ user menu */
-  'account.menu': 'Fiókmenü',
+  'account.menu': '{name}, fiókmenü',
   'account.settings': 'Beállítások',
   'account.billing': 'Csomag és számlázás',
   'account.admin': 'Adminisztráció',

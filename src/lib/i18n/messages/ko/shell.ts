@@ -40,7 +40,7 @@ const messages = {
   'trip.tab.costs': '비용',
   'trip.tab.files': '파일',
   'trip.tab.collab': '협업',
-  'account.menu': '계정 메뉴',
+  'account.menu': '{name}, 계정 메뉴',
   'account.settings': '설정',
   'account.billing': '플랜과 결제',
   'account.admin': '관리',
