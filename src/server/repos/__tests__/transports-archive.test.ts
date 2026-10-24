@@ -20,6 +20,7 @@ import {
   saveSearchedConnection,
   saveTransport,
   setTransportStatus,
+  TransportRefusalError,
 } from '../transports'
 import { createHarness } from './harness'
 import type { TenantScope } from '../base'
@@ -178,8 +179,13 @@ describe('archived transport write boundary', () => {
     '%s preserves missing-id errors on an archived trip',
     async (kind) => {
       await archiveTrip(tenant.scope, trip.id)
+      // A save-edit of an id the scope does not hold is the "this transport is gone" refusal.
+      const refusal =
+        kind === 'save-edit' || kind === 'search-edit'
+          ? TransportRefusalError
+          : NotFoundError
       await expect(write(kind, tenant.scope, 'missing')).rejects.toBeInstanceOf(
-        NotFoundError,
+        refusal,
       )
     },
   )
@@ -219,7 +225,7 @@ describe('archived transport write boundary', () => {
       })
       await expect(
         write(kind, foreign.scope, transportId, foreignTrip.id),
-      ).rejects.toBeInstanceOf(NotFoundError)
+      ).rejects.toBeInstanceOf(TransportRefusalError)
       expect(await snapshot()).toEqual(before)
     },
   )

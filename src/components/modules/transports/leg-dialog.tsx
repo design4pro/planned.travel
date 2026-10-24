@@ -31,8 +31,14 @@
  * not at all. Validation and network failures keep the draft open. An authored server refusal
  * instead closes the invalid action and refreshes the desk capability before another write is
  * offered; retrying that refresh repeats a read, never the refused save.
+ *
+ * **The one refusal that stays in the dialog** is "this transport no longer exists" (deleted in
+ * another tab or by another member). It is a state, not an error: the alert says so on either tab,
+ * the draft stays editable, Save is off because it could only be refused again, and Close ends the
+ * dialog. The loaders are re-run so the list behind it drops the transport.
  */
 import { useEffect, useId, useMemo, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import { ArrowRight, Plus } from 'lucide-react'
 
 import {
@@ -53,6 +59,7 @@ import {
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { mintId } from '#/lib/ids'
+import { transportRefusalOf } from '#/lib/transport-refusals'
 import { saveTransportFn } from '#/server/fns/transports'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
 import { ChainEditor } from './chain-editor'
@@ -87,6 +94,7 @@ import {
 } from './leg-form'
 import { MODE_ICON } from './mode-icon'
 import { transportDurationMinutes } from './leg-timing'
+import { TransportGoneAlert, useGoneSentence } from './transport-gone'
 
 import type { ChainDraft, TransportDraft } from './leg-form'
 import type { TransportData, TransportDayData } from './types'
@@ -181,6 +189,13 @@ export function TransportDialog({
   const [touched, setTouched] = useState(false)
   const [fillMode, setFillMode] = useState<DialogMode>('form')
   /**
+   * Set once a save was refused because the transport is gone. It outlives the tab switch, since
+   * the form and the connection search both read it, and it ends with the dialog.
+   */
+  const [gone, setGone] = useState(false)
+  const router = useRouter()
+  const goneSentence = useGoneSentence()
+  /**
    * The id a new transport is saved under, minted when the dialog opens and kept until it closes.
    *
    * The server treats an id it has seen as an edit of that row, so a second press on the same
@@ -202,6 +217,7 @@ export function TransportDialog({
     setChain(chainFor(transport))
     setTouched(false)
     setFillMode('form')
+    setGone(false)
     setDraftId(mintId())
   }, [open, transport, currency])
 
@@ -216,21 +232,48 @@ export function TransportDialog({
   const searchable =
     canSearchConnections && days.some((day) => day.date !== null)
 
+  /**
+   * A write that failed. The gone refusal is this dialog's own state and is not handed to the desk
+   * recovery owner: that one closes the dialog and blocks the desk until its capability is
+   * re-read, which would take the explanation away at the moment it is needed. The loaders are
+   * re-run instead, so the list behind the dialog stops offering the deleted transport.
+   */
+  function onSaveError(cause: unknown): void {
+    if (transportRefusalOf(cause) === null) {
+      onWriteError?.(cause)
+      return
+    }
+    setGone(true)
+    void router.invalidate()
+  }
+
   const save = useAction(
     saveTransportFn,
     editing
       ? {
-          onError: onWriteError,
+          onError: onSaveError,
+          refusal: goneSentence,
+          fallback: t('modules.transports.error.saveFallback'),
           success: t('modules.transports.toast.updated'),
           failure: t('modules.transports.toast.updateFailed'),
         }
       : {
-          onError: onWriteError,
+          onError: onSaveError,
+          refusal: goneSentence,
+          fallback: t('modules.transports.error.saveFallback'),
           success: t('modules.transports.toast.added'),
           description: t('modules.transports.toast.addedBody'),
           failure: t('modules.transports.toast.addFailed'),
         },
   )
+
+  /** The last failure belongs to the open it happened in: reopening starts clean. */
+  const resetSave = save.reset
+  useEffect(() => {
+    if (open) {
+      resetSave()
+    }
+  }, [open, transport, resetSave])
 
   const errors = useMemo(
     () => validateTransportDraft(draft, days),
@@ -294,7 +337,7 @@ export function TransportDialog({
     setTouched(true)
     // Enter in a field submits the form without the button, which is only `loading`: a second
     // call while one is in flight would race the first on the same id.
-    if (invalid || save.pending) {
+    if (invalid || save.pending || gone) {
       return
     }
     /*
@@ -377,7 +420,8 @@ export function TransportDialog({
               transportId={editing ? transport.id : undefined}
               journey={editing ? transport : undefined}
               days={days}
-              onWriteError={onWriteError}
+              onWriteError={onSaveError}
+              transportGone={gone}
               onSaved={() => onOpenChange(false)}
             />
           ) : (
@@ -389,11 +433,12 @@ export function TransportDialog({
                 void submit()
               }}
             >
-              {save.error === null ? null : (
+              {gone ? <TransportGoneAlert /> : null}
+              {!gone && save.error !== null ? (
                 <Alert tone="danger" title={t('modules.form.saveError')}>
                   {save.error}
                 </Alert>
-              )}
+              ) : null}
 
               <fieldset className="min-w-0">
                 <legend className="mb-2 text-label font-medium text-ink">
@@ -823,7 +868,7 @@ export function TransportDialog({
             shape="pill"
             onClick={() => onOpenChange(false)}
           >
-            {searchable && fillMode === 'search'
+            {gone || (searchable && fillMode === 'search')
               ? t('ui.action.close')
               : t('modules.action.cancel')}
           </Button>
@@ -838,7 +883,7 @@ export function TransportDialog({
               form={formId}
               variant="primary"
               shape="pill"
-              disabled={touched && invalid}
+              disabled={gone || (touched && invalid)}
               loading={save.pending}
               loadingLabel={t('modules.transports.action.saving')}
             >

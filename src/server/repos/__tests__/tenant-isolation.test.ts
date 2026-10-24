@@ -3045,8 +3045,12 @@ describe('tenant isolation', () => {
         // B's transport under B's own trip still resolves to nothing from A.
         () => requireTransportOfTrip(scope, beta.tripId, beta.transportId),
       ]
+      // An edit of B's id under A's trip reads as a transport that is not there, which is the
+      // refusal an absent id gets; every other write is a plain not-found.
       for (const attempt of attempts) {
-        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+        expect([NotFoundError.name, TransportRefusalError.name]).toContain(
+          (await captureError(attempt)).name,
+        )
       }
 
       expect(await getTransport(beta.tenant.scope, beta.transportId)).toEqual(
@@ -3159,8 +3163,12 @@ describe('tenant isolation', () => {
         () => setTransportStatus(scope, beta.transportId, 'cancelled'),
         () => deleteTransport(scope, beta.transportId),
       ]
+      // An edit of B's id under A's trip reads as a transport that is not there, which is the
+      // refusal an absent id gets; every other write is a plain not-found.
       for (const attempt of attempts) {
-        expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+        expect([NotFoundError.name, TransportRefusalError.name]).toContain(
+          (await captureError(attempt)).name,
+        )
       }
 
       expect(await listTripTransports(beta.tenant.scope, beta.tripId)).toEqual(
@@ -3383,8 +3391,12 @@ describe('tenant isolation', () => {
 
       // A's scope cannot see B's row, so the id reads as unused. A `create` reaches the insert,
       // the primary key refuses it, the batch takes the chain with it, and the refusal is a
-      // NotFoundError like any other foreign id. An `edit` never reaches a write at all.
-      for (const intent of ['create', 'edit'] as const) {
+      // NotFoundError like any other foreign id. An `edit` never reaches a write at all, and reads
+      // as the transport being gone, the answer an id that never existed gets.
+      for (const [intent, refusal] of [
+        ['create', NotFoundError],
+        ['edit', TransportRefusalError],
+      ] as const) {
         expect(
           await captureError(() =>
             saveTransport(alpha.tenant.scope, {
@@ -3395,7 +3407,7 @@ describe('tenant isolation', () => {
               chain: CHAIN,
             }),
           ),
-        ).toBeInstanceOf(NotFoundError)
+        ).toBeInstanceOf(refusal)
       }
 
       expect(await betaWorld()).toEqual(before)

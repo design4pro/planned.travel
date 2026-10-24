@@ -392,9 +392,9 @@ describe('a saved connection that is searched again', () => {
   })
 
   describe('when the journey is no longer there', () => {
-    const resend = (transportId: string, tripId: string) =>
+    const resend = (transportId: string, onTrip: string) =>
       saveSearchedConnection(tenant.scope, {
-        tripId,
+        tripId: onTrip,
         transportId,
         mode: 'train',
         title: 'Osaka to Tokyo',

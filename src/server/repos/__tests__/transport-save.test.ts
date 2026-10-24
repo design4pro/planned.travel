@@ -377,7 +377,9 @@ describe('saving a transport with its legs', () => {
         }),
       )
 
-      expect(error).toEqual(new TransportRefusalError(TRANSPORT_REFUSAL_KEYS[0]))
+      expect(error).toEqual(
+        new TransportRefusalError(TRANSPORT_REFUSAL_KEYS[0]),
+      )
       expect(classifyFailure(error)).toEqual({
         kind: 'refusal',
         message: TRANSPORT_REFUSAL_KEYS[0],

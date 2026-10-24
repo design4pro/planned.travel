@@ -136,7 +136,10 @@ describe('the transport refusal keys are closed', () => {
     ['a key with a prefix', 'x.modules.transports.refusal.gone'],
     ['a key with padding', ' modules.transports.refusal.gone '],
     ['a key of the same family', 'modules.transports.refusal'],
-    ['a key of the family that is not listed', 'modules.transports.toast.added'],
+    [
+      'a key of the family that is not listed',
+      'modules.transports.toast.added',
+    ],
     ['a listed key with a suffix', 'modules.transports.refusal.gone.'],
   ])('still redacts %s thrown as a repository error', (_name, message) => {
     expect(classifyFailure(new RepositoryError(message, 'ANY'))).toEqual({

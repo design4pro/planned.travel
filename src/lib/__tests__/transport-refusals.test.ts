@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
 import { encodePublicFailure } from '../errors'
-import { TRANSPORT_REFUSAL_KEYS, transportRefusalOf } from '../transport-refusals'
+import {
+  TRANSPORT_REFUSAL_KEYS,
+  transportRefusalOf,
+} from '../transport-refusals'
 
 describe('transportRefusalOf', () => {
   it('reads the key out of the redaction envelope a server function failure arrives in', () => {
@@ -40,10 +43,7 @@ describe('transportRefusalOf', () => {
       'a message that only contains the key',
       new Error('oops modules.transports.refusal.gone'),
     ],
-    [
-      'a currency refusal key',
-      new Error('shell.editTrip.currencyLocked'),
-    ],
+    ['a currency refusal key', new Error('shell.editTrip.currencyLocked')],
     [
       'something that is not an error',
       { message: 'modules.transports.refusal.gone' },
