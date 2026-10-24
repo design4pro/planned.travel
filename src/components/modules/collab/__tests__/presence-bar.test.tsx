@@ -18,13 +18,11 @@ const room = vi.hoisted(() => ({
   peers: [] as Array<unknown>,
   status: 'live' as string,
   reconnect: undefined as unknown as () => void,
-  open: undefined as unknown as () => void,
-  opening: false,
 }))
 
-vi.mock('#/components/layout/use-open-current-workspace', () => ({
-  useOpenCurrentWorkspace: () => ({ opening: room.opening, open: room.open }),
-}))
+// The real `useOpenCurrentWorkspace` runs; the document load it ends in is the spy.
+const assign = vi.fn()
+const originalLocation = window.location
 
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ invalidate: vi.fn() }),
@@ -45,11 +43,18 @@ beforeEach(() => {
   room.status = 'live'
   room.peers = []
   room.reconnect = vi.fn()
-  room.open = vi.fn()
-  room.opening = false
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { assign },
+  })
 })
 
 afterEach(() => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: originalLocation,
+  })
+  assign.mockReset()
   cleanup()
   document.body.innerHTML = ''
 })
@@ -164,7 +169,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       }),
     )
 
-    expect(room.open).toHaveBeenCalledTimes(1)
+    expect(assign).toHaveBeenCalledTimes(1)
     expect(room.reconnect).not.toHaveBeenCalled()
   })
 
@@ -178,8 +183,12 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
   })
 
   it('shows the button busy while the page is leaving, so a slow reload is not tapped twice', () => {
-    room.opening = true
     mountStale()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: EnShell['session.openCurrentWorkspace'],
+      }),
+    )
 
     // A busy button's name is the loading label, so it is found by its state.
     const button = document.querySelector('button[aria-busy="true"]')
@@ -217,7 +226,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
         }),
       )
 
-      expect(room.open).not.toHaveBeenCalled()
+      expect(assign).not.toHaveBeenCalled()
       const caption = document.querySelector('[aria-live="polite"]')
       // The reason stays beside the warning, and the button is described by both.
       expect(caption?.textContent).toContain(
@@ -242,7 +251,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       expect(first.textContent).toBe(En['action.cancel'])
       fireEvent.click(first)
 
-      expect(room.open).not.toHaveBeenCalled()
+      expect(assign).not.toHaveBeenCalled()
       expect(
         screen.getByRole('button', {
           name: EnShell['session.openCurrentWorkspace'],
@@ -265,7 +274,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
         }),
       )
 
-      expect(room.open).toHaveBeenCalledTimes(1)
+      expect(assign).toHaveBeenCalledTimes(1)
     })
 
     it('does not ask when the only fields are empty', () => {
@@ -278,7 +287,7 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
         }),
       )
 
-      expect(room.open).toHaveBeenCalledTimes(1)
+      expect(assign).toHaveBeenCalledTimes(1)
     })
   })
 })

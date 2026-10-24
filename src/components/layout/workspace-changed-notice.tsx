@@ -44,9 +44,15 @@ export function WorkspaceChangedNotice({
 }) {
   const t = useTranslate()
   const { noticeOpen } = useWorkspaceClaim()
-  const currentWorkspace = useOpenCurrentWorkspace()
+  const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
   const dismiss = useRef<HTMLButtonElement>(null)
   const opener = useRef<Element | null>(null)
+
+  // Closing also forgets a pending "are you sure": the next time it opens it asks afresh.
+  const closeNotice = () => {
+    currentWorkspace.cancel()
+    dismissWorkspaceNotice()
+  }
 
   // The name is a proper noun in someone else's script and direction: it is interpolated and
   // isolated, never concatenated, so it cannot reorder the sentence around it.
@@ -63,7 +69,7 @@ export function WorkspaceChangedNotice({
       onOpenChange={(open) => {
         // Escape while the page is already leaving would close the dialog under a reload that
         // cannot be taken back: "Not now" is disabled then, and so is this.
-        if (!open && !currentWorkspace.opening) dismissWorkspaceNotice()
+        if (!open && !currentWorkspace.opening) closeNotice()
       }}
     >
       <DialogContent
@@ -95,25 +101,32 @@ export function WorkspaceChangedNotice({
       >
         <DialogHeader className="pe-5 sm:pe-6">
           <DialogTitle>{t('shell.session.workspaceChangedTitle')}</DialogTitle>
-          <DialogDescription dir="auto">{body}</DialogDescription>
+          <DialogDescription dir="auto">
+            {body}
+            {currentWorkspace.confirming
+              ? ` ${t('modules.presence.workspaceChanged.discard')}`
+              : null}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             ref={dismiss}
             variant="secondary"
             shape="pill"
-            onClick={dismissWorkspaceNotice}
+            onClick={closeNotice}
             disabled={currentWorkspace.opening}
           >
             {t('shell.session.workspaceChangedDismiss')}
           </Button>
           <Button
-            variant="primary"
+            variant={currentWorkspace.confirming ? 'danger' : 'primary'}
             shape="pill"
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}
           >
-            {t('shell.session.openCurrentWorkspace')}
+            {currentWorkspace.confirming
+              ? t('modules.presence.workspaceChanged.confirm')
+              : t('shell.session.openCurrentWorkspace')}
           </Button>
         </DialogFooter>
       </DialogContent>
