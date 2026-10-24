@@ -1046,13 +1046,24 @@ export async function deletePlaceWithJourneys(
   return writtenDays(restated.map((day) => day.written))
 }
 
-/** Replaces the participant set of one stop. */
+/**
+ * Replaces the participant set of one stop.
+ *
+ * Starts from a row id, so it asks the stop's trip the two questions every trip-scoped writer asks
+ * - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR 0007), may they edit it -
+ * in that order, and writes only after both pass.
+ */
 export async function setAssignmentParticipants(
   scope: TenantScope,
   assignmentId: string,
   userIds: ReadonlyArray<string>,
 ): Promise<Array<string>> {
-  await dayAssignmentsRepository.requireById(scope, assignmentId)
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
+  await requireTrip(scope, assignment.tripId)
+  await assertTripRole(scope, assignment.tripId, ['owner', 'editor'])
   const parsed = [
     ...new Set(
       z

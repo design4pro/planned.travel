@@ -16,6 +16,7 @@
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { member } from '#/server/db/auth-schema'
+import { assignmentParticipants } from '#/server/db/schema'
 import { ZodError } from 'zod'
 import {
   createCheckIn,
@@ -33,7 +34,9 @@ import {
   deletePlaceWithJourneys,
   listTripAccommodations,
   reorderDayTimelines,
+  assignmentParticipantsAccess,
   scheduleAssignment,
+  setAssignmentParticipants,
   unscheduleAssignment,
   updateAccommodation,
 } from '../itinerary'
@@ -2133,7 +2136,7 @@ describe('member isolation', () => {
    * row ids (a former member, say), is answered `FORBIDDEN` for a row that, from where they stand,
    * does not exist - which tells them it does (ADR 0007).
    */
-  describe('the writers that start from a transport, booking or stay id (#1027)', () => {
+  describe('the writers that start from a transport, booking, stay or stop id (#1027, #1042)', () => {
     let transportId: string
     let reservationId: string
     let stayId: string
@@ -2144,9 +2147,12 @@ describe('member isolation', () => {
       legs: [{}],
     }
 
-    /** Everything an attacker could change on the three rows, read back as the owner. */
+    /** Everything an attacker could change on the rows below, read back as the owner. */
     async function rowsOf(): Promise<unknown> {
       return {
+        participants: await assignmentParticipantsAccess.findMany(alpha.scope, {
+          where: eq(assignmentParticipants.assignmentId, fixture.assignmentId),
+        }),
         transport: await getTransport(alpha.scope, transportId),
         legs: await listTransportLegs(alpha.scope, transportId),
         booking: await getReservation(alpha.scope, reservationId),
@@ -2199,10 +2205,20 @@ describe('member isolation', () => {
           () => updateAccommodation(scope, stayId, { name: 'Hijacked' }),
         ],
         ['deleting a stay', () => deleteAccommodation(scope, stayId)],
+        [
+          'replacing a stop’s participants',
+          () =>
+            setAssignmentParticipants(scope, fixture.assignmentId, [
+              strangerId,
+            ]),
+        ],
       ]
     }
 
     beforeEach(async () => {
+      await setAssignmentParticipants(alpha.scope, fixture.assignmentId, [
+        alpha.ownerUserId,
+      ])
       transportId = (
         await createTransport(alpha.scope, {
           tripId: fixture.tripId,
@@ -2306,6 +2322,33 @@ describe('member isolation', () => {
         expect(await captureError(write), label).toBeInstanceOf(TripRoleError)
       }
       expect(await rowsOf()).toEqual(before)
+    })
+
+    it('admits an editor to replace a stop’s participants', async () => {
+      const editorId = await alpha.addUser('Alpha the editor')
+      await addTripMember(alpha.scope, {
+        tripId: fixture.tripId,
+        userId: editorId,
+        role: 'editor',
+      })
+
+      expect(
+        await setAssignmentParticipants(
+          alpha.scopeFor(editorId),
+          fixture.assignmentId,
+          [strangerId],
+        ),
+      ).toEqual([strangerId])
+      expect(
+        (
+          await assignmentParticipantsAccess.findMany(alpha.scope, {
+            where: eq(
+              assignmentParticipants.assignmentId,
+              fixture.assignmentId,
+            ),
+          })
+        ).map((row) => row.userId),
+      ).toEqual([strangerId])
     })
 
     it('pairs a transport with the trip a request names', async () => {
