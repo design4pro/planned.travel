@@ -39,7 +39,7 @@ const messages = {
   'presence.workspaceChanged.title':
     'Las actualizaciones en vivo se detuvieron',
   'presence.workspaceChanged.body':
-    'Esta pestaña pertenece a un espacio de trabajo que se cambió en otra pestaña o ventana.',
+    'Esta pestaña pertenece a un espacio de trabajo que se cambió en otra pestaña o ventana. Los cambios que hagas aquí no se guardarán.',
   'presence.workspaceChanged.discard':
     'Se perderá el texto que no hayas enviado en esta pestaña.',
   'presence.workspaceChanged.confirm': 'Abrir de todos modos',

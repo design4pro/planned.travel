@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Yeniden bağlan',
   'presence.workspaceChanged.title': 'Canlı güncellemeler durdu',
   'presence.workspaceChanged.body':
-    'Bu sekme, başka bir sekmede veya pencerede değiştirilen bir çalışma alanına ait.',
+    'Bu sekme, başka bir sekmede veya pencerede değiştirilen bir çalışma alanına ait. Burada yaptığın değişiklikler kaydedilmez.',
   'presence.workspaceChanged.discard':
     'Bu sekmede göndermediğiniz metin kaybolacak.',
   'presence.workspaceChanged.confirm': 'Yine de aç',

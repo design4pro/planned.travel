@@ -40,7 +40,7 @@ const messages = {
   'presence.workspaceChanged.title':
     'Les actualitzacions en directe s’han aturat',
   'presence.workspaceChanged.body':
-    'Aquesta pestanya pertany a un espai de treball que s’ha canviat en una altra pestanya o finestra.',
+    'Aquesta pestanya pertany a un espai de treball que s’ha canviat en una altra pestanya o finestra. Els canvis que hi facis no es desaran.',
   'presence.workspaceChanged.discard':
     'Es perdrà el text que no hagis enviat en aquesta pestanya.',
   'presence.workspaceChanged.confirm': 'Obre igualment',

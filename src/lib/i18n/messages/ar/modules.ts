@@ -36,7 +36,7 @@ const messages = {
   'presence.reconnect': 'أعد الاتصال',
   'presence.workspaceChanged.title': 'توقفت التحديثات المباشرة',
   'presence.workspaceChanged.body':
-    'تنتمي علامة التبويب هذه إلى مساحة عمل جرى تغييرها في علامة تبويب أو نافذة أخرى.',
+    'تنتمي علامة التبويب هذه إلى مساحة عمل جرى تغييرها في علامة تبويب أو نافذة أخرى. لن تُحفظ التغييرات التي تجريها هنا.',
   'presence.workspaceChanged.discard':
     'سيضيع النص الذي لم ترسله في علامة التبويب هذه.',
   'presence.workspaceChanged.confirm': 'افتح على أي حال',

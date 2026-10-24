@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Újrakapcsolódás',
   'presence.workspaceChanged.title': 'Az élő frissítések leálltak',
   'presence.workspaceChanged.body':
-    'Ez a lap olyan munkaterülethez tartozik, amelyet egy másik lapon vagy ablakban megváltoztattak.',
+    'Ez a lap olyan munkaterülethez tartozik, amelyet egy másik lapon vagy ablakban megváltoztattak. Az itt végzett módosítások nem kerülnek mentésre.',
   'presence.workspaceChanged.discard':
     'Az ezen a lapon el nem küldött szöveg elvész.',
   'presence.workspaceChanged.confirm': 'Megnyitás mégis',

@@ -218,10 +218,36 @@ describe('the presence bar in a tab whose workspace was changed in another tab',
       )
 
       expect(room.open).not.toHaveBeenCalled()
-      expect(
-        screen.getByText(En['presence.workspaceChanged.discard']),
-      ).toBeTruthy()
+      const caption = document.querySelector('[aria-live="polite"]')
+      // The reason stays beside the warning, and the button is described by both.
+      expect(caption?.textContent).toContain(
+        En['presence.workspaceChanged.body'],
+      )
+      expect(caption?.textContent).toContain(
+        En['presence.workspaceChanged.discard'],
+      )
       expect(field.value).toBe('See you at the station at 9')
+    })
+
+    it('puts Cancel where the first press was, and Cancel keeps the tab as it is', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const [first] = screen.getAllByRole('button')
+      expect(first.textContent).toBe(En['action.cancel'])
+      fireEvent.click(first)
+
+      expect(room.open).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      ).toBeTruthy()
     })
 
     it('reloads on the second, explicit press', () => {

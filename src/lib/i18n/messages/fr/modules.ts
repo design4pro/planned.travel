@@ -40,7 +40,7 @@ const messages = {
   'presence.workspaceChanged.title':
     'Les mises à jour en direct se sont arrêtées',
   'presence.workspaceChanged.body':
-    'Cet onglet appartient à un espace de travail qui a été changé dans un autre onglet ou une autre fenêtre.',
+    'Cet onglet appartient à un espace de travail qui a été changé dans un autre onglet ou une autre fenêtre. Les modifications faites ici ne seront pas enregistrées.',
   'presence.workspaceChanged.discard':
     'Le texte que vous n’avez pas envoyé dans cet onglet sera perdu.',
   'presence.workspaceChanged.confirm': 'Ouvrir quand même',

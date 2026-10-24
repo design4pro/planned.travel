@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Połącz ponownie',
   'presence.workspaceChanged.title': 'Aktualizacje na żywo zatrzymały się',
   'presence.workspaceChanged.body':
-    'Ta karta należy do przestrzeni, którą zmieniono w innej karcie lub oknie.',
+    'Ta karta należy do przestrzeni, którą zmieniono w innej karcie lub oknie. Zmiany wprowadzone tutaj nie zostaną zapisane.',
   'presence.workspaceChanged.discard':
     'Tekst, którego nie wysłano w tej karcie, przepadnie.',
   'presence.workspaceChanged.confirm': 'Otwórz mimo to',

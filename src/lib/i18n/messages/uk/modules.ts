@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Перепідключитися',
   'presence.workspaceChanged.title': 'Оновлення наживо зупинено',
   'presence.workspaceChanged.body':
-    'Ця вкладка належить до простору, який змінили в іншій вкладці або вікні.',
+    'Ця вкладка належить до простору, який змінили в іншій вкладці або вікні. Зміни, зроблені тут, не збережуться.',
   'presence.workspaceChanged.discard':
     'Текст, який ви не надіслали в цій вкладці, буде втрачено.',
   'presence.workspaceChanged.confirm': 'Усе одно відкрити',

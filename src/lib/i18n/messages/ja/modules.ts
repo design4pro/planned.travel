@@ -36,8 +36,10 @@ const messages = {
     'ライブ更新は止まっています。保存は続きます。再読み込みか再試行で追いつけます。',
   'presence.reconnect': '再接続',
   'presence.workspaceChanged.title': 'ライブ更新が止まりました',
-  'presence.workspaceChanged.body': 'このタブは、別のタブまたはウィンドウで切り替えられたワークスペースに属しています。',
-  'presence.workspaceChanged.discard': 'このタブで送信していない文字は失われます。',
+  'presence.workspaceChanged.body':
+    'このタブは、別のタブまたはウィンドウで切り替えられたワークスペースに属しています。ここでの変更は保存されません。',
+  'presence.workspaceChanged.discard':
+    'このタブで送信していない文字は失われます。',
   'presence.workspaceChanged.confirm': 'このまま開く',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'すべての移動',

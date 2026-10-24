@@ -14,10 +14,11 @@
  * background socket event must not take focus from a field the reader is typing in, and the
  * reload it offers never starts by itself.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { ArrowRightLeft, RotateCw, Wifi, WifiOff } from 'lucide-react'
 
+import { hasUnsentText } from '#/components/layout/has-unsent-text'
 import { useOpenCurrentWorkspace } from '#/components/layout/use-open-current-workspace'
 import { Avatar, Button, Tooltip } from '#/components/ui'
 import { cn } from '#/lib/cn'
@@ -54,19 +55,6 @@ const STATUS_COPY: {
     labelKey: 'modules.presence.workspaceChanged.title',
     hintKey: 'modules.presence.workspaceChanged.body',
   },
-}
-
-/**
- * Whether a field on the screen holds text its reader has not sent. The composers keep their
- * drafts in component state, so the page is asked rather than each composer: a reload drops every
- * one of them, and the reader is asked before it happens (`workspace-changed`).
- */
-function hasUnsentText(): boolean {
-  return Array.from(
-    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      'textarea, input:not([type]), input[type="text"]',
-    ),
-  ).some((field) => !field.readOnly && field.value.trim().length > 0)
 }
 
 /** Each state has its own tone, so none of them reads as another (grey is `offline` alone). */
@@ -151,6 +139,7 @@ export function PresenceBar({
   const currentWorkspace = useOpenCurrentWorkspace()
   const [confirming, setConfirming] = useState(false)
   const workspaceChanged = room.status === 'workspace-changed'
+  const captionId = useId()
 
   // The reload cannot be taken back, so text that would be lost with it asks first: the first press
   // says so and changes the button, the second one goes on. Nothing is cleared or disabled.
@@ -238,16 +227,31 @@ export function PresenceBar({
         <>
           {/* The reason as text, readable without hovering: a phone cannot open the tooltip. */}
           <span
+            id={captionId}
             aria-live="polite"
             className="min-w-0 basis-full text-caption text-ink-2 sm:basis-auto"
           >
+            {t('modules.presence.workspaceChanged.body')}
             {confirming
-              ? t('modules.presence.workspaceChanged.discard')
-              : t('modules.presence.workspaceChanged.body')}
+              ? ` ${t('modules.presence.workspaceChanged.discard')}`
+              : null}
           </span>
+          {confirming ? (
+            // The safe choice sits where the first press was, so a second quick tap on the same
+            // spot backs out instead of discarding the draft.
+            <Button
+              variant="secondary"
+              shape="pill"
+              aria-describedby={captionId}
+              onClick={() => setConfirming(false)}
+            >
+              {t('modules.action.cancel')}
+            </Button>
+          ) : null}
           <Button
             variant={confirming ? 'danger' : 'secondary'}
             shape="pill"
+            aria-describedby={captionId}
             onClick={openCurrentWorkspace}
             loading={currentWorkspace.opening}
           >

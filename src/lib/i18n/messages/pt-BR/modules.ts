@@ -37,7 +37,7 @@ const messages = {
   'presence.reconnect': 'Reconectar',
   'presence.workspaceChanged.title': 'As atualizações ao vivo pararam',
   'presence.workspaceChanged.body':
-    'Esta aba pertence a um espaço de trabalho que foi trocado em outra aba ou janela.',
+    'Esta aba pertence a um espaço de trabalho que foi trocado em outra aba ou janela. As alterações feitas aqui não serão salvas.',
   'presence.workspaceChanged.discard':
     'O texto que você não enviou nesta aba será perdido.',
   'presence.workspaceChanged.confirm': 'Abrir mesmo assim',

@@ -80,7 +80,7 @@ const messages = {
   'presence.reconnect': 'Reconnect',
   'presence.workspaceChanged.title': 'Live updates stopped',
   'presence.workspaceChanged.body':
-    'This tab belongs to a workspace that was changed in another tab or window.',
+    'This tab belongs to a workspace that was changed in another tab or window. Changes you make here will not be saved.',
   'presence.workspaceChanged.discard':
     'Text you have not sent in this tab will be lost.',
   'presence.workspaceChanged.confirm': 'Open anyway',

@@ -39,7 +39,7 @@ const messages = {
   'presence.reconnect': 'Επανασύνδεση',
   'presence.workspaceChanged.title': 'Οι ζωντανές ενημερώσεις σταμάτησαν',
   'presence.workspaceChanged.body':
-    'Αυτή η καρτέλα ανήκει σε χώρο εργασίας που άλλαξε σε άλλη καρτέλα ή παράθυρο.',
+    'Αυτή η καρτέλα ανήκει σε χώρο εργασίας που άλλαξε σε άλλη καρτέλα ή παράθυρο. Οι αλλαγές που κάνετε εδώ δεν θα αποθηκευτούν.',
   'presence.workspaceChanged.discard':
     'Το κείμενο που δεν έχετε στείλει σε αυτή την καρτέλα θα χαθεί.',
   'presence.workspaceChanged.confirm': 'Άνοιγμα παρ’ όλα αυτά',

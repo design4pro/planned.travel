@@ -40,7 +40,7 @@ const messages = {
   'presence.workspaceChanged.title':
     'Gli aggiornamenti in tempo reale si sono fermati',
   'presence.workspaceChanged.body':
-    'Questa scheda appartiene a uno spazio di lavoro che è stato cambiato in un’altra scheda o finestra.',
+    'Questa scheda appartiene a uno spazio di lavoro che è stato cambiato in un’altra scheda o finestra. Le modifiche fatte qui non verranno salvate.',
   'presence.workspaceChanged.discard':
     'Il testo che non hai inviato in questa scheda andrà perso.',
   'presence.workspaceChanged.confirm': 'Apri comunque',

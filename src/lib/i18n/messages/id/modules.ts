@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Sambung ulang',
   'presence.workspaceChanged.title': 'Pembaruan langsung berhenti',
   'presence.workspaceChanged.body':
-    'Tab ini milik ruang kerja yang diubah di tab atau jendela lain.',
+    'Tab ini milik ruang kerja yang diubah di tab atau jendela lain. Perubahan yang Anda buat di sini tidak akan disimpan.',
   'presence.workspaceChanged.discard':
     'Teks yang belum Anda kirim di tab ini akan hilang.',
   'presence.workspaceChanged.confirm': 'Buka saja',

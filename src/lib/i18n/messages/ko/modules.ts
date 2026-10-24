@@ -36,7 +36,8 @@ const messages = {
     '실시간 업데이트가 꺼져 있습니다. 저장은 계속됩니다. 새로 고치거나 다시 시도하면 따라잡습니다.',
   'presence.reconnect': '다시 연결',
   'presence.workspaceChanged.title': '실시간 업데이트가 멈췄어요',
-  'presence.workspaceChanged.body': '이 탭은 다른 탭이나 창에서 바뀐 워크스페이스에 속해 있어요.',
+  'presence.workspaceChanged.body':
+    '이 탭은 다른 탭이나 창에서 바뀐 워크스페이스에 속해 있어요. 여기서 한 변경 사항은 저장되지 않아요.',
   'presence.workspaceChanged.discard': '이 탭에서 보내지 않은 글은 사라져요.',
   'presence.workspaceChanged.confirm': '그래도 열기',
   /* ------------------------------------------- the transports timeline */

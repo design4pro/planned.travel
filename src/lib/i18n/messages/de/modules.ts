@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Neu verbinden',
   'presence.workspaceChanged.title': 'Live-Updates wurden angehalten',
   'presence.workspaceChanged.body':
-    'Dieser Tab gehört zu einem Arbeitsbereich, der in einem anderen Tab oder Fenster gewechselt wurde.',
+    'Dieser Tab gehört zu einem Arbeitsbereich, der in einem anderen Tab oder Fenster gewechselt wurde. Änderungen, die du hier vornimmst, werden nicht gespeichert.',
   'presence.workspaceChanged.discard':
     'Text, den du in diesem Tab nicht gesendet hast, geht verloren.',
   'presence.workspaceChanged.confirm': 'Trotzdem öffnen',

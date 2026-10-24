@@ -402,11 +402,12 @@ as `07-S2` does.
   inside one 250 ms window produce one `router.invalidate()`, so a peer pasting eight places into a
   day costs one re-read and not eight. Existing primitives are reused and none is added — `Avatar`,
   `AvatarStack`, `Button`, `Tooltip` and `Badge` from `src/components/ui`.
-- **States.** The connection has four, and each is designed rather than merely labelled. `Live` is a
+- **States.** The connection has five, and each is designed rather than merely labelled. `Live` is a
   1.5px brand-tinted dot with the peer stack beside it; `Connecting` is the same dot at
   `--color-ink-4` with a `Spinner` at 16px; `Reconnecting` is a `--color-warning` dot and a plain
   sentence saying that anything sent is still saved; `Not live` is a `--color-ink-3` dot with a
-  `Button` variant `subtle` labelled "Reconnect", which is the error state's recovery affordance.
+  `Button` variant `subtle` labelled "Reconnect", which is the error state's recovery affordance. `Live updates stopped` is the fifth: a tab whose
+  workspace was changed in another tab, with the reason as text and the way out beside it.
   The peer stack's empty state — nobody else here — is the viewer's own avatar alone with no count
   chip, never an empty rectangle. There is no list in this stage that can be pending, so no skeleton
   is added; the skeleton the workspace already ships in `TripPending` covers the layout it mounts in.

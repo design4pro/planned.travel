@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Připojit znovu',
   'presence.workspaceChanged.title': 'Živé aktualizace se zastavily',
   'presence.workspaceChanged.body':
-    'Tato karta patří k prostoru, který byl změněn v jiné kartě nebo okně.',
+    'Tato karta patří k prostoru, který byl změněn v jiné kartě nebo okně. Změny provedené zde se neuloží.',
   'presence.workspaceChanged.discard':
     'Text, který jste v této kartě neodeslali, se ztratí.',
   'presence.workspaceChanged.confirm': 'Přesto otevřít',

@@ -38,7 +38,7 @@ const messages = {
   'presence.reconnect': 'Kết nối lại',
   'presence.workspaceChanged.title': 'Cập nhật trực tiếp đã dừng',
   'presence.workspaceChanged.body':
-    'Tab này thuộc về một không gian làm việc đã được đổi ở tab hoặc cửa sổ khác.',
+    'Tab này thuộc về một không gian làm việc đã được đổi ở tab hoặc cửa sổ khác. Các thay đổi bạn thực hiện ở đây sẽ không được lưu.',
   'presence.workspaceChanged.discard':
     'Văn bản bạn chưa gửi trong tab này sẽ bị mất.',
   'presence.workspaceChanged.confirm': 'Vẫn mở',
