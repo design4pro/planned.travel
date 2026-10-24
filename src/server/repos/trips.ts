@@ -100,8 +100,10 @@ import type { ShareScopes } from '#/server/db/schema'
 import type { Day, ShareLink, Trip, TripMember } from '#/server/db/types'
 import type { ListOptions, TenantScope, TenantTable } from './base'
 import { insertChunked, runBatch } from './batch'
+import { isTripWriteRole } from './trip-roles'
 
 export { MAX_BOUND_PARAMETERS, chunkFor } from './batch'
+export { TRIP_WRITE_ROLES, isTripWriteRole } from './trip-roles'
 
 /*
  * The imports above close two cycles — `places.ts` and `itinerary.ts` both import this module for
@@ -2155,7 +2157,8 @@ export async function tripRoleFor(
 }
 
 /**
- * Whether the acting user may write this trip's plan: owner or editor, and the trip is not archived.
+ * Whether the acting user may write this trip's plan: one of {@link TRIP_WRITE_ROLES} (owner or
+ * editor), and the trip is not archived. The role half is {@link isTripWriteRole}.
  *
  * The one answer every planner read gives its write controls. It sits beside {@link tripRoleFor}
  * because it is that role read to a boolean, and a second copy of it is what would let the board
@@ -2174,7 +2177,7 @@ export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,
   role: TripMember['role'] | null,
 ): boolean {
-  return !trip.isArchived && (role === 'owner' || role === 'editor')
+  return !trip.isArchived && isTripWriteRole(role)
 }
 
 /* -------------------------------------------------------------------------------------------------

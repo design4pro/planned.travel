@@ -18,6 +18,7 @@ import { z } from 'zod'
 import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
+  TRIP_WRITE_ROLES,
   assertTripRole,
   tripRoleFor,
   deleteTransport,
@@ -556,7 +557,7 @@ export async function searchConnections(
   ports: ConnectionSearchPorts,
 ): Promise<ConnectionSearchOutcome> {
   const trip = await requireTrip(scope, data.tripId)
-  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+  await assertTripRole(scope, trip.id, TRIP_WRITE_ROLES)
 
   const ceiling = await ports.ceiling(scope)
   const query = {

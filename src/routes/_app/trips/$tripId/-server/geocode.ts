@@ -27,6 +27,7 @@ import {
 import { ProviderBlockedError } from '#/server/metering/errors'
 import { RateCeilingError } from '#/server/metering/rate'
 import {
+  TRIP_WRITE_ROLES,
   assertTripRole,
   getSubscription,
   requireWritableTrip,
@@ -69,7 +70,7 @@ export async function reverseLookup(
   ports: ReverseLookupPorts,
 ): Promise<ReverseLookup> {
   const trip = await requireWritableTrip(scope, input.tripId)
-  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+  await assertTripRole(scope, trip.id, TRIP_WRITE_ROLES)
 
   const ceiling = resolveLimitsFromRow(await getSubscription(scope)).rates
     .geocode_lookups_per_month

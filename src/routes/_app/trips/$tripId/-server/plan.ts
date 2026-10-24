@@ -27,7 +27,7 @@ import {
   DAY_RUN_ANCHORS_MESSAGE,
   DAY_RUN_MAX_ITEMS,
   NotFoundError,
-  PLACE_WRITE_ROLES,
+  TRIP_WRITE_ROLES,
   assertTripRole,
   canWritePlan,
   createAssignment,
@@ -339,7 +339,7 @@ async function requireEditablePlan(
   tripId: string,
 ): Promise<Trip> {
   const trip = await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, trip.id, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, trip.id, TRIP_WRITE_ROLES)
   return trip
 }
 

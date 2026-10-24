@@ -31,6 +31,7 @@ import { NotFoundError, RepositoryError } from './context'
 import { requireTripDay } from './days'
 import { requirePlaceOfTrip } from './places'
 import { unlinkReservationsFromExpense } from './reservations'
+import { TRIP_WRITE_ROLES } from './trip-roles'
 import {
   assertExpectedTripCurrency,
   assertTripRole,
@@ -59,7 +60,6 @@ import type {
   Trip,
 } from '#/server/db/types'
 import type { TenantScope } from './base'
-import type { TripRole } from './trips'
 
 export const budgetItemsRepository = createTenantRepository(
   budgetItems,
@@ -84,11 +84,13 @@ export const settlementsRepository = createTenantRepository(
  * planned budget lines. A `viewer` reads the ledger, and so does a workspace member who only sees an
  * organization-visible trip (`CONTEXT.md`, "Trip member").
  *
- * The one place the money writers' role list is declared. Enforcement is {@link assertTripRole},
+ * An alias of {@link TRIP_WRITE_ROLES}, the trip's one writer-role list, read from `trip-roles.ts`
+ * rather than `trips.ts` because this module is reached from `trips.ts` through an import cycle and
+ * a module-scope read of `trips.ts` could find it uninitialised. Enforcement is {@link assertTripRole},
  * the trip's own guard, through {@link requireMoneyTrip}. The costs affordance delegates to
  * {@link canWritePlan}, the trip-owned predicate, through {@link canWriteMoney}.
  */
-export const MONEY_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
+export const MONEY_WRITE_ROLES = TRIP_WRITE_ROLES
 
 /**
  * Whether the costs screen may offer writes. Money follows the trip-owned rule for the plan:
