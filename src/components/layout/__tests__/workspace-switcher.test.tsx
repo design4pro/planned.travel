@@ -984,6 +984,18 @@ describe('creating a workspace', () => {
     },
   )
 
+  it('answers Enter in the field the same way as the button: the error, no request', async () => {
+    const { user } = await openDialog()
+    const input = screen.getByRole('textbox', { name: /Workspace name/ })
+
+    await user.type(input, '\u200B{Enter}')
+
+    expect(screen.getByText('Enter a workspace name.')).toBeTruthy()
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(input)
+    expect(workspace.create).not.toHaveBeenCalled()
+  })
+
   it('clears the error on the next edit and when the dialog is reopened', async () => {
     const { user, open } = await openDialog()
     const input = screen.getByRole('textbox', { name: /Workspace name/ })
