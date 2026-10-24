@@ -91,7 +91,7 @@ const messages = {
   'workspace.createUpgrade':
     '„{workspace}“ ist im Tarif Gratis, und nur ein Arbeitsbereich mit Bezahltarif kann einen weiteren erstellen. Hat einer deiner anderen Arbeitsbereiche einen Bezahltarif, wechsle zu ihm und erstelle von dort aus. Andernfalls stelle „{workspace}“ auf einen Bezahltarif um.',
   'workspace.createLimitReached':
-    'Du hast die höchste Anzahl an Arbeitsbereichen erreicht, denen ein Konto angehören kann.',
+    'Du gehörst so vielen Arbeitsbereichen an, wie das Limit erlaubt, daher kannst du keinen weiteren erstellen.',
   'workspace.createRoleRequired':
     'Nur ein Administrator des Arbeitsbereichs kann einen Arbeitsbereich erstellen. Frag einen Administrator dieses Arbeitsbereichs oder wechsle zu einem Arbeitsbereich, den du verwaltest.',
   'workspace.createFailed': 'Der Arbeitsbereich konnte nicht erstellt werden',

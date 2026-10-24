@@ -91,7 +91,7 @@ const messages = {
   'workspace.createUpgrade':
     '„{workspace}” jest w planie Darmowy, a kolejną przestrzeń może utworzyć tylko przestrzeń z planem płatnym. Jeśli któraś z innych Twoich przestrzeni ma plan płatny, przełącz się na nią i utwórz stamtąd. W przeciwnym razie przejdź w „{workspace}” na plan płatny.',
   'workspace.createLimitReached':
-    'Masz już największą liczbę przestrzeni, do których może należeć jedno konto.',
+    'Należysz do tylu przestrzeni, ile pozwala limit, więc nie możesz utworzyć kolejnej.',
   'workspace.createRoleRequired':
     'Przestrzeń może utworzyć tylko jej administrator. Poproś o to administratora tej przestrzeni albo przełącz się na przestrzeń, którą administrujesz.',
   'workspace.createFailed': 'Nie udało się utworzyć przestrzeni',

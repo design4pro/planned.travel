@@ -1091,7 +1091,7 @@ describe('creating a workspace', () => {
   it.each([
     [
       'limit-reached',
-      'You have reached the most workspaces one account can belong to.',
+      'You belong to as many workspaces as the limit allows, so you cannot create another.',
     ],
     [
       'role-required',

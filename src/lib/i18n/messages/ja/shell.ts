@@ -68,7 +68,7 @@ const messages = {
   'workspace.createName': 'ワークスペース名',
   'workspace.createUpgrade':
     '「{workspace}」はフリープランで、ワークスペースを追加で作成できるのは有料プランのワークスペースだけです。ほかのワークスペースに有料プランのものがあれば、そちらに切り替えて作成してください。ない場合は「{workspace}」を有料プランにアップグレードしてください。',
-  'workspace.createLimitReached': '1つのアカウントが参加できるワークスペースの上限に達しました。',
+  'workspace.createLimitReached': '上限いっぱいのワークスペースに所属しているため、新しく作成することはできません。',
   'workspace.createRoleRequired':
     'ワークスペースを作成できるのは、ワークスペースの管理者だけです。このワークスペースの管理者に依頼するか、自分が管理しているワークスペースに切り替えてください。',
   'workspace.createFailed': 'ワークスペースを作成できませんでした',

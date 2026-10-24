@@ -130,7 +130,7 @@ const messages = {
   'workspace.createUpgrade':
     '“{workspace}” is on the Free plan, and only a workspace on a paid plan can create another. If another of your workspaces is on a paid plan, switch to it and create from there. Otherwise, upgrade “{workspace}”.',
   'workspace.createLimitReached':
-    'You have reached the most workspaces one account can belong to.',
+    'You belong to as many workspaces as the limit allows, so you cannot create another.',
   'workspace.createRoleRequired':
     'Only a workspace admin can create a workspace. Ask an admin of this workspace, or switch to a workspace you administer.',
   'workspace.createFailed': 'Could not create the workspace',

@@ -81,12 +81,12 @@ const messages = {
   'workspace.createDescription':
     'Külön terület a saját utazásoknak, helyeknek és embereknek. Az Ingyenes csomaggal indul, és nem osztozik annak a munkaterületnek a csomagján, amelyben éppen van.',
   'workspace.createPermanent':
-    'A planned.travel még nem kínál lehetőséget munkaterület törlésére. Minden munkaterület, amelyet létrehozol vagy amelyhez csatlakozol, beleszámít a korlátba: ha {limit} munkaterület tagja vagy, nem hozhatsz létre újat.',
+    'A planned.travel még nem kínál lehetőséget munkaterület törlésére. Minden munkaterület, amelyet létrehoz vagy amelyhez csatlakozik, beleszámít a korlátba: ha {limit} munkaterület tagja, nem hozhat létre újat.',
   'workspace.createName': 'A munkaterület neve',
   'workspace.createUpgrade':
     '„{workspace}” az Ingyenes csomagon van, és csak fizetős csomagon lévő munkaterület hozhat létre újat. Ha valamelyik másik munkaterülete fizetős csomagon van, váltson arra, és onnan hozza létre. Egyébként állítsa át fizetős csomagra a(z) „{workspace}” munkaterületet.',
   'workspace.createLimitReached':
-    'Elérte azt a legnagyobb munkaterület-számot, amelynek egy fiók tagja lehet.',
+    'Annyi munkaterület tagja, amennyit a korlát megenged, ezért nem hozhat létre újat.',
   'workspace.createRoleRequired':
     'Munkaterületet csak a munkaterület adminisztrátora hozhat létre. Kérje meg ennek a munkaterületnek az adminisztrátorát, vagy váltson olyan munkaterületre, amelyet Ön kezel.',
   'workspace.createFailed': 'Nem sikerült létrehozni a munkaterületet',

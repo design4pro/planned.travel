@@ -88,7 +88,7 @@ const messages = {
   'workspace.createUpgrade':
     '„{workspace}“ je v tarifu Zdarma a další prostor může vytvořit jen prostor s placeným tarifem. Pokud má některý z vašich dalších prostorů placený tarif, přepněte na něj a vytvořte prostor odtud. Jinak u prostoru „{workspace}“ přejděte na placený tarif.',
   'workspace.createLimitReached':
-    'Dosáhli jste největšího počtu prostorů, do kterých může patřit jeden účet.',
+    'Patříte do tolika prostorů, kolik limit dovoluje, proto nelze vytvořit další.',
   'workspace.createRoleRequired':
     'Prostor může vytvořit jen jeho správce. Požádejte správce tohoto prostoru nebo přepněte na prostor, který spravujete.',
   'workspace.createFailed': 'Prostor se nepodařilo vytvořit',

@@ -104,7 +104,7 @@ const messages = {
   'workspace.createUpgrade':
     '“{workspace}” đang ở gói Miễn phí, và chỉ không gian ở gói trả phí mới tạo được không gian khác. Nếu một không gian khác của bạn đang ở gói trả phí, hãy chuyển sang đó và tạo từ đó. Nếu không, hãy nâng cấp “{workspace}”.',
   'workspace.createLimitReached':
-    'Bạn đã đạt số không gian tối đa mà một tài khoản có thể tham gia.',
+    'Bạn đã thuộc số không gian tối đa mà giới hạn cho phép, nên không thể tạo thêm.',
   'workspace.createRoleRequired':
     'Chỉ quản trị viên của không gian mới tạo được không gian. Hãy nhờ một quản trị viên của không gian này, hoặc chuyển sang không gian bạn quản trị.',
   'workspace.createFailed': 'Chưa tạo được không gian',

@@ -86,7 +86,7 @@ const messages = {
   'workspace.createUpgrade':
     '“{workspace}” heeft het abonnement Gratis, en alleen een werkruimte met een betaald abonnement kan er nog een maken. Heeft een van je andere werkruimtes een betaald abonnement, wissel daar dan naartoe en maak de nieuwe werkruimte vanaf daar. Anders upgrade je “{workspace}”.',
   'workspace.createLimitReached':
-    'Je hebt het maximale aantal werkruimtes bereikt waartoe één account kan behoren.',
+    'Je hoort bij evenveel werkruimtes als de limiet toestaat, dus je kunt er geen nieuwe aanmaken.',
   'workspace.createRoleRequired':
     'Alleen een beheerder van de werkruimte kan een werkruimte maken. Vraag een beheerder van deze werkruimte of wissel naar een werkruimte die je beheert.',
   'workspace.createFailed': 'De werkruimte kon niet worden gemaakt',

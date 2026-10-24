@@ -83,7 +83,7 @@ const messages = {
   'workspace.createUpgrade':
     '« {workspace} » est dans l’offre Gratuite, et seul un espace avec une offre payante peut en créer un autre. Si l’un de vos autres espaces a une offre payante, passez-y et créez depuis celui-ci. Sinon, faites passer « {workspace} » à une offre payante.',
   'workspace.createLimitReached':
-    'Vous avez atteint le nombre maximal d’espaces auxquels un compte peut appartenir.',
+    'Vous appartenez à autant d’espaces que la limite le permet, vous ne pouvez donc plus en créer.',
   'workspace.createRoleRequired':
     'Seul un administrateur de l’espace peut créer un espace. Demandez à un administrateur de cet espace ou passez à un espace que vous administrez.',
   'workspace.createFailed': 'Impossible de créer l’espace',

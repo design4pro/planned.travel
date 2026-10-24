@@ -97,7 +97,7 @@ const messages = {
   'workspace.createUpgrade':
     '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',
   'workspace.createLimitReached':
-    'Anda sudah mencapai jumlah ruang kerja terbanyak yang bisa diikuti satu akun.',
+    'Anda tergabung di ruang kerja sebanyak yang diizinkan batas, jadi Anda tidak dapat membuat yang baru.',
   'workspace.createRoleRequired':
     'Hanya administrator ruang kerja yang bisa membuat ruang kerja. Minta administrator ruang kerja ini, atau pindah ke ruang kerja yang Anda kelola.',
   'workspace.createFailed': 'Tidak bisa membuat ruang kerja',

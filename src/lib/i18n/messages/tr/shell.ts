@@ -86,7 +86,7 @@ const messages = {
   'workspace.createUpgrade':
     '“{workspace}” Ücretsiz planda; yeni bir çalışma alanını yalnızca ücretli planı olan bir çalışma alanı oluşturabilir. Diğer çalışma alanlarınızdan birinin ücretli planı varsa ona geçin ve oradan oluşturun. Aksi halde “{workspace}” alanını ücretli plana yükseltin.',
   'workspace.createLimitReached':
-    'Bir hesabın üye olabileceği en yüksek çalışma alanı sayısına ulaştınız.',
+    'Sınırın izin verdiği kadar çalışma alanına üyesiniz, bu yüzden yenisini oluşturamazsınız.',
   'workspace.createRoleRequired':
     'Yeni bir çalışma alanını yalnızca bir çalışma alanı yöneticisi oluşturabilir. Bu çalışma alanının bir yöneticisinden isteyin ya da yönettiğiniz bir çalışma alanına geçin.',
   'workspace.createFailed': 'Çalışma alanı oluşturulamadı',

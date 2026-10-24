@@ -85,7 +85,7 @@ const messages = {
   'workspace.createUpgrade':
     '«{workspace}» és al pla gratuït, i només un espai amb un pla de pagament en pot crear un altre. Si algun dels teus altres espais té un pla de pagament, canvia-hi i crea’n un des d’allà. Si no, millora el pla de «{workspace}».',
   'workspace.createLimitReached':
-    'Has arribat al màxim d’espais als quals pot pertànyer un compte.',
+    'Pertanys a tants espais com permet el límit, així que no en pots crear cap més.',
   'workspace.createRoleRequired':
     'Només un administrador de l’espai pot crear-ne un. Demana-ho a un administrador d’aquest espai o canvia a un espai que administris.',
   'workspace.createFailed': 'No s’ha pogut crear l’espai',

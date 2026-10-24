@@ -80,7 +80,7 @@ const messages = {
   'workspace.createUpgrade':
     '«{workspace}» è nel piano Gratuito e solo uno spazio con un piano a pagamento può crearne un altro. Se un altro dei tuoi spazi ha un piano a pagamento, passa a quello e crea da lì. Altrimenti, passa «{workspace}» a un piano a pagamento.',
   'workspace.createLimitReached':
-    'Hai raggiunto il numero massimo di spazi a cui può appartenere un account.',
+    'Appartieni a tanti spazi quanti ne consente il limite, quindi non puoi crearne altri.',
   'workspace.createRoleRequired':
     'Solo un amministratore dello spazio può creare uno spazio. Chiedilo a un amministratore di questo spazio o passa a uno spazio che amministri.',
   'workspace.createFailed': 'Non è stato possibile creare lo spazio',
