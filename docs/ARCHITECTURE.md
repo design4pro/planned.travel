@@ -89,7 +89,9 @@ A call from the authenticated shell also carries the workspace the tab is showin
 `requireOrg` compares it with the session's effective workspace before the role check and any data
 access, and a mismatch is refused as `workspace-changed` (403) with nothing written, so a tab left
 open before another tab switched workspace cannot write into the workspace it is not showing. The
-claim only narrows access: the tenant context still comes from the session alone.
+claim only narrows access: the tenant context still comes from the session alone. The trip room
+socket states the same claim as `?workspace=` on its URL, because a browser cannot set a header on a
+WebSocket (#979, §5).
 
 ### 2.3 A tile range request (`GET /api/tiles/basemap.pmtiles`, `Range: bytes=…`)
 
@@ -208,8 +210,8 @@ entry rule. These are architectural paths; some surfaces remain planned. Bounded
 another catalog member.
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
-  `organization_id`; `provider_usage` uses it only for attribution. Catalog is the single
-  exception outside repos, with exactly four members (these tables, bounded reminder discovery,
+  `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three
+  closed exceptions outside repos (SPEC §6; the others are the `…Unscoped` shape and the identity-table SQL of `src/server/auth/provisioning.ts`), with exactly four members (these tables, bounded reminder discovery,
   the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
@@ -341,6 +343,11 @@ TTL plus the webhook's own invalidation close the window behind it.
 `TRIP_ROOM` is addressed by trip id, so trip _n_ gets its own single-threaded object with its
 own SQLite storage and its own WebSocket set. Concretely, from `src/server/do/protocol.ts`:
 
+- A socket from a stale tab (the `?workspace=` claim names another workspace than the session's) is
+  not forwarded to the object: the Worker accepts the upgrade and closes it at once with code 4001
+  and the reason `Workspace changed` (`TRIP_ROOM_WORKSPACE_CHANGED_*`). A refused upgrade would be
+  unreadable to a browser socket, so the tab could only show "reconnecting". The tab moves to
+  `workspace-changed`, stops retrying and offers "Open the current workspace".
 - 32 KiB maximum frame; 40 messages per second per connection rate limit.
 - 5-minute alarm interval for housekeeping; a room idles out after 7 days.
 - Deleting a trip resets its room after the D1 deletion commits: sockets close and stored entity,

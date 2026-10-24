@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { FIXTURE_DAY } from './e2e/fixture-day'
+
 const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
 /**
@@ -60,9 +62,10 @@ if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
  *
  * The header is inert against anything but a dev server: the guard around it is
  * `import.meta.env.DEV`, which the production build folds to `false` and drops.
+ * CI serves the suite from an `E2E_BUILD=1` build instead, which carries the same
+ * day compiled in (`e2e/fixture-day.ts`); the header then changes nothing.
  */
 const SERVER_TODAY_HEADER = 'x-pt-server-today'
-const FIXTURE_DAY = '2026-08-20'
 const clockPin = { [SERVER_TODAY_HEADER]: FIXTURE_DAY }
 
 /**
@@ -123,7 +126,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  // Parallel workers share one dev server and one D1 file, and that is safe
+  // Parallel workers share one server (a dev server locally, a build on CI) and one D1 file, and that is safe
   // because every write the suite makes to the fixture is accounted for: the
   // sign-in and the language pin (setup project, which finishes before the browser
   // projects start, plus the restore in the `finally` of the visitor-language walk, listed below), and the impersonation fixture — whose session lives in its
@@ -137,7 +140,7 @@ export default defineConfig({
   // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. The "visitor language after a signed-in choice" walk in `e2e/journeys.spec.ts` is another: Chromium-only and serial, it sets the demo member's language to German in settings and pins it back to following the workspace in `finally`. `08-S1` and `08-S2a` in `e2e/product-modules.spec.ts` also write fixture state:
   // Chromium-only serial walks that set the demo member's allowance and leave settings on `/vacay`, or add a region under a visited country on `/atlas`, and restore their changes in `finally`. The real contention is the auth rate
   // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
-  // One per CI shard, measured: two workers on the 2-vCPU runner starved the
+  // One per CI shard. Measured on `vite dev`, before CI served a build: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action
   // timeout on 17 tests and left 12 flaky, all timeouts (PR #84, run
@@ -159,6 +162,9 @@ export default defineConfig({
   // the 10 s action and hydration waits as well, so it would have meant raising
   // every budget and hiding slow-page regressions. `--workers=N` still
   // overrides this on a quiet machine.
+  //
+  // Still one in CI on the `E2E_BUILD=1` build: two workers raced on the shared demo account
+  // (the 08-S5a and language-switch journeys save its locale while another file reads its UI).
   workers: isCI ? 1 : 2,
   // Doubled under CI, because the runner is about three times slower than the
   // machine this number was chosen on and the budget was sized on the wrong one.

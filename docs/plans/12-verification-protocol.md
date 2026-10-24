@@ -127,11 +127,13 @@ Three, and only these three names are valid after `--project=`:
 | `mobile-safari` | `devices['iPhone 15']` — WebKit, touch, 393x659 viewport | The mobile half. Safe-area insets, `100dvh` and momentum scrolling behave differently here and nowhere else. |
 
 Both browser projects send `x-pt-server-today: 2026-08-20` on every request. That value is
-`FIXTURE_DAY` in `playwright.config.ts`, and it is pinned for a reason that outlived the baselines:
+`FIXTURE_DAY` in `e2e/fixture-day.ts`, and it is pinned for a reason that outlived the baselines:
 the Worker selects rows by comparing fixture dates against its own `new Date()`, so unpinned, the
 seeded workspace's dashboard rail empties for good after 2026-10-12 and `trips-core.spec.ts` starts
 skipping - a suite going green by covering less, on a morning nobody touched it. Two vitest guards
-read the literal out of the config so the pin cannot drift in silence.
+read the literal out of that file so the pin cannot drift in silence. CI serves an `E2E_BUILD=1`
+`vite build` through `vite preview`, where the header is ignored: `vite.config.ts` compiles the same
+`FIXTURE_DAY` into `src/server/clock.ts` instead.
 
 There are no comparison settings, because nothing is compared. `expect.timeout` is 5 s and that is
 the whole of the `expect` block.
@@ -194,7 +196,7 @@ capture URL's own origin, because setting it context-wide is what made Google Fo
 preflight and photographed every frame in the fallback face.
 
 `2026-08-20` is the value, and it is not a free choice — it is `FIXTURE_DAY` in
-`playwright.config.ts`, the same string both browser projects send. A stage that pins the capture to
+`e2e/fixture-day.ts`, the same string both browser projects send. A stage that pins the capture to
 one day and the suite to another has produced two pictures of two products.
 
 One limit, measured, that decides where a capture may be pointed: `serverToday()` reads the header
@@ -335,7 +337,7 @@ The `relativeTime` declaration, `RELATIVE_TIME_SITES`, `pinRelativeTime()` and `
 that earlier versions of this section required are **gone**. They existed to hold a clock-derived
 string still inside a pixel comparison, and there is no comparison. What survives of that concern is
 the day itself: the header pin described in §2, and the two vitest guards that read `FIXTURE_DAY`
-out of `playwright.config.ts`. One rule from that machinery is worth keeping as a rule for humans,
+out of `e2e/fixture-day.ts`. One rule from that machinery is worth keeping as a rule for humans,
 because nothing enforces it any more: a console route must not print a date computed from the
 browser's clock when the Worker's is what selected the row. The unit tests over
 `src/server/fns/console/-lib/providers.ts` are what is left of the enforcement.

@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { relative } from 'node:path'
 
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
@@ -10,6 +11,8 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
+
+import { FIXTURE_DAY } from './e2e/fixture-day'
 
 /**
  * Source maps exist only for the build that is going to upload them.
@@ -41,6 +44,37 @@ const uploadsSourceMaps =
  * Off under e2e, plugin default (`enabled: true`) everywhere else, so `pnpm dev` keeps the relay.
  */
 const isE2E = process.env.E2E === '1'
+
+/**
+ * The day an e2e build believes it is, folded in at compile time (`src/server/clock.ts`).
+ *
+ * CI serves the browser suite from a build, where the `x-pt-server-today` header branch is gone
+ * by design. With `E2E_BUILD` unset this emits the literal `undefined` and the branch leaves the
+ * bundle, so a deployed Worker still has no way to be told what day it is.
+ */
+const isE2EBuild = process.env.E2E_BUILD === '1'
+const e2eServerToday = isE2EBuild ? JSON.stringify(FIXTURE_DAY) : 'undefined'
+
+/**
+ * Server-function ids an e2e build can be read by, in the dev server's own shape.
+ *
+ * A build names each function by a SHA-256 of its entry; `callsServerFn` in
+ * `e2e/helpers/server-fn.ts` finds a call by decoding the function's name out of its URL, which
+ * only the dev-server id carries. Only for `E2E_BUILD=1`: the deployed bundle keeps the hashes,
+ * and `pnpm build`'s manifest check (`scripts/check-server-fn-manifest.mjs`) keeps reading them.
+ */
+function readableServerFnId({
+  filename,
+  functionName,
+}: {
+  filename: string
+  functionName: string
+}): string {
+  const file = relative(import.meta.dirname, filename)
+  return Buffer.from(JSON.stringify({ file, export: functionName })).toString(
+    'base64url',
+  )
+}
 
 /**
  * An automated dev server outlives the checkout it was started for, and the port window is finite.
@@ -106,6 +140,7 @@ export function stopWhenRootIsRemoved({
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   build: { sourcemap: uploadsSourceMaps ? 'hidden' : false },
+  define: { __E2E_SERVER_TODAY__: e2eServerToday },
   /**
    * `.claude/` sits inside the repo root, and `.claude/worktrees/` holds full git worktrees —
    * 3.2 GB and ~95k files at the time of writing, including another checkout's `node_modules`
@@ -147,7 +182,11 @@ const config = defineConfig({
      */
     cloudflare({ viteEnvironment: { name: 'ssr' }, remoteBindings: false }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart(
+      isE2EBuild
+        ? { serverFns: { generateFunctionId: readableServerFnId } }
+        : undefined,
+    ),
     viteReact(),
     // Last on purpose: it reads the bundle other plugins produced, so it has to run after them.
     // Inert without a token - `disable` short-circuits it before it looks for anything to upload.

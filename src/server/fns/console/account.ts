@@ -9,7 +9,7 @@
  * where the contract puts it:
  *
  * - **The ledger statement lives in `src/server/catalog/audit.ts`**, beside `appendPlatformAudit`.
- *   §6 names `server/catalog` as the single stated exception to the tenant-repository rule, and
+ *   §6 names `server/catalog` as a stated exception to the tenant-repository rule, and
  *   `platform_audit_log` carries no `organization_id` so it could never pass through the tenant
  *   layer at all (§5). The append and the timeline are two halves of one table's contract; splitting
  *   them across layers is how the ordering ends up restated somewhere it can drift.

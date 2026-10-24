@@ -92,9 +92,10 @@ MCP token issuance; catalogue and packs curation.
 
 - Cloudflare Workers + TanStack Start (React 19), D1/Drizzle, KV, R2, Durable Objects, Queues.
 - **The dependency set is frozen.** No new packages. A genuine need is reported, never installed.
-- Every query goes through a tenant-scoped repository in `server/repos`; `server/catalog` is the
-  single stated exception outside repos (exactly three catalog members). Bounded `…Unscoped`
-  repo functions may take a plain `Database` under SPEC §5 FU-3 (suffix, header justification,
+- Every query goes through a tenant-scoped repository in `server/repos`; the stated
+  exceptions outside repos are three, and closed (SPEC §6): `server/catalog` (exactly four members), the
+  identity-table SQL of `src/server/auth/provisioning.ts` and the bounded `…Unscoped`
+  repo functions, which may take a plain `Database` under SPEC §5 FU-3 (suffix, header justification,
   one named caller and a narrow projection without tenant content). `components/ui` never fetches data and never imports from `server/`.
 - Every server-function input is validated with Zod.
 - Ships in **23 locales** (`ar ca cs de el en es fr hu id it ja ko nl pl pt-BR ru sv tr uk vi

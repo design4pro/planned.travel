@@ -3,8 +3,16 @@ import {
   isAuthRequirementError,
   requireOrg,
 } from '#/server/auth/session'
+import {
+  WORKSPACE_CLAIM_QUERY,
+  parseWorkspaceClaim,
+} from '#/lib/workspace-claim'
 import { getDb } from '#/server/db/client'
 import { connectToTripRoom } from '#/server/do'
+import {
+  TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+  TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+} from '#/server/do/protocol'
 import {
   canWritePlan,
   createScope,
@@ -24,6 +32,17 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * trusting the cookie's cached role), resolves the trip *inside* that tenant — a trip id from
  * another workspace is a 404 before the socket exists — and only then forwards
  * the upgrade with a signed-in-fact identity attached.
+ *
+ * **A stale tab is told, not refused.** A tab states the workspace it is showing as `?workspace=`
+ * (`WORKSPACE_CLAIM_QUERY`), the same claim every server function carries. After the session and
+ * workspace checks and before any trip lookup, a valid claim that is not the effective workspace is
+ * answered by the Worker itself: it accepts the upgrade, closes it at once with
+ * `TRIP_ROOM_WORKSPACE_CHANGED_CODE` and a fixed reason, and never touches the room. A refused
+ * upgrade (404) would be unreadable to a browser socket, which is what left a stale tab
+ * reconnecting for ever. The claim only narrows: it is compared, never used to pick the workspace
+ * (`TenantContext` still comes from the session alone), a missing or malformed one behaves as it
+ * always did, and the answer is the same whether or not the trip exists anywhere, so it reveals
+ * nothing about the workspace the session is in or the trip asked for.
  *
  * The room role is the stored **trip role** read through `canWritePlan` — the
  * one "may write the plan" rule every planner read already uses — never the
@@ -110,6 +129,22 @@ function absoluteAvatar(image: string | null | undefined): string | null {
   return /^https?:\/\//.test(image) ? image : null
 }
 
+/**
+ * Answers an upgrade from a stale tab: accepted in the Worker, closed at once, never forwarded.
+ * The room's own identity is not built and the reason names nothing.
+ */
+function closeForChangedWorkspace(): Response {
+  const pair = new WebSocketPair()
+  const client = pair[0]
+  const server = pair[1]
+  server.accept()
+  server.close(
+    TRIP_ROOM_WORKSPACE_CHANGED_CODE,
+    TRIP_ROOM_WORKSPACE_CHANGED_REASON,
+  )
+  return new Response(null, { status: 101, webSocket: client })
+}
+
 export async function serveTripRoom(
   namespace: TripRoomNamespace,
   request: Request,
@@ -138,6 +173,19 @@ export async function serveTripRoom(
       return json({ error: cause.message }, 403)
     }
     throw cause
+  }
+
+  // Advisory: absent or malformed behaves as it always did. A valid claim is compared with the
+  // workspace this request resolved, before either lookup below, so the answer cannot depend on
+  // which trips exist.
+  const claim = parseWorkspaceClaim(
+    new URL(request.url).searchParams.get(WORKSPACE_CLAIM_QUERY),
+  )
+  if (
+    claim.status === 'valid' &&
+    claim.organizationId !== context.organizationId
+  ) {
+    return closeForChangedWorkspace()
   }
 
   const scope = createScope(getDb(), context)
@@ -172,4 +220,3 @@ export async function serveTripRoom(
 
   return connectToTripRoom(namespace, identity, request)
 }
-

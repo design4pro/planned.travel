@@ -35,6 +35,13 @@ const messages = {
   'presence.offline.body':
     'Живые обновления выключены. Сохранение работает; обновите страницу или повторите, чтобы догнать.',
   'presence.reconnect': 'Переподключиться',
+  'presence.workspaceChanged.title':
+    'Обновления в реальном времени остановлены',
+  'presence.workspaceChanged.body':
+    'Эта вкладка относится к пространству, которое изменили в другой вкладке или окне. Изменения, сделанные здесь, не сохранятся.',
+  'presence.workspaceChanged.discard':
+    'Текст, который вы не отправили в этой вкладке, будет потерян.',
+  'presence.workspaceChanged.confirm': 'Всё равно открыть',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Все переезды',
   'transports.empty.title': 'Пока нет переездов',

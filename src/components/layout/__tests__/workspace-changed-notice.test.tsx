@@ -7,11 +7,13 @@ import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import {
   markWorkspaceStale,
   resetWorkspaceClaim,
+  resumeWorkspaceClaim,
   setWorkspaceClaim,
   workspaceClaimState,
 } from '#/lib/workspace-claim-store'
@@ -20,6 +22,7 @@ import { WorkspaceChangedNotice } from '../workspace-changed-notice'
 import type { Catalogue } from '#/lib/i18n'
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('ui', Ui),
 }
@@ -219,5 +222,121 @@ describe('WorkspaceChangedNotice', () => {
     expect(document.activeElement).toBe(
       view.container.ownerDocument.querySelector('main'),
     )
+  })
+
+  describe('with text the reader has not sent', () => {
+    function typeUnsent(): HTMLTextAreaElement {
+      const field = document.createElement('textarea')
+      field.value = 'See you at the station at 9'
+      document.body.appendChild(field)
+      return field
+    }
+
+    // Only the clock is faked: the confirmation ignores a press for a moment after it appears.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+      document.body.querySelectorAll('textarea').forEach((f) => f.remove())
+    })
+
+    it('asks before it reloads and keeps the text', async () => {
+      const field = typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+
+      expect(assign).not.toHaveBeenCalled()
+      expect(descriptionOf(screen.getByRole('alertdialog'))).toContain(
+        Modules['presence.workspaceChanged.discard'],
+      )
+      expect(field.value).toBe('See you at the station at 9')
+    })
+
+    it('reloads on the explicit second press', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+
+      vi.setSystemTime(Date.now() + 600)
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: Modules['presence.workspaceChanged.confirm'],
+        }),
+      )
+
+      expect(assign).toHaveBeenCalledWith('/dashboard')
+    })
+
+    it('puts focus on "Not now" and ignores a press that follows the first at once', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Not now' }),
+      )
+      const confirm = screen.getByRole('button', {
+        name: Modules['presence.workspaceChanged.confirm'],
+      })
+      fireEvent.click(confirm)
+      vi.setSystemTime(Date.now() + 200)
+      fireEvent.click(confirm)
+
+      expect(assign).not.toHaveBeenCalled()
+    })
+
+    it('"Not now" backs out of the question without reloading, and it asks afresh next time', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
+
+      expect(assign).not.toHaveBeenCalled()
+      refuse()
+      await screen.findByRole('alertdialog')
+      expect(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      ).toBeTruthy()
+    })
+
+    it('asks afresh after a navigation closed it from the store while it was asking', async () => {
+      typeUnsent()
+      mount()
+      refuse()
+      await screen.findByRole('alertdialog')
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      )
+      expect(screen.getByRole('button', { name: 'Open anyway' })).toBeTruthy()
+
+      act(() => resumeWorkspaceClaim())
+      refuse()
+
+      await screen.findByRole('alertdialog')
+      expect(screen.queryByRole('button', { name: 'Open anyway' })).toBeNull()
+      expect(
+        screen.getByRole('button', { name: 'Open the current workspace' }),
+      ).toBeTruthy()
+    })
   })
 })

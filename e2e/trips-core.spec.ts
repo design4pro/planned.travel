@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
+import { callsServerFn } from './helpers/server-fn.ts'
 import { settleMutations } from './helpers/settle.ts'
 import {
   DEMO_EMAIL,
@@ -355,6 +356,19 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
     await visit(page, TRIPS, 'light')
 
     const title = await firstTripTitle(page)
+    // Held until the "not yet" state is read: a fast server (the CI build) answers before
+    // any assertion could see the button disabled.
+    let release = (): void => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    await page.route(
+      (url) => callsServerFn(url, 'tripDeleteSummaryFn'),
+      async (route) => {
+        await held
+        await route.continue()
+      },
+    )
     await page.locator(TRIGGER).first().click()
     await page
       .getByRole('menu')
@@ -370,6 +384,7 @@ test.describe('01-S1 — Who may see a trip and who may change it', () => {
 
     // The summary is fetched when the dialog opens, so the button's resting state is "not yet".
     await expect(confirm).toBeDisabled()
+    release()
 
     // The inventory is drawn only once that answer lands, and it always names at least the one
     // member every trip has — so waiting for its first line is what makes the branch below a reading

@@ -1,19 +1,28 @@
 import '#/components/ui/__tests__/test-env'
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { TooltipProvider } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import En from '#/lib/i18n/messages/en/modules'
+import EnShell from '#/lib/i18n/messages/en/shell'
 import Pl from '#/lib/i18n/messages/pl/modules'
 import { PresenceBar } from '../presence-bar'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { PresenceMember } from '#/server/do/protocol'
 
-const room = vi.hoisted(() => ({ peers: [] as Array<unknown> }))
+const room = vi.hoisted(() => ({
+  peers: [] as Array<unknown>,
+  status: 'live' as string,
+  reconnect: undefined as unknown as () => void,
+}))
+
+// The real `useOpenCurrentWorkspace` runs; the document load it ends in is the spy.
+const assign = vi.fn()
+const originalLocation = window.location
 
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ invalidate: vi.fn() }),
@@ -21,16 +30,34 @@ vi.mock('@tanstack/react-router', () => ({
 
 vi.mock('../use-trip-room', () => ({
   useTripRoom: () => ({
-    status: 'live',
+    status: room.status,
     peers: room.peers,
     you: null,
     version: 0,
     changes: 0,
-    reconnect: vi.fn(),
+    reconnect: room.reconnect,
   }),
 }))
 
-afterEach(cleanup)
+beforeEach(() => {
+  room.status = 'live'
+  room.peers = []
+  room.reconnect = vi.fn()
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: { assign },
+  })
+})
+
+afterEach(() => {
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: originalLocation,
+  })
+  assign.mockReset()
+  cleanup()
+  document.body.innerHTML = ''
+})
 
 function member(
   connectionId: string,
@@ -99,5 +126,236 @@ describe('the presence bar for a person with no display name', () => {
 
     expect(screen.getByText('Ada Lovelace')).toBeTruthy()
     expect(screen.queryByText('Unnamed member')).toBeNull()
+  })
+})
+
+describe('the presence bar in a tab whose workspace was changed in another tab', () => {
+  function mountStale(): void {
+    room.status = 'workspace-changed'
+    mount('en', {
+      ...namespaceCatalogue('modules', En),
+      ...namespaceCatalogue('shell', EnShell),
+    })
+  }
+
+  it('says why live updates stopped, as visible text, in the one polite status region', () => {
+    mountStale()
+
+    const status = screen.getByRole('status')
+    expect(status.textContent).toBe(En['presence.workspaceChanged.title'])
+    expect(status.getAttribute('aria-live')).toBeNull()
+    expect(screen.getByText(En['presence.workspaceChanged.body'])).toBeTruthy()
+  })
+
+  it('is not the offline or the retrying look', () => {
+    mountStale()
+
+    const status = screen.getByRole('status')
+    expect(status.className).toContain('bg-info-soft')
+    expect(status.className).not.toContain('bg-surface-2')
+    expect(status.className).not.toContain('bg-warning-soft')
+    expect(status.querySelector('[data-motion-loop]')).toBeNull()
+  })
+
+  it('offers the current workspace and no reconnect', () => {
+    mountStale()
+
+    expect(
+      screen.queryByRole('button', { name: En['presence.reconnect'] }),
+    ).toBeNull()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: EnShell['session.openCurrentWorkspace'],
+      }),
+    )
+
+    expect(assign).toHaveBeenCalledTimes(1)
+    expect(room.reconnect).not.toHaveBeenCalled()
+  })
+
+  it('does not promise that everything still saves', () => {
+    mountStale()
+
+    expect(document.body.textContent).not.toContain(En['presence.offline.body'])
+    expect(document.body.textContent).not.toContain(
+      En['presence.reconnecting.body'],
+    )
+  })
+
+  it('shows the button busy while the page is leaving, so a slow reload is not tapped twice', () => {
+    mountStale()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: EnShell['session.openCurrentWorkspace'],
+      }),
+    )
+
+    // A busy button's name is the loading label, so it is found by its state.
+    const button = document.querySelector('button[aria-busy="true"]')
+    expect(button?.getAttribute('aria-disabled')).toBe('true')
+    expect(button?.textContent).toContain(
+      EnShell['session.openCurrentWorkspace'],
+    )
+  })
+
+  it('leaves the focus and any field where they were', () => {
+    const field = document.createElement('textarea')
+    document.body.appendChild(field)
+    field.focus()
+
+    mountStale()
+
+    expect(document.activeElement).toBe(field)
+  })
+
+  describe('with text the reader has not sent', () => {
+    // Only the clock is faked: the confirmation ignores a press for a moment after it appears.
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    function typeUnsent(): HTMLTextAreaElement {
+      const field = document.createElement('textarea')
+      field.value = 'See you at the station at 9'
+      document.body.appendChild(field)
+      return field
+    }
+
+    it('asks before it reloads, and keeps the text if the reader does not go on', () => {
+      const field = typeUnsent()
+      mountStale()
+
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      expect(assign).not.toHaveBeenCalled()
+      const caption = document.querySelector('[aria-live="polite"]')
+      // The reason stays beside the warning, and the button is described by both.
+      expect(caption?.textContent).toContain(
+        En['presence.workspaceChanged.body'],
+      )
+      expect(caption?.textContent).toContain(
+        En['presence.workspaceChanged.discard'],
+      )
+      expect(field.value).toBe('See you at the station at 9')
+    })
+
+    it('puts Cancel first, and Cancel keeps the tab as it is', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const [first] = screen.getAllByRole('button')
+      expect(first.textContent).toBe(En['action.cancel'])
+      fireEvent.click(first)
+
+      expect(assign).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      ).toBeTruthy()
+    })
+
+    it('moves focus to Cancel on the first press, and back to the opener when Cancel is pressed', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const [cancel] = screen.getAllByRole('button')
+      expect(document.activeElement).toBe(cancel)
+      fireEvent.click(cancel)
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+    })
+
+    it('does not confirm on a press that follows the first at once (double click, double tap, held Enter)', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      const confirm = screen.getByRole('button', {
+        name: En['presence.workspaceChanged.confirm'],
+      })
+      fireEvent.click(confirm)
+      vi.setSystemTime(Date.now() + 200)
+      fireEvent.click(confirm)
+
+      expect(assign).not.toHaveBeenCalled()
+    })
+
+    it('reloads on the second, explicit press', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      vi.setSystemTime(Date.now() + 600)
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: En['presence.workspaceChanged.confirm'],
+        }),
+      )
+
+      expect(assign).toHaveBeenCalledTimes(1)
+    })
+
+    it('disables Cancel once the reload has started, since it cannot be taken back', () => {
+      typeUnsent()
+      mountStale()
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+      vi.setSystemTime(Date.now() + 600)
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: En['presence.workspaceChanged.confirm'],
+        }),
+      )
+
+      const [cancel] = screen.getAllByRole('button')
+      expect(cancel.textContent).toBe(En['action.cancel'])
+      expect(cancel.hasAttribute('disabled')).toBe(true)
+    })
+
+    it('does not ask when the only fields are empty', () => {
+      document.body.appendChild(document.createElement('textarea'))
+      mountStale()
+
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: EnShell['session.openCurrentWorkspace'],
+        }),
+      )
+
+      expect(assign).toHaveBeenCalledTimes(1)
+    })
   })
 })

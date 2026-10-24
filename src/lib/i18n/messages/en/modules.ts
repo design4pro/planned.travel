@@ -78,6 +78,12 @@ const messages = {
   'presence.offline.body':
     'Live updates are off. Everything still saves; reload or retry to catch up.',
   'presence.reconnect': 'Reconnect',
+  'presence.workspaceChanged.title': 'Live updates stopped',
+  'presence.workspaceChanged.body':
+    'This tab belongs to a workspace that was changed in another tab or window. Changes you make here will not be saved.',
+  'presence.workspaceChanged.discard':
+    'Text you have not sent in this tab will be lost.',
+  'presence.workspaceChanged.confirm': 'Open anyway',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Every transport',
   'transports.empty.title': 'No transports yet',

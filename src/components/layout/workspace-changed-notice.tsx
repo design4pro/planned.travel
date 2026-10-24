@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 
 import {
   Button,
@@ -16,7 +16,10 @@ import {
   useWorkspaceClaim,
 } from '#/lib/workspace-claim-store'
 
-import { useOpenCurrentWorkspace } from './use-open-current-workspace'
+import {
+  CURRENT_WORKSPACE_BUTTON_CLASS,
+  useOpenCurrentWorkspace,
+} from './use-open-current-workspace'
 
 /**
  * What a tab says when the session's workspace is no longer the one it is showing.
@@ -44,9 +47,27 @@ export function WorkspaceChangedNotice({
 }) {
   const t = useTranslate()
   const { noticeOpen } = useWorkspaceClaim()
-  const currentWorkspace = useOpenCurrentWorkspace()
+  const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
   const dismiss = useRef<HTMLButtonElement>(null)
   const opener = useRef<Element | null>(null)
+
+  // The confirmation takes focus to the safe choice, so Enter pressed twice backs out.
+  const { confirming } = currentWorkspace
+  useEffect(() => {
+    if (confirming) dismiss.current?.focus()
+  }, [confirming])
+
+  // Closing also forgets a pending "are you sure": the next time it opens it asks afresh. The
+  // store closes the notice too (a navigation resumes the claim), so the reset follows `noticeOpen`
+  // rather than only the "Not now" press.
+  const { cancel } = currentWorkspace
+  useEffect(() => {
+    if (!noticeOpen) cancel()
+  }, [noticeOpen, cancel])
+  const closeNotice = () => {
+    cancel()
+    dismissWorkspaceNotice()
+  }
 
   // The name is a proper noun in someone else's script and direction: it is interpolated and
   // isolated, never concatenated, so it cannot reorder the sentence around it.
@@ -63,7 +84,7 @@ export function WorkspaceChangedNotice({
       onOpenChange={(open) => {
         // Escape while the page is already leaving would close the dialog under a reload that
         // cannot be taken back: "Not now" is disabled then, and so is this.
-        if (!open && !currentWorkspace.opening) dismissWorkspaceNotice()
+        if (!open && !currentWorkspace.opening) closeNotice()
       }}
     >
       <DialogContent
@@ -95,25 +116,36 @@ export function WorkspaceChangedNotice({
       >
         <DialogHeader className="pe-5 sm:pe-6">
           <DialogTitle>{t('shell.session.workspaceChangedTitle')}</DialogTitle>
-          <DialogDescription dir="auto">{body}</DialogDescription>
+          <DialogDescription dir="auto">
+            {body}
+            {/* Mounted before the first press, so the warning added to it is announced. */}
+            <span aria-live="polite">
+              {currentWorkspace.confirming
+                ? ` ${t('modules.presence.workspaceChanged.discard')}`
+                : null}
+            </span>
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
             ref={dismiss}
             variant="secondary"
             shape="pill"
-            onClick={dismissWorkspaceNotice}
+            onClick={closeNotice}
             disabled={currentWorkspace.opening}
           >
             {t('shell.session.workspaceChangedDismiss')}
           </Button>
           <Button
-            variant="primary"
+            variant={currentWorkspace.confirming ? 'danger' : 'primary'}
             shape="pill"
+            className={CURRENT_WORKSPACE_BUTTON_CLASS}
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}
           >
-            {t('shell.session.openCurrentWorkspace')}
+            {currentWorkspace.confirming
+              ? t('modules.presence.workspaceChanged.confirm')
+              : t('shell.session.openCurrentWorkspace')}
           </Button>
         </DialogFooter>
       </DialogContent>

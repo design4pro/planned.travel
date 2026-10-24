@@ -34,6 +34,11 @@ const messages = {
   'presence.offline.body':
     '即時更新已關閉。儲存照常進行；重新載入或重試即可跟上。',
   'presence.reconnect': '重新連線',
+  'presence.workspaceChanged.title': '即時更新已停止',
+  'presence.workspaceChanged.body':
+    '此分頁屬於一個已在另一個分頁或視窗中切換的工作區。你在此處所做的變更不會被儲存。',
+  'presence.workspaceChanged.discard': '你在此分頁中尚未傳送的文字將會遺失。',
+  'presence.workspaceChanged.confirm': '仍要開啟',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': '全部交通',
   'transports.empty.title': '還沒有交通安排',

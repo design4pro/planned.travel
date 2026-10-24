@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Cập nhật trực tiếp đang tắt. Việc lưu vẫn hoạt động; tải lại hoặc thử lại để bắt kịp.',
   'presence.reconnect': 'Kết nối lại',
+  'presence.workspaceChanged.title': 'Cập nhật trực tiếp đã dừng',
+  'presence.workspaceChanged.body':
+    'Tab này thuộc về một không gian làm việc đã được đổi ở tab hoặc cửa sổ khác. Các thay đổi bạn thực hiện ở đây sẽ không được lưu.',
+  'presence.workspaceChanged.discard':
+    'Văn bản bạn chưa gửi trong tab này sẽ bị mất.',
+  'presence.workspaceChanged.confirm': 'Vẫn mở',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Mọi lượt di chuyển',
   'transports.empty.title': 'Chưa có lượt di chuyển nào',

@@ -34,6 +34,12 @@ const messages = {
   'presence.offline.body':
     'التحديثات الحيّة متوقفة. الحفظ ما زال يعمل؛ أعد التحميل أو حاول مرة أخرى لتلحق بالباقي.',
   'presence.reconnect': 'أعد الاتصال',
+  'presence.workspaceChanged.title': 'توقفت التحديثات المباشرة',
+  'presence.workspaceChanged.body':
+    'تنتمي علامة التبويب هذه إلى مساحة عمل جرى تغييرها في علامة تبويب أو نافذة أخرى. لن تُحفظ التغييرات التي تجريها هنا.',
+  'presence.workspaceChanged.discard':
+    'سيضيع النص الذي لم ترسله في علامة التبويب هذه.',
+  'presence.workspaceChanged.confirm': 'افتح على أي حال',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'كل التنقلات',
   'transports.empty.title': 'لا تنقلات بعد',

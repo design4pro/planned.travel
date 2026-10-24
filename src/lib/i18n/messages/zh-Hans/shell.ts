@@ -60,10 +60,12 @@ const messages = {
   'workspace.createTitle': '创建一个工作区',
   'workspace.createDescription':
     '一个独立的空间，有自己的旅行、地点和成员。创建后从免费版开始，不会沿用你当前所在工作区的方案。',
+  'workspace.createPermanent':
+    'planned.travel 暂时还没有删除工作区的选项。你创建或加入的每个工作区都计入上限：属于 {limit} 个工作区后，就不能再创建新的。',
   'workspace.createName': '工作区名称',
   'workspace.createUpgrade':
     '“{workspace}”使用的是免费版，只有付费方案中的工作区才能再创建工作区。如果你的其他工作区属于付费方案，请切换过去再创建；否则请升级“{workspace}”。',
-  'workspace.createLimitReached': '你已达到一个账号可加入的工作区数量上限。',
+  'workspace.createLimitReached': '你所属的工作区数量已达上限，因此不能再创建新的。',
   'workspace.createRoleRequired': '只有工作区管理员可以创建工作区。请联系此工作区的管理员，或切换到你管理的工作区。',
   'workspace.createFailed': '没能创建工作区',
   'theme.label': '外观',
