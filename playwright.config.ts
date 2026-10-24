@@ -163,10 +163,9 @@ export default defineConfig({
   // every budget and hiding slow-page regressions. `--workers=N` still
   // overrides this on a quiet machine.
   //
-  // Two in CI as well since the shards serve an `E2E_BUILD=1` build (`.github/actions/e2e-env`):
-  // the starvation above was two browsers plus Vite SSR compiling routes on first visit, and a
-  // build has no compile to compete with.
-  workers: 2,
+  // Still one in CI on the `E2E_BUILD=1` build: two workers raced on the shared demo account
+  // (the 08-S5a and language-switch journeys save its locale while another file reads its UI).
+  workers: isCI ? 1 : 2,
   // Doubled under CI, because the runner is about three times slower than the
   // machine this number was chosen on and the budget was sized on the wrong one.
   // Measured: `the click surface never takes the reader's input` is 10.7 s in
