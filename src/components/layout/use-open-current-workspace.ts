@@ -21,7 +21,7 @@ const CONFIRM_ARM_MS = 500
  * "Open the current workspace" is wider than a 360px card in several locales.
  */
 export const CURRENT_WORKSPACE_BUTTON_CLASS =
-  'h-auto min-h-10 whitespace-normal py-2 text-center'
+  'h-auto min-h-10 max-w-full whitespace-normal py-2 text-center'
 
 /**
  * The recovery for a tab whose workspace is no longer the session's (`src/lib/workspace-claim.ts`).
