@@ -98,8 +98,8 @@ Verified against the repository at HEAD:
 - **`addCollectionPlaceInput` and `updateCollectionPlaceInput` are not strict objects** and expose `source`, `externalId` and
   `sortOrder` (`collections.ts`); the boundary of this stage must not.
 - **The admin meter reads a different number from the one the quota enforces.** `loadAdmin` shows `collections: listCollectionsWithCounts(scope).length`
-  and `places: summary.counts.places` (`src/routes/_app/-server/overview.ts`), the second counting trip places only
-  (`placesRepository.count` in `dashboard.ts`); 08-S9b makes the second read `countSavedPlaces`.
+  and `places` from `placesMeter(scope)` (`src/routes/_app/-server/overview.ts`, #951), the second counting trip places only
+  (`placesRepository.count`, which `placesMeter` wraps); 08-S9b makes that count `countSavedPlaces`.
 
 ## 📝 Proposed Solution
 
@@ -242,7 +242,7 @@ A neutral module, so the places-and-maps plan's later writer can import it witho
   still count `places` alone. The safe direction holds: nobody can exceed the
   ceiling by saving into collections. Making those three call sites symmetric is a small change in files this stage does not edit; a follow-up
   issue is filed (Risks). The admin "places used" meter would otherwise show room while a collection write is refused, so 08-S9b makes
-  `loadAdmin` report `countSavedPlaces` (`overview.ts`).
+  `placesMeter` (which `loadAdmin` reads for its places entry) count `countSavedPlaces`.
 
 ### One copy rule (`src/lib/collections/dedupe.ts`, Resolved assumption 12)
 
