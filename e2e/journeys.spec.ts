@@ -2720,7 +2720,9 @@ test.describe('switching workspace', () => {
     await expect(menu).toHaveAccessibleName(/account menu$/i)
     await expect(menu).toHaveAccessibleDescription(
       // The name, then the email.
-      new RegExp(`\\S\\s+${DEMO_EMAIL.replaceAll('.', '\\.')}$`),
+      new RegExp(
+        `\\S\\s+${DEMO_EMAIL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`,
+      ),
     )
     await expect(menu.getByText(DEMO_EMAIL)).toBeVisible()
 

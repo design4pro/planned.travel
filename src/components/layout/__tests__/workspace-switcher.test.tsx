@@ -1286,6 +1286,41 @@ describe('the account menu header', () => {
     },
   )
 
+  it('hides the loaded photo with the rest of the header', async () => {
+    // Radix mounts the `<img>` only once the browser reports the image loaded; jsdom never does.
+    vi.stubGlobal(
+      'Image',
+      class extends EventTarget {
+        complete = false
+        naturalWidth = 0
+        set src(_: string) {
+          queueMicrotask(() => {
+            this.complete = true
+            this.naturalWidth = 1
+            this.dispatchEvent(new Event('load'))
+          })
+        }
+      },
+    )
+    try {
+      await mount(withPhoto('https://example.test/kasia.jpg'))
+
+      const photo = await within(screen.getByRole('menu')).findByRole('img', {
+        name: 'Kasia Nowak',
+        hidden: true,
+      })
+
+      expect(photo.closest('[aria-hidden="true"]')).not.toBeNull()
+      expect(
+        within(screen.getByRole('menu')).queryByRole('img', {
+          name: 'Kasia Nowak',
+        }),
+      ).toBeNull()
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it.each([
     ['without a photo', null],
     ['with a photo', 'https://example.test/kasia.jpg'],
