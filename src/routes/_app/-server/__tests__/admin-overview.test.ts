@@ -100,7 +100,7 @@ describe('the admin overview places usage', () => {
       },
     ],
     ['no subscription', null],
-  ] as const)('equals the meter for %s', async (_name, subscription) => {
+  ] as const)('equals the meter for %s', async (name, subscription) => {
     if (subscription !== null) {
       await upsertSubscription(tenant.scope, subscription)
     }
@@ -111,7 +111,8 @@ describe('the admin overview places usage', () => {
     const { used, limit } = await placesMeter(tenant.scope)
     expect(used).toBe(2)
     expect(places).toEqual({ metric: 'places', used, limit })
-    expect(places?.limit === null || Number.isFinite(places?.limit)).toBe(true)
+    if (name === 'a places override') expect(limit).toBe(7)
+    expect(Number.isFinite(places?.limit)).toBe(true)
   })
 
   it('leaves the other usage entries as they were', async () => {
