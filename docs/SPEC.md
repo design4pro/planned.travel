@@ -759,7 +759,7 @@ Rules:
   through `repos/audit.ts`, by `created_at` alone: 400 days, 200 ids per batch, 250 batches shared
   across the run, no self-audit, error on `drained: false`. Four, and closed; a fifth one changes
   this contract.
-- The third exception is `src/server/auth/provisioning.ts` (workspace creation and sign-up
+- The third stated exception is `src/server/auth/provisioning.ts` (workspace creation and sign-up
   provisioning). It reads `user` and reads and writes `organization` and `member`, all Better Auth
   identity tables imported from `server/db/auth-schema` and never from the tenant schema; a create
   has no tenant scope yet, so there is none to pass.
