@@ -3,7 +3,9 @@
 A glossary and nothing else. No implementation details, no file paths, no commands. Terms are added lazily, during grilling sessions, when they earn their place. Decisions with rationale belong in docs/adr/, not here.
 
 - **Installed app** - planned.travel opened from a home-screen or dock icon in its own window. Installation is optional and does not make trips available offline.
-- **Organization (tenant)** — the unit of isolation and billing. Every product row belongs to exactly one organization; a user acts inside one organization at a time.
+- **Organization (tenant)** — the unit of isolation and of the subscription: every product row belongs to exactly one organization, and a user acts inside one organization at a time. It is no longer the only unit of billing, because a subscription can carry the unlimited trips of workspaces its owner created (see Carried workspace).
+- **Sponsoring subscription** — the paid subscription of a workspace (the sponsor workspace) when it also carries workspaces its owner created. It is the only subscription involved: a carried workspace has none of its own.
+- **Carried workspace** — a workspace created by an owner of a sponsor workspace and recorded as such at creation. It has unlimited trips for as long as the sponsoring subscription is entitling and the person who made the link is still an owner of both workspaces; otherwise it is on the Free plan, and nothing is deleted or locked. It inherits nothing else (not modules, not metered-call allowances, not seats or storage). A carried workspace never sponsors another. _Avoid_: "shared plan", "inherited plan", "team plan".
 - **Workspace console** — the administrative surface where an organization manages members, billing and settings.
 - **Trip** — the central planning object: a titled journey owned by an organization, with members and guests. It may be dated (a start and an end) or not yet: an undated trip still has a run of numbered days.
 - **Day** — one numbered day of a trip, the unit the itinerary timeline is built from. It carries a calendar date once the trip is dated; the run of days always numbers 1..n without gaps.
