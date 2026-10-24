@@ -332,6 +332,25 @@ describe('dayHandoffs — a day split by a journey', () => {
     expect(dayHandoffs([stop(1), journey('ferry'), stop(2)])).toHaveLength(2)
   })
 
+  it('cuts at the position in the sequence it is given, never by a coordinate', () => {
+    // The stop before the journey is the northernmost: only the order says which side it is on.
+    const links = dayHandoffs([stop(9), journey('flight'), stop(1), stop(2)])
+
+    expect(links.map((link) => link.kind)).toEqual(['point', 'directions'])
+    expect(links[0]?.href).toBe(
+      'https://www.google.com/maps/search/?api=1&query=9%2C10',
+    )
+  })
+
+  it('still splits at a cancelled journey: the mode marks the distance, status is not read', () => {
+    const cancelled = {
+      kind: 'transport',
+      transport: { mode: 'flight', status: 'cancelled' },
+    } as const
+
+    expect(dayHandoffs([stop(1), cancelled, stop(2)])).toHaveLength(2)
+  })
+
   it('skips an unplaced stop on either side without shifting the others', () => {
     const links = dayHandoffs([
       stop(null),
