@@ -624,6 +624,7 @@ const messages = {
   'trips.card.copying': 'Menyalin',
   'trips.card.copyingLabel': '{title} masih disalin',
   'trips.card.copyingReason': 'Tunggu sampai penyalinan selesai.',
+  'trips.card.archivedReason': 'Pulihkan perjalanan ini untuk mengeditnya.',
   'metric.trips': 'Perjalanan',
   'metric.places': 'Tempat',
   'metric.members': 'Anggota',

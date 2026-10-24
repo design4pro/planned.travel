@@ -493,6 +493,28 @@ describe('the travel-statistics fan-out', () => {
     expect(await listFavouriteTripIds(tenant.scope)).toEqual([tripId])
   })
 
+  it('sends nothing when an archived trip refuses the edit', async () => {
+    await createTrip({
+      title: 'Lisbon',
+      destination: '',
+      startDate: '2026-04-10',
+      endDate: '2026-04-12',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    await archiveTrip({ tripId })
+    stubs.batches = []
+
+    await expect(
+      updateTrip({ tripId, startDate: '2027-04-10', endDate: '2027-04-12' }),
+    ).rejects.toMatchObject({ code: 'TRIP_ARCHIVED' })
+
+    expect(sent()).toEqual([])
+    expect((await requireTrip(tenant.scope, tripId)).startDate).toBe(
+      '2026-04-10',
+    )
+  })
+
   it('never fails the write when the queue refuses', async () => {
     await createTrip({
       title: 'Lisbon',

@@ -560,6 +560,7 @@ const messages = {
   'trips.card.copying': '복사 중',
   'trips.card.copyingLabel': '{title}은(는) 아직 복사 중입니다',
   'trips.card.copyingReason': '복사가 끝날 때까지 기다려 주세요.',
+  'trips.card.archivedReason': '이 여행을 편집하려면 먼저 복원하세요.',
   'metric.trips': '여행',
   'metric.places': '장소',
   'metric.members': '멤버',

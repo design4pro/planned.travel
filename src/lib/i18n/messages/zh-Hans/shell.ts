@@ -533,6 +533,7 @@ const messages = {
   'trips.card.copying': '复制中',
   'trips.card.copyingLabel': '{title} 仍在复制中',
   'trips.card.copyingReason': '请等复制完成。',
+  'trips.card.archivedReason': '请先恢复这次旅行，再进行编辑。',
   'metric.trips': '行程',
   'metric.places': '地点',
   'metric.members': '成员',

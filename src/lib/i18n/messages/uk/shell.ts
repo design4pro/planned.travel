@@ -719,6 +719,7 @@ const messages = {
   'trips.card.copying': 'Копіюється',
   'trips.card.copyingLabel': '{title} ще копіюється',
   'trips.card.copyingReason': 'Зачекайте, доки копіювання завершиться.',
+  'trips.card.archivedReason': 'Відновіть цю подорож, щоб її редагувати.',
   'metric.trips': 'Поїздки',
   'metric.places': 'Місця',
   'metric.members': 'Учасники',

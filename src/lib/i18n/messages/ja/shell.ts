@@ -572,6 +572,7 @@ const messages = {
   'trips.card.copying': '複製中',
   'trips.card.copyingLabel': '{title} はまだ複製中です',
   'trips.card.copyingReason': '複製が終わるまでお待ちください。',
+  'trips.card.archivedReason': '編集するには、この旅行を復元してください。',
   'metric.trips': '旅',
   'metric.places': '場所',
   'metric.members': 'メンバー',

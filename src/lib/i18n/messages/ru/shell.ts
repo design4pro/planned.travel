@@ -730,6 +730,7 @@ const messages = {
   'trips.card.copying': 'Копируется',
   'trips.card.copyingLabel': '{title} ещё копируется',
   'trips.card.copyingReason': 'Дождитесь окончания копирования.',
+  'trips.card.archivedReason': 'Восстановите эту поездку, чтобы её редактировать.',
   'metric.trips': 'Поездки',
   'metric.places': 'Места',
   'metric.members': 'Участники',

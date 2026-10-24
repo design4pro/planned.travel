@@ -654,6 +654,7 @@ const messages = {
   'trips.card.copying': 'Kopyalanıyor',
   'trips.card.copyingLabel': '{title} hâlâ kopyalanıyor',
   'trips.card.copyingReason': 'Kopyalama bitene kadar bekleyin.',
+  'trips.card.archivedReason': 'Düzenlemek için bu seyahati geri yükleyin.',
   'metric.trips': 'Geziler',
   'metric.places': 'Yerler',
   'metric.members': 'Üyeler',

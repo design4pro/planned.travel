@@ -704,6 +704,7 @@ const messages = {
   'trips.card.copying': 'S’està copiant',
   'trips.card.copyingLabel': '{title} encara s’està copiant',
   'trips.card.copyingReason': 'Espera que acabi la còpia.',
+  'trips.card.archivedReason': 'Restaura aquest viatge per editar-lo.',
   'metric.trips': 'Viatges',
   'metric.places': 'Llocs',
   'metric.members': 'Membres',

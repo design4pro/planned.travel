@@ -718,6 +718,7 @@ const messages = {
   'trips.card.copying': 'Kopíruje se',
   'trips.card.copyingLabel': '{title} se ještě kopíruje',
   'trips.card.copyingReason': 'Počkejte, až kopírování skončí.',
+  'trips.card.archivedReason': 'Chcete-li tuto cestu upravit, nejdřív ji obnovte.',
   'metric.trips': 'Cesty',
   'metric.places': 'Místa',
   'metric.members': 'Členové',

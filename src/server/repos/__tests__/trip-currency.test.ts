@@ -315,13 +315,19 @@ describe('changing a trip’s budget currency', () => {
       expect(stored.title).toBe('Lisbon in spring')
     })
 
-    it('saves its other fields exactly as before', async () => {
-      const saved = await updateTrip(tenant.scope, tripId, {
-        title: 'Still editable',
-        currency: 'EUR',
-      })
+    // Inverted on purpose (#1040): an archived trip used to save every field but the currency.
+    it('refuses its other fields too, and keeps the title', async () => {
+      const failure = await captureError(() =>
+        updateTrip(tenant.scope, tripId, {
+          title: 'Not editable',
+          currency: 'EUR',
+        }),
+      )
 
-      expect(saved.title).toBe('Still editable')
+      expect(failure).toBeInstanceOf(TripArchivedError)
+      expect((await requireTrip(tenant.scope, tripId)).title).toBe(
+        'Lisbon in spring',
+      )
     })
   })
 

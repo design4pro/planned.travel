@@ -681,6 +681,7 @@ const messages = {
   'trips.card.copying': 'Wordt gekopieerd',
   'trips.card.copyingLabel': '{title} wordt nog gekopieerd',
   'trips.card.copyingReason': 'Wacht tot de kopie klaar is.',
+  'trips.card.archivedReason': 'Herstel deze reis om hem te bewerken.',
   'metric.trips': 'Reizen',
   'metric.places': 'Plekken',
   'metric.members': 'Leden',

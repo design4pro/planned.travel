@@ -662,6 +662,7 @@ const messages = {
   'trips.card.copying': 'Αντιγράφεται',
   'trips.card.copyingLabel': 'Το {title} αντιγράφεται ακόμη',
   'trips.card.copyingReason': 'Περιμένετε να ολοκληρωθεί η αντιγραφή.',
+  'trips.card.archivedReason': 'Επαναφέρετε αυτό το ταξίδι για να το επεξεργαστείτε.',
   'metric.trips': 'Ταξίδια',
   'metric.places': 'Μέρη',
   'metric.members': 'Μέλη',

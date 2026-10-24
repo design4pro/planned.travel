@@ -661,6 +661,7 @@ const messages = {
   'trips.card.copying': 'Kopieras',
   'trips.card.copyingLabel': '{title} kopieras fortfarande',
   'trips.card.copyingReason': 'Vänta tills kopian är klar.',
+  'trips.card.archivedReason': 'Återställ resan för att redigera den.',
   'metric.trips': 'Resor',
   'metric.places': 'Platser',
   'metric.members': 'Medlemmar',

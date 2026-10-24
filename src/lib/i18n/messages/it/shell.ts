@@ -703,6 +703,7 @@ const messages = {
   'trips.card.copying': 'In copia',
   'trips.card.copyingLabel': '{title} è ancora in copia',
   'trips.card.copyingReason': 'Aspetta che la copia finisca.',
+  'trips.card.archivedReason': 'Ripristina questo viaggio per modificarlo.',
   'metric.trips': 'Viaggi',
   'metric.places': 'Luoghi',
   'metric.members': 'Membri',

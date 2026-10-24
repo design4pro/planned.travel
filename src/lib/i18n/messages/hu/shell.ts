@@ -680,6 +680,7 @@ const messages = {
   'trips.card.copying': 'Másolás',
   'trips.card.copyingLabel': 'A(z) {title} még másolás alatt áll',
   'trips.card.copyingReason': 'Várd meg, amíg a másolás befejeződik.',
+  'trips.card.archivedReason': 'Állítsd vissza ezt az utazást, hogy szerkeszthesd.',
   'metric.trips': 'Utazások',
   'metric.places': 'Helyek',
   'metric.members': 'Tagok',

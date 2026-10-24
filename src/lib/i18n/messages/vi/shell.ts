@@ -622,6 +622,7 @@ const messages = {
   'trips.card.copying': 'Đang sao chép',
   'trips.card.copyingLabel': '{title} vẫn đang được sao chép',
   'trips.card.copyingReason': 'Hãy đợi sao chép xong.',
+  'trips.card.archivedReason': 'Hãy khôi phục chuyến đi này để chỉnh sửa.',
   'metric.trips': 'Chuyến đi',
   'metric.places': 'Địa điểm',
   'metric.members': 'Thành viên',
