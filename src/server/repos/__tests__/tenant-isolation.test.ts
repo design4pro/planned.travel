@@ -296,6 +296,7 @@ import {
   removeTripMember,
   requireTrip,
   restoreTrip,
+  setTripVisibility,
   shareLinksRepository,
   startTripCopy,
   tripMembersRepository,
@@ -4605,6 +4606,7 @@ describe('tenant isolation', () => {
 
       for (const attempt of [
         () => updateTrip(scope, beta.tripId, { title: 'Hijacked' }),
+        () => setTripVisibility(scope, beta.tripId, 'organization'),
         () => archiveTrip(scope, beta.tripId),
         () => restoreTrip(scope, beta.tripId),
         () => deleteTrip(scope, beta.tripId),

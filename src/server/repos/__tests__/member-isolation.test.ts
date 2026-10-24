@@ -117,6 +117,7 @@ import {
   removeTripMember,
   requireTrip,
   restoreTrip,
+  setTripVisibility,
   startTripCopy,
   TripArchivedError,
   TripRoleError,
@@ -640,10 +641,10 @@ describe('member isolation', () => {
         ),
       ).toBeInstanceOf(NotFoundError)
 
-      // The visibility switch writes through `updateTrip`, so it answers the same way.
+      // The visibility switch writes through `setTripVisibility`, so it answers the same way.
       expect(
         await captureError(() =>
-          updateTrip(stranger, fixture.tripId, { visibility: 'organization' }),
+          setTripVisibility(stranger, fixture.tripId, 'organization'),
         ),
       ).toBeInstanceOf(NotFoundError)
       expect((await requireTrip(alpha.scope, fixture.tripId)).visibility).toBe(
