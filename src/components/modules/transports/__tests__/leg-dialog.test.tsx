@@ -346,7 +346,7 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
   it('hands focus to the target the owner names when it closes from the gone state, since the row it was opened from is gone', async () => {
     const target = document.createElement('div')
     target.tabIndex = -1
-    document.body.append(target)
+    document.body.appendChild(target)
     const onOpenChange = vi.fn()
     save.mockRejectedValueOnce(goneRefusal())
     const view = render(dialog(true, onOpenChange, vi.fn(), () => target))
@@ -366,7 +366,7 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
   it('leaves the hand-back to the opener alone when the dialog was not in its gone state', async () => {
     const target = document.createElement('div')
     target.tabIndex = -1
-    document.body.append(target)
+    document.body.appendChild(target)
     const view = render(dialog(true, vi.fn(), vi.fn(), () => target))
 
     view.rerender(dialog(false, vi.fn(), vi.fn(), () => target))
