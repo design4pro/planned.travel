@@ -149,6 +149,7 @@ const messages = {
   'plan.stop.menu.moveToDay': 'نقل إلى يوم آخر',
   'plan.stop.menu.backToUnplanned': 'إعادته إلى غير المجدولة',
   'plan.stop.menu.delete': 'حذف من الرحلة',
+  'plan.stop.visited': 'تمت الزيارة',
   'plan.delete.title': 'حذف {name}؟',
   'plan.delete.titleUnnamed': 'حذف هذا المكان؟',
   'plan.delete.bodyUnplanned':

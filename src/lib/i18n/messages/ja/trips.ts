@@ -145,6 +145,7 @@ const messages = {
   'plan.stop.menu.moveToDay': '別の日へ移動',
   'plan.stop.menu.backToUnplanned': '未計画に戻す',
   'plan.stop.menu.delete': '旅行から削除',
+  'plan.stop.visited': '訪問済み',
   'plan.delete.title': '{name} を削除しますか？',
   'plan.delete.titleUnnamed': 'この場所を削除しますか？',
   'plan.delete.bodyUnplanned':
