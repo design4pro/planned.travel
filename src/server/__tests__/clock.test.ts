@@ -159,8 +159,12 @@ describe('serverToday', () => {
     const config = read('playwright.config.ts')
     expect(config).toContain(`const SERVER_TODAY_HEADER = '${PIN_HEADER}'`)
 
-    const pinned = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(config)
-    expect(pinned?.[1], 'playwright.config.ts pins no fixture day').toBeTypeOf(
+    expect(config).toContain(`import { FIXTURE_DAY } from './e2e/fixture-day'`)
+
+    const pinned = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(
+      read('e2e/fixture-day.ts'),
+    )
+    expect(pinned?.[1], 'e2e/fixture-day.ts pins no fixture day').toBeTypeOf(
       'string',
     )
   })
@@ -187,5 +191,29 @@ describe('serverNow', () => {
   it('returns the wall clock when no request is in scope, and does not throw', () => {
     expect(() => serverNow()).not.toThrow()
     expect(serverNow().toISOString()).toBe(WALL_CLOCK_NOW)
+  })
+})
+
+describe('an E2E_BUILD bundle', () => {
+  // `vite.config.ts` replaces the identifier textually in that one build; a global stands in for
+  // it here, which is the same binding a bare `__E2E_SERVER_TODAY__` resolves to.
+  beforeEach(() => {
+    vi.stubGlobal('__E2E_SERVER_TODAY__', '2026-08-20')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('answers the compiled-in day with no header and no request in scope', async () => {
+    await expect(duringRequest({}, serverToday)).resolves.toBe('2026-08-20')
+    expect(serverToday()).toBe('2026-08-20')
+    expect(serverNow().toISOString()).toBe('2026-08-20T12:00:00.000Z')
+  })
+
+  it('is not moved by a header', async () => {
+    await expect(
+      duringRequest({ [PIN_HEADER]: '2019-12-31' }, serverToday),
+    ).resolves.toBe('2026-08-20')
   })
 })

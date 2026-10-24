@@ -343,6 +343,7 @@ jobs:
             test-results/**/error-context.md
             e2e-runtime.log
             dev-server.log
+            preview-server.log
 
   # Keep the required check name; reports are diagnostics, never the verdict.
   # `!cancelled()`, not `always()`: a failed or skipped shard still gets a red verdict, but a

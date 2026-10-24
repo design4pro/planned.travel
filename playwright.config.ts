@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { FIXTURE_DAY } from './e2e/fixture-day'
+
 const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
 /**
@@ -60,9 +62,10 @@ if (!isCI && process.env.PLAYWRIGHT_ALLOW_ANY_PORT !== '1') {
  *
  * The header is inert against anything but a dev server: the guard around it is
  * `import.meta.env.DEV`, which the production build folds to `false` and drops.
+ * CI serves the suite from an `E2E_BUILD=1` build instead, which carries the same
+ * day compiled in (`e2e/fixture-day.ts`); the header then changes nothing.
  */
 const SERVER_TODAY_HEADER = 'x-pt-server-today'
-const FIXTURE_DAY = '2026-08-20'
 const clockPin = { [SERVER_TODAY_HEADER]: FIXTURE_DAY }
 
 /**
@@ -159,7 +162,11 @@ export default defineConfig({
   // the 10 s action and hydration waits as well, so it would have meant raising
   // every budget and hiding slow-page regressions. `--workers=N` still
   // overrides this on a quiet machine.
-  workers: isCI ? 1 : 2,
+  //
+  // Two in CI as well since the shards serve an `E2E_BUILD=1` build (`.github/actions/e2e-env`):
+  // the starvation above was two browsers plus Vite SSR compiling routes on first visit, and a
+  // build has no compile to compete with.
+  workers: 2,
   // Doubled under CI, because the runner is about three times slower than the
   // machine this number was chosen on and the budget was sized on the wrong one.
   // Measured: `the click surface never takes the reader's input` is 10.7 s in

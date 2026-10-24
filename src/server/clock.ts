@@ -22,6 +22,9 @@
  *   which Vite replaces with a literal `false` in the server build, so the
  *   branch, the header name and the `getRequest()` call are all constant-folded
  *   away: nothing in `dist/server` can be told what day it is.
+ * - The one build that knows its day is CI's e2e build (`E2E_BUILD=1`), which has
+ *   the fixture day compiled in rather than accepted from a request; every other
+ *   build folds that branch away too (`__E2E_SERVER_TODAY__` below).
  *
  * The fallback is unconditional and total. `getRequest()` resolves an
  * `AsyncLocalStorage` store and *throws* when there is no request in scope, and
@@ -42,6 +45,12 @@
  */
 import { createServerOnlyFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
+
+/**
+ * The day an `E2E_BUILD=1` bundle was compiled to believe in; the literal `undefined` in every other
+ * build (`vite.config.ts`). Read through `typeof` because vitest does not load that `define`.
+ */
+declare const __E2E_SERVER_TODAY__: string | undefined
 
 /**
  * A calendar day in the shape every date column in the schema stores, read off
@@ -72,6 +81,7 @@ function isCalendarDay(value: string): boolean {
  * header name, the `getRequest()` call and the parsing away together.
  */
 function pinnedDay(): string | null {
+  if (typeof __E2E_SERVER_TODAY__ === 'string') return __E2E_SERVER_TODAY__
   if (import.meta.env.DEV) {
     let header: string | null
     try {
