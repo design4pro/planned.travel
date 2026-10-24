@@ -121,3 +121,81 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   // A full reload into the workspace B just switched back to.
   await expectActive(page, FIRST)
 })
+
+/**
+ * 979 - the same stale tab, on the trip's live-collaboration indicator.
+ *
+ * A browser WebSocket cannot read why an upgrade was refused, so the socket door answers a tab that
+ * states another workspace than the session's by accepting the upgrade and closing it at once with a
+ * dedicated code. Tab A's socket is dropped after tab B switched workspace, so its next connect is
+ * the one the door closes: the pill must say live updates stopped, the retries must end, and the way
+ * out is the same "Open the current workspace" the server-function notice offers.
+ */
+test('a trip tab whose workspace changed says why live updates stopped and stops retrying', async ({
+  context,
+  page,
+  baseURL,
+}) => {
+  test.setTimeout(150_000)
+  await context.clearCookies()
+  expect(
+    await signIn(page, baseURL),
+    `${DEMO_EMAIL} could not sign in - run \`node scripts/seed/seed.mjs\``,
+  ).toBe(true)
+
+  // Count the tab's socket attempts, and keep the first so it can be dropped on cue.
+  const sockets: Array<{ url: string; drop: () => void }> = []
+  await page.routeWebSocket(/\/api\/trip-room\//, (ws) => {
+    ws.connectToServer()
+    sockets.push({
+      url: ws.url(),
+      drop: () => void ws.close({ code: 1001, reason: 'test drop' }),
+    })
+  })
+
+  // Tab A: a trip's collaboration screen in the first workspace, connected and live.
+  await page.goto('/trips', { waitUntil: 'networkidle' })
+  const trip = page.locator('a[href^="/trips/"][href$="/plan"]:visible').first()
+  await expect(trip).toBeVisible()
+  const href = await trip.getAttribute('href')
+  expect(href).toBeTruthy()
+  await page.goto(href?.replace(/\/plan$/, '/collab') ?? '', {
+    waitUntil: 'networkidle',
+  })
+  const pill = page.getByRole('status').filter({ hasText: /^Live$/ })
+  await expect(pill).toBeVisible({ timeout: 30_000 })
+  expect(
+    new URL(sockets[0]?.url ?? '').searchParams.get('workspace'),
+  ).toBeTruthy()
+
+  // Tab B: the same session switches to the second workspace.
+  const other = await context.newPage()
+  await other.goto('/dashboard', { waitUntil: 'networkidle' })
+  await switchTo(other, SECOND)
+
+  // Tab A's socket drops, and its reconnect states the workspace it is still showing.
+  sockets[0]?.drop()
+  const stopped = page
+    .getByRole('status')
+    .filter({ hasText: 'Live updates stopped' })
+  await expect(stopped).toBeVisible({ timeout: 30_000 })
+  await expect(
+    page.getByText(
+      'This tab belongs to a workspace that was changed in another tab or window.',
+    ),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Reconnect' })).toHaveCount(0)
+
+  // Retries ended: well past the first backoff steps, no further attempt was made.
+  const attempts = sockets.length
+  await page.waitForTimeout(5_000)
+  expect(sockets.length, 'a stale tab must stop reconnecting').toBe(attempts)
+
+  // The way out is a reload into whatever the session now says: tab B switched to SECOND.
+  await page.getByRole('button', { name: 'Open the current workspace' }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expectActive(page, SECOND)
+
+  // Leave the shared session in the first workspace for the rest of the run.
+  await switchTo(other, FIRST)
+})

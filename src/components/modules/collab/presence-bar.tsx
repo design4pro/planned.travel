@@ -8,12 +8,17 @@
  * every panel updates from the database rather than from a socket frame.
  *
  * The status is stated plainly. A collaborative screen that has quietly stopped
- * listening is worse than one that says it is reconnecting.
+ * listening is worse than one that says it is reconnecting. A tab whose workspace was changed in
+ * another tab says the one thing that is true there - live updates stopped here, and a retry cannot
+ * fix it - and offers the way out (`workspace-changed`). It is a pill and a button, not a modal: a
+ * background socket event must not take focus from a field the reader is typing in, and the
+ * reload it offers never starts by itself.
  */
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { RotateCw, Wifi, WifiOff } from 'lucide-react'
+import { ArrowRightLeft, RotateCw, Wifi, WifiOff } from 'lucide-react'
 
+import { useOpenCurrentWorkspace } from '#/components/layout/use-open-current-workspace'
 import { Avatar, Button, Tooltip } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -45,6 +50,55 @@ const STATUS_COPY: {
     labelKey: 'modules.presence.offline.title',
     hintKey: 'modules.presence.offline.body',
   },
+  'workspace-changed': {
+    labelKey: 'modules.presence.workspaceChanged.title',
+    hintKey: 'modules.presence.workspaceChanged.body',
+  },
+}
+
+/**
+ * Whether a field on the screen holds text its reader has not sent. The composers keep their
+ * drafts in component state, so the page is asked rather than each composer: a reload drops every
+ * one of them, and the reader is asked before it happens (`workspace-changed`).
+ */
+function hasUnsentText(): boolean {
+  return Array.from(
+    document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'textarea, input:not([type]), input[type="text"]',
+    ),
+  ).some((field) => !field.readOnly && field.value.trim().length > 0)
+}
+
+/** Each state has its own tone, so none of them reads as another (grey is `offline` alone). */
+const PILL_TONE: { readonly [K in RoomStatus]: string } = {
+  connecting: 'bg-warning-soft text-warning',
+  live: 'bg-success-soft text-success',
+  reconnecting: 'bg-warning-soft text-warning',
+  offline: 'bg-surface-2 text-ink-3',
+  'workspace-changed': 'bg-info-soft text-info',
+}
+
+function StatusGlyph({ status }: { status: RoomStatus }) {
+  if (status === 'offline') return <WifiOff aria-hidden className="size-3.5" />
+  if (status === 'workspace-changed') {
+    return <ArrowRightLeft aria-hidden className="size-3.5" />
+  }
+  return (
+    <span className="relative grid size-3.5 place-items-center">
+      <Wifi aria-hidden className="size-3.5" />
+      {status === 'live' ? null : (
+        <span
+          aria-hidden
+          className="absolute inset-0 animate-pulse-soft rounded-full bg-current/20"
+          // This ring is the whole difference between "connecting" and
+          // "connected": it is drawn only while the room is not live.
+          // Frozen, it becomes a halo that means nothing, and the bar
+          // claims a settled state it has not reached.
+          data-motion-loop=""
+        />
+      )}
+    </span>
+  )
 }
 
 interface Person {
@@ -94,6 +148,20 @@ export function PresenceBar({
   const copy = STATUS_COPY[room.status]
   const unnamed = t('modules.collab.presence.unnamed')
 
+  const currentWorkspace = useOpenCurrentWorkspace()
+  const [confirming, setConfirming] = useState(false)
+  const workspaceChanged = room.status === 'workspace-changed'
+
+  // The reload cannot be taken back, so text that would be lost with it asks first: the first press
+  // says so and changes the button, the second one goes on. Nothing is cleared or disabled.
+  const openCurrentWorkspace = () => {
+    if (!confirming && hasUnsentText()) {
+      setConfirming(true)
+      return
+    }
+    currentWorkspace.open()
+  }
+
   return (
     <div className={cn('flex min-w-0 flex-wrap items-center gap-3', className)}>
       <Tooltip content={t(copy.hintKey)}>
@@ -102,31 +170,10 @@ export function PresenceBar({
           role="status"
           className={cn(
             'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full px-3 text-caption font-semibold focus-ring',
-            room.status === 'live'
-              ? 'bg-success-soft text-success'
-              : room.status === 'offline'
-                ? 'bg-surface-2 text-ink-3'
-                : 'bg-warning-soft text-warning',
+            PILL_TONE[room.status],
           )}
         >
-          {room.status === 'offline' ? (
-            <WifiOff aria-hidden className="size-3.5" />
-          ) : (
-            <span className="relative grid size-3.5 place-items-center">
-              <Wifi aria-hidden className="size-3.5" />
-              {room.status === 'live' ? null : (
-                <span
-                  aria-hidden
-                  className="absolute inset-0 animate-pulse-soft rounded-full bg-current/20"
-                  // This ring is the whole difference between "connecting" and
-                  // "connected": it is drawn only while the room is not live.
-                  // Frozen, it becomes a halo that means nothing, and the bar
-                  // claims a settled state it has not reached.
-                  data-motion-loop=""
-                />
-              )}
-            </span>
-          )}
+          <StatusGlyph status={room.status} />
           {t(copy.labelKey)}
         </span>
       </Tooltip>
@@ -185,6 +232,30 @@ export function PresenceBar({
           <RotateCw aria-hidden />
           {t('modules.presence.reconnect')}
         </Button>
+      ) : null}
+
+      {workspaceChanged ? (
+        <>
+          {/* The reason as text, readable without hovering: a phone cannot open the tooltip. */}
+          <span
+            aria-live="polite"
+            className="min-w-0 basis-full text-caption text-ink-2 sm:basis-auto"
+          >
+            {confirming
+              ? t('modules.presence.workspaceChanged.discard')
+              : t('modules.presence.workspaceChanged.body')}
+          </span>
+          <Button
+            variant={confirming ? 'danger' : 'secondary'}
+            shape="pill"
+            onClick={openCurrentWorkspace}
+            loading={currentWorkspace.opening}
+          >
+            {confirming
+              ? t('modules.presence.workspaceChanged.confirm')
+              : t('shell.session.openCurrentWorkspace')}
+          </Button>
+        </>
       ) : null}
     </div>
   )

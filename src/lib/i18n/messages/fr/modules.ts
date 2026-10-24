@@ -37,6 +37,13 @@ const messages = {
   'presence.offline.body':
     'Les mises à jour en direct sont coupées. Tout s’enregistre encore ; rechargez ou réessayez pour rattraper.',
   'presence.reconnect': 'Se reconnecter',
+  'presence.workspaceChanged.title':
+    'Les mises à jour en direct se sont arrêtées',
+  'presence.workspaceChanged.body':
+    'Cet onglet appartient à un espace de travail qui a été changé dans un autre onglet ou une autre fenêtre.',
+  'presence.workspaceChanged.discard':
+    'Le texte que vous n’avez pas envoyé dans cet onglet sera perdu.',
+  'presence.workspaceChanged.confirm': 'Ouvrir quand même',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Tous les trajets',
   'transports.empty.title': 'Aucun trajet pour l’instant',

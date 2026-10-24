@@ -37,6 +37,13 @@ const messages = {
   'presence.offline.body':
     'Les actualitzacions en directe estan apagades. Tot es continua desant; recarrega o torna-ho a provar per posar-te al dia.',
   'presence.reconnect': 'Reconnecta',
+  'presence.workspaceChanged.title':
+    'Les actualitzacions en directe s’han aturat',
+  'presence.workspaceChanged.body':
+    'Aquesta pestanya pertany a un espai de treball que s’ha canviat en una altra pestanya o finestra.',
+  'presence.workspaceChanged.discard':
+    'Es perdrà el text que no hagis enviat en aquesta pestanya.',
+  'presence.workspaceChanged.confirm': 'Obre igualment',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Tots els trajectes',
   'transports.empty.title': 'Encara no hi ha trajectes',

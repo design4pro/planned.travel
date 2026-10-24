@@ -37,6 +37,13 @@ const messages = {
   'presence.offline.body':
     'Gli aggiornamenti dal vivo sono spenti. Si salva ancora tutto; ricarica o riprova per recuperare.',
   'presence.reconnect': 'Riconnetti',
+  'presence.workspaceChanged.title':
+    'Gli aggiornamenti in tempo reale si sono fermati',
+  'presence.workspaceChanged.body':
+    'Questa scheda appartiene a uno spazio di lavoro che è stato cambiato in un’altra scheda o finestra.',
+  'presence.workspaceChanged.discard':
+    'Il testo che non hai inviato in questa scheda andrà perso.',
+  'presence.workspaceChanged.confirm': 'Apri comunque',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Tutti gli spostamenti',
   'transports.empty.title': 'Ancora nessuno spostamento',

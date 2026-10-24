@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Live-updates staan uit. Er wordt nog gewoon opgeslagen; herlaad of probeer opnieuw om bij te komen.',
   'presence.reconnect': 'Opnieuw verbinden',
+  'presence.workspaceChanged.title': 'Live-updates zijn gestopt',
+  'presence.workspaceChanged.body':
+    'Dit tabblad hoort bij een werkruimte die in een ander tabblad of venster is gewijzigd.',
+  'presence.workspaceChanged.discard':
+    'Tekst die je in dit tabblad niet hebt verstuurd, gaat verloren.',
+  'presence.workspaceChanged.confirm': 'Toch openen',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Alle trajecten',
   'transports.empty.title': 'Nog geen trajecten',

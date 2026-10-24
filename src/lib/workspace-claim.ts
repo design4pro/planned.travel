@@ -22,6 +22,13 @@ import { readPublicFailure } from '#/lib/errors'
 export const WORKSPACE_CLAIM_HEADER = 'x-planned-workspace'
 
 /**
+ * Where a WebSocket upgrade states the claim: a query parameter, because a browser cannot set a
+ * header on `new WebSocket(url)`. Same value, same meaning, and the same rule: compared, never used
+ * (`serveTripRoom`, `src/routes/api/trip-room/-lib/connect.ts`).
+ */
+export const WORKSPACE_CLAIM_QUERY = 'workspace'
+
+/**
  * The refusal, as the catalogue key it travels as.
  *
  * Same shape as `SHELL_STATE_KEYS` (`src/components/layout/session.ts`): the server throws the key

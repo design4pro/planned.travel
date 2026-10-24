@@ -34,6 +34,10 @@ const messages = {
   'presence.offline.body':
     '实时更新已关闭。保存照常进行；重新加载或重试即可跟上。',
   'presence.reconnect': '重新连接',
+  'presence.workspaceChanged.title': '实时更新已停止',
+  'presence.workspaceChanged.body': '此标签页属于一个已在另一个标签页或窗口中切换的工作区。',
+  'presence.workspaceChanged.discard': '你在此标签页中尚未发送的文字将会丢失。',
+  'presence.workspaceChanged.confirm': '仍然打开',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': '全部交通',
   'transports.empty.title': '还没有交通安排',

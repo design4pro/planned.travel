@@ -37,6 +37,12 @@ const messages = {
   'presence.offline.body':
     'Οι ζωντανές ενημερώσεις είναι κλειστές. Η αποθήκευση συνεχίζεται· ανανέωσε ή ξαναδοκίμασε για να προλάβεις.',
   'presence.reconnect': 'Επανασύνδεση',
+  'presence.workspaceChanged.title': 'Οι ζωντανές ενημερώσεις σταμάτησαν',
+  'presence.workspaceChanged.body':
+    'Αυτή η καρτέλα ανήκει σε χώρο εργασίας που άλλαξε σε άλλη καρτέλα ή παράθυρο.',
+  'presence.workspaceChanged.discard':
+    'Το κείμενο που δεν έχετε στείλει σε αυτή την καρτέλα θα χαθεί.',
+  'presence.workspaceChanged.confirm': 'Άνοιγμα παρ’ όλα αυτά',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Όλες οι μετακινήσεις',
   'transports.empty.title': 'Καμία μετακίνηση ακόμη',

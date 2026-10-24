@@ -36,6 +36,12 @@ const messages = {
   'presence.offline.body':
     'Aktualizacje na żywo są wyłączone. Zapis działa; odśwież albo ponów, żeby nadrobić.',
   'presence.reconnect': 'Połącz ponownie',
+  'presence.workspaceChanged.title': 'Aktualizacje na żywo zatrzymały się',
+  'presence.workspaceChanged.body':
+    'Ta karta należy do przestrzeni, którą zmieniono w innej karcie lub oknie.',
+  'presence.workspaceChanged.discard':
+    'Tekst, którego nie wysłano w tej karcie, przepadnie.',
+  'presence.workspaceChanged.confirm': 'Otwórz mimo to',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Wszystkie przejazdy',
   'transports.empty.title': 'Jeszcze bez przejazdów',

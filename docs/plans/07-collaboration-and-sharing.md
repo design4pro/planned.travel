@@ -335,7 +335,9 @@ as `07-S2` does.
   The socket's authorisation boundary is `src/routes/api/trip-room/-lib/connect.ts` (the route module
   `$tripId.ts` only reads the binding) and nowhere else: it re-reads the session, re-reads the
   caller's stored trip role rather than trusting a cached role, resolves the trip _inside_ the
-  caller's tenant so a foreign trip id is a 404 before a socket exists, and only then asserts an
+  caller's tenant so a foreign trip id is a 404 before a socket exists (after one earlier step: a tab
+  whose `?workspace=` claim is not the session's workspace is closed with code 4001 and the reason
+  `Workspace changed` before any trip lookup, #979), and only then asserts an
   identity to the room. The room role is `canWritePlan(trip, tripRole)`: an owner or editor of a
   trip that is not archived connects as `editor`; a trip viewer, a traveller who is not on the trip,
   and anyone on an archived trip connect as `viewer` and have their patches refused inside the room,

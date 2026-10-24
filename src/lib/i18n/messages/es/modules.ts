@@ -36,6 +36,13 @@ const messages = {
   'presence.offline.body':
     'Las actualizaciones en directo están apagadas. Todo se sigue guardando; recarga o reinténtalo para ponerte al día.',
   'presence.reconnect': 'Reconectar',
+  'presence.workspaceChanged.title':
+    'Las actualizaciones en vivo se detuvieron',
+  'presence.workspaceChanged.body':
+    'Esta pestaña pertenece a un espacio de trabajo que se cambió en otra pestaña o ventana.',
+  'presence.workspaceChanged.discard':
+    'Se perderá el texto que no hayas enviado en esta pestaña.',
+  'presence.workspaceChanged.confirm': 'Abrir de todos modos',
   /* ------------------------------------------- the transports timeline */
   'transports.filter.all': 'Todos los trayectos',
   'transports.empty.title': 'Todavía no hay trayectos',
