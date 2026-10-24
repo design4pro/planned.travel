@@ -71,7 +71,7 @@ The Agent Brief was written before the code below was re-read for this spec. Eac
    reads) plus the two ownership booleans, and the pure function requires `planId !== 'free'` after
    `limitInputsFromRow`. It still returns no tenant content.
 2. **"One named function" has two callers, not one.** FU-3 asks for one named production caller per `…Unscoped`
-   function. The guard (`resolveQuotas`, repos) and the loader (`createSubscriptionStore().findByOrganization`,
+   function. The guard (`resolveQuotas`, repos) and the loader (a new `createSubscriptionStore()` method,
    billing) are two ends of the one resolution and are in different layers, so the function has exactly **two** named
    callers and the amendment says so (below). The create gate is not a third: it goes through `resolveQuotas`.
 3. **"Written only inside the creation batch" is SQL in the auth layer.** `createOrganizationFor` is in
@@ -173,7 +173,9 @@ It never returns the sponsor's id, name, members, trips or any other content. Th
 active organization id (from `scope.ctx.organizationId`, or from the billing context), never a request value.
 
 Its two named production callers are the two ends of one resolution: `resolveQuotas` (`src/server/repos/base.ts`) and
-`createSubscriptionStore().findByOrganization` (`src/server/billing/store.ts`). A source test lists the importers and
+a new method of `createSubscriptionStore()` (`src/server/billing/store.ts`) that `loadPlanState` calls. It is not
+`findByOrganization`: the webhook and the checkout call that one for the subscription record and must not see the carry.
+A source test lists the importers and
 fails on a third. SPEC §5 FU-3 is amended to allow that pair for this function by name (it is the single exception to
 "one caller", and it exists because the guard and the loader are different layers that must give one answer).
 
@@ -195,7 +197,8 @@ A sponsor that has a link of its own and no subscription of its own is not entit
 `createOrganizationFor` gains one statement in its existing `db.batch`, after the organization and before the member:
 `recordCarry` (below) from the new write-only module
 `src/server/auth/carry.ts`, sibling of `participation.ts` (SPEC §5 is amended to name it; a source test pins its
-writers and that it has no select, update or delete of its own). It is an `INSERT … SELECT … WHERE` that inserts a row
+writers and that it has no standalone select, update or delete: it returns no row, and the only read is the subquery
+inside its one statement). It is an `INSERT … SELECT … WHERE` that inserts a row
 only if, at the moment of the batch, `userId` is an owner of the sponsor (composite-role-aware, `',' || role || ','
 LIKE '%,owner,%'`) and the sponsor has a `subscriptions` row in an entitling status. If either stopped being true between the gate and the batch, no row is
 written and the new workspace is created exactly as today: Free. The read-time rule re-checks everything anyway, so the
@@ -413,7 +416,7 @@ user can see, because no row can be written until the second.
 
 - Add `src/server/auth/carry.ts` (`recordCarry`, write-only, conditional `INSERT … SELECT … WHERE`) and the statement in
   `createOrganizationFor`'s batch; amend SPEC §5 to name the module and add a source test pinning its importers and that
-  it has no read. Add the ADR 0046 reference to `docs/ACCESS.md` §2.7 and amend §2.7 to the gate table above.
+  it has no standalone read. Add the ADR 0046 reference to `docs/ACCESS.md` §2.7 and amend §2.7 to the gate table above.
 - `createWorkspace` decides the sponsor server-side (table above) and refuses a caller who is not the carry's creator.
   `createWorkspaceInput` stays `z.strictObject({ name })`.
 - Update `workspace.createDescription`, `workspace.createUpgrade` and add `workspace.createCarried` in all 23 locales;

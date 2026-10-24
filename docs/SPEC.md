@@ -402,9 +402,10 @@ caller's own active organization id it returns, for that workspace's recorded sp
 `plan`, `seats` and `providerProductId`, the `createdBy` of the carry and two booleans (the creator is still an owner of
 the sponsor, and of the carried workspace). It never returns the sponsor's id, name, members, trips or any other content, takes no
 request value and cannot list the workspaces a sponsor carries. It is the one FU-3 function with **two** named production
-callers, `resolveQuotas` (`src/server/repos/base.ts`) and `createSubscriptionStore().findByOrganization`
-(`src/server/billing/store.ts`), because the repository guard and the billing plan-state loader are different layers that
-must give one answer; a source test lists the importers and fails on a third. The decision is made once, by `applyCarry` in
+callers, `resolveQuotas` (`src/server/repos/base.ts`) and a new method of `createSubscriptionStore()`
+(`src/server/billing/store.ts`, not `findByOrganization`, whose webhook and checkout callers must not see the carry),
+because the repository guard and the billing plan-state loader are different layers that must give one answer; a source
+test lists the importers and fails on a third. The decision is made once, by `applyCarry` in
 `src/server/billing/limits.ts`. This is an exception to the scope argument, not a fifth catalog member.
 
 #### Global-catalogue carve-out
@@ -607,7 +608,8 @@ hooks. Activation failure never restores pending or removes durable membership; 
 switcher recovers activation. Repeating acceptance remains a refusal and never restores removed access.
 
 Workspace creation adds one more write-only statement to its batch: `src/server/auth/carry.ts` (`recordCarry`, ADR 0046),
-a sibling of `participation.ts` with no select, update or delete of its own. It is an `INSERT … SELECT … WHERE` into
+a sibling of `participation.ts` with no standalone select, update or delete (it returns no row; the only read is the
+subquery inside its one statement). It is an `INSERT … SELECT … WHERE` into
 `workspace_carries` that writes a row only when the creator is an owner of the sponsor (the source workspace if it holds an
 entitling subscription, otherwise the sponsor of the source's own carry) and the sponsor has an entitling subscription row.
 The source workspace id comes from the caller's tenant scope, never from a request body; the sponsor is chosen inside the

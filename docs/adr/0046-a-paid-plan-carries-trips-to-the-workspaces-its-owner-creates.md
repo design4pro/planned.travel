@@ -41,13 +41,14 @@ locks nothing.
 takes a plain `Database` under SPEC §5 FU-3 and returns the sponsor's `status`, `plan`, `seats` and `providerProductId`,
 the carry's `createdBy`, and two booleans (the creator owns the sponsor, the creator owns the carried workspace). It
 returns no sponsor id, name, member, trip or other content, takes only the caller's own active organization id, and cannot
-list. It has **two** named production callers, `resolveQuotas` and `createSubscriptionStore().findByOrganization`: the
-guard and the loader are different layers that must give one answer, and a source test fails on a third. FU-3's
+list. It has **two** named production callers, `resolveQuotas` and a new method of `createSubscriptionStore()` (not
+`findByOrganization`, which the webhook and checkout also call and which must not see the carry): the guard and the
+loader are different layers that must give one answer, and a source test fails on a third. FU-3's
 "one named production caller per function" gains this single, named exception. The decision itself is one pure function,
 `applyCarry`, in `src/server/billing/limits.ts`.
 
-**6. One auth write.** `src/server/auth/carry.ts` is a write-only sibling of `auth/participation.ts` (no select, update
-or delete of its own) that puts one conditional statement into `createOrganizationFor`'s batch. SPEC §5 names it as a
+**6. One auth write.** `src/server/auth/carry.ts` is a write-only sibling of `auth/participation.ts` (no standalone
+select, update or delete; its one statement returns no row) that puts one conditional statement into `createOrganizationFor`'s batch. SPEC §5 names it as a
 third closed leaf of the auth layer and a source test pins its writers.
 
 **7. The screen learns a flag, not the sponsor.** `Entitlements.carry` is `none`, `carried` or `lapsed`. Members of the
