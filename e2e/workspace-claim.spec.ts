@@ -113,10 +113,17 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   await switchTo(other, FIRST)
   expect(await tripTitles(other)).not.toContain(title)
 
-  // The way out is a reload into whatever the session now says; B just switched back to FIRST.
+  // The way out is a reload into whatever the session now says; B just switched back to FIRST. The
+  // trip name typed into A's creation dialog is unsent text, so the first press asks before it
+  // discards that and the tab stays where it is until the second press.
   await notice
     .getByRole('button', { name: 'Open the current workspace' })
     .click()
+  await expect(
+    notice.getByText('Text you have not sent in this tab will be lost.'),
+  ).toBeVisible()
+  await expect(page).toHaveURL(/\/trips$/)
+  await notice.getByRole('button', { name: 'Open anyway' }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
   // A full reload into the workspace B just switched back to.
   await expectActive(page, FIRST)
