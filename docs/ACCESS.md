@@ -1418,7 +1418,7 @@ on `platform.user.impersonation_started`, the id `session.create.before` chose a
 workspace name). It is `null` only when the body of the plugin's answer carried no workspace. That
 landing workspace may have been created by the impersonation itself, because `session.create.before`
 provisions a personal workspace for an account that has none; the start event is the only row that
-shows it.
+shows it. A workspace the per-request fallback provisions mid-session is not shown anywhere (below).
 
 So is every workspace the operator moves into between the two. A change of the session's
 `activeOrganizationId` inside an impersonated session appends
@@ -1441,8 +1441,10 @@ the operator's role cannot be read, no row is written and an `error` line says s
 administrator as `user` is worse than a gap that is logged. The same holds for an impersonated
 update that reaches the hook with no request context (`audit.impersonation-workspace.no-context`):
 nothing pairs it with a previous workspace, so it is logged and not recorded. Creating a workspace is not a path to
-this row: an impersonated session cannot reach it (§2.7). The one workspace an impersonation can
-create, the personal one provisioned when the session starts, is visible in the start event instead.
+this row: an impersonated session cannot reach it (§2.7). A personal workspace provisioned when
+the session starts is visible in the start event instead. One provisioned later is not recorded
+anywhere: when the worn session has no workspace and the target has none left, the per-request
+fallback of `requireOrg` provisions one (`resolveOrProvisionOrganization`) without a session update.
 
 ---
 

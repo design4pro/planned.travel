@@ -229,9 +229,10 @@ describe('auditChanges', () => {
  * The impersonation verbs are the ones whose payload is not `auditUserState`'s key set.
  *
  * `src/server/fns/console/impersonation.ts` records `{ impersonating }` on the way in, with the
- * session's expiry and the target's platform role beside it, and `{ impersonating: null }` on the
- * way out - and the dev seed's ledger fixture writes exactly that shape so the account screen has a
- * subject in a fresh clone. All three keys sit outside `FIELD_ORDER`, which is what makes this worth
+ * session's expiry, the target's platform role and the workspace the session landed in beside it,
+ * and `{ impersonating: null }` on the way out - and the dev seed's ledger fixture writes the same
+ * shape without the workspace (older rows lack it too) so the account screen has a subject in a
+ * fresh clone. The keys sit outside `FIELD_ORDER`, which is what makes this worth
  * pinning: an unlabelled key is printed as the column stored it, and `EXPIRESAT` in tracked capitals
  * is a variable name where a reader expected English.
  */
@@ -271,6 +272,30 @@ describe('an impersonation entry', () => {
     expect(changes).toEqual([
       { field: 'impersonating', before: 'acct_9', after: '\u2014' },
     ])
+  })
+
+  it('shows the workspace a session started in as an id on the start entry', () => {
+    const changes = auditChanges(t, {
+      before: { impersonating: null },
+      after: { impersonating: 'acct_9', organizationId: 'org_1' },
+    })
+
+    expect(changes.find((change) => change.field === 'organizationId')).toEqual(
+      {
+        field: 'organizationId',
+        before: '\u2014',
+        after: 'org_1',
+      },
+    )
+  })
+
+  it('shows no workspace line on a start entry that landed in none', () => {
+    const changes = auditChanges(t, {
+      before: { impersonating: null },
+      after: { impersonating: 'acct_9', organizationId: null },
+    })
+
+    expect(changes.map((change) => change.field)).toEqual(['impersonating'])
   })
 
   it('names the workspace a switch moved out of and into, and shows a cleared one as a dash', () => {

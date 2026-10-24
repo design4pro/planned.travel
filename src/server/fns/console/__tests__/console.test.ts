@@ -2568,6 +2568,7 @@ describe('impersonation', () => {
       )
       .get(worn.id) as { id: string | null }
     const rows = await auditRows()
+    expect(landed.id).not.toBeNull()
     expect(rows[0]?.changes?.after?.organizationId).toBe(landed.id)
   })
 
