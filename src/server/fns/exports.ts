@@ -29,6 +29,7 @@ import {
   releaseExport,
 } from '#/server/repos/exports'
 import {
+  isTripWriteRole,
   requireTrip,
   tripRoleFor,
   getEffectiveSettings,
@@ -119,7 +120,7 @@ export async function listTripExports(
       trip.id,
       { now },
     ),
-    canRequest: role === 'owner' || role === 'editor',
+    canRequest: isTripWriteRole(role),
     allowance: {
       ...(await exportAllowance(scope, { month })),
       month,

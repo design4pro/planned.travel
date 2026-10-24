@@ -19,6 +19,7 @@ import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
   TRIP_WRITE_ROLES,
+  isTripWriteRole,
   assertTripRole,
   tripRoleFor,
   deleteTransport,
@@ -286,7 +287,7 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
       found: true,
       canWrite: canWritePlan(trip, role),
       isArchived: trip.isArchived,
-      canSearchConnections: role === 'owner' || role === 'editor',
+      canSearchConnections: isTripWriteRole(role),
       currency: trip.currency,
       byMode,
       totalDistanceMetres,
