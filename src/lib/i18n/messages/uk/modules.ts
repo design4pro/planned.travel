@@ -87,6 +87,10 @@ const messages = {
   'transports.toast.statusFailed.title': 'Статус не змінився',
   'transports.toast.statusFailed.body':
     'Переїзд залишився в попередньому стані.',
+  'transports.refusal.gone':
+    'Його вилучено, поки це вікно було відкрите, тож зміни не можна зберегти. Закрийте вікно, щоб побачити актуальний список.',
+  'transports.refusal.goneTitle': 'Цього переїзду більше немає',
+  'transports.error.saveFallback': 'Спробуйте ще раз за мить.',
   'transports.toast.removed': 'Переїзд вилучено',
   'transports.toast.removeFailed': 'Переїзд не вилучено',
 
