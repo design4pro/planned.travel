@@ -47,13 +47,14 @@ import {
   listTripDays,
   requireTripDay,
 } from './days'
-import {
-  PLACE_WRITE_ROLES,
-  placesRepository,
-  requirePlaceOfTrip,
-} from './places'
+import { placesRepository, requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
-import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
+import {
+  TRIP_WRITE_ROLES,
+  assertTripRole,
+  requireTrip,
+  requireWritableTrip,
+} from './trips'
 import {
   currencySchema,
   definedOnly,
@@ -676,7 +677,7 @@ export async function reorderDayTimelines(
   // see it can be told `FORBIDDEN` (PRD #104 decisions 1 and 6). Nothing is written
   // until all of them have passed.
   await requireTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await Promise.all(
     values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
   )
@@ -935,7 +936,7 @@ export async function scheduleAssignment(
 }> {
   const values = scheduleAssignmentInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
@@ -980,7 +981,7 @@ export async function unscheduleAssignment(
 ): Promise<Array<WrittenDayJourneys>> {
   const values = unscheduleAssignmentInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
 
   const stop = await dayAssignmentsRepository.findById(
     scope,
@@ -1021,7 +1022,7 @@ export async function deletePlaceWithJourneys(
 ): Promise<Array<WrittenDayJourneys>> {
   const values = deletePlaceWithJourneysInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
   const stops = await dayAssignmentsRepository.findMany(scope, {
@@ -1096,7 +1097,7 @@ export async function createAccommodation(
 ): Promise<DayAccommodation> {
   const values = createAccommodationInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   const start = await requireTripDay(scope, values.tripId, values.startDayId)
   const end = await requireTripDay(scope, values.tripId, values.endDayId)
   if (end.dayNumber < start.dayNumber) {
@@ -1122,7 +1123,7 @@ export async function updateAccommodation(
     accommodationId,
   )
   await requireWritableTrip(scope, existing.tripId)
-  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, existing.tripId, TRIP_WRITE_ROLES)
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
   }
@@ -1151,7 +1152,7 @@ export async function deleteAccommodation(
     accommodationId,
   )
   await requireWritableTrip(scope, existing.tripId)
-  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, existing.tripId, TRIP_WRITE_ROLES)
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
 }
 

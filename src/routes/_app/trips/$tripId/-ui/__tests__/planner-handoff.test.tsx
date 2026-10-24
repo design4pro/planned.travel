@@ -11,7 +11,12 @@ import { I18nProvider, LOCALE_TAGS, loadCatalogue } from '#/lib/i18n'
 import { StopMenu } from '../plan-actions'
 import { PlannerDayHandoff, PlannerDayTools } from '../planner-day-tools'
 
-import type { PlannerDay, PlannerRow } from '#/components/planner'
+import type {
+  PlannerDay,
+  PlannerItem,
+  PlannerRow,
+  PlannerTransport,
+} from '#/components/planner'
 import type { Locale } from '#/lib/i18n'
 
 /**
@@ -69,6 +74,42 @@ function dayOf(rows: ReadonlyArray<PlannerRow>): PlannerDay {
     rows,
     items: rows.map((entry) => ({ kind: 'stop', row: entry })),
   }
+}
+
+function transportItem(
+  mode = 'flight',
+  part: PlannerTransport['part'] = 'departing',
+): PlannerItem {
+  const transport: PlannerTransport = {
+    itemId: `leg-${mode}`,
+    kind: 'transport',
+    id: `transport-${mode}`,
+    dayId: 'd3',
+    part,
+    phase: null,
+    mode,
+    status: 'confirmed',
+    serviceNumber: null,
+    fromName: null,
+    toName: null,
+    time: null,
+    price: null,
+    position: 0,
+  }
+  return { kind: 'transport', transport }
+}
+
+/** A day whose displayed sequence is exactly `items`, rows in the same order. */
+function dayWith(items: ReadonlyArray<PlannerItem>): PlannerDay {
+  return {
+    ...dayOf([]),
+    items,
+    rows: items.flatMap((item) => (item.kind === 'stop' ? [item.row] : [])),
+  }
+}
+
+function stopItem(id: string, lat: number): PlannerItem {
+  return { kind: 'stop', row: row(id, { lat, lng: 10 }) }
 }
 
 function placedRows(count: number): ReadonlyArray<PlannerRow> {
@@ -144,6 +185,170 @@ describe('PlannerDayTools — the day hand-off', () => {
     })
     expect(link.textContent).toBe(`Directions in Google Maps${note}`)
   })
+
+  it('offers one link per side of a flight, each told apart by a numbered line', () => {
+    render(
+      tools(
+        dayWith([
+          stopItem('1', 1),
+          stopItem('2', 2),
+          transportItem(),
+          stopItem('3', 3),
+        ]),
+      ),
+    )
+
+    const links = screen.getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Directions in Google MapsPart 1 of 2',
+      'Show on Google MapsPart 2 of 2',
+    ])
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Directions in Google Maps, part 1 of 2 for Day 3 (opens in a new tab)',
+      'Show on Google Maps, part 2 of 2 for Day 3 (opens in a new tab)',
+    ])
+  })
+
+  it('counts the cap on each side of a journey and keeps the part line first', () => {
+    const side = (from: number) =>
+      Array.from({ length: GOOGLE_DIRECTIONS_MAX_STOPS + 1 }, (_, index) =>
+        stopItem(String(from + index), from + index),
+      )
+    render(tools(dayWith([...side(1), transportItem('ferry'), ...side(20)])))
+
+    const total = GOOGLE_DIRECTIONS_MAX_STOPS + 1
+    const note = `Stops: first ${GOOGLE_DIRECTIONS_MAX_STOPS} of ${total}`
+    const links = screen.getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([
+      `Directions in Google MapsPart 1 of 2${note}`,
+      `Directions in Google MapsPart 2 of 2${note}`,
+    ])
+    expect(links[1]?.getAttribute('aria-label')).toBe(
+      `Directions in Google Maps, part 2 of 2, ${note.toLowerCase()} for Day 3 (opens in a new tab)`,
+    )
+  })
+
+  it('numbers only the links offered, so an empty side leaves no gap', () => {
+    render(
+      tools(
+        dayWith([
+          stopItem('1', 1),
+          stopItem('2', 2),
+          transportItem(),
+          transportItem('train'),
+          stopItem('3', 3),
+          stopItem('4', 4),
+        ]),
+      ),
+    )
+
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(
+      [
+        'Directions in Google MapsPart 1 of 2',
+        'Directions in Google MapsPart 2 of 2',
+      ],
+    )
+  })
+
+  it('keeps the plain copy when a journey leaves one link', () => {
+    render(
+      tools(dayWith([transportItem(), stopItem('1', 1), stopItem('2', 2)])),
+    )
+
+    const link = screen.getByRole('link')
+    expect(link.textContent).toBe('Directions in Google Maps')
+    expect(link.getAttribute('aria-label')).toBe(
+      'Directions in Google Maps for Day 3 (opens in a new tab)',
+    )
+  })
+
+  it('leaves the day whole across a bus', () => {
+    render(
+      tools(
+        dayWith([stopItem('1', 1), transportItem('bus'), stopItem('2', 2)]),
+      ),
+    )
+
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.queryByText(/Part 1 of/)).toBeNull()
+  })
+
+  it('shows the same split links, lines and names in the read-only footer', () => {
+    render(
+      <PlannerDayHandoff
+        day={dayWith([stopItem('1', 1), transportItem(), stopItem('2', 2)])}
+      />,
+    )
+
+    const links = screen.getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Show on Google MapsPart 1 of 2',
+      'Show on Google MapsPart 2 of 2',
+    ])
+    expect(links.map((link) => link.getAttribute('aria-label'))).toEqual([
+      'Show on Google Maps, part 1 of 2 for Day 3 (opens in a new tab)',
+      'Show on Google Maps, part 2 of 2 for Day 3 (opens in a new tab)',
+    ])
+  })
+
+  it('cuts nothing at a travelling row, which sits at the head of the day', () => {
+    render(
+      tools(
+        dayWith([
+          transportItem('flight', 'travelling'),
+          stopItem('1', 1),
+          stopItem('2', 2),
+        ]),
+      ),
+    )
+
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+  })
+
+  it.each(LOCALE_TAGS)(
+    'opens each split control’s name with its label and its visible lines, then the day, in %s',
+    async (locale) => {
+      const side = (from: number, count: number) =>
+        Array.from({ length: count }, (_, index) =>
+          stopItem(String(from + index), from + index),
+        )
+      render(
+        tools(
+          dayWith([
+            ...side(1, GOOGLE_DIRECTIONS_MAX_STOPS + 1),
+            transportItem(),
+            ...side(10, 2),
+            transportItem('train'),
+            stopItem('20', 20),
+          ]),
+        ),
+        locale,
+        await loadCatalogue(locale),
+      )
+
+      const links = screen.getAllByRole('link')
+      expect(links).toHaveLength(3)
+      for (const link of links) {
+        const [label, ...lines] = Array.from(link.children).map(
+          (child) => child.textContent ?? '',
+        )
+        const lower = (text: string) => text.toLocaleLowerCase(locale)
+        const name = lower(link.getAttribute('aria-label') ?? '')
+        expect(name.startsWith(lower(label ?? ''))).toBe(true)
+        // Label in Name (WCAG 2.5.3): the visible lines follow the label, in the same words
+        // and the same order, before the day, so a spoken phrase is one run of the name.
+        expect(lines.length).toBeGreaterThan(0)
+        let from = lower(label ?? '').length
+        for (const line of lines) {
+          const at = name.indexOf(lower(line), from)
+          expect(at).toBeGreaterThanOrEqual(from)
+          from = at + line.length
+        }
+        expect(name.indexOf('day 3', from)).toBeGreaterThanOrEqual(from)
+      }
+    },
+    30_000,
+  )
 
   it.each(LOCALE_TAGS)(
     'opens each control’s name with its visible label in %s',

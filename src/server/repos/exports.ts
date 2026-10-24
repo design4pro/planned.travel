@@ -3,7 +3,7 @@ import { UNLIMITED } from '#/server/db/types'
 import { assertQuota, resolveQuotas } from './base'
 import { bumpUsage, getMonthlyUsage } from './billing'
 import { isUniqueConstraintViolation } from './context'
-import { assertTripRole, requireTrip } from './trips'
+import { TRIP_WRITE_ROLES, assertTripRole, requireTrip } from './trips'
 import type { TenantScope } from './base'
 
 export async function reserveExport(
@@ -12,7 +12,7 @@ export async function reserveExport(
   { month }: { month: string },
 ) {
   await requireTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner', 'editor'])
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   const bump = () => bumpUsage(scope, 'exports', 1, month)
   const row = await bump().catch((cause: unknown) => {
     if (!isUniqueConstraintViolation(cause)) throw cause

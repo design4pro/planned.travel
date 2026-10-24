@@ -186,6 +186,13 @@ const messages = {
   'plan.handoff.day.point': 'Zobrazit v {service}',
   'plan.handoff.day.pointName':
     'Zobrazit v {service}: jediná zastávka na mapě, {day} (otevře se na nové kartě)',
+  'plan.handoff.day.part': 'Část {n} z {count}',
+  'plan.handoff.day.directionsPartName':
+    'Trasa v {service}, část {n} z {count}, {day} (otevře se na nové kartě)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Trasa v {service}, část {n} z {count}, zastávky: prvních {carried} z {total}, {day} (otevře se na nové kartě)',
+  'plan.handoff.day.pointPartName':
+    'Zobrazit v {service}, část {n} z {count}, {day} (otevře se na nové kartě)',
   'plan.drop.hint':
     'Klikněte na mapu pravým tlačítkem nebo na ni dlouze podržte prst a místo se přidá přesně tam.',
   'plan.drop.armed':

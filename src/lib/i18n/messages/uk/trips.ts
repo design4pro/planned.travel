@@ -190,6 +190,13 @@ const messages = {
   'plan.handoff.day.point': 'Показати у {service}',
   'plan.handoff.day.pointName':
     'Показати у {service}: єдина зупинка на мапі, {day} (відкриється в новій вкладці)',
+  'plan.handoff.day.part': 'Частина {n} із {count}',
+  'plan.handoff.day.directionsPartName':
+    'Маршрут у {service}, частина {n} із {count}, {day} (відкриється в новій вкладці)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Маршрут у {service}, частина {n} із {count}, зупинки: перші {carried} із {total}, {day} (відкриється в новій вкладці)',
+  'plan.handoff.day.pointPartName':
+    'Показати у {service}, частина {n} із {count}, {day} (відкриється в новій вкладці)',
   'plan.drop.hint':
     'Клацніть мапу правою кнопкою миші або натисніть і утримуйте, щоб додати місце саме там.',
   'plan.drop.armed':
