@@ -34,14 +34,19 @@ export const DEMO_PASSWORD = process.env.E2E_PASSWORD ?? 'planned-demo-2026'
  * browser context immediately — one request per test instead of a full form round trip, and a failure
  * here is unambiguous rather than a mystery timeout on a selector. Better Auth enforces an Origin
  * header on state-changing requests, hence the explicit one.
+ *
+ * The account defaults to the demo owner. Another fixture person (all four share the seed password)
+ * signs in by email, from a context whose cookie jar was cleared first so the cached owner session is
+ * never the one answering.
  */
 export async function signIn(
   page: Page,
   baseURL: string | undefined,
+  email: string = DEMO_EMAIL,
 ): Promise<boolean> {
   const response = await page.request.post('/api/auth/sign-in/email', {
     headers: { origin: baseURL ?? 'http://localhost:3000' },
-    data: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+    data: { email, password: DEMO_PASSWORD },
     failOnStatusCode: false,
   })
   return response.ok()
