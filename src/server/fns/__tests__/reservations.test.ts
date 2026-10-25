@@ -21,7 +21,9 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  CurrencyRefusalError,
   TripArchivedError,
+  TripRoleError,
   addTripMember,
   archiveTrip,
   createAssignment,
@@ -1566,5 +1568,207 @@ describe('a booking price change on a cost line that is split', () => {
     expect(
       await getExpenseWithShares(elsewhere.scope, foreign.expense.id),
     ).toEqual(snapshot)
+  })
+})
+
+describe('a booking save made under a trip currency that is no longer the trip’s', () => {
+  const STALE = 'EUR'
+
+  /** A trip in JPY, re-based since the tab loaded under EUR; the booking on it is priced. */
+  async function booked() {
+    await createBooking(
+      bookingPayload({
+        tripId: trip.id,
+        startDate: '2026-04-11',
+        priceMinor: 24_000,
+        currency: 'JPY',
+      }),
+    )
+    const booking = await onlyBooking()
+    stubs.mirrorToRoom.mockClear()
+    return booking
+  }
+
+  async function snapshot() {
+    return {
+      bookings: await listTripReservations(scope, { tripId: trip.id }),
+      lines: await listTripExpenses(scope, trip.id),
+      audit: (await listAuditLog(scope, {})).items.map((entry) => entry.id),
+    }
+  }
+
+  it('refuses a create and an update with the key and writes nothing', async () => {
+    const booking = await booked()
+    const before = await snapshot()
+
+    const create = await captureError(() =>
+      createBooking(
+        bookingPayload({
+          tripId: trip.id,
+          title: 'Late taxi',
+          priceMinor: 3_000,
+          currency: STALE,
+          expectedTripCurrency: STALE,
+        }),
+      ),
+    )
+    const update = await captureError(() =>
+      updateBooking(
+        bookingPayload({
+          tripId: trip.id,
+          reservationId: booking.id,
+          title: 'Rewritten',
+          startDate: '2026-04-11',
+          priceMinor: 1,
+          currency: STALE,
+          expectedTripCurrency: STALE,
+        }),
+      ),
+    )
+
+    for (const error of [create, update]) {
+      expect(error).toBeInstanceOf(CurrencyRefusalError)
+      expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+    }
+    expect(await snapshot()).toEqual(before)
+    expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+  })
+
+  it('saves under the current currency, in either case, and never stores the field', async () => {
+    await createBooking(
+      bookingPayload({
+        tripId: trip.id,
+        title: 'Dinner',
+        expectedTripCurrency: 'jpy',
+      }),
+    )
+    const booking = await onlyBooking()
+    await updateBooking(
+      bookingPayload({
+        tripId: trip.id,
+        reservationId: booking.id,
+        title: 'Dinner, moved',
+        expectedTripCurrency: 'JPY',
+      }),
+    )
+
+    const saved = await getReservation(scope, booking.id)
+    expect(saved?.title).toBe('Dinner, moved')
+    expect(saved).not.toHaveProperty('expectedTripCurrency')
+  })
+
+  it('leaves a save that names no currency unchecked', async () => {
+    await createBooking(bookingPayload({ tripId: trip.id }))
+
+    expect(await onlyBooking()).toBeDefined()
+  })
+
+  it('refuses a malformed currency at the schema, on both validators', () => {
+    for (const expectedTripCurrency of ['EU', 'EURO', '1 2', '']) {
+      expect(
+        bookingInputSchema.safeParse(
+          bookingPayload({ tripId: trip.id, expectedTripCurrency }),
+        ).success,
+      ).toBe(false)
+      expect(
+        bookingUpdateSchema.safeParse(
+          bookingPayload({
+            tripId: trip.id,
+            reservationId: 'r',
+            expectedTripCurrency,
+          }),
+        ).success,
+      ).toBe(false)
+    }
+    expect(
+      bookingInputSchema.parse(
+        bookingPayload({ tripId: trip.id, expectedTripCurrency: ' eur ' }),
+      ).expectedTripCurrency,
+    ).toBe('EUR')
+  })
+
+  it('answers a viewer with the role refusal, not the currency one', async () => {
+    const viewerId = await tenant.addUser('A viewer')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    stubs.scope = tenant.scopeFor(viewerId)
+
+    const error = await captureError(() =>
+      createBooking(
+        bookingPayload({ tripId: trip.id, expectedTripCurrency: STALE }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(TripRoleError)
+    expect(error).not.toBeInstanceOf(CurrencyRefusalError)
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+  })
+
+  it('answers the other workspace’s trip and row as not found, never as a currency refusal', async () => {
+    const elsewhere = await harness.seedTenant('elsewhere')
+    const abroad = await createTrip(elsewhere.scope, {
+      title: 'Lisbon',
+      startDate: '2026-05-01',
+      endDate: '2026-05-03',
+      currency: 'EUR',
+    })
+    const foreign = await createReservation(elsewhere.scope, {
+      tripId: abroad.id,
+      type: 'restaurant',
+      status: 'pending',
+      title: 'Dinner abroad',
+      priceMinor: 5_000,
+      currency: 'EUR',
+    })
+    const own = await booked()
+    const before = {
+      here: await snapshot(),
+      there: {
+        bookings: await listTripReservations(elsewhere.scope, {
+          tripId: abroad.id,
+        }),
+        lines: await listTripExpenses(elsewhere.scope, abroad.id),
+      },
+    }
+
+    const attempts = [
+      () =>
+        createBooking(
+          bookingPayload({ tripId: abroad.id, expectedTripCurrency: 'XXX' }),
+        ),
+      () =>
+        updateBooking(
+          bookingPayload({
+            tripId: abroad.id,
+            reservationId: foreign.id,
+            expectedTripCurrency: 'XXX',
+          }),
+        ),
+      () =>
+        updateBooking(
+          bookingPayload({
+            tripId: trip.id,
+            reservationId: foreign.id,
+            expectedTripCurrency: 'XXX',
+          }),
+        ),
+    ]
+    for (const attempt of attempts) {
+      const error = await captureError(attempt)
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).not.toBeInstanceOf(CurrencyRefusalError)
+    }
+
+    expect(await snapshot()).toEqual(before.here)
+    expect(
+      await listTripReservations(elsewhere.scope, { tripId: abroad.id }),
+    ).toEqual(before.there.bookings)
+    expect(await listTripExpenses(elsewhere.scope, abroad.id)).toEqual(
+      before.there.lines,
+    )
+    expect(own.tripId).toBe(trip.id)
   })
 })

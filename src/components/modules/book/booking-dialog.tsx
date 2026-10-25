@@ -12,6 +12,7 @@
  * stay's own writes, which record the booking and its nights together.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import {
   Bed,
   Landmark,
@@ -40,9 +41,11 @@ import {
   Textarea,
   toast,
 } from '#/components/ui'
+import { useStaleTripCurrency } from '#/components/costs/stale-trip-currency'
 import { cn } from '#/lib/cn'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
-import { formatMoney } from '#/lib/money'
+import { currencyCode, formatMoney } from '#/lib/money'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
 import { createStayFn, updateStayFn } from '#/server/fns/stays'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
@@ -239,14 +242,35 @@ export function BookingDialog({
 }) {
   const locale = useLocale()
   const t = useTranslate()
+  const router = useRouter()
 
   const editing = booking !== undefined
   const formId = useId()
+  const currencyId = useId()
 
   const [draft, setDraft] = useState<BookingDraft>(() =>
     newDraft(currency, initialStayDayId),
   )
   const [touched, setTouched] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const priceRef = useRef<HTMLInputElement>(null)
+  // The trip was re-based while this was open and the save was refused: what was typed stays, the
+  // screen refreshes, and a currency that only mirrored the trip follows it (adopted below).
+  const stale = useStaleTripCurrency(currency, saving, () => priceRef.current)
+  const adopt = stale.adopt
+  if (adopt !== null) {
+    stale.adopted()
+    // A booking saved with a currency of its own keeps it: its digits are still right in it.
+    setDraft((current) =>
+      booking?.currency == null && currencyCode(current.currency) === adopt.from
+        ? { ...current, currency: adopt.to }
+        : current,
+    )
+  }
+  // Read by the reset below without being one of its triggers: a refreshed currency must not wipe
+  // the draft the refusal told the reader to check.
+  const currencyRef = useRef(currency)
+  currencyRef.current = currency
   /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
@@ -265,6 +289,10 @@ export function BookingDialog({
   openRef.current = open
   /** Counts the times this dialog was opened, to tell a save's own open from a later one. */
   const sessionRef = useRef(0)
+  /** The session the running save started in; a refusal that lands in a later one is not shown there. */
+  const submittedRef = useRef(0)
+  /** Every action's reset, set once they exist: a refusal one of them kept is dropped on open. */
+  const resetActionsRef = useRef<Array<() => void>>([])
   const mountedRef = useRef(true)
   const flushWarnings = useCallback(() => {
     const pending = [...pendingWarningsRef.current.values()]
@@ -300,12 +328,14 @@ export function BookingDialog({
     }
     setDraft(
       booking === undefined
-        ? newDraft(currency, initialStayDayId)
-        : draftFrom(booking, currency),
+        ? newDraft(currencyRef.current, initialStayDayId)
+        : draftFrom(booking, currencyRef.current),
     )
     setTouched(false)
     setSplitStale(false)
-  }, [open, booking, currency, initialStayDayId])
+    stale.dismiss()
+    resetActionsRef.current.forEach((reset) => reset())
+  }, [open, booking, initialStayDayId])
 
   // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
   // the form, so a warning shown or still held for it goes. Another booking, or a new one, leaves
@@ -319,24 +349,63 @@ export function BookingDialog({
     }
   }, [open, bookingId])
 
+  // A save made under a currency the trip no longer has is refused with a key, not a sentence: it
+  // is answered inline, once the refreshed currency is known, and the screen is reloaded to get it.
+  const staleCurrency = {
+    refusal: (cause: unknown) =>
+      currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged'
+        ? t('costs.refusal.rebaseChanged')
+        : null,
+    onError: (cause: unknown) => {
+      if (currencyRefusalOf(cause) !== 'costs.refusal.tripCurrencyChanged') {
+        return
+      }
+      void router.invalidate()
+      // The dialog was closed or opened again since the save started: nothing here would show it.
+      if (
+        mountedRef.current &&
+        openRef.current &&
+        submittedRef.current === sessionRef.current
+      ) {
+        stale.refuse(currencyCode(currency))
+      } else {
+        // `useAction` has already kept the refusal as its error, and this dialog is not the one that
+        // saved: the toast is the only place it is told.
+        resetActionsRef.current.forEach((reset) => reset())
+        toast.error(t('modules.form.saveError'), {
+          description: t('costs.refusal.rebaseChanged'),
+        })
+      }
+    },
+  }
   const create = useAction(createBookingFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const update = useAction(updateBookingFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
   const createStay = useAction(createStayFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const updateStay = useAction(updateStayFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
+  resetActionsRef.current = [
+    create.reset,
+    update.reset,
+    createStay.reset,
+    updateStay.reset,
+  ]
 
   /*
    * A stay is dated by the trip's days, so it needs days to choose from. An accommodation booking
@@ -368,6 +437,20 @@ export function BookingDialog({
     [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
+  // After the refusal the typed digits may be in the old currency: the price has to be looked at
+  // (edited) before it is saved again, as in the Costs dialogs. No price typed, nothing to look at.
+  // A booking that keeps a currency of its own is saved in it as before: its digits are still right.
+  const priceBlocked =
+    stale.messageFor !== null &&
+    draft.price.trim() !== '' &&
+    booking?.currency == null
+  const staleMessage =
+    stale.messageFor === null
+      ? undefined
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
+  const saveError =
+    staleMessage ??
+    (stale.pending ? t('costs.refusal.rebaseChanged') : action.error)
   const saveLabel: MessageKey = editing
     ? 'modules.book.action.save'
     : 'modules.book.action.add'
@@ -421,14 +504,17 @@ export function BookingDialog({
 
   async function submit(): Promise<void> {
     setTouched(true)
-    if (invalid) {
+    if (invalid || priceBlocked) {
       return
     }
     const session = sessionRef.current
+    submittedRef.current = session
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
-    const result = stayBranch
-      ? await saveStay(priceMinor)
-      : await saveBooking(priceMinor)
+    stale.dismiss()
+    setSaving(true)
+    const result = await (
+      stayBranch ? saveStay(priceMinor) : saveBooking(priceMinor)
+    ).finally(() => setSaving(false))
     if (result === null) {
       return
     }
@@ -486,6 +572,7 @@ export function BookingDialog({
       priceMinor,
       currency: priceMinor === 0 ? '' : draft.currency,
       notes: draft.notes,
+      expectedTripCurrency: currencyCode(currency),
       startDayId: draft.startDayId,
       endDayId: draft.endDayId,
       checkInTime: draft.startTime,
@@ -520,6 +607,7 @@ export function BookingDialog({
       dayId: draft.dayId,
       assignmentId: draft.assignmentId,
       notes: draft.notes,
+      expectedTripCurrency: currencyCode(currency),
     }
     return booking === undefined
       ? create.run({ data: payload })
@@ -563,9 +651,9 @@ export function BookingDialog({
               void submit()
             }}
           >
-            {action.error === null ? null : (
+            {saveError === null ? null : (
               <Alert tone="danger" title={t('modules.form.saveError')}>
-                {action.error}
+                {saveError}
               </Alert>
             )}
 
@@ -734,20 +822,37 @@ export function BookingDialog({
               {showsField(draft.type, 'price') ? (
                 <Field
                   label={t('modules.field.price')}
-                  error={errorFor('price')}
+                  error={
+                    (priceBlocked ? staleMessage : undefined) ??
+                    errorFor('price')
+                  }
                   hint={t('modules.book.field.priceHint')}
                 >
-                  <Input
-                    value={draft.price}
-                    onChange={(event) => set('price', event.target.value)}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    trailing={
-                      <span className="text-caption text-ink-4">
-                        {draft.currency}
-                      </span>
-                    }
-                  />
+                  <>
+                    <Input
+                      ref={priceRef}
+                      aria-describedby={currencyId}
+                      value={draft.price}
+                      onChange={(event) => {
+                        if (stale.messageFor !== null || stale.pending) {
+                          action.reset()
+                        }
+                        stale.dismiss()
+                        set('price', event.target.value)
+                      }}
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      trailing={
+                        <span className="text-caption text-ink-4">
+                          {draft.currency}
+                        </span>
+                      }
+                    />
+                    {/* The visible code is hidden from assistive technology with the input's trailing slot. */}
+                    <span id={currencyId} className="sr-only">
+                      {draft.currency}
+                    </span>
+                  </>
                 </Field>
               ) : null}
               <Field label={t('modules.field.status')}>
@@ -925,7 +1030,7 @@ export function BookingDialog({
             form={splitStale ? undefined : formId}
             variant="primary"
             shape="pill"
-            disabled={!splitStale && touched && invalid}
+            disabled={(!splitStale && touched && invalid) || priceBlocked}
             loading={action.pending}
             loadingLabel={t('modules.book.action.saving')}
             onClick={splitStale ? () => onOpenChange(false) : undefined}

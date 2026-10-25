@@ -11,12 +11,14 @@ import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { createLogger, serializeError } from '#/server/observability'
 import {
   NotFoundError,
+  assertExpectedTripCurrency,
   createAccommodation,
   createReservation,
   dayAccommodationsRepository,
   deleteAccommodation,
   deleteReservation,
   requireTripDay,
+  requireWritableBookingTrip,
   requireWritableTrip,
   updateAccommodation,
   updateReservation,
@@ -172,7 +174,8 @@ export async function createStay(
   scope: TenantScope,
   data: StayInput,
 ): Promise<StayWriteResult> {
-  const trip = await requireWritableTrip(scope, data.tripId)
+  const trip = await requireWritableBookingTrip(scope, data.tripId)
+  assertExpectedTripCurrency(trip, data.expectedTripCurrency)
   const { start, end } = await stayDays(scope, data)
 
   const reservation = await createReservation(scope, {
@@ -230,8 +233,9 @@ export async function updateStay(
   scope: TenantScope,
   data: StayUpdate,
 ): Promise<StayWriteResult> {
-  const trip = await requireWritableTrip(scope, data.tripId)
+  const trip = await requireWritableBookingTrip(scope, data.tripId)
   const stay = await requireStayOfBooking(scope, data)
+  assertExpectedTripCurrency(trip, data.expectedTripCurrency)
   const { start, end } = await stayDays(scope, data)
 
   const reservation = await updateReservation(
