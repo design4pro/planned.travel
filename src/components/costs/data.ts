@@ -666,11 +666,15 @@ export function expensesCsv(input: {
   readonly display: DisplayCurrency
   readonly t: Translate
 }): string {
+  const { t } = input
+  // The server names a payer who left the workspace in English; the catalogue names them here.
   const nameOf = new Map(
-    input.people.map((person) => [person.userId, person.name]),
+    input.people.map((person) => [
+      person.userId,
+      person.leftWorkspace === true ? t('costs.person.removed') : person.name,
+    ]),
   )
 
-  const { t } = input
   const lines = [
     csvLine([
       ...CSV_HEADER_KEYS.map((key) => t(key)),

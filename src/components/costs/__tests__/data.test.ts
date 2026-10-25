@@ -866,6 +866,28 @@ describe('expensesCsv', () => {
     expect(rows[1]).toBe(lines[2])
   })
 
+  it('names a payer who left the workspace from the catalogue, not from the server’s English name', () => {
+    const left = expensesCsv({
+      rows: [expense({ paidBy: 'u-left' })],
+      people: [
+        ...PEOPLE,
+        {
+          userId: 'u-left',
+          name: 'Removed traveller',
+          email: '',
+          image: null,
+          role: 'member',
+          leftWorkspace: true,
+        },
+      ],
+      viewerUserId: 'u-rafal',
+      t: de,
+      display: PER_TRIP,
+    })
+    expect(left).toContain('"Entfernte Reisende"')
+    expect(left).not.toContain('Removed traveller')
+  })
+
   describe('the display-currency column', () => {
     const EXISTING = [
       'Date',
