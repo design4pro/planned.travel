@@ -89,6 +89,7 @@ const PROPER_NOUNS: ReadonlyArray<string> = [
 const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
   ca: [
     'costs.category.transport',
+    'costs.export.csv.notes',
     'modules.files.kind.document',
     'modules.transports.mode.metro',
     'modules.transports.mode.taxi',
@@ -113,6 +114,7 @@ const LOANWORDS: Partial<Record<Locale, ReadonlyArray<string>>> = {
   ],
   fr: [
     'costs.category.transport',
+    'costs.export.csv.notes',
     'costs.field.date',
     'costs.payment.note',
     'costs.split.method.exact',
