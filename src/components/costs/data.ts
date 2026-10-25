@@ -20,6 +20,7 @@ import {
   suggestTransfers,
 } from '#/lib/money'
 
+import type { MessageKey, Translate } from '#/lib/i18n'
 import type { Locale } from '#/lib/i18n/locales'
 import type { DisplayCurrency } from '#/lib/money'
 
@@ -614,25 +615,21 @@ export function displayCurrencyChoices(input: {
 /** Excel on Windows needs the byte-order mark to read the file as UTF-8. */
 const BOM = '\ufeff'
 
-const CSV_HEADERS = [
-  'Date',
-  'Title',
-  'Category',
-  'Amount',
-  'Currency',
-  'Original amount',
-  'Original currency',
-  'Rate',
-  'Paid by',
-  'Split method',
-  'Your share',
-  'Notes',
-] as const
-
-/** The one column added after the others, named for the currency it is in. */
-function displayHeader(display: DisplayCurrency): string {
-  return `Amount in ${currencyCode(display.code)}`
-}
+/** The column headings, in file order: a catalogue key each, read in the reader's locale. */
+const CSV_HEADER_KEYS = [
+  'costs.field.date',
+  'costs.export.csv.title',
+  'costs.export.csv.category',
+  'costs.field.amount',
+  'costs.field.currency',
+  'costs.export.csv.originalAmount',
+  'costs.export.csv.originalCurrency',
+  'costs.export.csv.rate',
+  'costs.field.paidBy',
+  'costs.export.csv.splitMethod',
+  'costs.totalTile.yourShare',
+  'costs.export.csv.notes',
+] as const satisfies ReadonlyArray<MessageKey>
 
 /**
  * One CSV field, quoted per RFC 4180.
@@ -667,12 +664,21 @@ export function expensesCsv(input: {
   readonly people: ReadonlyArray<CostsPerson>
   readonly viewerUserId: string
   readonly display: DisplayCurrency
+  readonly t: Translate
 }): string {
   const nameOf = new Map(
     input.people.map((person) => [person.userId, person.name]),
   )
 
-  const lines = [csvLine([...CSV_HEADERS, displayHeader(input.display)])]
+  const { t } = input
+  const lines = [
+    csvLine([
+      ...CSV_HEADER_KEYS.map((key) => t(key)),
+      t('costs.export.csv.amountIn', {
+        currency: currencyCode(input.display.code),
+      }),
+    ]),
+  ]
   for (const row of input.rows) {
     lines.push(
       csvLine([
@@ -688,7 +694,7 @@ export function expensesCsv(input: {
         row.exchangeRate === null ? '' : row.exchangeRate.toFixed(4),
         row.paidBy === null
           ? ''
-          : (nameOf.get(row.paidBy) ?? 'Removed traveller'),
+          : (nameOf.get(row.paidBy) ?? t('costs.person.removed')),
         row.splitMethod,
         formatMoneyPlain(shareOf(row, input.viewerUserId), row.currency),
         row.notes ?? '',

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
 
+import { namespaceTranslate } from '#/lib/i18n/__tests__/namespace-translate'
+import DeCosts from '#/lib/i18n/messages/de/costs'
+import EnCosts from '#/lib/i18n/messages/en/costs'
+
 import { memberSegments } from '../chart-geometry'
 import {
   applyOps,
@@ -765,10 +769,13 @@ describe('memberShares', () => {
 describe('expensesCsv', () => {
   const BOM = '\ufeff'
   const PER_TRIP = { mode: 'per-trip', code: 'JPY' } as const
+  const en = namespaceTranslate('costs', EnCosts)
+  const de = namespaceTranslate('costs', DeCosts)
   const csv = expensesCsv({
     rows: ROWS,
     people: PEOPLE,
     viewerUserId: 'u-rafal',
+    t: en,
     display: PER_TRIP,
   })
   const lines = csv.slice(BOM.length).trimEnd().split('\r\n')
@@ -808,6 +815,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: 'Dinner, "the good one"\nwith wine' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(tricky).toContain('"Dinner, ""the good one""\nwith wine"')
@@ -819,6 +827,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: '=1+1' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(injected).toContain(`"'=1+1"`)
@@ -829,9 +838,32 @@ describe('expensesCsv', () => {
       rows: [],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(empty.slice(BOM.length).trimEnd().split('\r\n')).toHaveLength(1)
+  })
+
+  it('writes the header row and the removed-traveller cell in the reader’s locale, leaving the data cells alone', () => {
+    const german = expensesCsv({
+      rows: [expense({ paidBy: 'u-gone' }), ...ROWS],
+      people: PEOPLE,
+      viewerUserId: 'u-rafal',
+      t: de,
+      display: PER_TRIP,
+    })
+    const [header, removed, ...rows] = german
+      .slice(BOM.length)
+      .trimEnd()
+      .split('\r\n')
+
+    expect(header).toBe(
+      '"Datum","Titel","Kategorie","Betrag","Währung","Ursprünglicher Betrag","Ursprüngliche Währung","Kurs","Bezahlt von","Aufteilung","Dein Anteil","Notizen","Betrag in JPY"',
+    )
+    expect(removed).toContain('"Entfernte Reisende"')
+    // Category and split-method tokens, amounts and currencies are machine-readable, not copy.
+    expect(rows[0]).toBe(lines[1])
+    expect(rows[1]).toBe(lines[2])
   })
 
   describe('the display-currency column', () => {
@@ -874,6 +906,7 @@ describe('expensesCsv', () => {
         rows: [expense({ amountMinor: 30_000, convertedMinor: 1_850 })],
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       const [header, row] = converted.slice(BOM.length).trimEnd().split('\r\n')
@@ -890,6 +923,7 @@ describe('expensesCsv', () => {
         rows: [expense({ amountMinor: 30_000, convertedMinor: null })],
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       const [, row] = unconverted.slice(BOM.length).trimEnd().split('\r\n')
@@ -902,6 +936,7 @@ describe('expensesCsv', () => {
         rows: ROWS,
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       expect(fixed.startsWith(BOM)).toBe(true)
