@@ -601,6 +601,82 @@ describe('DayWeatherPanel', () => {
     ).toEqual(['AfternoonCloudy10°', 'Evening8°'])
   })
 
+  it('draws the badge\'s muted "no sky" mark for a slot with no sky, and announces nothing for it', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [
+            { from: '12:00', symbol: 'cloudy', tempC: 10 },
+            { from: '18:00', symbol: null, tempC: 8 },
+          ],
+        }}
+        unit="metric"
+      />,
+    )
+
+    const [, evening] = screen.getAllByRole('listitem')
+    const mark = evening.querySelector('svg.lucide-thermometer')
+    expect(mark?.getAttribute('aria-hidden')).toBe('true')
+    expect(mark?.getAttribute('class')).toContain('text-ink-4')
+    expect(mark?.getAttribute('width')).toBe('16')
+    expect(evening.textContent).toBe('Evening8°')
+  })
+
+  it.each([
+    ['clearsky', 'lucide-moon'],
+    ['fair', 'lucide-cloud-moon'],
+    ['partlycloudy', 'lucide-cloud-moon'],
+    ['rain', 'lucide-cloud-rain'],
+    ['cloudy', 'lucide-cloud'],
+  ])('draws %s in the Night slot as %s', (symbol, icon) => {
+    render(
+      <DayWeatherPanel
+        reading={{ ...READING, slots: [{ from: '00:00', symbol, tempC: 5 }] }}
+        unit="metric"
+      />,
+    )
+
+    const night = screen.getByRole('listitem')
+    expect(night.querySelector('svg.lucide-sun')).toBeNull()
+    expect(night.querySelector(`svg.${icon}`)).not.toBeNull()
+  })
+
+  it('keeps the day icons in the Morning, Afternoon and Evening slots', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [
+            { from: '06:00', symbol: 'clearsky', tempC: 6 },
+            { from: '12:00', symbol: 'fair', tempC: 11 },
+            { from: '18:00', symbol: 'partlycloudy', tempC: 8 },
+          ],
+        }}
+        unit="metric"
+      />,
+    )
+
+    const [morning, afternoon, evening] = screen.getAllByRole('listitem')
+    expect(morning.querySelector('svg.lucide-sun')).not.toBeNull()
+    expect(afternoon.querySelector('svg.lucide-cloud-sun')).not.toBeNull()
+    expect(evening.querySelector('svg.lucide-cloud-sun')).not.toBeNull()
+  })
+
+  it('names a Night condition by the condition, not by the moon', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [{ from: '00:00', symbol: 'clearsky', tempC: 5 }],
+        }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.getByRole('listitem').textContent).toBe('NightClear5°')
+  })
+
   it('leaves out a row the provider gave nothing for, rather than writing a zero', () => {
     render(
       <DayWeatherPanel

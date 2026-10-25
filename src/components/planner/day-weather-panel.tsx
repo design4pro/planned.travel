@@ -1,7 +1,9 @@
+import { Thermometer } from 'lucide-react'
+
 import { cn } from '#/lib/cn'
 import { formatNumber, formatPercent } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
-import { CONDITION_ICON } from './weather-icons'
+import { slotIcon } from './weather-icons'
 import { CONDITION_LABEL, SLOT_LABEL, panelModel } from './weather-model'
 
 import type { ReactNode } from 'react'
@@ -98,21 +100,31 @@ export function DayWeatherPanel({
         <ul
           role="list"
           aria-label={t('trips.plan.weather.panel.slots')}
-          className="grid auto-cols-fr grid-flow-col gap-1 border-t border-edge pt-3"
+          // Three shared rows (label, icon, temperature): a label that wraps pushes only its own
+          // row down, so the icons and temperatures stay level across the strip.
+          className="grid auto-cols-fr grid-flow-col grid-rows-[auto_auto_auto] gap-1 border-t border-edge pt-3"
         >
           {model.slots.map((slot) => {
             const Icon =
-              slot.condition === null ? null : CONDITION_ICON[slot.condition]
+              slot.condition === null
+                ? null
+                : slotIcon(slot.name, slot.condition)
             return (
               <li
                 key={slot.name}
-                className="flex flex-col items-center gap-1 text-caption tabular-nums"
+                className="row-span-3 grid grid-rows-subgrid justify-items-center text-caption tabular-nums"
               >
                 <span className="max-w-full text-center hyphens-auto wrap-anywhere text-ink-3">
                   {t(SLOT_LABEL[slot.name])}
                 </span>
                 {Icon === null || slot.condition === null ? (
-                  <span aria-hidden="true" className="size-4" />
+                  // The badge's "no sky" mark, so the temperatures stay aligned.
+                  <Thermometer
+                    size={16}
+                    strokeWidth={2}
+                    aria-hidden="true"
+                    className="text-ink-4"
+                  />
                 ) : (
                   <>
                     <Icon
