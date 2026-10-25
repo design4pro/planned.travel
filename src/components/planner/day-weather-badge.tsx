@@ -226,7 +226,13 @@ function readingFace(
   if (model.kind === 'forecast') {
     const max = figure(model.max)
     const min = figure(model.min)
-    const figures = { max: `${max}${model.unit}`, min: `${min}${model.unit}` }
+    // `figures` is the visible run (WCAG 2.5.3 Label in Name): built here once, from the same
+    // strings the spans below render, so the name contains the visible text as one string.
+    const figures = {
+      figures: `${max}/${min}${model.unit}`,
+      max: `${max}${model.unit}`,
+      min: `${min}${model.unit}`,
+    }
     return {
       name:
         model.condition === null

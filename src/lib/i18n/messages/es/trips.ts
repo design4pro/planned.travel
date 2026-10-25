@@ -422,9 +422,9 @@ const messages = {
     'Un viaje admite como máximo {limit} invitados, porque una lista más larga hace difíciles de leer la selección de participantes y el reparto de gastos',
   'people.error.guestMergeTarget': 'Elige a alguien que ya esté en este viaje',
   'plan.weather.badge.forecast':
-    'Previsión: {condition}, máxima {max}, mínima {min}',
+    'Previsión: {figures}, {condition} (máxima {max}, mínima {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsión: máxima {max}, mínima {min}',
+    'Previsión: {figures} (máxima {max}, mínima {min})',
   'plan.weather.badge.unavailable':
     'El tiempo no está disponible para este día',
   'plan.weather.badge.loading': 'Cargando el tiempo',

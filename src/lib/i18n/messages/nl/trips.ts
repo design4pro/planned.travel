@@ -410,9 +410,9 @@ const messages = {
     'Een reis heeft hooguit {limit} gasten, omdat een langere lijst de deelnemerskeuze en de kostenverdeling moeilijk leesbaar maakt',
   'people.error.guestMergeTarget': 'Kies iemand die al op deze reis staat',
   'plan.weather.badge.forecast':
-    'Voorspelling: {condition}, maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures}, {condition} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Voorspelling: maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.unavailable': 'Weer niet beschikbaar voor deze dag',
   'plan.weather.badge.loading': 'Weer laden',
   'plan.weather.badge.recorded': 'Gemeten: maximaal {max}, minimaal {min}',

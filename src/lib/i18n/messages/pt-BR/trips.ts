@@ -420,9 +420,9 @@ const messages = {
     'Uma viagem comporta no máximo {limit} convidados, porque uma lista maior dificulta a escolha de participantes e a leitura da divisão de gastos',
   'people.error.guestMergeTarget': 'Escolha alguém que já está nesta viagem',
   'plan.weather.badge.forecast':
-    'Previsão: {condition}, máxima de {max}, mínima de {min}',
+    'Previsão: {figures}, {condition} (máxima de {max}, mínima de {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsão: máxima de {max}, mínima de {min}',
+    'Previsão: {figures} (máxima de {max}, mínima de {min})',
   'plan.weather.badge.unavailable': 'Tempo indisponível para este dia',
   'plan.weather.badge.loading': 'Carregando o tempo',
   'plan.weather.badge.recorded': 'Registrado: máxima de {max}, mínima de {min}',

@@ -431,9 +431,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Оберіть когось, хто вже бере участь у подорожі',
   'plan.weather.badge.forecast':
-    'Прогноз: {condition}, максимум {max}, мінімум {min}',
+    'Прогноз: {figures}, {condition} (максимум {max}, мінімум {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Прогноз: максимум {max}, мінімум {min}',
+    'Прогноз: {figures} (максимум {max}, мінімум {min})',
   'plan.weather.badge.unavailable': 'Погода на цей день недоступна',
   'plan.weather.badge.loading': 'Завантаження погоди',
   'plan.weather.badge.recorded': 'Зафіксовано: максимум {max}, мінімум {min}',

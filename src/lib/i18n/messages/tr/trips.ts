@@ -404,9 +404,9 @@ const messages = {
     'Bir gezide en fazla {limit} misafir olabilir; daha uzun bir liste katılımcı seçimini ve masraf paylaşımını okumayı zorlaştırır',
   'people.error.guestMergeTarget': 'Bu gezide zaten olan birini seç',
   'plan.weather.badge.forecast':
-    'Tahmin: {condition}, en yüksek {max}, en düşük {min}',
+    'Tahmin: {figures}, {condition} (en yüksek {max}, en düşük {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Tahmin: en yüksek {max}, en düşük {min}',
+    'Tahmin: {figures} (en yüksek {max}, en düşük {min})',
   'plan.weather.badge.unavailable': 'Bu gün için hava durumu kullanılamıyor',
   'plan.weather.badge.loading': 'Hava durumu yükleniyor',
   'plan.weather.badge.recorded': 'Kaydedilen: en yüksek {max}, en düşük {min}',

@@ -420,9 +420,9 @@ const messages = {
     'Un viatge admet com a màxim {limit} convidats, perquè una llista més llarga fa difícils de llegir la tria de participants i el repartiment de despeses',
   'people.error.guestMergeTarget': 'Tria algú que ja sigui en aquest viatge',
   'plan.weather.badge.forecast':
-    'Previsió: {condition}, màxima {max}, mínima {min}',
+    'Previsió: {figures}, {condition} (màxima {max}, mínima {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsió: màxima {max}, mínima {min}',
+    'Previsió: {figures} (màxima {max}, mínima {min})',
   'plan.weather.badge.unavailable':
     'El temps no està disponible per a aquest dia',
   'plan.weather.badge.loading': "S'està carregant el temps",

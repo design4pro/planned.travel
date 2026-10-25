@@ -395,8 +395,10 @@ const messages = {
   'people.error.guestLimit':
     '旅行に追加できるゲストは最大 {limit} 人です。それ以上になると参加者の選択や費用の分担が読みにくくなるためです',
   'people.error.guestMergeTarget': 'すでにこの旅行にいる人を選んでください',
-  'plan.weather.badge.forecast': '予報: {condition}、最高 {max}、最低 {min}',
-  'plan.weather.badge.forecastNoCondition': '予報: 最高 {max}、最低 {min}',
+  'plan.weather.badge.forecast':
+    '予報: {figures}、{condition}（最高 {max}、最低 {min}）',
+  'plan.weather.badge.forecastNoCondition':
+    '予報: {figures}（最高 {max}、最低 {min}）',
   'plan.weather.badge.unavailable': 'この日の天気は取得できません',
   'plan.weather.badge.loading': '天気を読み込み中',
   'plan.weather.badge.recorded': '観測値: 最高 {max}、 最低 {min}',

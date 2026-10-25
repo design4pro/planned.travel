@@ -401,9 +401,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Pilih seseorang yang sudah ada di perjalanan ini',
   'plan.weather.badge.forecast':
-    'Prakiraan: {condition}, tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures}, {condition} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Prakiraan: tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
   'plan.weather.badge.loading': 'Memuat cuaca',
   'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',

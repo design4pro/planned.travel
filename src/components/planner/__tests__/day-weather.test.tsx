@@ -120,13 +120,54 @@ function badge(
   )
 }
 
+describe('the forecast badge name contains its visible text (WCAG 2.5.3)', () => {
+  const noCondition = forecast({ ...READING, symbol: null })
+
+  it.each([
+    ['Celsius', FORECAST, 'metric'],
+    ['Fahrenheit', FORECAST, 'imperial'],
+    ['no condition', noCondition, 'metric'],
+  ] as const)('holds for %s', (_label, weather, unit) => {
+    badge(weather, unit)
+
+    const button = screen.getByRole('button', { name: /^Forecast/ })
+    const visible = button.textContent ?? ''
+    expect(visible).not.toBe('')
+    expect(button.getAttribute('aria-label')).toContain(visible)
+  })
+
+  it('matches a speech command that speaks the visible label', () => {
+    badge(FORECAST)
+
+    expect(screen.getByRole('button', { name: /12°\/4°C/ })).toBeDefined()
+  })
+
+  it('holds in a right-to-left locale', async () => {
+    const arabic = await loadCatalogue('ar')
+    mount(
+      <I18nProvider locale="ar" messages={arabic}>
+        <DayWeatherBadge
+          weather={FORECAST}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+      </I18nProvider>,
+    )
+
+    const button = screen.getByRole('button')
+    const visible = button.textContent ?? ''
+    expect(visible).not.toBe('')
+    expect(button.getAttribute('aria-label')).toContain(visible)
+  })
+})
+
 describe('DayWeatherBadge', () => {
-  it('names a forecast with the word Forecast first, then the condition, high and low', () => {
+  it('names a forecast with the word Forecast first, then the figures, the condition, high and low', () => {
     badge(FORECAST)
 
     expect(
       screen.getByRole('button', {
-        name: 'Forecast: Rain, high 12°C, low 4°C',
+        name: 'Forecast: 12°/4°C, Rain (high 12°C, low 4°C)',
       }),
     ).toBeDefined()
   })
@@ -136,7 +177,7 @@ describe('DayWeatherBadge', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'Forecast: Rain, high 53°F, low 40°F',
+        name: 'Forecast: 53°/40°F, Rain (high 53°F, low 40°F)',
       }),
     ).toBeDefined()
     expect(screen.getByText('53°')).toBeDefined()
@@ -146,7 +187,9 @@ describe('DayWeatherBadge', () => {
     badge(forecast({ ...READING, symbol: null }))
 
     expect(
-      screen.getByRole('button', { name: 'Forecast: high 12°C, low 4°C' }),
+      screen.getByRole('button', {
+        name: 'Forecast: 12°/4°C (high 12°C, low 4°C)',
+      }),
     ).toBeDefined()
   })
 

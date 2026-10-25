@@ -425,9 +425,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Scegli qualcuno che è già in questo viaggio',
   'plan.weather.badge.forecast':
-    'Previsione: {condition}, massima {max}, minima {min}',
+    'Previsione: {figures}, {condition} (massima {max}, minima {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsione: massima {max}, minima {min}',
+    'Previsione: {figures} (massima {max}, minima {min})',
   'plan.weather.badge.unavailable': 'Meteo non disponibile per questo giorno',
   'plan.weather.badge.loading': 'Caricamento del meteo',
   'plan.weather.badge.recorded': 'Registrato: massima {max}, minima {min}',

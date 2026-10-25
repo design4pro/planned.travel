@@ -623,8 +623,10 @@ const messages = {
     'A trip holds at most {limit} guests, because a longer list makes the participant pickers and the split arithmetic hard to read',
   'people.error.guestMergeTarget':
     'Choose somebody who is already on this trip',
-  'plan.weather.badge.forecast': 'Forecast: {condition}, high {max}, low {min}',
-  'plan.weather.badge.forecastNoCondition': 'Forecast: high {max}, low {min}',
+  'plan.weather.badge.forecast':
+    'Forecast: {figures}, {condition} (high {max}, low {min})',
+  'plan.weather.badge.forecastNoCondition':
+    'Forecast: {figures} (high {max}, low {min})',
   'plan.weather.badge.unavailable': 'Weather unavailable for this day',
   'plan.weather.badge.loading': 'Loading weather',
   'plan.weather.badge.recorded': 'Recorded: high {max}, low {min}',

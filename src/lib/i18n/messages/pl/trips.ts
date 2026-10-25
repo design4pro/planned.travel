@@ -436,8 +436,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Wybierz kogoś, kto już jest na tej wycieczce',
   'plan.weather.badge.forecast':
-    'Prognoza: {condition}, maks. {max}, min. {min}',
-  'plan.weather.badge.forecastNoCondition': 'Prognoza: maks. {max}, min. {min}',
+    'Prognoza: {figures}, {condition} (maks. {max}, min. {min})',
+  'plan.weather.badge.forecastNoCondition':
+    'Prognoza: {figures} (maks. {max}, min. {min})',
   'plan.weather.badge.unavailable': 'Pogoda niedostępna dla tego dnia',
   'plan.weather.badge.loading': 'Wczytywanie pogody',
   'plan.weather.badge.recorded': 'Zarejestrowano: maks. {max}, min. {min}',

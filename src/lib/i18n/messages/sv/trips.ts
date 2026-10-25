@@ -404,8 +404,9 @@ const messages = {
     'En resa rymmer högst {limit} gäster, eftersom en längre lista gör deltagarväljarna och kostnadsfördelningen svåra att läsa',
   'people.error.guestMergeTarget': 'Välj någon som redan är med på resan',
   'plan.weather.badge.forecast':
-    'Prognos: {condition}, högst {max}, lägst {min}',
-  'plan.weather.badge.forecastNoCondition': 'Prognos: högst {max}, lägst {min}',
+    'Prognos: {figures}, {condition} (högst {max}, lägst {min})',
+  'plan.weather.badge.forecastNoCondition':
+    'Prognos: {figures} (högst {max}, lägst {min})',
   'plan.weather.badge.unavailable':
     'Vädret är inte tillgängligt för den här dagen',
   'plan.weather.badge.loading': 'Läser in vädret',
