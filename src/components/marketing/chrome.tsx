@@ -53,7 +53,7 @@ export function MarketingHeader({
 
   return (
     <header className="sticky top-0 z-nav border-b border-edge-faint bg-canvas/85 pt-safe backdrop-blur-xl">
-      <div className="mx-auto flex h-nav max-w-content items-center gap-2 px-4 max-[22rem]:gap-1 max-[22rem]:px-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-nav max-w-content items-center gap-2 gutter-x max-[22rem]:gap-1 max-[22rem]:[--gutter-x:0.75rem]">
         <Link
           to="/"
           aria-label={t('marketing.nav.home')}
@@ -264,7 +264,7 @@ export function MarketingFooter({ minimal = false }: { minimal?: boolean }) {
 
   return (
     <footer className="border-t border-edge-faint bg-surface-2/40">
-      <div className="mx-auto max-w-content px-4 py-14 sm:px-6 lg:px-8 lg:py-16">
+      <div className="mx-auto max-w-content gutter-x py-14 lg:py-16">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] lg:gap-8">
           <div className="min-w-0">
             <Wordmark size="md" showSuffix />

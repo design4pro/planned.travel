@@ -111,7 +111,7 @@ floor guard script; the review now does.
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
 under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set. Rendering a literal
 string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
-contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`.
+contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`; the safe-area insets (`gutter-x`, `px-safe`) are the exception, because they belong to the screen and not to the reading direction.
 The one bounded exception is server refusal copy (§9 rule 10): a new name in
 `AUTHORED_ERROR_NAMES` without the same PR amending that rule is a blocker.
 

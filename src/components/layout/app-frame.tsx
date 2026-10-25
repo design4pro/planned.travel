@@ -37,7 +37,7 @@ export function AppFrame({
   return (
     <main
       className={cn(
-        'mx-auto w-full max-w-content flex-1 px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8',
+        'mx-auto w-full max-w-content flex-1 gutter-x pt-6 lg:pt-8',
         'pb-[calc(var(--safe-bottom)+8.5rem)] lg:pb-16',
         className,
       )}
