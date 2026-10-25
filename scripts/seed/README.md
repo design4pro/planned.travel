@@ -299,7 +299,7 @@ writes that follow still pass through the same quota guard rather than around it
 | Patagonia traverse    | `draft`     | —              | USD      | 1          |
 | Porto, one long lunch | `planning`  | —              | EUR      | 1          |
 
-Lisbon is the one trip with all three trip roles: Rafal owns it, Priya edits it and Jonas only views it (the account the costs-tab role journeys sign in as a viewer; Priya is their editor).
+Lisbon is the one trip with all three trip roles: Rafal owns it, Priya edits it and Jonas only views it. The costs-tab role journeys (`e2e/costs-roles.spec.ts`) sign in as Jonas for the viewer case and, for the editor case, as Jonas again on Dolomites, where he is an editor: Priya is suspended and cannot sign in.
 
 The flagship carries 12 days (each with a title, notes and an accommodation covering it), 38 places
 across nine categories with real coordinates, addresses, opening hours and ratings, 38 stops in
