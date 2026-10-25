@@ -56,7 +56,7 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * docs/ACCESS.md §6.4 true.
  *
  * The role is read once, at connect, and an open socket keeps it - so the writes
- * that change it close the sockets they affect: a new role, a removal or a leave
+ * that change it close the sockets they affect: a new role, an add, a removal or a leave
  * closes that person's sockets (`closeRoomFor`). An archive, a restore or a visibility
  * narrowed to private closes the whole room (`closeRoom`); deletion closes its sockets
  * and erases stored room state (`resetRoom`). All three helpers live in

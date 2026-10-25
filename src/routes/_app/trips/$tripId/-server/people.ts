@@ -317,9 +317,9 @@ async function memberOnTrip(
 }
 
 /**
- * Closes a person's open sockets in the trip's room, so a role change, a removal or a leave reaches
- * a tab that is already open instead of waiting for it to reconnect (the room reads the role once,
- * at connect).
+ * Closes a person's open sockets in the trip's room, so a role change, an add, a removal or a leave
+ * reaches a tab that is already open instead of waiting for it to reconnect (the room reads the role
+ * once, at connect).
  *
  * Called only once the write has succeeded, with the trip and person from the rows the repository
  * resolved. The bridge is reached at call time for the reason `plan.ts` records at `mirrorDayOrder`:
@@ -405,6 +405,9 @@ export const addTripMemberFn = createServerFn({ method: 'POST' })
           userId: data.userId,
           role: data.role,
         })
+        // Straight after the write, so the actor-name read below cannot skip it: a workspace member
+        // watching an organization-visible trip holds a `viewer` socket that this add outdates.
+        await evictFromRoom(scope, member.tripId, member.userId)
 
         await announceInvitation(
           scope,
