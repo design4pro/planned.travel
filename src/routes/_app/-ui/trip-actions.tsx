@@ -729,6 +729,13 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
             </DropdownMenuLabel>
           ) : null}
 
+          {/* Edit is off on an archived trip, whose details the repository refuses to write (#1040). */}
+          {trip.isArchived && trip.role === 'owner' && !trip.copyPending ? (
+            <DropdownMenuLabel>
+              {t('shell.trips.card.archivedReason')}
+            </DropdownMenuLabel>
+          ) : null}
+
           {/*
             Copy is first and is offered to every reader, because every reader may copy (PRD #104
             decision 6) — so it is the first of a viewer's two items rather than an owner's
@@ -762,7 +769,7 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
               <DropdownMenuItem
                 icon={<Pencil />}
                 onSelect={() => setEditing(true)}
-                disabled={frozen}
+                disabled={frozen || trip.isArchived}
               >
                 {t('shell.tripActions.edit')}
               </DropdownMenuItem>

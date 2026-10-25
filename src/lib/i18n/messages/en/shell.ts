@@ -754,6 +754,7 @@ const messages = {
   'trips.card.copying': 'Copying',
   'trips.card.copyingLabel': '{title} is still being copied',
   'trips.card.copyingReason': 'Wait for the copy to finish.',
+  'trips.card.archivedReason': 'Restore this trip to edit it.',
   'metric.trips': 'Trips',
   'metric.places': 'Places',
   'metric.members': 'Members',

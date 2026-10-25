@@ -693,6 +693,7 @@ const messages = {
   'trips.card.copying': 'Wird kopiert',
   'trips.card.copyingLabel': '{title} wird noch kopiert',
   'trips.card.copyingReason': 'Warte, bis die Kopie fertig ist.',
+  'trips.card.archivedReason': 'Stelle diese Reise wieder her, um sie zu bearbeiten.',
   'metric.trips': 'Reisen',
   'metric.places': 'Orte',
   'metric.members': 'Mitglieder',

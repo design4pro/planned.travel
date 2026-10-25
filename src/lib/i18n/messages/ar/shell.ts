@@ -763,6 +763,7 @@ const messages = {
   'trips.card.copying': 'قيد النسخ',
   'trips.card.copyingLabel': 'لا يزال {title} قيد النسخ',
   'trips.card.copyingReason': 'انتظر حتى ينتهي النسخ.',
+  'trips.card.archivedReason': 'استعد هذه الرحلة لتتمكن من تعديلها.',
   'metric.trips': 'الرحلات',
   'metric.places': 'الأماكن',
   'metric.members': 'الأعضاء',

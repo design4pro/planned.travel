@@ -25,6 +25,7 @@ import {
   TripGuestMergeTargetError,
   TripGuestNameTakenError,
   addTripMember,
+  archiveTrip,
   createTrip,
   createTripGuest,
   getMembership,
@@ -926,6 +927,47 @@ describe('the trip room after a change of someone’s access', () => {
       }),
     )
 
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('still narrows an archived trip, and closes the room when it does', async () => {
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    await archiveTrip(owner, fixture.tripId)
+
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'private' },
+      }),
+    )
+
+    expect(
+      (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
+    ).toBe('private')
+    expect(stubs.evicted).toEqual([{ tripId: fixture.tripId, userId: null }])
+  })
+
+  it('closes nothing when a non-owner is refused on an archived trip', async () => {
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    await archiveTrip(owner, fixture.tripId)
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        setTripVisibilityFn({
+          data: { tripId: fixture.tripId, visibility: 'private' },
+        }),
+      ),
+    )
+
+    expect((error as RepositoryError).code).toBe('FORBIDDEN')
     expect(stubs.evicted).toEqual([])
   })
 

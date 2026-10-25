@@ -1076,6 +1076,12 @@ export async function createTrip(
  * A trip's metadata is its owner's (PRD #104 decision 6): moving the dates moves every member's day
  * run, so an editor — who owns the plan's *content* — is refused here.
  *
+ * **An archived trip refuses the whole patch** with a {@link TripArchivedError}, before anything is
+ * read or written (#1040): a date move deletes days, and a save that moves no date still repairs a
+ * day run that disagrees with the dates, so freezing only the dates would leave the day-run
+ * synchronisation reachable. The owner restores the trip first. Who can see the trip is the one
+ * detail that stays open, through {@link setTripVisibility}.
+ *
  * **The budget currency is the one field that is not simply patched.** A different currency is
  * applied only while nothing on the trip is priced - relabelling a trip that has money in it would
  * keep every figure and change what it is in - and is refused with a {@link CurrencyRefusalError},
@@ -1088,6 +1094,9 @@ export async function updateTrip(
   input: UpdateTripInput,
 ): Promise<Trip> {
   const existing = await requireOwnedTrip(scope, tripId)
+  if (existing.isArchived) {
+    throw new TripArchivedError()
+  }
   const { currency, ...values } = definedOnly(updateTripInput.parse(input))
 
   // A tab on the previous bundle sends the currency on every save, so only a *different* one is a
@@ -1097,9 +1106,6 @@ export async function updateTrip(
   // which is why the current sheet sends the currency only when the reader changed it.
   const currencyChanged =
     currency !== undefined && currency !== existing.currency
-  if (currencyChanged && existing.isArchived) {
-    throw new TripArchivedError()
-  }
 
   const startDate =
     values.startDate === undefined ? existing.startDate : values.startDate
@@ -1130,6 +1136,23 @@ export async function updateTrip(
   }
 
   return trip
+}
+
+/**
+ * Decides who can find the trip. Owner only, and open on an archived trip.
+ *
+ * Its own writer rather than `updateTrip` because that one refuses an archived trip: visibility
+ * decides who may see the record, not what the record says, and making the owner restore a trip to
+ * withdraw a share would put friction on a privacy action. Built like {@link archiveTrip}: the owner
+ * guard, then one column.
+ */
+export async function setTripVisibility(
+  scope: TenantScope,
+  tripId: string,
+  visibility: Trip['visibility'],
+): Promise<Trip> {
+  await requireOwnedTrip(scope, tripId)
+  return tripsRepository.requireUpdate(scope, tripId, { visibility })
 }
 
 /**

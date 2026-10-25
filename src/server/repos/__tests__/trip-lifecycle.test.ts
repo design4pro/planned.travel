@@ -47,8 +47,10 @@ import {
   requireTrip,
   requireWritableTrip,
   restoreTrip,
+  setTripVisibility,
   startTripCopy,
   TripArchivedError,
+  TripRoleError,
   tripMembersRepository,
   tripRolesFor,
   tripsRepository,
@@ -364,6 +366,206 @@ describe('trip lifecycle', () => {
 
       await expect(archiveTrip(outsider, trip.id)).resolves.toMatchObject({
         isArchived: true,
+      })
+    })
+
+    /**
+     * The details writer is frozen as a whole, not field by field: a date move deletes days, and a
+     * save that moves no date still repairs a day run whose length disagrees with the dates, so
+     * freezing the dates alone would leave the day-run synchronisation reachable (#1040).
+     */
+    describe('the trip details writer', () => {
+      /** Everything a refused save must leave alone, read past every repository. */
+      async function snapshot(tripId: string) {
+        const [tripRows, dayRows, assignmentRows, noteRows] = await Promise.all(
+          [
+            harness.db.select().from(trips).where(eq(trips.id, tripId)),
+            harness.db.select().from(days).where(eq(days.tripId, tripId)),
+            harness.db
+              .select()
+              .from(dayAssignments)
+              .where(eq(dayAssignments.tripId, tripId)),
+            harness.db
+              .select()
+              .from(dayNotes)
+              .where(eq(dayNotes.tripId, tripId)),
+          ],
+        )
+        return { tripRows, dayRows, assignmentRows, noteRows }
+      }
+
+      async function archivedTripWithPlan() {
+        const trip = await createTrip(tenant.scope, {
+          title: 'Lisbon',
+          startDate: '2026-04-10',
+          endDate: '2026-04-12',
+        })
+        const day = (await listTripDays(tenant.scope, trip.id)).at(-1)
+        if (day === undefined) throw new Error('the trip has no days')
+        const place = await createPlace(tenant.scope, {
+          tripId: trip.id,
+          name: 'Miradouro da Senhora do Monte',
+        })
+        await createAssignment(tenant.scope, {
+          tripId: trip.id,
+          dayId: day.id,
+          placeId: place.id,
+        })
+        await createDayNote(tenant.scope, {
+          tripId: trip.id,
+          dayId: day.id,
+          body: 'Buy the transit pass at the airport.',
+        })
+        await archiveTrip(tenant.scope, trip.id)
+        return trip
+      }
+
+      it.each([
+        ['a shortened range', { endDate: '2026-04-10' }],
+        ['a moved range', { startDate: '2026-05-01', endDate: '2026-05-03' }],
+        ['a title alone', { title: 'Still editable' }],
+        ['a visibility change', { visibility: 'organization' as const }],
+      ])('refuses %s as archived and changes no row', async (_name, patch) => {
+        const trip = await archivedTripWithPlan()
+        const before = await snapshot(trip.id)
+
+        const error = await captureError(() =>
+          updateTrip(tenant.scope, trip.id, patch),
+        )
+
+        expect(error).toBeInstanceOf(TripArchivedError)
+        expect((error as RepositoryError).code).toBe('TRIP_ARCHIVED')
+        expect(await snapshot(trip.id)).toEqual(before)
+      })
+
+      it('refuses a save that would only repair the day run, and leaves the run alone', async () => {
+        const trip = await archivedTripWithPlan()
+        const [firstDay] = await listTripDays(tenant.scope, trip.id)
+        if (firstDay === undefined) throw new Error('the trip has no days')
+        await harness.db.delete(days).where(eq(days.id, firstDay.id))
+        const before = await snapshot(trip.id)
+
+        const error = await captureError(() =>
+          updateTrip(tenant.scope, trip.id, { title: 'Lisbon again' }),
+        )
+
+        expect(error).toBeInstanceOf(TripArchivedError)
+        expect(await snapshot(trip.id)).toEqual(before)
+      })
+
+      it('answers not found, then forbidden, then archived', async () => {
+        const trip = await archivedTripWithPlan()
+        await addTripMember(tenant.scope, {
+          tripId: trip.id,
+          userId: outsiderId,
+          role: 'editor',
+        })
+        const stranger = tenant.scopeFor(await tenant.addUser('Stranger'))
+
+        expect(
+          await captureError(() =>
+            updateTrip(stranger, trip.id, { title: 'Nope' }),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+        expect(
+          await captureError(() =>
+            updateTrip(outsider, trip.id, { title: 'Nope' }),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+        expect(
+          await captureError(() =>
+            updateTrip(tenant.scope, trip.id, { title: 'Nope' }),
+          ),
+        ).toBeInstanceOf(TripArchivedError)
+      })
+
+      it('edits again, dates included, once the trip is restored', async () => {
+        const trip = await archivedTripWithPlan()
+        await restoreTrip(tenant.scope, trip.id)
+
+        const saved = await updateTrip(tenant.scope, trip.id, {
+          title: 'Lisbon, again',
+          endDate: '2026-04-11',
+        })
+
+        expect(saved).toMatchObject({
+          title: 'Lisbon, again',
+          endDate: '2026-04-11',
+        })
+        expect(await listTripDays(tenant.scope, trip.id)).toHaveLength(2)
+      })
+    })
+
+    /** Who can see a trip is the owner's call whatever state the record is in, like membership. */
+    describe('the visibility writer', () => {
+      it('lets the owner change who can see an archived trip', async () => {
+        const trip = await createTrip(tenant.scope, { title: 'Lisbon' })
+        await archiveTrip(tenant.scope, trip.id)
+
+        const saved = await setTripVisibility(
+          tenant.scope,
+          trip.id,
+          'organization',
+        )
+
+        expect(saved).toMatchObject({
+          visibility: 'organization',
+          isArchived: true,
+        })
+        expect(await canReadTrip(outsider, trip.id)).toBe(true)
+      })
+
+      it('changes nothing but the visibility', async () => {
+        const trip = await createTrip(tenant.scope, {
+          title: 'Lisbon',
+          startDate: '2026-04-10',
+          endDate: '2026-04-12',
+        })
+        await archiveTrip(tenant.scope, trip.id)
+
+        await setTripVisibility(tenant.scope, trip.id, 'organization')
+
+        expect(await requireTrip(tenant.scope, trip.id)).toMatchObject({
+          title: 'Lisbon',
+          startDate: '2026-04-10',
+          endDate: '2026-04-12',
+        })
+        expect(await listTripDays(tenant.scope, trip.id)).toHaveLength(3)
+      })
+
+      it('refuses a non-owner and tells an outsider nothing', async () => {
+        const trip = await createTrip(tenant.scope, {
+          title: 'Lisbon',
+          visibility: 'organization',
+        })
+        await archiveTrip(tenant.scope, trip.id)
+
+        expect(
+          await captureError(() =>
+            setTripVisibility(outsider, trip.id, 'private'),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+        await addTripMember(tenant.scope, {
+          tripId: trip.id,
+          userId: outsiderId,
+          role: 'editor',
+        })
+        expect(
+          await captureError(() =>
+            setTripVisibility(outsider, trip.id, 'private'),
+          ),
+        ).toBeInstanceOf(TripRoleError)
+
+        const hidden = await createTrip(tenant.scope, { title: 'Private' })
+        await archiveTrip(tenant.scope, hidden.id)
+        expect(
+          await captureError(() =>
+            setTripVisibility(outsider, hidden.id, 'organization'),
+          ),
+        ).toBeInstanceOf(NotFoundError)
+        expect((await requireTrip(tenant.scope, hidden.id)).visibility).toBe(
+          'private',
+        )
       })
     })
   })

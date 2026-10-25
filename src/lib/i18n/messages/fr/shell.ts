@@ -707,6 +707,7 @@ const messages = {
   'trips.card.copying': 'Copie en cours',
   'trips.card.copyingLabel': '{title} est encore en cours de copie',
   'trips.card.copyingReason': 'Attendez la fin de la copie.',
+  'trips.card.archivedReason': 'Restaurez ce voyage pour le modifier.',
   'metric.trips': 'Voyages',
   'metric.places': 'Lieux',
   'metric.members': 'Membres',
