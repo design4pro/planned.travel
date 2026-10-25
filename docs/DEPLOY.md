@@ -1634,7 +1634,13 @@ pnpm exec wrangler queues info planned-travel-tasks
 # planned-travel-tasks-dlq: consumeTaskBatch records the failure in KV and R2 and then acks,
 # so the platform queue stays empty in normal operation whether or not jobs are dying
 # (ARCHITECTURE.md §2.4). No output means no job has failed terminally in the last 14 days,
-# which is the healthy case.
+# which is the healthy case. An expected refusal is not a terminal failure and leaves nothing
+# here: a trip export or trip copy whose requester has left the workspace, or whose trip is
+# gone (or no longer readable to the requester, which reads the same), is acked as abandoned
+# (`TaskAbandonedError`) with one `info` line, `task abandoned`, carrying the task id, kind,
+# workspace id and a reason code (`requester-left`, `trip-gone`). It is not written to
+# `dead-letter/`: an export's envelope holds the whole trip document and the requester's
+# address, and a copy's holds ids only but is an expected refusal, not a fault.
 pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
 
 # The backstop, and the one failure this listing cannot show: if KV or R2 is down, the
@@ -1655,7 +1661,8 @@ pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<id>"
 # `DEAD_LETTER_RETENTION_DAYS` (14 when unset; a value that is not plain digits, or is 0, is
 # ignored; set it as a `vars` entry in `wrangler.jsonc`). The run is weekly and production-only
 # (staging registers just `0 3 * * *`), so a body is gone at most about three weeks after it was
-# written; copy it out while investigating.
+# written on production, and on staging it is never pruned: it stays until someone deletes it
+# by hand; copy it out while investigating.
 pnpm exec wrangler r2 object get \
   "planned-travel-files/dead-letter/<YYYY-MM-DD>/<id>.json" --file ./dead-task.json --remote
 
@@ -1680,7 +1687,13 @@ runs even if another rejects, and the first rejection is rethrown. Tenant retent
 constant `TENANT_AUDIT_RETENTION_DAYS = 400` (owner confirms), with 200 ids per delete and one
 250-batch cap across workspaces. Watch `deleted`, `batches`, `organizations`, `drained`;
 `drained: false` is an error requiring investigation. Backup/export artifact retention remains
-unimplemented and still emits its warning. Production still has exactly three cron expressions.
+unimplemented and still emits its warning. For a finished trip export that means the "kept for 7
+days" wording holds for the reader, not for the bytes: after seven days the export is neither
+listed nor downloadable and its KV pointer is gone, but the object stays under
+`exports/<org>/<trip>/` until the same trip is exported again, the trip is deleted (the purge
+takes the export keys it can list; an export still running when the trip is deleted writes after
+that listing, and a listing that fails is only logged, so either can leave the object), or the
+weekly export sweep of #1287 is written. Production still has exactly three cron expressions.
 
 **Use this read-back, not `wrangler deployments list`.** That command lists Worker _versions_ —
 id, author, source, deployment time — and never prints a cron expression, so it cannot tell you

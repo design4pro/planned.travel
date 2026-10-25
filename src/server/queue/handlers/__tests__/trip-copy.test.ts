@@ -46,7 +46,11 @@ import {
   createTripCopyHandler,
   tripCopyTaskId,
 } from '../trip-copy'
-import { TaskConfigurationError, TaskPermanentError } from '../../types'
+import {
+  TaskAbandonedError,
+  TaskConfigurationError,
+  TaskPermanentError,
+} from '../../types'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { Trip } from '#/server/db/types'
@@ -348,7 +352,10 @@ describe('handleTripCopy', () => {
         },
         context(tenant.organizationId),
       ),
-    ).rejects.toBeInstanceOf(TaskPermanentError)
+    ).rejects.toMatchObject({
+      name: 'TaskAbandonedError',
+      reason: 'requester-left',
+    })
 
     // The half-built trip goes with them; an inbox they can no longer reach gets nothing.
     expect(await getTrip(tenant.scope, targetId)).toBeNull()
@@ -426,7 +433,7 @@ describe('handleTripCopy', () => {
     expect(error).not.toBeInstanceOf(TaskPermanentError)
   })
 
-  it('is permanent when the target is gone, and clears up after it', async () => {
+  it('is abandoned when the target is gone, and clears up after it', async () => {
     const source = await seedSource()
     const targetId = await startCopy(source)
     // The reader deleted the half-built copy while the queue still held the job.
@@ -441,7 +448,8 @@ describe('handleTripCopy', () => {
       context(tenant.organizationId),
     ).catch((cause: unknown) => cause)
 
-    expect(error).toBeInstanceOf(TaskPermanentError)
+    expect(error).toBeInstanceOf(TaskAbandonedError)
+    expect(error).toMatchObject({ reason: 'trip-gone' })
     expect((error as Error).cause).toBeInstanceOf(NotFoundError)
     expect(await getTrip(tenant.scope, targetId)).toBeNull()
     // No inbox row: the target's title went with it, and a notification naming nothing is worse
