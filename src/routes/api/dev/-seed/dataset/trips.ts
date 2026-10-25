@@ -47,6 +47,7 @@ export const lisbonTrip: SeedTrip = {
   travellers: [
     { person: 'rafal', role: 'owner' },
     { person: 'priya', role: 'editor' },
+    { person: 'jonas', role: 'viewer' },
   ],
 
   days: [
