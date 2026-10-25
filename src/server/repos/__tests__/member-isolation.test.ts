@@ -32,6 +32,7 @@ import {
   createAssignment,
   deleteAccommodation,
   deletePlaceWithJourneys,
+  getTripItinerary,
   listTripAccommodations,
   listTripAssignments,
   reorderAssignments,
@@ -2156,6 +2157,14 @@ describe('member isolation', () => {
       legs: [{}],
     }
 
+    /** The user ids stored on the stop, read back as the owner. */
+    async function storedParticipants(): Promise<Array<string>> {
+      const rows = await assignmentParticipantsAccess.findMany(alpha.scope, {
+        where: eq(assignmentParticipants.assignmentId, fixture.assignmentId),
+      })
+      return rows.map((row) => row.userId)
+    }
+
     /** Everything an attacker could change on the rows below, read back as the owner. */
     async function rowsOf(): Promise<unknown> {
       return {
@@ -2391,19 +2400,148 @@ describe('member isolation', () => {
         await setAssignmentParticipants(
           alpha.scopeFor(editorId),
           fixture.assignmentId,
-          [strangerId],
+          [editorId],
         ),
-      ).toEqual([strangerId])
+      ).toEqual([editorId])
+      expect(await storedParticipants()).toEqual([editorId])
+    })
+
+    it('lists an editor and a viewer of the trip as participants', async () => {
+      const editorId = await alpha.addUser('Alpha the editor')
+      const viewerId = await alpha.addUser('Alpha the viewer')
+      for (const [userId, role] of [
+        [editorId, 'editor'],
+        [viewerId, 'viewer'],
+      ] as const) {
+        await addTripMember(alpha.scope, {
+          tripId: fixture.tripId,
+          userId,
+          role,
+        })
+      }
+
       expect(
-        (
-          await assignmentParticipantsAccess.findMany(alpha.scope, {
-            where: eq(
-              assignmentParticipants.assignmentId,
-              fixture.assignmentId,
-            ),
-          })
-        ).map((row) => row.userId),
-      ).toEqual([strangerId])
+        await setAssignmentParticipants(alpha.scope, fixture.assignmentId, [
+          editorId,
+          viewerId,
+        ]),
+      ).toEqual([editorId, viewerId])
+      expect((await storedParticipants()).sort()).toEqual(
+        [editorId, viewerId].sort(),
+      )
+    })
+
+    describe('who may be listed on a stop, and what leaving the trip does to the list (#1086)', () => {
+      let memberId: string
+
+      beforeEach(async () => {
+        memberId = await alpha.addUser('Alpha the traveller')
+        await addTripMember(alpha.scope, {
+          tripId: fixture.tripId,
+          userId: memberId,
+          role: 'editor',
+        })
+        await setAssignmentParticipants(alpha.scope, fixture.assignmentId, [
+          alpha.ownerUserId,
+          memberId,
+        ])
+      })
+
+      async function itineraryParticipants(): Promise<ReadonlyArray<string>> {
+        const itinerary = await getTripItinerary(alpha.scope, fixture.tripId)
+        return itinerary.flatMap((day) =>
+          day.stops.flatMap((stop) => stop.participantUserIds),
+        )
+      }
+
+      async function refusal(userIds: ReadonlyArray<string>): Promise<unknown> {
+        return captureError(() =>
+          setAssignmentParticipants(alpha.scope, fixture.assignmentId, userIds),
+        )
+      }
+
+      it('refuses a workspace member who is not on the trip and keeps the stored set', async () => {
+        const before = (await storedParticipants()).sort()
+
+        expect(await refusal([strangerId])).toBeInstanceOf(NotFoundError)
+        expect((await storedParticipants()).sort()).toEqual(before)
+      })
+
+      it('refuses a well-formed id that matches no user with the same message', async () => {
+        const before = (await storedParticipants()).sort()
+
+        const unknown = await refusal(['nobody-has-this-id'])
+        const notOnTrip = await refusal([strangerId])
+        expect(unknown).toBeInstanceOf(NotFoundError)
+        expect((unknown as Error).message).toBe((notOnTrip as Error).message)
+        expect((unknown as Error).message).not.toContain('nobody-has-this-id')
+        expect((await storedParticipants()).sort()).toEqual(before)
+      })
+
+      it('refuses a list that mixes a member with an outsider as a whole', async () => {
+        const before = (await storedParticipants()).sort()
+
+        expect(await refusal([memberId, strangerId])).toBeInstanceOf(
+          NotFoundError,
+        )
+        expect((await storedParticipants()).sort()).toEqual(before)
+      })
+
+      it('answers a caller who cannot see the trip with the trip’s refusal, not the member one', async () => {
+        const error = await captureError(() =>
+          setAssignmentParticipants(stranger, fixture.assignmentId, [
+            strangerId,
+          ]),
+        )
+
+        expect(error).toBeInstanceOf(NotFoundError)
+        expect((error as Error).message).not.toContain('trip member')
+      })
+
+      it('stops showing a person who left the trip, keeps the stored row and shows them again on return', async () => {
+        const membership = (
+          await listTripMembers(alpha.scope, fixture.tripId)
+        ).find((row) => row.userId === memberId)
+        if (membership === undefined) {
+          throw new Error('The member added in beforeEach must be listed.')
+        }
+        expect([...(await itineraryParticipants())].sort()).toEqual(
+          [alpha.ownerUserId, memberId].sort(),
+        )
+
+        await removeTripMember(alpha.scope, membership.id)
+        expect(await itineraryParticipants()).toEqual([alpha.ownerUserId])
+        expect(await storedParticipants()).toContain(memberId)
+
+        await addTripMember(alpha.scope, {
+          tripId: fixture.tripId,
+          userId: memberId,
+          role: 'editor',
+        })
+        expect([...(await itineraryParticipants())].sort()).toEqual(
+          [alpha.ownerUserId, memberId].sort(),
+        )
+      })
+
+      it('accepts a re-save that leaves a former member out and refuses one that names them', async () => {
+        const membership = (
+          await listTripMembers(alpha.scope, fixture.tripId)
+        ).find((row) => row.userId === memberId)
+        if (membership === undefined) {
+          throw new Error('The member added in beforeEach must be listed.')
+        }
+        await removeTripMember(alpha.scope, membership.id)
+
+        expect(await refusal([alpha.ownerUserId, memberId])).toBeInstanceOf(
+          NotFoundError,
+        )
+        expect(
+          await setAssignmentParticipants(alpha.scope, fixture.assignmentId, [
+            alpha.ownerUserId,
+          ]),
+        ).toEqual([alpha.ownerUserId])
+        expect(await storedParticipants()).toEqual([alpha.ownerUserId])
+      })
     })
 
     it('admits an editor to create, update and reorder stops', async () => {

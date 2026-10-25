@@ -54,6 +54,7 @@ import {
   assertTripRole,
   requireTrip,
   requireWritableTrip,
+  tripMemberUserIds,
 } from './trips'
 import {
   currencySchema,
@@ -327,8 +328,14 @@ export interface ItineraryDay {
 }
 
 /**
- * The whole itinerary in four scoped queries: days, assignments, places and participants.
- * Stops are ordered by `order_index` then id, so ties from a fractional reorder stay stable.
+ * The whole itinerary in five scoped queries: days, assignments, places, participants and the
+ * trip's members. Stops are ordered by `order_index` then id, so ties from a fractional reorder stay
+ * stable.
+ *
+ * A stop lists only the participants who are **current trip members** (#1086): a person who leaves
+ * the trip disappears from its stops, but their `assignment_participants` rows are kept, so they
+ * reappear if they rejoin. Permanent deletion belongs to the erasure work (#811). The membership is
+ * read once per itinerary, in the same parallel read as the places and participants.
  */
 export async function getTripItinerary(
   scope: TenantScope,
@@ -345,18 +352,23 @@ export async function getTripItinerary(
   const placeIds = [...new Set(assignments.map((row) => row.placeId))]
   const assignmentIds = assignments.map((row) => row.id)
 
-  const [placeRows, participantRows] = await Promise.all([
+  const [placeRows, participantRows, memberIds] = await Promise.all([
     placesRepository.findByIds(scope, placeIds),
     assignmentIds.length === 0
       ? Promise.resolve([])
       : assignmentParticipantsAccess.findMany(scope, {
           where: inArray(assignmentParticipants.assignmentId, assignmentIds),
         }),
+    tripMemberUserIds(scope, tripId),
   ])
 
   const placesById = new Map(placeRows.map((row) => [row.id, row]))
+  const currentMembers = new Set(memberIds)
   const participantsByAssignment = new Map<string, Array<string>>()
   for (const row of participantRows) {
+    if (!currentMembers.has(row.userId)) {
+      continue
+    }
     const bucket = participantsByAssignment.get(row.assignmentId)
     if (bucket) {
       bucket.push(row.userId)
@@ -1091,6 +1103,15 @@ export async function deletePlaceWithJourneys(
  * Starts from a row id, so it asks the stop's trip the two questions every trip-scoped writer asks
  * - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR 0007), may they edit it -
  * in that order, and writes only after both pass.
+ *
+ * Only a **current member of the stop's trip** (any role) may be listed (#1086). A list naming
+ * anyone else - a workspace member who is not on the trip, a person who has left it, a user of
+ * another workspace, an id that matches no user - is refused as a whole with one
+ * `NotFoundError('trip member', 'named in the request')` that names no id, and the stored set is
+ * untouched. A stop carries no debt, so unlike an expense a person who has left is not kept
+ * listable: re-saving a set without them succeeds, naming them is refused. The membership check runs
+ * after the two guards above, so a caller who may not see the trip is answered the trip's refusal.
+ * {@link getTripItinerary} applies the same definition of member when it reads the set back.
  */
 export async function setAssignmentParticipants(
   scope: TenantScope,
@@ -1111,6 +1132,10 @@ export async function setAssignmentParticipants(
         .parse([...userIds]),
     ),
   ]
+  const members = new Set(await tripMemberUserIds(scope, assignment.tripId))
+  if (parsed.some((userId) => !members.has(userId))) {
+    throw new NotFoundError('trip member', 'named in the request')
+  }
 
   await assignmentParticipantsAccess.removeWhere(
     scope,

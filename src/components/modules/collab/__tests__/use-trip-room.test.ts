@@ -44,6 +44,21 @@ vi.mock('partysocket/use-ws', () => ({
 
 const { useTripRoom } = await import('../use-trip-room')
 
+function member(connectionId: string, name: string | null = 'Ada') {
+  return {
+    connectionId,
+    user: { id: `u-${connectionId}`, name, initials: 'A', hue: 120 },
+    joinedAt: 1,
+    lastSeenAt: 2,
+    focus: null,
+  }
+}
+
+function receive(message: unknown): void {
+  const { onMessage } = captured.options as SocketOptions
+  act(() => onMessage({ data: JSON.stringify(message) }))
+}
+
 function close(code: number, reason: string): void {
   const { onClose } = captured.options as SocketOptions
   act(() => onClose({ code, reason }))
@@ -135,7 +150,8 @@ describe('useTripRoom - a tab whose workspace was changed in another tab', () =>
       options.onMessage({
         data: JSON.stringify({
           t: 'welcome',
-          you: { id: 'u', name: 'U', image: null, tabs: 1 },
+          protocol: 1,
+          you: member('c-1'),
           peers: [],
           version: 0,
         }),
@@ -188,5 +204,34 @@ describe('useTripRoom - a tab whose workspace was changed in another tab', () =>
     close(1006, '')
 
     expect(result.current.status).toBe('reconnecting')
+  })
+})
+
+describe('useTripRoom - a frame whose shape the client does not understand', () => {
+  beforeEach(() => {
+    captured.options = null
+    captured.socket = null
+  })
+
+  it('changes nothing and calls nothing, however malformed it is', () => {
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useTripRoom('trip-1', { onCommit }))
+    receive({
+      t: 'welcome',
+      protocol: 1,
+      you: member('c-1'),
+      peers: [member('c-2', null)],
+      version: 3,
+    })
+    const before = { ...result.current }
+    expect(before.status).toBe('live')
+    expect(before.peers.map((peer) => peer.user.name)).toEqual(['Ada', null])
+
+    receive({ t: 'presence', peers: [member('c-3', 5 as never)] })
+    receive({ t: 'welcome', protocol: 1, peers: [], version: 9 })
+    receive({ t: 'commit', version: 9, entries: 'nope' })
+
+    expect(result.current).toEqual(before)
+    expect(onCommit).not.toHaveBeenCalled()
   })
 })

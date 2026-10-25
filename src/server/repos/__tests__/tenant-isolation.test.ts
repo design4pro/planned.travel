@@ -584,11 +584,6 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     placeId: place.id,
     startTime: '09:30',
   })
-  await setAssignmentParticipants(scope, assignment.id, [
-    tenant.ownerUserId,
-    secondUserId,
-  ])
-
   const accommodation = await createAccommodation(scope, {
     tripId: trip.id,
     startDayId: firstDay.id,
@@ -628,6 +623,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     userId: companionUserId,
     role: 'editor',
   })
+  await setAssignmentParticipants(scope, assignment.id, [
+    tenant.ownerUserId,
+    companionUserId,
+  ])
   const expense = await createExpense(scope, {
     tripId: trip.id,
     dayId: firstDay.id,
@@ -1403,6 +1402,24 @@ describe('tenant isolation', () => {
           eq(collectionPlaceLabels.collectionPlaceId, alpha.collectionPlaceId),
         )
       expect(links).toHaveLength(0)
+    })
+
+    it('refuses a user of another workspace as a stop’s participant', async () => {
+      const error = await captureError(() =>
+        setAssignmentParticipants(alpha.tenant.scope, alpha.assignmentId, [
+          beta.tenant.ownerUserId,
+        ]),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+
+      const rows = await harness.db
+        .select()
+        .from(assignmentParticipants)
+        .where(eq(assignmentParticipants.assignmentId, alpha.assignmentId))
+      expect(rows.map((row) => row.userId)).not.toContain(
+        beta.tenant.ownerUserId,
+      )
+      expect(rows).toHaveLength(2)
     })
 
     it('refuses to set participants on a foreign assignment', async () => {
