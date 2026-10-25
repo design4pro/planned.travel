@@ -26,6 +26,7 @@ import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import { createPdfExportHandler, renderExportDocument } from '../pdf-export'
 import {
   TaskConfigurationError,
+  TaskAbandonedError,
   TaskPermanentError,
   TaskRetryableError,
   pdfExportPayloadSchema,
@@ -405,7 +406,7 @@ describe('the scope re-check', () => {
     expect(rigged.emails).toEqual([])
   }
 
-  it('is permanent when the requester has left the workspace, before anything is written or sent', async () => {
+  it('is abandoned, not failed, when the requester has left the workspace, before anything is written or sent', async () => {
     const leaverId = await tenant.addUser('Leaver')
     await removeMember(
       tenant.scope,
@@ -415,17 +416,25 @@ describe('the scope re-check', () => {
 
     await expect(
       run({ requestedBy: leaverId, notify: 'leaver@example.com' }, rigged),
-    ).rejects.toBeInstanceOf(TaskPermanentError)
+    ).rejects.toMatchObject({
+      name: 'TaskAbandonedError',
+      reason: 'requester-left',
+    })
     await expectNothingWritten(rigged)
   })
 
-  it('is permanent when the trip is gone', async () => {
+  it('is abandoned, not failed, when the trip is gone', async () => {
     await deleteTrip(tenant.scope, tripId)
     const rigged = rig()
 
-    await expect(
-      run({ notify: 'owner@example.com' }, rigged),
-    ).rejects.toBeInstanceOf(TaskPermanentError)
+    const error = await run({ notify: 'owner@example.com' }, rigged).catch(
+      (cause: unknown) => cause,
+    )
+
+    expect(error).toBeInstanceOf(TaskAbandonedError)
+    expect(error).toMatchObject({ reason: 'trip-gone' })
+    // Still a permanent failure to anything that asks, so no retry is ever scheduled.
+    expect(error).toBeInstanceOf(TaskPermanentError)
     await expectNothingWritten(rigged)
   })
 

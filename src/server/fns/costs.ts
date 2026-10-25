@@ -391,19 +391,20 @@ async function loadPeople(
 const PROFILE_LOOKUP_LIMIT = 200
 
 /**
- * The people the given splits name who are not trip members now, named when the workspace still
- * knows them. Built from share rows the caller already read, so it adds one tenant-scoped profile
- * lookup and no query of its own.
+ * The people the costs payload names who are not trip members now, named when the workspace still
+ * knows them: share holders, expense payers and both sides of a payment or suggested payment.
+ * Built from ids the caller already read, so it adds one tenant-scoped profile lookup and no query
+ * of its own.
  */
 async function loadDepartedPeople(
   scope: TenantScope,
   people: ReadonlyArray<CostsPerson>,
-  shares: ReadonlyArray<ReadonlyArray<{ readonly userId: string }>>,
+  named: ReadonlyArray<string | null>,
 ): Promise<Array<CostsDepartedPerson>> {
   const onTrip = new Set(people.map((person) => person.userId))
-  const departed = [
-    ...new Set(shares.flatMap((rows) => rows.map((row) => row.userId))),
-  ].filter((userId) => !onTrip.has(userId))
+  const departed = [...new Set(named)].filter(
+    (userId): userId is string => userId !== null && !onTrip.has(userId),
+  )
 
   const profiles = new Map<string, MemberProfile>()
   for (let from = 0; from < departed.length; from += PROFILE_LOOKUP_LIMIT) {
@@ -648,11 +649,17 @@ export async function costsPayload(
     }),
   ])
 
-  const departedPeople = await loadDepartedPeople(
-    scope,
-    people,
-    withShares.map(({ shares }) => shares),
-  )
+  const departedPeople = await loadDepartedPeople(scope, people, [
+    ...withShares.flatMap(({ expense, shares }) => [
+      expense.paidBy,
+      ...shares.map((share) => share.userId),
+    ]),
+    ...balances.map((row) => row.userId),
+    ...[...settled, ...suggestions].flatMap((row) => [
+      row.fromUserId,
+      row.toUserId,
+    ]),
+  ])
 
   const today = todayIso()
   const display = await displayFor(scope, trip, {

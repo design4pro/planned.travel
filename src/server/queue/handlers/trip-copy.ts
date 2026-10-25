@@ -17,7 +17,9 @@
  *
  * Three failures can never succeed on retry, and all three end with the half-built target deleted:
  * the requester is no longer a member, one of the two trips is gone, and the `places` ceiling was
- * crossed by a concurrent write after the copy was admitted. Everything else — a D1 error, a
+ * crossed by a concurrent write after the copy was admitted. The first two throw
+ * `TaskAbandonedError`, which the consumer acks without a dead letter; the third is a
+ * `TaskPermanentError` and is dead-lettered. Everything else — a D1 error, a
  * registered copier throwing — is transient: the handler rethrows, the queue redelivers, and the
  * next attempt clears whatever this one wrote into the target and copies again.
  *
@@ -54,6 +56,7 @@ import { enqueueTasks } from '../jobs'
 import { recomputeDelaySeconds, travelStatsTaskId } from './travel-stats'
 import {
   ALL_TIME_STAT_YEAR,
+  TaskAbandonedError,
   TaskConfigurationError,
   TaskPermanentError,
   isCalendarStatYear,
@@ -304,8 +307,9 @@ function isPermanentCopyFailure(error: unknown): boolean {
  * Deletes the half-built target and tells the requester, which is what every permanent failure does.
  *
  * The delete cascades, so nothing the failed attempt wrote survives it. Both steps are guarded: a
- * cleanup that throws would turn a permanent failure into a retried one, and the message is already
- * on its way to the dead-letter record that carries the real cause.
+ * cleanup that throws would turn a permanent failure into a retried one, and the error is already
+ * on its way out of the handler, to the dead-letter record or the abandoned line that carries the
+ * real cause.
  */
 async function discardTarget(
   scope: TenantScope,
@@ -374,7 +378,8 @@ export function createTripCopyHandler(
       // with them; the notification does not, because an inbox they can no longer reach is not
       // where this is told.
       await discardTarget(probe, context, targetTripId, requestedBy, null)
-      throw new TaskPermanentError(
+      throw new TaskAbandonedError(
+        'requester-left',
         `User ${requestedBy} is no longer a member of ${context.orgId}; the trip copy is abandoned`,
       )
     }
@@ -391,7 +396,8 @@ export function createTripCopyHandler(
           throw cause
         }
         await discardTarget(scope, context, targetTripId, requestedBy, null)
-        throw new TaskPermanentError(
+        throw new TaskAbandonedError(
+          'trip-gone',
           `Trip ${targetTripId} is gone; there is nothing left to copy into`,
           { cause },
         )

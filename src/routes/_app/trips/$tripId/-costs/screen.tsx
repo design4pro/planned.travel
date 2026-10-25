@@ -29,6 +29,7 @@ import {
   downloadCsv,
   expensesCsv,
   filterExpenses,
+  findPerson,
   formatDayShort,
   isFiltered,
   totalsFor,
@@ -152,7 +153,7 @@ export function CostsScreen({
     const who = paymentWho(
       row,
       (userId) =>
-        data.people.find((person) => person.userId === userId)?.name ??
+        findPerson(data.people, data.departedPeople, userId)?.name ??
         t('costs.person.removed'),
       data.viewerUserId,
       t,
@@ -478,6 +479,7 @@ export function CostsScreen({
           snapshot={snapshot}
           totals={totals}
           people={data.people}
+          departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
           currency={data.currency}
           budgetTargetMinor={data.budgetTargetMinor}
@@ -550,6 +552,7 @@ export function CostsScreen({
               <ExpenseList
                 rows={visible}
                 people={data.people}
+                departedPeople={data.departedPeople}
                 viewerUserId={data.viewerUserId}
                 currency={data.currency}
                 display={data.displayCurrency}
@@ -564,6 +567,7 @@ export function CostsScreen({
           <CostsRail
             snapshot={snapshot}
             people={data.people}
+            departedPeople={data.departedPeople}
             viewerUserId={data.viewerUserId}
             currency={data.currency}
             display={data.displayCurrency}
@@ -623,6 +627,7 @@ export function CostsScreen({
           onOpenChange={setOpen}
           currency={session.currency}
           people={data.people}
+          departedPeople={data.departedPeople}
           loadPreview={(request) =>
             previewCurrencyChangeFn({
               data: { tripId: data.tripId, ...request },
@@ -654,7 +659,7 @@ export function CostsScreen({
           currency={data.currency}
           affects={[session.row.fromUserId, session.row.toUserId].map(
             (userId) =>
-              data.people.find((person) => person.userId === userId)?.name ??
+              findPerson(data.people, data.departedPeople, userId)?.name ??
               t('costs.person.removedTarget'),
           )}
           onConfirm={() => removePayment(session.row)}
@@ -682,7 +687,7 @@ export function CostsScreen({
           currency={data.currency}
           affects={session.row.shares.map(
             (share) =>
-              data.people.find((person) => person.userId === share.userId)
+              findPerson(data.people, data.departedPeople, share.userId)
                 ?.name ?? t('costs.person.removedTarget'),
           )}
           onConfirm={() => removeExpense(session.row)}

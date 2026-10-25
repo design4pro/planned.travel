@@ -13,6 +13,7 @@ import {
   displayCurrencyChoices,
   expensesCsv,
   filterExpenses,
+  findPerson,
   formatDayLabel,
   formatDayShort,
   groupByDay,
@@ -235,6 +236,39 @@ describe('shareOf', () => {
 
   it('is zero for someone left out of the split', () => {
     expect(shareOf(ROWS[2], 'u-mika')).toBe(0)
+  })
+})
+
+describe('findPerson', () => {
+  const MEMBER = {
+    userId: 'u-ada',
+    name: 'Ada',
+    email: '',
+    image: 'ada.png',
+    role: 'owner',
+  }
+  const DEPARTED = [
+    { userId: 'u-cy', name: 'Cy', image: 'cy.png' },
+    { userId: 'u-ghost', name: null, image: null },
+    { userId: 'u-ada', name: 'Ada before she rejoined', image: null },
+  ]
+
+  it('finds a trip member first, even when the departed list also names them', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-ada')?.name).toBe('Ada')
+  })
+
+  it('finds a departed traveller by name and image', () => {
+    const found = findPerson([MEMBER], DEPARTED, 'u-cy')
+    expect(found?.name).toBe('Cy')
+    expect(found?.image).toBe('cy.png')
+  })
+
+  it('returns a null name for a departed traveller the workspace has no profile for', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-ghost')?.name).toBeNull()
+  })
+
+  it('returns nothing for someone the payload does not name', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-nobody')).toBeUndefined()
   })
 })
 

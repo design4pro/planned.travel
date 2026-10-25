@@ -13,6 +13,7 @@ import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
 import { RESERVATION_STATUSES, RESERVATION_TYPES } from '#/server/db/schema'
 import { createLogger, serializeError } from '#/server/observability'
 import {
+  assertExpectedTripCurrency,
   canWritePlan,
   clearReservationImported,
   countTripReservationsByStatus,
@@ -26,6 +27,7 @@ import {
   repriceExpense,
   requireReservationOfTrip,
   requireTrip,
+  requireWritableBookingTrip,
   requireWritableTrip,
   setReservationStatus,
   totalTripReservationsMinor,
@@ -105,6 +107,18 @@ const bookingFields = {
    */
   assignmentId: z.string().trim().max(64),
   notes: optionalNotes,
+  /**
+   * The trip's currency as the editor that sent this was filled in under. Optional, so the imported
+   * booking path, the seeder and a tab loaded before this field existed still validate; a trip
+   * re-based since refuses the write. A check, never a column: `payload` does not carry it.
+   */
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .length(3)
+    .regex(/^[A-Za-z]{3}$/)
+    .transform((value) => value.toUpperCase())
+    .optional(),
 }
 
 export const bookingInputSchema = z.object({ tripId, ...bookingFields })
@@ -489,7 +503,8 @@ export const createBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingInputSchema)
   .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    const trip = await requireWritableTrip(scope, data.tripId)
+    const trip = await requireWritableBookingTrip(scope, data.tripId)
+    assertExpectedTripCurrency(trip, data.expectedTripCurrency)
     assertOrder(data)
 
     const reservation = await createReservation(scope, {
@@ -519,10 +534,11 @@ export const updateBookingFn = createServerFn({ method: 'POST' })
   .validator(bookingUpdateSchema)
   .handler(async ({ data }): Promise<BookingWriteResult> => {
     const scope = await appScope()
-    const trip = await requireWritableTrip(scope, data.tripId)
+    const trip = await requireWritableBookingTrip(scope, data.tripId)
     // Everything below acts on `data.tripId` — the room, the trail, the ledger — so the booking
     // must be one of that trip's, not merely one the caller may edit.
     await requireReservationOfTrip(scope, data.tripId, data.reservationId)
+    assertExpectedTripCurrency(trip, data.expectedTripCurrency)
     assertOrder(data)
 
     const reservation = await updateReservation(

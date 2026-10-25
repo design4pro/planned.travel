@@ -24,6 +24,7 @@ import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney, formatSignedMoney } from '#/lib/money'
 import {
   CategoryDonut,
+  findPerson,
   formatDayLabel,
   isOptimisticId,
   paymentMethodLabel,
@@ -40,6 +41,7 @@ import type { DisplayCurrency } from '#/lib/money'
 import type {
   CostsBalance,
   CostsCategoryTotal,
+  CostsDepartedPerson,
   CostsPerson,
   CostsSettlement,
   CostsSuggestion,
@@ -48,6 +50,7 @@ import type {
 export interface CostsRailProps {
   readonly snapshot: CostsSnapshot
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly currency: string
   readonly display: DisplayCurrency
@@ -67,6 +70,7 @@ export interface CostsRailProps {
 export function CostsRail({
   snapshot,
   people,
+  departedPeople,
   viewerUserId,
   currency,
   display,
@@ -79,10 +83,10 @@ export function CostsRail({
 }: CostsRailProps) {
   const t = useTranslate()
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ??
+    findPerson(people, departedPeople, userId)?.name ??
     t('costs.person.removed')
   const imageOf = (userId: string): string | null =>
-    people.find((person) => person.userId === userId)?.image ?? null
+    findPerson(people, departedPeople, userId)?.image ?? null
 
   return (
     <aside className="flex min-w-0 flex-col gap-6">

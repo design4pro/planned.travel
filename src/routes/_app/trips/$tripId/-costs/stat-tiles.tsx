@@ -16,15 +16,21 @@ import { Avatar, StatCard } from '#/components/ui'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatMoney } from '#/lib/money'
-import { MemberBar, dailySeries, memberShares } from '#/components/costs'
+import {
+  MemberBar,
+  dailySeries,
+  findPerson,
+  memberShares,
+} from '#/components/costs'
 
 import type { CostsSnapshot, CostsTotals } from '#/components/costs'
-import type { CostsPerson } from '#/server/fns/costs'
+import type { CostsDepartedPerson, CostsPerson } from '#/server/fns/costs'
 
 export interface StatTilesProps {
   readonly snapshot: CostsSnapshot
   readonly totals: CostsTotals
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly currency: string
   readonly budgetTargetMinor: number | null
@@ -35,6 +41,7 @@ export function StatTiles({
   snapshot,
   totals,
   people,
+  departedPeople,
   viewerUserId,
   currency,
   budgetTargetMinor,
@@ -45,8 +52,10 @@ export function StatTiles({
   const nameOf = (userId: string): string =>
     userId === viewerUserId
       ? t('costs.person.you')
-      : (people.find((person) => person.userId === userId)?.name ??
+      : (findPerson(people, departedPeople, userId)?.name ??
         t('costs.person.removed'))
+  const imageOf = (userId: string): string | null =>
+    findPerson(people, departedPeople, userId)?.image ?? null
 
   const creditors = snapshot.suggestions.filter(
     (row) => row.fromUserId === viewerUserId,
@@ -77,7 +86,7 @@ export function StatTiles({
             prefix={t('costs.tile.owe.to')}
             userIds={creditors.map((row) => row.toUserId)}
             nameOf={nameOf}
-            people={people}
+            imageOf={imageOf}
           />
         }
       />
@@ -96,7 +105,7 @@ export function StatTiles({
             prefix={t('costs.tile.owed.from')}
             userIds={debtors.map((row) => row.fromUserId)}
             nameOf={nameOf}
-            people={people}
+            imageOf={imageOf}
           />
         }
       />
@@ -165,12 +174,12 @@ function PeopleLine({
   prefix,
   userIds,
   nameOf,
-  people,
+  imageOf,
 }: {
   prefix: string
   userIds: ReadonlyArray<string>
   nameOf: (userId: string) => string
-  people: ReadonlyArray<CostsPerson>
+  imageOf: (userId: string) => string | null
 }) {
   if (userIds.length === 0) {
     return null
@@ -186,11 +195,7 @@ function PeopleLine({
           key={userId}
           className="flex min-w-0 items-center gap-1.5 rounded-full bg-surface-2 py-0.5 pe-2 ps-0.5"
         >
-          <Avatar
-            name={nameOf(userId)}
-            src={people.find((person) => person.userId === userId)?.image}
-            size="xs"
-          />
+          <Avatar name={nameOf(userId)} src={imageOf(userId)} size="xs" />
           <span className="truncate font-medium text-ink-2">
             {nameOf(userId)}
           </span>

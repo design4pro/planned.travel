@@ -37,6 +37,7 @@ import {
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { formatInverseRate, formatNumber, formatRateInput } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { findPerson } from '#/components/costs'
 import { openedCurrencyOptions } from '#/routes/_app/-lib/currency-names'
 import {
   OFFERED_CURRENCY_CODES,
@@ -49,7 +50,7 @@ import {
 
 import type { ReactNode } from 'react'
 import type { Locale, Translate } from '#/lib/i18n'
-import type { CostsPerson } from '#/server/fns/costs'
+import type { CostsDepartedPerson, CostsPerson } from '#/server/fns/costs'
 import type { CurrencyChangePreview } from '#/server/repos'
 
 /** A hung commit must not trap the traveller in a modal they cannot leave. */
@@ -79,6 +80,7 @@ export interface CurrencyRebaseDialogProps {
   readonly currency: string
   /** Who the leftover lines name. */
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople: ReadonlyArray<CostsDepartedPerson>
   readonly loadPreview: (
     request: RebaseRequest,
   ) => Promise<CurrencyChangePreview>
@@ -174,6 +176,7 @@ export function CurrencyRebaseDialog({
   onOpenChange,
   currency,
   people,
+  departedPeople,
   loadPreview,
   commit,
   readCurrency,
@@ -380,7 +383,7 @@ export function CurrencyRebaseDialog({
     return null
   })()
   const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ??
+    findPerson(people, departedPeople, userId)?.name ??
     t('costs.rebase.someone')
 
   let refusalMessage: string | null = null
