@@ -502,7 +502,9 @@ long-term average, and a row labelled "High / low" over it would read as a predi
 keys rather than one interpolated string because the wording differs, not a word inside it.
 
 MET's symbol codes are mapped to the condition groups by a table in `day-weather-badge.tsx`'s model
-file; the day/night suffix is dropped for the label.
+file; the day/night suffix is dropped for the label. The panel alone tells the Night slot apart,
+on the client: a moon for `clear`, a cloud with a moon for `fair` and `partlyCloudy` (#1089). A
+slot with no sky draws the badge's muted thermometer in its icon row, so the strip stays aligned.
 
 ## 📝 Observability
 
