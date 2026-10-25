@@ -173,6 +173,7 @@ export function PlanWorkspace({
   mobileSummary,
   resizeLeftLabel,
   resizeRightLabel,
+  titleRef,
   children,
 }: {
   readonly layout: ReturnType<typeof usePlanWorkspace>
@@ -186,6 +187,8 @@ export function PlanWorkspace({
   readonly mobileSummary: string
   readonly resizeLeftLabel: string
   readonly resizeRightLabel: string
+  /** A focus target that is always mounted, for when the panels are collapsed or closed. */
+  readonly titleRef?: React.Ref<HTMLHeadingElement>
   readonly children: React.ReactNode
 }) {
   const t = useTranslate()
@@ -224,7 +227,9 @@ export function PlanWorkspace({
           TRIP_SLICE_HEIGHT_CLASS.lg,
         )}
       >
-        <h1 className="sr-only">{tripTitle}</h1>
+        <h1 ref={titleRef} tabIndex={-1} className="sr-only outline-none">
+          {tripTitle}
+        </h1>
         {children}
         {/* -------------------------------------------------------- desktop */}
 

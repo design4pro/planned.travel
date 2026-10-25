@@ -252,7 +252,13 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
   )
   const isOwner = data.viewerRole === 'owner'
   useEffect(() => {
-    if (!isOwner) lostRole.current?.focus()
+    if (isOwner) return
+    // The owner dialogs are closed by `isOwner`; forget what they were about, so they stay closed.
+    setRemoving(null)
+    setRenaming(null)
+    setRemovingGuest(null)
+    setMerging(null)
+    lostRole.current?.focus()
   }, [isOwner])
   const soleOwner =
     members.filter((person) => person.role === 'owner').length === 1
@@ -643,7 +649,15 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           failure === null ||
           failure.write.kind === 'leave' ? null : (
             <div ref={lostRole} tabIndex={-1} className="outline-none">
-              <Alert tone="danger" size="sm" onDismiss={() => setFailure(null)}>
+              <Alert
+                tone="danger"
+                size="sm"
+                onDismiss={() => {
+                  // The node that holds focus leaves with the alert.
+                  membersHeading.current?.focus()
+                  setFailure(null)
+                }}
+              >
                 {failure.message}
               </Alert>
             </div>

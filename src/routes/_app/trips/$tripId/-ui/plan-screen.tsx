@@ -884,25 +884,35 @@ export function PlanScreen({
   }, [releaseDialog])
 
   // A refused write re-reads the board, and the re-read can take `editable` away from a screen the
-  // reader is working in: the form that outlived the permission is closed (its refusal moves to a
-  // toast), and focus goes to the itinerary, since the control that held it is gone.
+  // reader is working in: the form that outlived the permission is closed, its refusal moves to a
+  // toast, and focus goes to the itinerary (or the title when the panels are shut), since the
+  // control that held it is gone. Toast and focus wait for the form to go: a modal form traps focus
+  // and hides the rest of the page from a screen reader.
   const wasEditable = React.useRef(editable)
-  const focusAfterClose = React.useRef(false)
+  /** What the form of a refused write showed, for the toast that replaces the form. */
+  const formRefusal = React.useRef<string | null>(null)
+  const lostWrite = React.useRef<{ readonly refusal: string | null } | null>(
+    null,
+  )
+  const titleRef = React.useRef<HTMLHeadingElement | null>(null)
   React.useEffect(() => {
     if (wasEditable.current && !editable) {
-      if (formError !== null) toast.error(formError)
-      focusAfterClose.current = true
+      lostWrite.current = { refusal: formRefusal.current }
+      formRefusal.current = null
+      // A pin being placed is a write mode too.
+      setPicking(null)
     }
     wasEditable.current = editable
-    if (!focusAfterClose.current) return
-    // Focus waits for the form to go: a modal form traps it.
+    const lost = lostWrite.current
+    if (lost === null) return
     if (dialog !== null) {
       closeDialog()
       return
     }
-    focusAfterClose.current = false
-    railRef.current?.focus()
-  }, [closeDialog, dialog, editable, formError])
+    lostWrite.current = null
+    if (lost.refusal !== null) toast.error(lost.refusal)
+    ;(railRef.current ?? titleRef.current)?.focus()
+  }, [closeDialog, dialog, editable])
 
   /**
    * Runs a write and reports whether it landed. The form that was open when it started (if any)
@@ -924,6 +934,7 @@ export function PlanScreen({
       const stillOwned = claimWrite()
       const token = Symbol()
       setSavingWrite({ token, owner: dialog })
+      formRefusal.current = null
       setFormError(null)
       setFormErrorAction(null)
       try {
@@ -941,6 +952,8 @@ export function PlanScreen({
         if (stillOwned()) {
           setFormError(report.message)
           setFormErrorAction(report.action)
+          formRefusal.current =
+            readPublicFailure(cause).kind === 'refusal' ? report.message : null
         } else {
           reportLateWriteFailure(report, toast, openInNewTab)
         }
@@ -1421,6 +1434,7 @@ export function PlanScreen({
         ideas={ideas}
         addButton={addButton}
         railFooter={railFooter}
+        titleRef={titleRef}
         scheduledCount={String(model.scheduledCount)}
         placesCount={String(
           placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,

@@ -478,6 +478,7 @@ describe('a write the server refused', () => {
     expect(mocks.error).toHaveBeenCalledWith(
       'You can no longer edit this trip.',
     )
+    expect(mocks.error).toHaveBeenCalledTimes(1)
     // The control that held focus is gone with the write controls.
     expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
     expect(document.activeElement?.textContent).toContain('Select Place p1')
@@ -536,6 +537,20 @@ describe('a write the server refused', () => {
     )
     expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
     expect(await offersEdit()).toBe(false)
+  })
+
+  it('hands focus to the trip title when the itinerary panel is collapsed', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    const view = await mount()
+    mocks.invalidate.mockImplementation(async () => demoted(view))
+    await menu('Move its pin')
+    await userEvent.click(
+      screen.getAllByRole('button', { name: /^Hide the .* panel$/ })[0],
+    )
+    await act(async () => mocks.click?.({ lngLat: { lng: 10, lat: 20 } }))
+
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect(document.activeElement?.tagName).toBe('H1')
   })
 
   it('puts a refused move back when the re-read changes nothing', async () => {
