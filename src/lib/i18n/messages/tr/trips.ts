@@ -450,6 +450,8 @@ const messages = {
   'plan.weather.panel.low': 'En düşük',
   'plan.weather.panel.recordedNote': 'Bu güne ait ölçülen değerler.',
   'plan.weather.panel.temperatureTypical': 'Tipik en yüksek / en düşük',
+  'plan.weather.panel.typicalHigh': 'Tipik en yüksek',
+  'plan.weather.panel.typicalLow': 'Tipik en düşük',
   'plan.weather.panel.estimateNote':
     'Bu ay için uzun vadeli ortalama; tahmin değildir.',
   'plan.weather.attribution.metNorway':
