@@ -60,6 +60,8 @@ const stubs = vi.hoisted(() => ({
   evicted: [] as Array<{ tripId: string; userId: string | null }>,
   /** How many evictions had been asked for when `notify()` was first called; null until it is. */
   evictedAtNotify: null as number | null,
+  /** Awaited inside every eviction, before it is recorded: reads the database as the close sees it. */
+  onEvict: null as (() => Promise<void>) | null,
 }))
 
 /**
@@ -74,9 +76,11 @@ vi.mock('#/server/fns/context', () => ({
     tripId: string,
     userId: string,
   ): Promise<void> => {
+    await stubs.onEvict?.()
     stubs.evicted.push({ tripId, userId })
   },
   closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
+    await stubs.onEvict?.()
     stubs.evicted.push({ tripId, userId: null })
   },
 }))
@@ -161,6 +165,7 @@ const {
   attempted,
   leaveTripFn,
   mergeGuestIntoMember,
+  mergeTripGuestFn,
   readTripPeople,
   removeTripGuestFn,
   removeTripMemberFn,
@@ -206,6 +211,7 @@ beforeEach(async () => {
   stubs.notifyRejects = false
   stubs.evicted = []
   stubs.evictedAtNotify = null
+  stubs.onEvict = null
 
   const editorId = await tenant.addUser('An editor')
   const viewerId = await tenant.addUser('A reader')
@@ -1056,6 +1062,147 @@ describe('the trip room after a change of someone’s access', () => {
     )
 
     expect((error as RepositoryError).code).toBe('FORBIDDEN')
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('leaves the room alone when an organization-visible trip stays organization-visible', async () => {
+    for (let turn = 0; turn < 2; turn += 1) {
+      await inRequest(() =>
+        setTripVisibilityFn({
+          data: { tripId: fixture.tripId, visibility: 'organization' },
+        }),
+      )
+    }
+
+    expect(stubs.evicted).toEqual([])
+  })
+
+  it('asks for nothing, and sends no statistics, when the last owner is demoted', async () => {
+    const memberId = await memberIdOf(tenant.ownerUserId)
+
+    await inRequest(() =>
+      setTripRoleFn({
+        data: { tripId: fixture.tripId, memberId, role: 'viewer' },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([])
+    expect(envelopes()).toEqual([])
+    expect(
+      (await listTripMembers(owner, fixture.tripId)).find(
+        (row) => row.id === memberId,
+      )?.role,
+    ).toBe('owner')
+  })
+
+  it('closes strictly after the write: the close already sees the new state', async () => {
+    const seen: Array<string> = []
+    const roleOf = async (userId: string): Promise<string> =>
+      (await listTripMembers(owner, fixture.tripId)).find(
+        (row) => row.userId === userId,
+      )?.role ?? 'gone'
+
+    stubs.onEvict = async () => {
+      seen.push(`add:${await roleOf(fixture.outsiderId)}`)
+    }
+    await inRequest(() =>
+      addTripMemberFn({
+        data: {
+          tripId: fixture.tripId,
+          userId: fixture.outsiderId,
+          role: 'editor',
+        },
+      }),
+    )
+
+    stubs.onEvict = async () => {
+      seen.push(`role:${await roleOf(fixture.viewerId)}`)
+    }
+    await inRequest(async () =>
+      setTripRoleFn({
+        data: {
+          tripId: fixture.tripId,
+          memberId: await memberIdOf(fixture.viewerId),
+          role: 'editor',
+        },
+      }),
+    )
+
+    stubs.onEvict = async () => {
+      seen.push(`remove:${await roleOf(fixture.editorId)}`)
+    }
+    await inRequest(async () =>
+      removeTripMemberFn({
+        data: {
+          tripId: fixture.tripId,
+          memberId: await memberIdOf(fixture.editorId),
+        },
+      }),
+    )
+
+    stubs.onEvict = async () => {
+      seen.push(`leave:${await roleOf(fixture.outsiderId)}`)
+    }
+    stubs.scope = tenant.scopeFor(fixture.outsiderId)
+    await inRequest(() => leaveTripFn({ data: { tripId: fixture.tripId } }))
+
+    stubs.scope = owner
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    stubs.onEvict = async () => {
+      seen.push(
+        `visibility:${(await readTripPeople(owner, fixture.tripId, 'test-key')).visibility}`,
+      )
+    }
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'private' },
+      }),
+    )
+
+    expect(seen).toEqual([
+      'add:editor',
+      'role:editor',
+      'remove:gone',
+      'leave:gone',
+      'visibility:private',
+    ])
+  })
+
+  it('evicts nobody for the guest writes or the guest merge', async () => {
+    await inRequest(() =>
+      addTripGuestFn({ data: { tripId: fixture.tripId, displayName: 'Anna' } }),
+    )
+    const [anna] = await listTripGuests(owner, fixture.tripId)
+    await inRequest(() =>
+      renameTripGuestFn({
+        data: {
+          tripId: fixture.tripId,
+          guestId: anna.id,
+          displayName: 'Anne',
+        },
+      }),
+    )
+    await inRequest(async () =>
+      mergeTripGuestFn({
+        data: {
+          tripId: fixture.tripId,
+          guestId: anna.id,
+          memberId: await memberIdOf(fixture.editorId),
+        },
+      }),
+    )
+    await inRequest(() =>
+      addTripGuestFn({ data: { tripId: fixture.tripId, displayName: 'Bo' } }),
+    )
+    const [bo] = await listTripGuests(owner, fixture.tripId)
+    await inRequest(() =>
+      removeTripGuestFn({ data: { tripId: fixture.tripId, guestId: bo.id } }),
+    )
+
     expect(stubs.evicted).toEqual([])
   })
 })

@@ -2192,7 +2192,8 @@ export async function tripRoleFor(
  * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
  * room. The room reads it once, at connect: the writes that change a role, remove a member or archive
  * the trip close the sockets they affect, so the next connect applies this rule again
- * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`). A connect already in flight when
+ * (`evictionsFor` in `src/server/fns/-lib/trip-access-change.ts` names them; the closes are
+ * `closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`). A connect already in flight when
  * the close lands is refused by the room, which remembers the close as a revocation watermark and
  * compares it with the `issuedAt` the connect handler stamped before it read the role (#1085). A
  * close that never reached the room retains the old role for at most the maximum socket age plus the

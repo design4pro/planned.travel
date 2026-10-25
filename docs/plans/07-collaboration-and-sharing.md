@@ -345,7 +345,7 @@ as `07-S2` does.
   The role is read at connect, so the writes that change it close the sockets they affect and the
   client's reconnect picks the stored role up: a role change, an add, a removal or a leave closes
   that person's sockets, and an archive, a restore, a delete or a visibility narrowed to private
-  closes the whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
+  closes the whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050; the table that says which write closes whom is `evictionsFor` in `src/server/fns/-lib/trip-access-change.ts`, #1181). A person who
   stops belonging to the workspace - removed, leaving, or banned, signed out everywhere or deleted by
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
@@ -2507,7 +2507,8 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 - One observation recorded rather than acted on, because it belongs to another row: this stage adds
   no caller of `closeTripRoom`. Evicting a live socket is what **removal** from a trip needs, not
   what an invite link needs, and #1050 gave removal, role changes and the trip lifecycle their
-  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
+  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, reached through
+  `settleTripAccessChange` in `src/server/fns/-lib/trip-access-change.ts`).
 
 ## Cross-plan collisions
 
