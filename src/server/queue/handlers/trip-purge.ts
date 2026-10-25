@@ -11,10 +11,11 @@
  *
  * The envelope names the organization and a list of keys. **The organization is the authority and the
  * keys are a request**, which is the same posture `travel-stats` takes — except that R2 has no
- * `tenantFilter()`, so the tenant boundary has to be drawn on the key itself. Every key this product
- * mints carries the organization id in its second path segment (`storageKeyFor`,
+ * `tenantFilter()`, so the tenant boundary has to be drawn on the key itself. Every workspace-scoped
+ * key carries the organization id in its second path segment (`trips/<org>/…` from `storageKeyFor`,
  * `src/server/fns/file-policy.ts`), so that is what is checked, and a key that names another
- * organization is skipped rather than deleted.
+ * organization is skipped rather than deleted. Families that are not workspace-scoped, such as
+ * `dead-letter/<date>/…`, have no organization segment and are never matched (see `belongsTo`).
  *
  * **Why not a second read of `trip_files`.** By the time this message is delivered the rows are gone —
  * that is what the cascade did, and it is the event that produced the envelope — so an intersection

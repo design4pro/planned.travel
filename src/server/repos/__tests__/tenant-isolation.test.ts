@@ -4884,8 +4884,8 @@ describe('tenant isolation', () => {
   /**
    * The purge is the one half of a delete that leaves the database entirely, so it is the one place
    * a boundary could be crossed without a tenant filter to stop it (PRD #104 decision 3). R2 has no
-   * `organization_id`; what it has is a key namespace, and every key this product mints names its
-   * organization in the second path segment. The envelope's `orgId` is the authority and the keys are
+   * `organization_id`; what it has is a key namespace, and every workspace-scoped key (`trips/<org>/…`)
+   * names its organization in the second path segment. The envelope's `orgId` is the authority and the keys are
    * a request, so an envelope forged under A that names B's objects deletes nothing.
    */
   describe('the storage purge', () => {
