@@ -134,6 +134,14 @@ export function TripEditSheet({
       failureRef.current?.focus()
     }
   }, [coverFailure])
+  const errorRef = useRef<HTMLDivElement>(null)
+  // The re-read after a refusal can take the owner role away while Save or Retry holds focus; both
+  // go (disabled, hidden), so focus moves to the refusal that explains it.
+  useEffect(() => {
+    if (!isOwner) {
+      errorRef.current?.focus()
+    }
+  }, [isOwner])
   /** A file already stored whose cover write failed, so a retry does not upload it twice. */
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
@@ -272,34 +280,12 @@ export function TripEditSheet({
             }}
           >
             {error === null ? null : (
-              <Alert
-                tone="danger"
-                title={t('shell.editTrip.errorTitle')}
-                actions={
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    shape="pill"
-                    onClick={() => {
-                      if (form.canSave) void submit()
-                    }}
-                  >
-                    {t('shell.editTrip.retry')}
-                  </Button>
-                }
-              >
-                {error}
-              </Alert>
-            )}
-
-            {coverFailure === null ? null : (
-              <div ref={failureRef} tabIndex={-1} className="outline-none">
+              <div ref={errorRef} tabIndex={-1} className="outline-none">
                 <Alert
-                  tone="warning"
-                  title={t('shell.newTrip.coverFailedTitle')}
+                  tone="danger"
+                  title={t('shell.editTrip.errorTitle')}
                   actions={
-                    <>
+                    isOwner ? (
                       <Button
                         type="button"
                         variant="secondary"
@@ -311,18 +297,46 @@ export function TripEditSheet({
                       >
                         {t('shell.editTrip.retry')}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        shape="pill"
-                        onClick={() => {
-                          if (form.canSave) void submit({ skipCover: true })
-                        }}
-                      >
-                        {t('shell.editTrip.coverContinue')}
-                      </Button>
-                    </>
+                    ) : undefined
+                  }
+                >
+                  {error}
+                </Alert>
+              </div>
+            )}
+
+            {coverFailure === null ? null : (
+              <div ref={failureRef} tabIndex={-1} className="outline-none">
+                <Alert
+                  tone="warning"
+                  title={t('shell.newTrip.coverFailedTitle')}
+                  actions={
+                    isOwner ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          shape="pill"
+                          onClick={() => {
+                            if (form.canSave) void submit()
+                          }}
+                        >
+                          {t('shell.editTrip.retry')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          shape="pill"
+                          onClick={() => {
+                            if (form.canSave) void submit({ skipCover: true })
+                          }}
+                        >
+                          {t('shell.editTrip.coverContinue')}
+                        </Button>
+                      </>
+                    ) : undefined
                   }
                 >
                   {t('shell.editTrip.coverFailed', { name: coverFailure.name })}

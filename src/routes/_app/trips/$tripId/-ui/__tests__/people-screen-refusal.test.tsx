@@ -9,6 +9,7 @@ import userEvent from '@testing-library/user-event'
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Shell from '#/lib/i18n/messages/en/shell'
 import Trips from '#/lib/i18n/messages/en/trips'
 import Ui from '#/lib/i18n/messages/en/ui'
 
@@ -47,6 +48,7 @@ vi.mock('@tanstack/react-router', () => ({
 const { PeopleScreen } = await import('../people-screen')
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('ui', Ui),
 }
@@ -125,19 +127,23 @@ afterEach(() => {
 })
 
 describe('a write the server refused as a refusal', () => {
-  it('re-reads the screen, keeps the refusal beside the control and takes the control away', async () => {
+  it('re-reads the screen, keeps the refusal once, takes the control away and focuses the refusal', async () => {
     mocks.visibility.mockRejectedValue(failedWith('refusal'))
     mountOwner()
 
     await userEvent.click(screen.getByRole('switch', { name: switchLabel }))
 
     expect(mocks.invalidate).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('alert').textContent).toContain(REFUSED)
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toContain(REFUSED)
     expect(screen.queryByRole('switch', { name: switchLabel })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Rename Anna' })).toBeNull()
+    // The switch held focus and left with the owner controls; nothing offers to resend the write.
+    expect(document.activeElement).toBe(alert.parentElement)
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
-  it('keeps an open dialog on its refusal and does not let it write again', async () => {
+  it('closes an open dialog on the refusal, which cannot write again, and focuses the refusal', async () => {
     mocks.removeGuest.mockRejectedValue(failedWith('refusal'))
     mountOwner()
 
@@ -148,12 +154,32 @@ describe('a write the server refused as a refusal', () => {
     await act(async () => {})
 
     expect(mocks.invalidate).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('dialog').textContent).toContain(REFUSED)
-
-    const confirm = screen.getByRole('button', { name: 'Remove' })
-    expect(confirm.hasAttribute('disabled')).toBe(true)
-    await userEvent.click(confirm)
     expect(mocks.removeGuest).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    const alert = screen.getByRole('alert')
+    expect(alert.textContent).toContain(REFUSED)
+    expect(document.activeElement).toBe(alert.parentElement)
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+  })
+
+  it('still shows the refusal when the dialog was cancelled before the answer came', async () => {
+    let refuse!: (error: Error) => void
+    mocks.removeGuest.mockReturnValue(
+      new Promise<never>((_, no) => {
+        refuse = no
+      }),
+    )
+    mountOwner()
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove Anna from this trip' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await act(async () => refuse(failedWith('refusal')))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByRole('alert').textContent).toContain(REFUSED)
   })
 
   it('shows the refusal even when the re-read itself fails', async () => {

@@ -310,8 +310,12 @@ describe('the trip edit sheet when the server refuses the save', () => {
     await userEvent.click(saveButton())
 
     expect(router.invalidate).toHaveBeenCalledTimes(1)
-    expect((await screen.findByRole('alert')).textContent).toContain(REFUSED)
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain(REFUSED)
     expect(saveButton().hasAttribute('disabled')).toBe(true)
+    // Save held focus and is now disabled: focus moves to the refusal, and its Retry is gone.
+    expect(document.activeElement).toBe(alert.parentElement)
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
 
     await userEvent.click(saveButton())
     expect(server.update).toHaveBeenCalledTimes(1)

@@ -7,7 +7,8 @@
  * cannot exercise is *not rendered* rather than rendered disabled — a disabled control invites
  * somebody to wonder what they are missing — and a stale payload costs a refused write rather than
  * an unauthorised one. A thrown refusal also reads the payload again, so the controls follow the
- * reader's current role. `trip-actions.tsx` takes the same posture for the same reason.
+ * reader's current role: the owner-only dialogs close with it and the refusal moves to one alert
+ * that takes focus. `trip-actions.tsx` takes the same posture for the same reason.
  *
  * **Named refusals have copy; everything else is the generic failure.** `-server/people.ts` answers
  * `{ ok: false, reason }` for exactly the rules this screen can explain, and the reason is a
@@ -25,7 +26,7 @@
  */
 
 import { InviteLinkPanel } from './invite-link-panel'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import {
   LogOut,
@@ -220,6 +221,12 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
   /** The same, for a guest who left the list through a removal or a merge. */
   const guestsHeading = useRef<HTMLHeadingElement>(null)
   const guestField = useRef<HTMLInputElement>(null)
+  /**
+   * The refusal a write raised after it cost the reader the owner role, and where focus goes then:
+   * the control that held it (a switch, a select, a dialog's confirm) has left with the owner
+   * controls, and the fallback is `<body>`.
+   */
+  const lostRole = useRef<HTMLDivElement>(null)
   /** {@link removed}'s twin for the two dialogs that take a guest off the list. */
   const guestGone = useRef(false)
   /**
@@ -244,6 +251,9 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
     (person): person is TripGuestParticipant => person.kind === 'guest',
   )
   const isOwner = data.viewerRole === 'owner'
+  useEffect(() => {
+    if (!isOwner) lostRole.current?.focus()
+  }, [isOwner])
   const soleOwner =
     members.filter((person) => person.role === 'owner').length === 1
 
@@ -438,6 +448,8 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
 
   function failureAt(at: Anchor): React.ReactNode {
     if (failure === null || failure.at !== at) return null
+    // Without the owner role the refusal is shown once, by `lostRole`, and nothing offers to resend it.
+    if (!isOwner && failure.write.kind !== 'leave') return null
 
     return (
       <Alert
@@ -625,8 +637,17 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
             </CardContent>
           </Card>
 
-          {/* The invite and guest forms leave with the owner's role; a refusal they raised stays here. */}
-          {isOwner ? null : (failureAt('invite') ?? failureAt('guest-add'))}
+          {/* Whatever the owner controls raised stays here once the role is gone: no Retry, since the
+              write would be refused again. */}
+          {isOwner ||
+          failure === null ||
+          failure.write.kind === 'leave' ? null : (
+            <div ref={lostRole} tabIndex={-1} className="outline-none">
+              <Alert tone="danger" size="sm" onDismiss={() => setFailure(null)}>
+                {failure.message}
+              </Alert>
+            </div>
+          )}
 
           {/* The link-sharing card lands here. `COL-10` and `COL-11`
               (docs/plans/07-collaboration-and-sharing.md) are the tickets that fill it; until then
@@ -754,7 +775,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
       </div>
 
       <ConfirmDialog
-        open={removing !== null}
+        open={removing !== null && isOwner}
         onOpenChange={(open) => {
           if (!open) setRemoving(null)
         }}
@@ -763,7 +784,6 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         confirm={t('trips.people.remove.confirm')}
         cancel={t('trips.people.cancel')}
         busy={busy !== null && removing !== null}
-        disabled={!isOwner}
         failure={
           removing === null ? null : failureAt(`remove:${removing.memberId}`)
         }
@@ -775,21 +795,21 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         // the row that has just gone. Refused here, and the heading claimed in the same synchronous
         // handler: deferring the focus by a frame hands the window back to that restoration.
         onCloseAutoFocus={(event) => {
-          if (!removed.current) return
+          if (!removed.current && isOwner) return
           event.preventDefault()
-          membersHeading.current?.focus()
+          if (isOwner) membersHeading.current?.focus()
+          else lostRole.current?.focus()
         }}
       />
 
       <GuestNameDialog
         // Keyed by the guest so the field starts from their name each time it opens.
         key={`rename:${renaming?.guestId ?? 'closed'}`}
-        guest={renaming}
+        guest={isOwner ? renaming : null}
         onOpenChange={(open) => {
           if (!open) setRenaming(null)
         }}
         busy={renaming !== null && busy === `guest-rename:${renaming.guestId}`}
-        disabled={!isOwner}
         refusal={
           renaming === null
             ? undefined
@@ -812,7 +832,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
       />
 
       <ConfirmDialog
-        open={removingGuest !== null}
+        open={removingGuest !== null && isOwner}
         onOpenChange={(open) => {
           if (!open) setRemovingGuest(null)
         }}
@@ -826,7 +846,6 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           removingGuest !== null &&
           busy === `guest-remove:${removingGuest.guestId}`
         }
-        disabled={!isOwner}
         failure={
           removingGuest === null
             ? null
@@ -837,21 +856,21 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           void run({ kind: 'guest-remove', guestId: removingGuest.guestId })
         }}
         onCloseAutoFocus={(event) => {
-          if (!guestGone.current) return
+          if (!guestGone.current && isOwner) return
           event.preventDefault()
-          guestsHeading.current?.focus()
+          if (isOwner) guestsHeading.current?.focus()
+          else lostRole.current?.focus()
         }}
       />
 
       <MergeGuestDialog
         key={`merge:${merging?.guestId ?? 'closed'}`}
-        guest={merging}
+        guest={isOwner ? merging : null}
         members={members}
         onOpenChange={(open) => {
           if (!open) setMerging(null)
         }}
         busy={merging !== null && busy === `guest-merge:${merging.guestId}`}
-        disabled={!isOwner}
         failure={
           merging === null ? null : failureAt(`guest-merge:${merging.guestId}`)
         }
@@ -864,9 +883,10 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           })
         }}
         onCloseAutoFocus={(event) => {
-          if (!guestGone.current) return
+          if (!guestGone.current && isOwner) return
           event.preventDefault()
-          guestsHeading.current?.focus()
+          if (isOwner) guestsHeading.current?.focus()
+          else lostRole.current?.focus()
         }}
       />
 
@@ -1021,8 +1041,6 @@ interface ConfirmDialogProps {
   readonly confirm: string
   readonly cancel: string
   readonly busy: boolean
-  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
-  readonly disabled?: boolean
   readonly failure: React.ReactNode
   readonly onConfirm: () => void
   /** Overrides where focus lands on close. Left out, the dialog restores it to whatever opened it. */
@@ -1040,7 +1058,6 @@ export function ConfirmDialog({
   confirm,
   cancel,
   busy,
-  disabled = false,
   failure,
   onConfirm,
   onCloseAutoFocus,
@@ -1070,7 +1087,6 @@ export function ConfirmDialog({
             type="button"
             variant={confirmVariant}
             shape="pill"
-            disabled={disabled}
             loading={busy}
             loadingLabel={pendingLabel ?? confirm}
             onClick={onConfirm}
@@ -1164,8 +1180,6 @@ export interface GuestNameDialogProps {
   readonly guest: TripGuestParticipant | null
   readonly onOpenChange: (open: boolean) => void
   readonly busy: boolean
-  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
-  readonly disabled?: boolean
   /** A named refusal, rendered on the field. */
   readonly refusal: string | undefined
   /** An unexpected failure, rendered as an alert with Retry. */
@@ -1180,7 +1194,6 @@ export function GuestNameDialog({
   guest,
   onOpenChange,
   busy,
-  disabled = false,
   refusal,
   failure,
   onEdit,
@@ -1198,7 +1211,7 @@ export function GuestNameDialog({
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            if (filled && !disabled) onConfirm(value)
+            if (filled) onConfirm(value)
           }}
         >
           <DialogHeader>
@@ -1234,7 +1247,7 @@ export function GuestNameDialog({
             <Button
               type="submit"
               shape="pill"
-              disabled={!filled || disabled}
+              disabled={!filled}
               loading={busy}
               loadingLabel={t('trips.people.guest.rename.confirm')}
             >
@@ -1252,8 +1265,6 @@ export interface MergeGuestDialogProps {
   readonly members: ReadonlyArray<TripMemberParticipant>
   readonly onOpenChange: (open: boolean) => void
   readonly busy: boolean
-  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
-  readonly disabled?: boolean
   readonly failure: React.ReactNode
   readonly onConfirm: (memberId: string) => void
   readonly onCloseAutoFocus: (event: Event) => void
@@ -1270,7 +1281,6 @@ export function MergeGuestDialog({
   members,
   onOpenChange,
   busy,
-  disabled = false,
   failure,
   onConfirm,
   onCloseAutoFocus,
@@ -1329,7 +1339,7 @@ export function MergeGuestDialog({
             type="button"
             variant="danger"
             shape="pill"
-            disabled={target === null || disabled}
+            disabled={target === null}
             loading={busy}
             loadingLabel={t('trips.people.guest.merge.confirm')}
             onClick={() => {

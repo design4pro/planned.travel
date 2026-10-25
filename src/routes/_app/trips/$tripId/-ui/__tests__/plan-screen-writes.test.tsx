@@ -463,7 +463,7 @@ function demoted(view: Awaited<ReturnType<typeof mount>>) {
 }
 
 describe('a write the server refused', () => {
-  it('re-reads the board, keeps the refusal in the form and takes the controls away', async () => {
+  it('closes the form the re-read outlived, toasts the refusal and hands focus to the itinerary', async () => {
     mocks.write.mockRejectedValue(failedWith('refusal'))
     const view = await mount()
     mocks.invalidate.mockImplementation(async () => demoted(view))
@@ -472,22 +472,22 @@ describe('a write the server refused', () => {
     await act(async () => {})
 
     expect(mocks.invalidate).toHaveBeenCalledTimes(1)
-    expect(screen.getByRole('alert').textContent).toContain(
+    // The form cannot write with a permission it no longer has: it is gone, and says why.
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(mocks.write).toHaveBeenCalledTimes(1)
+    expect(mocks.error).toHaveBeenCalledWith(
       'You can no longer edit this trip.',
     )
-
-    // The dialog outlived the permission, and it must not write with it.
-    submit()
-    await act(async () => {})
-    expect(mocks.write).toHaveBeenCalledTimes(1)
-
-    await close()
+    // The control that held focus is gone with the write controls.
+    expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
+    expect(document.activeElement?.textContent).toContain('Select Place p1')
     expect(await offersEdit()).toBe(false)
   })
 
-  it('re-reads after a refused day-note write too', async () => {
+  it('closes a refused day-note form the same way', async () => {
     mocks.write.mockRejectedValue(failedWith('refusal'))
-    await mount()
+    const view = await mount()
+    mocks.invalidate.mockImplementation(async () => demoted(view))
     await userEvent.click(screen.getByRole('button', { name: 'Delete note' }))
     await userEvent.click(
       within(screen.getByRole('dialog')).getByRole('button', {
@@ -495,7 +495,12 @@ describe('a write the server refused', () => {
       }),
     )
     await act(async () => {})
+
     expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(mocks.error).toHaveBeenCalledWith(
+      'You can no longer edit this trip.',
+    )
   })
 
   it('toasts a refused late write and still re-reads', async () => {
@@ -529,7 +534,24 @@ describe('a write the server refused', () => {
     expect(mocks.error.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.invalidate.mock.invocationCallOrder[0],
     )
+    expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
     expect(await offersEdit()).toBe(false)
+  })
+
+  it('puts a refused move back when the re-read changes nothing', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    await mount()
+    await menu('Back to unplanned')
+    await act(async () => {})
+
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    // Still a scheduled stop: the optimistic order was rolled back, not left to the payload.
+    await userEvent.click(
+      screen.getAllByRole('button', { name: 'Actions for Place p1' })[0],
+    )
+    expect(
+      screen.queryByRole('menuitem', { name: 'Back to unplanned' }),
+    ).not.toBeNull()
   })
 
   it.each(['validation', 'unexpected'] as const)(

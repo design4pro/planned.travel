@@ -883,6 +883,27 @@ export function PlanScreen({
     setFormErrorAction(null)
   }, [releaseDialog])
 
+  // A refused write re-reads the board, and the re-read can take `editable` away from a screen the
+  // reader is working in: the form that outlived the permission is closed (its refusal moves to a
+  // toast), and focus goes to the itinerary, since the control that held it is gone.
+  const wasEditable = React.useRef(editable)
+  const focusAfterClose = React.useRef(false)
+  React.useEffect(() => {
+    if (wasEditable.current && !editable) {
+      if (formError !== null) toast.error(formError)
+      focusAfterClose.current = true
+    }
+    wasEditable.current = editable
+    if (!focusAfterClose.current) return
+    // Focus waits for the form to go: a modal form traps it.
+    if (dialog !== null) {
+      closeDialog()
+      return
+    }
+    focusAfterClose.current = false
+    railRef.current?.focus()
+  }, [closeDialog, dialog, editable, formError])
+
   /**
    * Runs a write and reports whether it landed. The form that was open when it started (if any)
    * owns it: its error slot shows a failure and `closeOnLanded` closes it. When that form is gone,
@@ -1232,7 +1253,11 @@ export function PlanScreen({
   /* ------------------------------------------------------------------ panels */
 
   const itinerary = (
-    <div ref={railRef} className="flex flex-col gap-1">
+    <div
+      ref={railRef}
+      tabIndex={-1}
+      className="flex flex-col gap-1 outline-none"
+    >
       {model.days.length === 0 ? (
         <div className="px-2 py-6 text-center">
           <SectionLabel as="h3" className="justify-center">
