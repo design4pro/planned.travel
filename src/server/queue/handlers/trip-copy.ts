@@ -54,6 +54,7 @@ import { enqueueTasks } from '../jobs'
 import { recomputeDelaySeconds, travelStatsTaskId } from './travel-stats'
 import {
   ALL_TIME_STAT_YEAR,
+  TaskAbandonedError,
   TaskConfigurationError,
   TaskPermanentError,
   isCalendarStatYear,
@@ -374,7 +375,8 @@ export function createTripCopyHandler(
       // with them; the notification does not, because an inbox they can no longer reach is not
       // where this is told.
       await discardTarget(probe, context, targetTripId, requestedBy, null)
-      throw new TaskPermanentError(
+      throw new TaskAbandonedError(
+        'requester-left',
         `User ${requestedBy} is no longer a member of ${context.orgId}; the trip copy is abandoned`,
       )
     }
@@ -391,7 +393,8 @@ export function createTripCopyHandler(
           throw cause
         }
         await discardTarget(scope, context, targetTripId, requestedBy, null)
-        throw new TaskPermanentError(
+        throw new TaskAbandonedError(
+          'trip-gone',
           `Trip ${targetTripId} is gone; there is nothing left to copy into`,
           { cause },
         )

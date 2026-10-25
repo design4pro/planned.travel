@@ -8,7 +8,13 @@
 import { describe, expect, it } from 'vitest'
 import { consumeTaskBatch, taskHandlers } from '../consumer'
 import { taskDeadKey, taskDoneKey } from '../jobs'
-import { TASK_KINDS, TaskPermanentError, TaskRetryableError } from '../types'
+import {
+  TASK_KINDS,
+  TaskAbandonedError,
+  TaskConfigurationError,
+  TaskPermanentError,
+  TaskRetryableError,
+} from '../types'
 import { createLogger, createMemorySink } from '../../observability/logger'
 
 import type {
@@ -502,6 +508,112 @@ describe('the dead-letter record', () => {
       object: { body: { id: 'task-exhausted' } },
     })
   })
+})
+
+describe('an abandoned task', () => {
+  const NOTIFY = 'owner@example.com'
+
+  function abandoningRegistry(): TaskHandlerRegistry {
+    return {
+      email: async () => {
+        throw new TaskAbandonedError(
+          'requester-left',
+          `User u-1 is no longer a member; the export is abandoned`,
+        )
+      },
+    }
+  }
+
+  function sensitiveEnvelope(): unknown {
+    return emailEnvelope({
+      payload: { to: [NOTIFY], subject: 'Lisbon plan', html: '<p>doc</p>' },
+    })
+  }
+
+  it('is acked without a dead-letter body, a task:dead: record or an error event', async () => {
+    const env = fakeEnv()
+    const sink = createMemorySink()
+    const msg = message(sensitiveEnvelope())
+
+    const result = await consumeTaskBatch(
+      batch([msg]),
+      env,
+      createLogger({ level: 'debug', sink }),
+      { registry: abandoningRegistry() },
+    )
+
+    expect(msg.settled).toEqual({ acked: 1, retried: [] })
+    expect(result).toMatchObject({
+      acked: 1,
+      abandoned: 1,
+      deadLettered: 0,
+      retried: 0,
+    })
+    expect([...env.FILES.puts.keys()]).toEqual([])
+    expect(
+      [...env.KV.store.keys()].filter((k) => k.startsWith('task:dead:')),
+    ).toEqual([])
+    expect(sink.records.filter((r) => r.level === 'error')).toEqual([])
+  })
+
+  it('logs one info line of ids and a reason code, and nothing from the envelope body', async () => {
+    const env = fakeEnv()
+    const sink = createMemorySink()
+
+    await consumeTaskBatch(
+      batch([message(sensitiveEnvelope())]),
+      env,
+      createLogger({ level: 'debug', sink }),
+      { registry: abandoningRegistry() },
+    )
+
+    const lines = sink.records.filter((r) => r.msg === 'task abandoned')
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatchObject({
+      level: 'info',
+      taskId: 'task-1',
+      orgId: 'org-1',
+      kind: 'email',
+      reason: 'requester-left',
+    })
+    const serialized = JSON.stringify(sink.records)
+    expect(serialized).not.toContain(NOTIFY)
+    expect(serialized).not.toContain('Lisbon plan')
+    expect(serialized).not.toContain('is no longer a member')
+  })
+
+  it.each([
+    ['a plain TaskPermanentError', () => new TaskPermanentError('nope'), 1],
+    [
+      'a TaskConfigurationError',
+      () => new TaskConfigurationError('EMAIL_API_KEY is not set'),
+      1,
+    ],
+    ['an exhausted retry', () => new TaskRetryableError('still failing'), 3],
+  ])(
+    'still writes both halves of the record for %s',
+    async (_name, make, attempts) => {
+      const env = fakeEnv()
+      const registry: TaskHandlerRegistry = {
+        email: async () => {
+          throw make()
+        },
+      }
+
+      const result = await consumeTaskBatch(
+        batch([message(emailEnvelope(), attempts)]),
+        env,
+        logger(),
+        { registry, now: () => Date.parse('2026-03-14T08:30:00.000Z') },
+      )
+
+      expect(result).toMatchObject({ deadLettered: 1, abandoned: 0 })
+      expect(env.KV.store.has(taskDeadKey('task-1'))).toBe(true)
+      expect(env.FILES.puts.has('dead-letter/2026-03-14/task-1.json')).toBe(
+        true,
+      )
+    },
+  )
 })
 
 /**

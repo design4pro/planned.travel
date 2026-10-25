@@ -599,6 +599,28 @@ export class TaskPermanentError extends Error {
   }
 }
 
+/** Why a task was dropped without being a failure. A code, never prose, so a log line stays free of content. */
+export type TaskAbandonedReason = 'requester-left' | 'trip-gone'
+
+/**
+ * A task whose premise ended before it ran: the requester left the workspace or the trip was
+ * deleted. Retrying cannot help, and it is not a fault either, so the consumer acks it without a
+ * dead letter. A subclass of {@link TaskPermanentError} so anything that asks `isPermanentFailure`
+ * still sees a permanent outcome.
+ */
+export class TaskAbandonedError extends TaskPermanentError {
+  readonly reason: TaskAbandonedReason
+  constructor(
+    reason: TaskAbandonedReason,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options)
+    this.name = 'TaskAbandonedError'
+    this.reason = reason
+  }
+}
+
 /** A missing or malformed binding/secret. Permanent until an operator fixes it. */
 export class TaskConfigurationError extends TaskPermanentError {
   constructor(message: string) {

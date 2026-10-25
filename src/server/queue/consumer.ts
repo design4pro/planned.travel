@@ -5,9 +5,13 @@
  * until `taskEnvelopeSchema` has vetted it, and the schema validates the kind
  * and its payload together, so a handler can never be handed the wrong shape.
  *
- * Three outcomes, and each maps onto exactly one Queues verb:
+ * Four outcomes, and each maps onto exactly one Queues verb:
  *
  * - success, or a duplicate of something already done → `ack`
+ * - abandoned (`TaskAbandonedError`: the requester left the workspace, or the trip is gone) → `ack`
+ *   with one `info` line of ids and a reason code. It is expected rather than a fault, and the
+ *   envelope holds the whole trip document, so it is not dead-lettered: a copy under a key with no
+ *   workspace segment would outlive the membership or trip that made the work moot
  * - permanent failure (bad payload, missing secret, absent source object) →
  *   dead-letter, then `ack`, because retrying cannot change the answer
  * - retryable failure (upstream 5xx, rate limit) → `retry` with jittered
@@ -28,6 +32,7 @@ import {
   taskDoneKey,
 } from './jobs'
 import {
+  TaskAbandonedError,
   TaskPermanentError,
   TaskRetryableError,
   isPermanentFailure,
@@ -210,6 +215,7 @@ export interface ConsumeResult {
   retried: number
   deadLettered: number
   duplicates: number
+  abandoned: number
 }
 
 /**
@@ -272,6 +278,7 @@ export async function consumeTaskBatch(
     retried: 0,
     deadLettered: 0,
     duplicates: 0,
+    abandoned: 0,
   }
 
   /**
@@ -353,9 +360,25 @@ export async function consumeTaskBatch(
     }
 
     try {
+      // `track` logs a thrown error at `error` level with its message and stack, which for an
+      // abandoned task would name the requester. It is returned as a value so it never gets there.
       const metrics = await jobLogger.track('task completed', () =>
-        runHandler(envelope, registry, context),
+        runHandler(envelope, registry, context).catch((error: unknown) => {
+          if (error instanceof TaskAbandonedError) return error
+          throw error
+        }),
       )
+      if (metrics instanceof TaskAbandonedError) {
+        // Ids and a code only: the envelope carries the requester and the notify address.
+        jobLogger.info('task abandoned', {
+          kind: envelope.kind,
+          reason: metrics.reason,
+        })
+        message.ack()
+        result.abandoned += 1
+        result.acked += 1
+        continue
+      }
       await env.KV.put(
         taskDoneKey(envelope.id),
         JSON.stringify({ at: now(), ...metrics }),
