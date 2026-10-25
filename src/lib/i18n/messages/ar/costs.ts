@@ -187,7 +187,7 @@ const messages = {
     many: '{others} مسافرًا آخر',
     other: '{others} مسافر آخر',
   },
-  'memberBar.notSplit': 'غير مخصّص لأي شخص',
+  'memberBar.notSplit': 'لم يُقسَّم بين أي مسافر',
   'totalTile.label': 'إجمالي إنفاق الرحلة',
   'totalTile.captionPlanned': 'المخطَّط {amount} لجميع المسافرين',
   'totalTile.captionBudget': 'ميزانية الرحلة {amount}',

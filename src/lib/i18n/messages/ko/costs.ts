@@ -171,7 +171,7 @@ const messages = {
   'memberBar.others': {
     other: '외 여행자 {others}명',
   },
-  'memberBar.notSplit': '누구에게도 배정되지 않음',
+  'memberBar.notSplit': '누구에게도 분담되지 않음',
   'totalTile.label': '여행 총지출',
   'totalTile.captionPlanned': '모든 여행자 합계 {amount} 예정',
   'totalTile.captionBudget': '여행 예산 {amount}',

@@ -665,14 +665,21 @@ export function ExpenseDialog({
                             departedPayer.name ?? t('costs.person.removed'),
                         },
                       ]),
-                  ...offered.map((person) => ({
-                    value: person.userId,
-                    label:
-                      person.userId === viewerUserId
-                        ? t('costs.payment.youSuffix', { name: person.name })
-                        : person.name,
-                    description: person.email === '' ? undefined : person.email,
-                  })),
+                  ...offered.map((person) => {
+                    const name =
+                      person.leftWorkspace === true
+                        ? t('costs.person.removed')
+                        : person.name
+                    return {
+                      value: person.userId,
+                      label:
+                        person.userId === viewerUserId
+                          ? t('costs.payment.youSuffix', { name })
+                          : name,
+                      description:
+                        person.email === '' ? undefined : person.email,
+                    }
+                  }),
                 ]}
                 value={form.paidBy}
                 onValueChange={(next) => setForm({ ...form, paidBy: next })}

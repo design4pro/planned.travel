@@ -104,13 +104,13 @@ describe('MemberBar', () => {
     ).toBeDefined()
   })
 
-  it('adds "Not assigned to anyone" last when the shares fall short', () => {
+  it('adds "Not split between anyone" last when the shares fall short', () => {
     renderBar([member('a', 600, 'Ana'), member('b', 300, 'Ben')], 1_000)
 
     expect(rows()).toEqual([
       'Ana, 60%',
       'Ben, 30%',
-      'Not assigned to anyone, 10%',
+      'Not split between anyone, 10%',
     ])
   })
 
@@ -131,7 +131,7 @@ describe('MemberBar', () => {
       'Ben, 25%',
       'Cy, 20%',
       '2 other travellers, 20%',
-      'Not assigned to anyone, 5%',
+      'Not split between anyone, 5%',
     ])
   })
 
@@ -206,7 +206,7 @@ describe('MemberBar', () => {
   it('shows a member and the remainder as two segments', () => {
     renderBar([member('a', 400, 'Ana')], 1_000)
 
-    expect(rows()).toEqual(['Ana, 40%', 'Not assigned to anyone, 60%'])
+    expect(rows()).toEqual(['Ana, 40%', 'Not split between anyone, 60%'])
   })
 
   it('uses only logical properties', () => {

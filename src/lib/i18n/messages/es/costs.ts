@@ -182,7 +182,7 @@ const messages = {
     many: '{others} viajeros más',
     other: '{others} viajeros más',
   },
-  'memberBar.notSplit': 'Sin asignar a nadie',
+  'memberBar.notSplit': 'Sin repartir entre nadie',
   'totalTile.label': 'Gasto total del viaje',
   'totalTile.captionPlanned': '{amount} previstos entre todos los viajeros',
   'totalTile.captionBudget': '{amount} de presupuesto para el viaje',

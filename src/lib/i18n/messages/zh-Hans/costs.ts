@@ -160,7 +160,7 @@ const messages = {
   'memberBar.others': {
     other: '另外 {others} 位旅行者',
   },
-  'memberBar.notSplit': '未分配给任何人',
+  'memberBar.notSplit': '未分摊给任何人',
   'totalTile.label': '行程总支出',
   'totalTile.captionPlanned': '所有旅行者合计计划 {amount}',
   'totalTile.captionBudget': '行程预算 {amount}',
