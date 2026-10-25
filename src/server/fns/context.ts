@@ -132,7 +132,8 @@ async function evictQuietly(
  * and picks up the stored role.
  *
  * Call it only after the database write succeeded, with ids taken from the rows the repository
- * resolved - never straight from the request.
+ * resolved - never straight from the request. A trip handler does not call it: it states the change
+ * to `settleTripAccessChange` (`./-lib/trip-access-change`), which owns which write closes whom.
  */
 export function closeRoomFor(
   scope: TenantScope,

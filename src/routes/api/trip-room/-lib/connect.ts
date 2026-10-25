@@ -59,8 +59,10 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * that change it close the sockets they affect: a new role, an add, a removal or a leave
  * closes that person's sockets (`closeRoomFor`). An archive, a restore or a visibility
  * narrowed to private closes the whole room (`closeRoom`); deletion closes its sockets
- * and erases stored room state (`resetRoom`). All three helpers live in
- * `src/server/fns/context.ts`. A person who stops belonging to the workspace
+ * and erases stored room state (`resetRoom`). The three helpers live in
+ * `src/server/fns/context.ts`, and the table that says which write calls which is
+ * `evictionsFor` in `src/server/fns/-lib/trip-access-change.ts`, the one caller of all
+ * three (#1181). A person who stops belonging to the workspace
  * (removed, leaving, or banned, signed out or deleted by the platform console) has
  * the sockets they hold in every room of it closed by the `trip-room-evict` task, and
  * so does a person who ends their own session (a password reset, a password change that
