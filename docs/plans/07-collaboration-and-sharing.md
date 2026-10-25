@@ -343,9 +343,9 @@ as `07-S2` does.
   and anyone on an archived trip connect as `viewer` and have their patches refused inside the room,
   and so does a session an operator is impersonating (docs/ACCESS.md §6.4, #1253).
   The role is read at connect, so the writes that change it close the sockets they affect and the
-  client's reconnect picks the stored role up: a role change, a removal or a leave closes that
-  person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
-  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
+  client's reconnect picks the stored role up: a role change, an add, a removal or a leave closes
+  that person's sockets, and an archive, a restore, a delete or a visibility narrowed to private
+  closes the whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
   stops belonging to the workspace - removed, leaving, or banned, signed out everywhere or deleted by
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends

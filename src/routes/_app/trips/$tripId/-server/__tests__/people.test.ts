@@ -805,6 +805,69 @@ describe('the trip room after a change of someone’s access', () => {
     expect(stubs.evicted).toEqual([])
   })
 
+  it('evicts an added person for every role, naming them from the row the repository returned', async () => {
+    for (const role of ['viewer', 'editor', 'owner'] as const) {
+      stubs.evicted = []
+      const userId = await tenant.addUser(`Added as ${role}`)
+
+      await inRequest(() =>
+        addTripMemberFn({ data: { tripId: fixture.tripId, userId, role } }),
+      )
+
+      expect(stubs.evicted).toEqual([{ tripId: fixture.tripId, userId }])
+    }
+  })
+
+  it('evicts an added person before the invitation is announced and the statistics move', async () => {
+    stubs.notifyRejects = true
+
+    await inRequest(() =>
+      addTripMemberFn({
+        data: {
+          tripId: fixture.tripId,
+          userId: fixture.outsiderId,
+          role: 'editor',
+        },
+      }),
+    )
+
+    expect(stubs.evicted).toEqual([
+      { tripId: fixture.tripId, userId: fixture.outsiderId },
+    ])
+    expect(envelopes().length).toBeGreaterThan(0)
+  })
+
+  it('asks for nothing when an add is refused: a non-owner, a person already on the trip, a stranger to the workspace', async () => {
+    stubs.scope = tenant.scopeFor(fixture.editorId)
+    const forbidden = await captureError(() =>
+      inRequest(() =>
+        addTripMemberFn({
+          data: {
+            tripId: fixture.tripId,
+            userId: fixture.outsiderId,
+            role: 'viewer',
+          },
+        }),
+      ),
+    )
+    expect((forbidden as RepositoryError).code).toBe('FORBIDDEN')
+
+    stubs.scope = owner
+    const foreign = await harness.seedTenant('elsewhere')
+    for (const userId of [fixture.viewerId, foreign.scope.ctx.userId]) {
+      await inRequest(() =>
+        addTripMemberFn({
+          data: { tripId: fixture.tripId, userId, role: 'editor' },
+        }),
+      )
+    }
+
+    expect(stubs.evicted).toEqual([])
+    expect(
+      (await listTripMembers(owner, fixture.tripId)).map((row) => row.userId),
+    ).not.toContain(foreign.scope.ctx.userId)
+  })
+
   it('evicts a removed member, naming the person from the membership row', async () => {
     const memberId = await memberIdOf(fixture.viewerId)
 
