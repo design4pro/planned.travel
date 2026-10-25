@@ -94,6 +94,7 @@ const messages = {
   'workspace.createPermanent':
     'Di planned.travel belum ada opsi untuk menghapus ruang kerja. Setiap ruang kerja yang Anda buat atau ikuti dihitung dalam batas: setelah Anda tergabung di {limit} ruang kerja, Anda tidak dapat membuat yang baru.',
   'workspace.createName': 'Nama ruang kerja',
+  'workspace.createNameRequired': 'Masukkan nama ruang kerja.',
   'workspace.createUpgrade':
     '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',
   'workspace.createLimitReached':

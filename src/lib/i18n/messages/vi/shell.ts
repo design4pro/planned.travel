@@ -101,6 +101,7 @@ const messages = {
   'workspace.createPermanent':
     'planned.travel chưa có tùy chọn xóa một không gian. Mỗi không gian bạn tạo hoặc tham gia đều được tính vào giới hạn: khi bạn thuộc {limit} không gian, bạn không thể tạo thêm.',
   'workspace.createName': 'Tên không gian',
+  'workspace.createNameRequired': 'Nhập tên cho không gian.',
   'workspace.createUpgrade':
     '“{workspace}” đang ở gói Miễn phí, và chỉ không gian ở gói trả phí mới tạo được không gian khác. Nếu một không gian khác của bạn đang ở gói trả phí, hãy chuyển sang đó và tạo từ đó. Nếu không, hãy nâng cấp “{workspace}”.',
   'workspace.createLimitReached':

@@ -971,24 +971,77 @@ describe('creating a workspace', () => {
     )
   })
 
-  it('will not submit a blank name', async () => {
-    const { user } = await openDialog()
+  it('keeps the create button enabled, so a blank name is answered rather than silently refused', async () => {
+    await openDialog()
 
     expect(
       screen
         .getByRole('button', { name: 'Create workspace' })
         .hasAttribute('disabled'),
-    ).toBe(true)
-    await user.type(
-      screen.getByRole('textbox', { name: /Workspace name/ }),
-      '   ',
-    )
+    ).toBe(false)
     expect(
       screen
-        .getByRole('button', { name: 'Create workspace' })
-        .hasAttribute('disabled'),
+        .getByRole('textbox', { name: /Workspace name/ })
+        .closest('form')
+        ?.hasAttribute('novalidate'),
     ).toBe(true)
+  })
+
+  it.each([
+    ['empty', ''],
+    ['spaces', '   '],
+    ['a zero-width space', '\u200B'],
+  ])(
+    'names the error and sends nothing for a name that is %s',
+    async (_label, name) => {
+      const { user } = await openDialog()
+      const input = screen.getByRole('textbox', { name: /Workspace name/ })
+      if (name !== '') await user.type(input, name)
+      await user.click(screen.getByRole('button', { name: 'Create workspace' }))
+
+      expect(screen.getByText('Enter a workspace name.')).toBeTruthy()
+      expect(input.getAttribute('aria-invalid')).toBe('true')
+      expect(descriptionOf(input)).toBe('Enter a workspace name.')
+      expect(input.getAttribute('required')).not.toBeNull()
+      expect(document.activeElement).toBe(input)
+      expect(workspace.create).not.toHaveBeenCalled()
+    },
+  )
+
+  it('answers Enter in the field the same way as the button: the error, no request', async () => {
+    const { user } = await openDialog()
+    const input = screen.getByRole('textbox', { name: /Workspace name/ })
+
+    await user.type(input, '\u200B{Enter}')
+
+    expect(screen.getByText('Enter a workspace name.')).toBeTruthy()
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(document.activeElement).toBe(input)
     expect(workspace.create).not.toHaveBeenCalled()
+  })
+
+  it('clears the error on the next edit and when the dialog is reopened', async () => {
+    const { user, open } = await openDialog()
+    const input = screen.getByRole('textbox', { name: /Workspace name/ })
+    await user.click(screen.getByRole('button', { name: 'Create workspace' }))
+    expect(screen.getByText('Enter a workspace name.')).toBeTruthy()
+
+    await user.type(input, 'L')
+
+    expect(screen.queryByText('Enter a workspace name.')).toBeNull()
+    expect(input.getAttribute('aria-invalid')).toBeNull()
+
+    await user.clear(input)
+    await user.click(screen.getByRole('button', { name: 'Create workspace' }))
+    expect(screen.getByText('Enter a workspace name.')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    await open()
+    await user.click(screen.getByRole('menuitem', { name: 'Create workspace' }))
+    await screen.findByRole('dialog', { name: 'Create a workspace' })
+
+    expect(screen.queryByText('Enter a workspace name.')).toBeNull()
   })
 
   it('creates it, closes the dialog and lands in the new workspace the way a switch does', async () => {

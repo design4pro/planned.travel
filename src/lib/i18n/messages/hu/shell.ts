@@ -83,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'A planned.travel még nem kínál lehetőséget munkaterület törlésére. Minden munkaterület, amelyet létrehoz vagy amelyhez csatlakozik, beleszámít a korlátba: ha {limit} munkaterület tagja, nem hozhat létre újat.',
   'workspace.createName': 'A munkaterület neve',
+  'workspace.createNameRequired': 'Adja meg a munkaterület nevét.',
   'workspace.createUpgrade':
     '„{workspace}” az Ingyenes csomagon van, és csak fizetős csomagon lévő munkaterület hozhat létre újat. Ha valamelyik másik munkaterülete fizetős csomagon van, váltson arra, és onnan hozza létre. Egyébként állítsa át fizetős csomagra a(z) „{workspace}” munkaterületet.',
   'workspace.createLimitReached':

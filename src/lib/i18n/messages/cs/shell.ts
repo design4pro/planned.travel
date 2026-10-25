@@ -85,6 +85,7 @@ const messages = {
   'workspace.createPermanent':
     'V planned.travel zatím není možnost prostor smazat. Každý prostor, který vytvoříte nebo do kterého vstoupíte, se počítá do limitu: jakmile patříte do {limit} prostorů, nelze vytvořit další.',
   'workspace.createName': 'Název prostoru',
+  'workspace.createNameRequired': 'Zadejte název prostoru.',
   'workspace.createUpgrade':
     '„{workspace}“ je v tarifu Zdarma a další prostor může vytvořit jen prostor s placeným tarifem. Pokud má některý z vašich dalších prostorů placený tarif, přepněte na něj a vytvořte prostor odtud. Jinak u prostoru „{workspace}“ přejděte na placený tarif.',
   'workspace.createLimitReached':

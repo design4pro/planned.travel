@@ -83,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'En planned.travel todavía no hay ninguna opción para eliminar un espacio. Cada espacio que creas o al que te unes cuenta para el límite: cuando perteneces a {limit} espacios, no puedes crear otro.',
   'workspace.createName': 'Nombre del espacio',
+  'workspace.createNameRequired': 'Escribe un nombre para el espacio.',
   'workspace.createUpgrade':
     '«{workspace}» está en el plan Gratis y solo un espacio con un plan de pago puede crear otro. Si alguno de tus otros espacios tiene un plan de pago, cambia a él y crea desde allí. Si no, mejora el plan de «{workspace}».',
   'workspace.createLimitReached':

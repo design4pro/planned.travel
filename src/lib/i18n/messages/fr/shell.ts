@@ -80,6 +80,7 @@ const messages = {
   'workspace.createPermanent':
     'Il n’existe pas encore d’option pour supprimer un espace dans planned.travel. Chaque espace que vous créez ou que vous rejoignez compte dans la limite : une fois que vous appartenez à {limit} espaces, vous ne pouvez plus en créer.',
   'workspace.createName': 'Nom de l’espace',
+  'workspace.createNameRequired': 'Saisissez un nom pour l’espace.',
   'workspace.createUpgrade':
     '« {workspace} » est dans l’offre Gratuite, et seul un espace avec une offre payante peut en créer un autre. Si l’un de vos autres espaces a une offre payante, passez-y et créez depuis celui-ci. Sinon, faites passer « {workspace} » à une offre payante.',
   'workspace.createLimitReached':

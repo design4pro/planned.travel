@@ -88,6 +88,7 @@ const messages = {
   'workspace.createPermanent':
     'W planned.travel nie ma jeszcze opcji usunięcia przestrzeni. Każda przestrzeń, którą utworzysz lub do której dołączysz, wlicza się do limitu: gdy należysz do {limit} przestrzeni, nie możesz utworzyć kolejnej.',
   'workspace.createName': 'Nazwa przestrzeni',
+  'workspace.createNameRequired': 'Wpisz nazwę przestrzeni.',
   'workspace.createUpgrade':
     '„{workspace}” jest w planie Darmowy, a kolejną przestrzeń może utworzyć tylko przestrzeń z planem płatnym. Jeśli któraś z innych Twoich przestrzeni ma plan płatny, przełącz się na nią i utwórz stamtąd. W przeciwnym razie przejdź w „{workspace}” na plan płatny.',
   'workspace.createLimitReached':

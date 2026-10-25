@@ -86,6 +86,7 @@ const messages = {
   'workspace.createPermanent':
     'لا يوجد في planned.travel خيار لحذف مساحة عمل حتى الآن. تُحتسب كل مساحة عمل تنشئها أو تنضم إليها ضمن الحد: عندما تنتمي إلى {limit} مساحة عمل، لن تتمكن من إنشاء مساحة جديدة.',
   'workspace.createName': 'اسم مساحة العمل',
+  'workspace.createNameRequired': 'أدخل اسمًا لمساحة العمل.',
   'workspace.createUpgrade':
     '«{workspace}» على الخطة المجانية، ولا يمكن إنشاء مساحة عمل أخرى إلا من مساحة عمل على خطة مدفوعة. إذا كانت إحدى مساحات عملك الأخرى على خطة مدفوعة، فانتقل إليها وأنشئ من هناك. وإلا فقم بترقية «{workspace}».',
   'workspace.createLimitReached':

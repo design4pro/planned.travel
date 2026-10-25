@@ -82,6 +82,7 @@ const messages = {
   'workspace.createPermanent':
     'A planned.travel encara no hi ha cap opció per suprimir un espai. Cada espai que crees o al qual t’uneixes compta dins el límit: quan pertanyis a {limit} espais, no en podràs crear cap més.',
   'workspace.createName': 'Nom de l’espai',
+  'workspace.createNameRequired': 'Introdueix un nom per a l’espai.',
   'workspace.createUpgrade':
     '«{workspace}» és al pla gratuït, i només un espai amb un pla de pagament en pot crear un altre. Si algun dels teus altres espais té un pla de pagament, canvia-hi i crea’n un des d’allà. Si no, millora el pla de «{workspace}».',
   'workspace.createLimitReached':

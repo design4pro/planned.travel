@@ -83,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'planned.travel’da henüz bir çalışma alanını silme seçeneği yok. Oluşturduğunuz veya katıldığınız her çalışma alanı sınıra dahildir: {limit} çalışma alanına üye olduğunuzda yenisini oluşturamazsınız.',
   'workspace.createName': 'Çalışma alanı adı',
+  'workspace.createNameRequired': 'Çalışma alanı için bir ad girin.',
   'workspace.createUpgrade':
     '“{workspace}” Ücretsiz planda; yeni bir çalışma alanını yalnızca ücretli planı olan bir çalışma alanı oluşturabilir. Diğer çalışma alanlarınızdan birinin ücretli planı varsa ona geçin ve oradan oluşturun. Aksi halde “{workspace}” alanını ücretli plana yükseltin.',
   'workspace.createLimitReached':

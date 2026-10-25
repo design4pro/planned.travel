@@ -66,6 +66,7 @@ const messages = {
   'workspace.createPermanent':
     'planned.travel には、ワークスペースを削除するオプションはまだありません。作成または参加したワークスペースはすべて上限に含まれ、{limit}個のワークスペースに所属すると、新しく作成することはできません。',
   'workspace.createName': 'ワークスペース名',
+  'workspace.createNameRequired': 'ワークスペース名を入力してください。',
   'workspace.createUpgrade':
     '「{workspace}」はフリープランで、ワークスペースを追加で作成できるのは有料プランのワークスペースだけです。ほかのワークスペースに有料プランのものがあれば、そちらに切り替えて作成してください。ない場合は「{workspace}」を有料プランにアップグレードしてください。',
   'workspace.createLimitReached': '上限いっぱいのワークスペースに所属しているため、新しく作成することはできません。',
