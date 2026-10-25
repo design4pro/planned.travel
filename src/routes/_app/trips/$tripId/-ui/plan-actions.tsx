@@ -55,7 +55,6 @@ import {
 } from '#/lib/geo/handoff'
 import { formatCoordinate, parsePosition } from '#/lib/geo/position'
 import { useTranslate } from '#/lib/i18n'
-import { reopenNoticeFor } from '#/lib/workspace-claim-store'
 
 import type { PlannerCategory, PlannerRow } from '#/components/planner'
 import type { Translate, MessageKey } from '#/lib/i18n'
@@ -116,12 +115,6 @@ const BOOKING: ReadonlyArray<{
 /** Narrows the select's string back to the column's own vocabulary. */
 function asBookingStatus(value: string): PlanReservationStatus {
   return BOOKING_STATUSES.find((entry) => entry === value) ?? 'none'
-}
-
-export function messageOf(error: unknown, fallback: string): string {
-  if (reopenNoticeFor(error)) return fallback
-  if (error instanceof Error && error.message.length > 0) return error.message
-  return fallback
 }
 
 function categoryOptions(
