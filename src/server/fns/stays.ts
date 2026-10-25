@@ -50,6 +50,8 @@ const stayFields = {
   /** The end of the check-in window; `''` when the property states none. */
   checkInEndTime: booking.startTime,
   checkOutTime: booking.endTime,
+  /** Declared here too: this object schema strips a key it has not been told about. */
+  expectedTripCurrency: booking.expectedTripCurrency,
 }
 
 export const stayInputSchema = z.object(stayFields)
