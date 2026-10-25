@@ -62,28 +62,41 @@ const stubs = vi.hoisted(() => ({
   evictedAtNotify: null as number | null,
   /** Awaited inside every eviction, before it is recorded: reads the database as the close sees it. */
   onEvict: null as (() => Promise<void>) | null,
+  /** When true, the room cannot be reached. */
+  roomThrows: false,
 }))
 
 /**
- * `#/server/fns/context` is where the room evictions live, and it imports `cloudflare:workers`,
- * which does not resolve in the plain-Node project this suite runs in. It is replaced wholesale with
- * a recorder; the helpers' own behaviour (the namespace they call, the warning they log) is held by
+ * The real `#/server/fns/context` runs here, over a recording `TRIP_ROOM`: its `cloudflare:workers`
+ * import does not resolve in the plain-Node project this suite runs in, so the Worker environment is
+ * replaced and the room's `/close` requests become the evictions below. That is what lets a case make
+ * the room throw and see the handler still answer. The namespace's own wire shape is held by
  * `src/server/fns/__tests__/room-eviction.test.ts`.
  */
-vi.mock('#/server/fns/context', () => ({
-  closeRoomFor: async (
-    _scope: TenantScope,
-    tripId: string,
-    userId: string,
-  ): Promise<void> => {
-    await stubs.onEvict?.()
-    stubs.evicted.push({ tripId, userId })
-  },
-  closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
-    await stubs.onEvict?.()
-    stubs.evicted.push({ tripId, userId: null })
+vi.mock('cloudflare:workers', () => ({
+  env: {
+    TRIP_ROOM: {
+      idFromName: (name: string) => name,
+      get: (tripId: string) => ({
+        fetch: async (request: Request): Promise<Response> => {
+          if (stubs.roomThrows) {
+            throw new Error('TRIP_ROOM is unreachable')
+          }
+          await stubs.onEvict?.()
+          const body = await request.text()
+          stubs.evicted.push({
+            tripId,
+            userId: body === '' ? null : JSON.parse(body).userId,
+          })
+          return new Response(null, { status: 200 })
+        },
+      }),
+    },
   },
 }))
+
+vi.mock('#/server/auth/session', () => ({ requireOrg: async () => null }))
+vi.mock('#/server/db/client', () => ({ getDb: () => null }))
 
 vi.mock('../../../../-server/context', async () => {
   const { AuthRequirementError } = await import('#/server/auth/tenant')
@@ -212,6 +225,7 @@ beforeEach(async () => {
   stubs.evicted = []
   stubs.evictedAtNotify = null
   stubs.onEvict = null
+  stubs.roomThrows = false
 
   const editorId = await tenant.addUser('An editor')
   const viewerId = await tenant.addUser('A reader')
@@ -874,9 +888,64 @@ describe('the trip room after a change of someone’s access', () => {
     }
 
     expect(stubs.evicted).toEqual([])
+    expect(envelopes()).toEqual([])
     expect(
       (await listTripMembers(owner, fixture.tripId)).map((row) => row.userId),
     ).not.toContain(foreign.scope.ctx.userId)
+  })
+
+  it('asks for nothing, and sends no statistics, when an add names a trip of another workspace', async () => {
+    const foreign = await harness.seedTenant('elsewhere')
+    stubs.scope = foreign.scope
+
+    const error = await captureError(() =>
+      inRequest(() =>
+        addTripMemberFn({
+          data: {
+            tripId: fixture.tripId,
+            userId: foreign.scope.ctx.userId,
+            role: 'editor',
+          },
+        }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(stubs.evicted).toEqual([])
+    expect(envelopes()).toEqual([])
+  })
+
+  it('still answers, with the write kept, when the room cannot be reached', async () => {
+    stubs.roomThrows = true
+    const memberId = await memberIdOf(fixture.viewerId)
+
+    // One person's sockets: a promotion.
+    await inRequest(() =>
+      setTripRoleFn({
+        data: { tripId: fixture.tripId, memberId, role: 'editor' },
+      }),
+    )
+    expect(
+      (await listTripMembers(owner, fixture.tripId)).find(
+        (row) => row.id === memberId,
+      )?.role,
+    ).toBe('editor')
+
+    // The whole room: a narrowing.
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'organization' },
+      }),
+    )
+    await inRequest(() =>
+      setTripVisibilityFn({
+        data: { tripId: fixture.tripId, visibility: 'private' },
+      }),
+    )
+    expect(
+      (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
+    ).toBe('private')
+    expect(stubs.evicted).toEqual([])
   })
 
   it('evicts a removed member, naming the person from the membership row', async () => {
