@@ -358,10 +358,13 @@ as `07-S2` does.
   sessions clears; only a D1 check closes it, #1085) (#1176); a revoke of the other sessions reads
   the person's other live session rows after it ran and ends each through Better Auth's adapter,
   row and blob, whether or not the per-user session index named it (#1240). The close is
-  best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
-  the room after the close, leaves the old role for at most the maximum socket age plus the
-  alarm interval (15 + 5 minutes, about 20 minutes). Refusing a connect minted before a
-  revocation is the exact race fix (#1085). The age cap adds one reconnect per open socket per
+  best effort: a room that cannot be reached leaves the old role for at most the maximum socket
+  age plus the alarm interval (15 + 5 minutes, about 20 minutes). A connect already in flight whose
+  upgrade reaches the room after the close is refused, not served: the identity carries `issuedAt`
+  (the app Worker's clock, taken before the role is read), a close carries `revokedAt` (the same
+  clock, taken after the write), the room keeps it as a watermark for 15 minutes and closes a
+  connect minted before it at once with the room-closed code, so the client reconnects through
+  the connect handler (#1085). The age cap adds one reconnect per open socket per
   maximum age: one app Worker request, a session read, two D1 reads and one Durable Object fetch,
   plus the screen loader re-read. Nothing in this stage relaxes any of that, and the provider does
   not pass a trip id the layout did not already resolve through its own loader.
