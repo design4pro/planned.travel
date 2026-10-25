@@ -3114,6 +3114,9 @@ outside the workspace has to travel before they can be put on a trip. No package
 why, and the argument is that the card grows two membership-fed affordances and should be designed
 once.
 
+> Superseded in part: the people count this stage describes as `countTripPeople` is now read by
+> `readTripCardFacts` (`src/server/repos/trip-cards.ts`), and `countTripPeople` no longer exists.
+
 ### Reference rows
 
 - `TRP-01` partial → **done**.

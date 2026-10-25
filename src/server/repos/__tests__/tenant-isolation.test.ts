@@ -277,6 +277,7 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
+import { readTripCardFacts } from '../trip-cards'
 import {
   addTripMember,
   archiveTrip,
@@ -308,7 +309,6 @@ import {
 } from '../trips'
 import {
   TripGuestMergeTargetError,
-  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -6435,10 +6435,10 @@ describe('tenant isolation', () => {
     })
   })
 
-  /** `01-S7` — the companion figure on every trip card, counted for a whole page at once. */
-  describe('trip people counts', () => {
+  /** `01-S7` — the companion figure on every trip card, read for a whole page at once. */
+  describe('trip card people counts', () => {
     it('counts only the caller’s trips, and gives a foreign id no entry rather than a zero', async () => {
-      const counts = await countTripPeople(alpha.tenant.scope, [
+      const facts = await readTripCardFacts(alpha.tenant.scope, [
         alpha.tripId,
         beta.tripId,
       ])
@@ -6446,18 +6446,20 @@ describe('tenant isolation', () => {
       const members = await listTripMembers(alpha.tenant.scope, alpha.tripId)
       const guests = await listTripGuests(alpha.tenant.scope, alpha.tripId)
       expect(guests.length).toBeGreaterThan(0)
-      expect(counts.get(alpha.tripId)).toBe(members.length + guests.length)
-      expect(counts.has(beta.tripId)).toBe(false)
-      expect([...counts.keys()]).toEqual([alpha.tripId])
+      expect(facts.get(alpha.tripId)?.peopleCount).toBe(
+        members.length + guests.length,
+      )
+      expect(facts.has(beta.tripId)).toBe(false)
+      expect([...facts.keys()]).toEqual([alpha.tripId])
     })
 
     it('answers an empty map for the other tenant’s ids alone', async () => {
       const betaMembers = await listTripMembers(beta.tenant.scope, beta.tripId)
       const betaGuests = await listTripGuests(beta.tenant.scope, beta.tripId)
 
-      expect(await countTripPeople(alpha.tenant.scope, [beta.tripId])).toEqual(
-        new Map(),
-      )
+      expect(
+        await readTripCardFacts(alpha.tenant.scope, [beta.tripId]),
+      ).toEqual(new Map())
 
       // A read, and nothing of B's moved under it.
       expect(await listTripMembers(beta.tenant.scope, beta.tripId)).toEqual(
@@ -6468,23 +6470,21 @@ describe('tenant isolation', () => {
       )
     })
 
-    it('reads a whole page in two grouped statements, never one per card', async () => {
+    it('reads a whole page in five statements, never one per card', async () => {
       const second = await createTrip(alpha.tenant.scope, {
         title: 'A second trip of A',
         currency: 'EUR',
       })
       harness.statements.length = 0
 
-      const counts = await countTripPeople(alpha.tenant.scope, [
+      const facts = await readTripCardFacts(alpha.tenant.scope, [
         alpha.tripId,
         second.id,
       ])
 
-      expect(counts.get(second.id)).toBe(1)
-      expect(harness.statements).toHaveLength(2)
-      for (const statement of harness.statements) {
-        expect(statement).toMatch(/group by/i)
-      }
+      expect(facts.get(second.id)?.peopleCount).toBe(1)
+      // One chunk: the readable ids and star, then places, members, guests and the caller's role.
+      expect(harness.statements).toHaveLength(5)
     })
 
     it('keeps every statement within D1’s bound-parameter limit for a full page of a hundred trips', async () => {
@@ -6494,12 +6494,12 @@ describe('tenant isolation', () => {
       ]
       harness.statements.length = 0
 
-      const counts = await countTripPeople(alpha.tenant.scope, page)
+      const facts = await readTripCardFacts(alpha.tenant.scope, page)
 
-      expect(counts.get(alpha.tripId)).toBeGreaterThan(0)
-      expect(counts.size).toBe(1)
-      // Two chunks, a members and a guests statement each.
-      expect(harness.statements).toHaveLength(4)
+      expect(facts.get(alpha.tripId)?.peopleCount).toBeGreaterThan(0)
+      expect(facts.size).toBe(1)
+      // Two chunks, five statements each.
+      expect(harness.statements).toHaveLength(10)
       for (const statement of harness.statements) {
         expect(statement.split('?').length - 1).toBeLessThanOrEqual(
           MAX_BOUND_PARAMETERS,
