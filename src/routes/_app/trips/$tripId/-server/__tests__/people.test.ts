@@ -58,6 +58,8 @@ const stubs = vi.hoisted(() => ({
   notifyRejects: false,
   /** Every room eviction asked for: one person's sockets, or (`userId` null) the whole room. */
   evicted: [] as Array<{ tripId: string; userId: string | null }>,
+  /** How many evictions had been asked for when `notify()` was first called; null until it is. */
+  evictedAtNotify: null as number | null,
 }))
 
 /**
@@ -121,6 +123,7 @@ vi.mock('#/server/repos', async (importOriginal) => {
     notify: async (
       ...args: Parameters<typeof actual.notify>
     ): ReturnType<typeof actual.notify> => {
+      stubs.evictedAtNotify ??= stubs.evicted.length
       if (stubs.notifyRejects) {
         throw new Error('D1_ERROR: the notification was not written')
       }
@@ -202,6 +205,7 @@ beforeEach(async () => {
   stubs.sent = []
   stubs.notifyRejects = false
   stubs.evicted = []
+  stubs.evictedAtNotify = null
 
   const editorId = await tenant.addUser('An editor')
   const viewerId = await tenant.addUser('A reader')
@@ -834,6 +838,7 @@ describe('the trip room after a change of someone’s access', () => {
     expect(stubs.evicted).toEqual([
       { tripId: fixture.tripId, userId: fixture.outsiderId },
     ])
+    expect(stubs.evictedAtNotify).toBe(1)
     expect(envelopes().length).toBeGreaterThan(0)
   })
 
