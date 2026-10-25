@@ -1440,6 +1440,9 @@ describe('work still in flight when the request deadline answers', () => {
 
     expect((await pending)[0].status).toBe('unavailable')
     expect(handed).toHaveLength(1)
+    expect(await Promise.race([handed[0], Promise.resolve('pending')])).toBe(
+      'pending',
+    )
     expect(w.cache.entries.has(forecastCacheKey(OSLO.lat, OSLO.lng))).toBe(
       false,
     )
@@ -1466,6 +1469,7 @@ describe('work still in flight when the request deadline answers', () => {
     const pending = resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
     await vi.advanceTimersByTimeAsync(WEATHER_DEADLINE_MS)
     expect((await pending)[0].status).toBe('unavailable')
+    expect(handed).toHaveLength(1)
     expect(w.cache.entries.has(FAILURE_KEY)).toBe(false)
 
     release()
@@ -1514,6 +1518,20 @@ describe('the hit and miss counts when the deadline cuts the reads short', () =>
     expect(info).toHaveBeenCalledWith(
       'weather.resolved',
       expect.objectContaining({ locations: 2, hits: 0, misses: 0 }),
+    )
+  })
+
+  it('counts a cache read that fails as a read miss', async () => {
+    const info = vi.fn()
+    const cache = memoryKv()
+    cache.get = () => Promise.reject(new Error('kv down'))
+    const w = world({ cache, logger: { warn: vi.fn(), info } })
+
+    await resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+
+    expect(info).toHaveBeenCalledWith(
+      'weather.resolved',
+      expect.objectContaining({ locations: 1, hits: 0, misses: 1 }),
     )
   })
 
