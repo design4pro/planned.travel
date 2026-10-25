@@ -717,7 +717,10 @@ function ListPanel(props: ListPanelProps) {
             size="sm"
             icon={<Icon />}
             title={t('modules.lists.items.empty.title')}
-            description={t('modules.lists.items.empty.body')}
+            // The body points at the composer below, which a reader who may not write is not given.
+            description={
+              canWrite ? t('modules.lists.items.empty.body') : undefined
+            }
           />
         </div>
       ) : visible.length === 0 ? (

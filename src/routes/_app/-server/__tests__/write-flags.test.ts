@@ -10,7 +10,7 @@ import type * as ReactStart from '@tanstack/react-start'
 /**
  * What the lists and files screens learn about the reader's write permission (#1091): the loader
  * answers it from the trip role and the archived state with `canWritePlan`, the one answer the plan
- * and the desks give. The server still refuses every such write; this is only the affordance.
+ * and the desks give. This is only the affordance: the guards live in the writers themselves.
  */
 const stubs = vi.hoisted(() => ({ scope: null as TenantScope | null }))
 

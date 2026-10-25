@@ -144,6 +144,19 @@ describe('ListsBoard', () => {
     expect(screen.queryByRole('button', { name: 'New list' })).toBeNull()
   })
 
+  it('does not point a reader of an empty list at a composer they are not given', () => {
+    mount([{ ...PACKING, items: [] }], false)
+
+    expect(screen.getByText('This list is empty')).not.toBeNull()
+    expect(screen.queryByText(/the field below/u)).toBeNull()
+  })
+
+  it('points a writer of an empty list at the composer', () => {
+    mount([{ ...PACKING, items: [] }], true)
+
+    expect(screen.getByText(/the field below/u)).not.toBeNull()
+  })
+
   it('says the trip is archived, whoever the reader is', () => {
     mount([PACKING], false, true)
 
