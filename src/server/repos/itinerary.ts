@@ -52,6 +52,7 @@ import { requireReservationOfTrip } from './reservations'
 import {
   TRIP_WRITE_ROLES,
   assertTripRole,
+  canReadTrip,
   requireTrip,
   requireWritableTrip,
   tripMemberUserIds,
@@ -610,13 +611,8 @@ export async function reorderAssignments(
   )
   const visibleIds = new Set<string>()
   for (const tripId of new Set(known.map((row) => row.tripId))) {
-    try {
-      await requireTrip(scope, tripId)
-    } catch (error) {
-      if (error instanceof NotFoundError) {
-        continue
-      }
-      throw error
+    if (!(await canReadTrip(scope, tripId))) {
+      continue
     }
     await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
     for (const row of known) {
