@@ -73,7 +73,10 @@ async function resolve(trip: SeedTrip) {
   const runtime = {
     cache,
     counters: cache,
-    outbound: { logger: { info: vi.fn(), warn: vi.fn() } },
+    outbound: {
+      waitUntil: () => undefined,
+      logger: { info: vi.fn(), warn: vi.fn() },
+    },
     organizationId: ORGANIZATION,
     ceiling: PLAN_RATE_CEILINGS.crew.weather_lookups_per_month,
     now: () => SEED_ANCHOR_INSTANT,

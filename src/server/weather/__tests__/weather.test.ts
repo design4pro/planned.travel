@@ -144,6 +144,7 @@ function world(
     cache?: MemoryKv
     counters?: MemoryKv
     logger?: WeatherRuntime['logger']
+    waitUntil?: OutboundRuntime['waitUntil']
   } = {},
 ): World {
   const cache = overrides.cache ?? memoryKv()
@@ -154,7 +155,10 @@ function world(
   const runtime: WeatherRuntime = {
     cache,
     counters,
-    outbound: silentOutbound(),
+    outbound: {
+      ...silentOutbound(),
+      ...(overrides.waitUntil ? { waitUntil: overrides.waitUntil } : {}),
+    },
     organizationId: 'org-alpha',
     ceiling: overrides.ceiling ?? 300,
     now: () => state.now,
@@ -1395,6 +1399,133 @@ describe('when the provider is in trouble', () => {
     await vi.advanceTimersByTimeAsync(WEATHER_DEADLINE_MS)
 
     expect((await pending)[0].status).toBe('unavailable')
+  })
+})
+
+describe('work still in flight when the request deadline answers', () => {
+  const FAILURE_KEY = failureCacheKey('met-norway', OSLO.lat, OSLO.lng)
+
+  /** A cache whose first read of the Oslo forecast waits for `release()`; every other read answers. */
+  function slowFirstRead() {
+    const cache = memoryKv()
+    const read = cache.get
+    let release: () => void = () => undefined
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let held = false
+    cache.get = async (key) => {
+      if (key === forecastCacheKey(OSLO.lat, OSLO.lng) && !held) {
+        held = true
+        await gate
+      }
+      return read(key)
+    }
+    return { cache, release }
+  }
+
+  function captured() {
+    const handed: Array<Promise<unknown>> = []
+    return { handed, waitUntil: (p: Promise<unknown>) => void handed.push(p) }
+  }
+
+  it('hands the resolution to waitUntil once, and the refreshed entry lands after the deadline answered', async () => {
+    vi.useFakeTimers({ now: NOW })
+    const { cache, release } = slowFirstRead()
+    const { handed, waitUntil } = captured()
+    const w = world({ cache, waitUntil })
+
+    const pending = resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    await vi.advanceTimersByTimeAsync(WEATHER_DEADLINE_MS)
+
+    expect((await pending)[0].status).toBe('unavailable')
+    expect(handed).toHaveLength(1)
+    expect(w.cache.entries.has(forecastCacheKey(OSLO.lat, OSLO.lng))).toBe(
+      false,
+    )
+
+    release()
+    await handed[0]
+
+    expect(w.provider.urls).toHaveLength(1)
+    expect(w.cache.entries.has(forecastCacheKey(OSLO.lat, OSLO.lng))).toBe(true)
+  })
+
+  it('writes the failure entry after the deadline answered, so the next reload spends nothing', async () => {
+    vi.useFakeTimers({ now: NOW })
+    const { cache, release } = slowFirstRead()
+    const { handed, waitUntil } = captured()
+    const w = world({
+      cache,
+      waitUntil,
+      provider: provider(() =>
+        Promise.resolve(new Response('no', { status: 503 })),
+      ),
+    })
+
+    const pending = resolveTripWeather(w.runtime, [day('2026-10-10')], ZONE)
+    await vi.advanceTimersByTimeAsync(WEATHER_DEADLINE_MS)
+    expect((await pending)[0].status).toBe('unavailable')
+    expect(w.cache.entries.has(FAILURE_KEY)).toBe(false)
+
+    release()
+    await handed[0]
+    expect(w.cache.entries.has(FAILURE_KEY)).toBe(true)
+    const callsAfterFirst = w.provider.urls.length
+    const spentAfterFirst = spent(w.counters)
+
+    const second = await resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10')],
+      ZONE,
+    )
+
+    expect(second[0].status).toBe('unavailable')
+    expect(w.provider.urls).toHaveLength(callsAfterFirst)
+    expect(spent(w.counters)).toBe(spentAfterFirst)
+  })
+})
+
+describe('the hit and miss counts when the deadline cuts the reads short', () => {
+  const PARIS = { lat: 48.8566, lng: 2.3522 }
+
+  async function resolveLogged(hang: (key: string) => boolean) {
+    vi.useFakeTimers({ now: NOW })
+    const info = vi.fn()
+    const cache = memoryKv()
+    const read = cache.get
+    cache.get = (key) =>
+      hang(key) ? new Promise<string | null>(() => undefined) : read(key)
+    const w = world({ cache, logger: { warn: vi.fn(), info } })
+
+    const pending = resolveTripWeather(
+      w.runtime,
+      [day('2026-10-10'), day('2026-10-10', PARIS)],
+      ZONE,
+    )
+    await vi.advanceTimersByTimeAsync(WEATHER_DEADLINE_MS)
+    await pending
+    return info
+  }
+
+  it('counts neither a hit nor a miss when no cache read answered', async () => {
+    const info = await resolveLogged(() => true)
+
+    expect(info).toHaveBeenCalledWith(
+      'weather.resolved',
+      expect.objectContaining({ locations: 2, hits: 0, misses: 0 }),
+    )
+  })
+
+  it('counts a miss only for the location whose read answered', async () => {
+    const info = await resolveLogged(
+      (key) => key === forecastCacheKey(PARIS.lat, PARIS.lng),
+    )
+
+    expect(info).toHaveBeenCalledWith(
+      'weather.resolved',
+      expect.objectContaining({ locations: 2, hits: 0, misses: 1 }),
+    )
   })
 })
 
