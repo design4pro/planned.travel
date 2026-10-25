@@ -7,6 +7,13 @@ import type { Locator, Page } from '@playwright/test'
 // journey overrides the tokens that carry it (`--safe-left` / `--safe-right`).
 const INSET = 50
 
+// The shell gutter without an inset: 16 / 24 / 32px from the base, `sm` (40rem) and `lg` (64rem).
+async function gutterAt(page: Page) {
+  const width = await page.evaluate(() => window.innerWidth)
+  if (width >= 1024) return 32
+  return width >= 640 ? 24 : 16
+}
+
 async function sidePadding(locator: Locator) {
   return locator.evaluate((element) => {
     const style = getComputedStyle(element)
@@ -35,9 +42,9 @@ test.describe('signed in', () => {
     await expect(well).toBeVisible()
 
     const before = await Promise.all([sidePadding(navRow), sidePadding(well)])
+    const gutter = await gutterAt(page)
     for (const padding of before) {
-      expect(padding.left).toBeLessThan(INSET)
-      expect(padding.right).toBeLessThan(INSET)
+      expect(padding).toEqual({ left: gutter, right: gutter })
     }
 
     await simulateNotch(page)
@@ -63,9 +70,9 @@ test.describe('signed out', () => {
       sidePadding(headerRow),
       sidePadding(footerRow),
     ])
+    const gutter = await gutterAt(page)
     for (const padding of before) {
-      expect(padding.left).toBeLessThan(INSET)
-      expect(padding.right).toBeLessThan(INSET)
+      expect(padding).toEqual({ left: gutter, right: gutter })
     }
 
     await simulateNotch(page)
