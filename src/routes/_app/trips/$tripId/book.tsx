@@ -122,11 +122,15 @@ function BookPage() {
           }
         />
 
-        {data.archived ? (
+        {data.canWrite ? null : (
           <Alert tone="info" size="sm">
-            {t('trips.book.readOnly.archived')}
+            {t(
+              data.archived
+                ? 'trips.book.readOnly.archived'
+                : 'trips.book.readOnly.role',
+            )}
           </Alert>
-        ) : null}
+        )}
 
         {data.canWrite ? (
           <ImportBookingsDialog

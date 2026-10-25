@@ -1196,6 +1196,12 @@ const messages = {
   'files.readOnly.title': '只读文件',
   'files.readOnly.role':
     '只有旅行所有者和编辑者可以上传、重命名或删除文件。你仍然可以下载文件。',
+  'files.readOnly.archived':
+    '此行程已归档，因此文件为只读。你仍然可以下载。恢复该行程后才能更改。',
+  'lists.readOnly.role':
+    '你可以查看这些清单。只有行程的所有者和编辑者可以更改。',
+  'lists.readOnly.archived':
+    '此行程已归档，因此清单为只读。恢复该行程后才能更改。',
   'vacay.kind.vacation': '休假',
   'vacay.kind.half_day': '半天休假',
   'vacay.kind.sick': '病假',

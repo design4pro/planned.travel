@@ -299,6 +299,8 @@ const messages = {
   'book.pinnedCaption': 'Disematkan pada satu hari rencana',
   'book.readOnly.archived':
     'Perjalanan ini diarsipkan, jadi pemesanan dan penginapannya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
+  'book.readOnly.role':
+    'Anda bisa melihat pemesanan dan penginapan ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Perubahan ini ditolak. Periksa keadaan perjalanan saat ini sebelum membuat perubahan lain.',
@@ -306,6 +308,8 @@ const messages = {
     'Perjalanan tidak dapat dimuat ulang. Coba lagi sebelum membuat perubahan.',
   'transports.readOnly.archived':
     'Perjalanan ini diarsipkan. Pulihkan untuk mengubah transportasi.',
+  'transports.readOnly.role':
+    'Anda bisa melihat transportasi ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   'transports.title': 'Transportasi',
   'transports.empty': 'Belum ada yang dicatat',
   'transports.count.transports': {

@@ -319,6 +319,8 @@ const messages = {
   'book.pinnedCaption': 'Épinglé à un jour du plan',
   'book.readOnly.archived':
     'Ce voyage est archivé, les réservations et les séjours sont donc en lecture seule. Restaurez le voyage pour les modifier.',
+  'book.readOnly.role':
+    'Vous pouvez consulter ces réservations et séjours. Seuls le propriétaire du voyage et les éditeurs peuvent les modifier.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Cette modification a été refusée. Vérifiez l’état actuel du voyage avant de faire d’autres modifications.',
@@ -326,6 +328,8 @@ const messages = {
     'Le voyage n’a pas pu être actualisé. Réessayez avant de faire des modifications.',
   'transports.readOnly.archived':
     'Ce voyage est archivé. Restaurez-le pour modifier les transports.',
+  'transports.readOnly.role':
+    'Vous pouvez consulter ces transports. Seuls le propriétaire du voyage et les éditeurs peuvent les modifier.',
   'transports.title': 'Trajets',
   'transports.empty': 'Rien de noté pour l’instant',
   'transports.count.transports': {

@@ -1259,6 +1259,12 @@ const messages = {
   'files.readOnly.title': '읽기 전용 파일',
   'files.readOnly.role':
     '여행 소유자와 편집자만 파일을 업로드하거나 이름을 변경하거나 삭제할 수 있습니다. 다운로드는 계속할 수 있습니다.',
+  'files.readOnly.archived':
+    '이 여행은 보관되어 있어 파일은 읽기 전용입니다. 다운로드는 계속 할 수 있습니다. 변경하려면 여행을 복원하세요.',
+  'lists.readOnly.role':
+    '이 목록은 볼 수만 있습니다. 여행 소유자와 편집자만 변경할 수 있습니다.',
+  'lists.readOnly.archived':
+    '이 여행은 보관되어 있어 목록은 읽기 전용입니다. 변경하려면 여행을 복원하세요.',
   'vacay.kind.vacation': '휴가',
   'vacay.kind.half_day': '반일 휴가',
   'vacay.kind.sick': '병가',

@@ -470,6 +470,8 @@ const messages = {
   'book.pinnedCaption': 'Pinned to a day of the plan',
   'book.readOnly.archived':
     'This trip is archived, so its bookings and stays are read-only. Restore the trip to change them.',
+  'book.readOnly.role':
+    'You can read these bookings and stays. Only the trip’s owner and editors can change them.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'This change was refused. Review the current trip before making more changes.',
@@ -477,6 +479,8 @@ const messages = {
     'The trip could not be refreshed. Try again before making changes.',
   'transports.readOnly.archived':
     'This trip is archived. Restore it to change transports.',
+  'transports.readOnly.role':
+    'You can read these transports. Only the trip’s owner and editors can change them.',
   'transports.title': 'Transports',
   'transports.empty': 'Nothing recorded yet',
   /**

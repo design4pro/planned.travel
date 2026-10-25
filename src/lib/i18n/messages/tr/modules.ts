@@ -1341,6 +1341,12 @@ const messages = {
   'files.readOnly.title': 'Salt okunur dosyalar',
   'files.readOnly.role':
     'Yalnızca seyahat sahipleri ve düzenleyicileri dosya yükleyebilir, yeniden adlandırabilir veya silebilir. Dosyaları indirmeye devam edebilirsin.',
+  'files.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden dosyalar salt okunur. Yine de indirebilirsiniz. Değiştirmek için seyahati geri yükleyin.',
+  'lists.readOnly.role':
+    'Bu listeleri görüntüleyebilirsiniz. Yalnızca seyahatin sahibi ve düzenleyiciler değiştirebilir.',
+  'lists.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden listeler salt okunur. Değiştirmek için seyahati geri yükleyin.',
   'vacay.kind.vacation': 'İzin',
   'vacay.kind.half_day': 'Yarım gün izin',
   'vacay.kind.sick': 'Hastalık izni',

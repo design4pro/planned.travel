@@ -1427,6 +1427,12 @@ const messages = {
   'files.readOnly.title': 'Soubory pouze pro čtení',
   'files.readOnly.role':
     'Pouze vlastníci a editoři cesty mohou soubory nahrávat, přejmenovávat nebo mazat. Stále je můžete stahovat.',
+  'files.readOnly.archived':
+    'Tato cesta je archivovaná, takže soubory jsou jen pro čtení. Stále je můžete stáhnout. Chcete-li je změnit, cestu obnovte.',
+  'lists.readOnly.role':
+    'Tyto seznamy si můžete prohlížet. Měnit je může jen vlastník cesty a ti, kdo mohou upravovat.',
+  'lists.readOnly.archived':
+    'Tato cesta je archivovaná, takže seznamy jsou jen pro čtení. Chcete-li je změnit, cestu obnovte.',
   'vacay.kind.vacation': 'Dovolená',
   'vacay.kind.half_day': 'Půlden dovolené',
   'vacay.kind.sick': 'Nemocenská',

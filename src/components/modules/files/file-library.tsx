@@ -141,6 +141,8 @@ function carriesFiles(data: DataTransfer): boolean {
 
 export interface FileLibraryProps {
   readonly canWrite: boolean
+  /** The reason a writer is refused, for the notice: an archived trip says to restore it. */
+  readonly archived: boolean
   readonly tripId: string
   readonly files: ReadonlyArray<FileData>
   readonly people: ReadonlyArray<FilePerson>
@@ -153,6 +155,7 @@ export interface FileLibraryProps {
 
 export function FileLibrary({
   canWrite,
+  archived,
   tripId,
   files,
   people,
@@ -679,7 +682,11 @@ export function FileLibrary({
         </ModulePanel>
       ) : (
         <Alert title={t('modules.files.readOnly.title')}>
-          {t('modules.files.readOnly.role')}
+          {t(
+            archived
+              ? 'modules.files.readOnly.archived'
+              : 'modules.files.readOnly.role',
+          )}
         </Alert>
       )}
 

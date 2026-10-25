@@ -304,6 +304,8 @@ const messages = {
   'book.pinnedCaption': 'Programın bir gününe sabitlendi',
   'book.readOnly.archived':
     'Bu seyahat arşivlendi, bu yüzden rezervasyonlar ve konaklamalar salt okunur. Değiştirmek için seyahati geri yükleyin.',
+  'book.readOnly.role':
+    'Bu rezervasyonları ve konaklamaları görüntüleyebilirsiniz. Yalnızca seyahatin sahibi ve düzenleyiciler değiştirebilir.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Bu değişiklik reddedildi. Başka değişiklikler yapmadan önce seyahatin güncel durumunu kontrol edin.',
@@ -311,6 +313,8 @@ const messages = {
     'Seyahat yenilenemedi. Değişiklik yapmadan önce tekrar deneyin.',
   'transports.readOnly.archived':
     'Bu seyahat arşivlenmiş. Ulaşımı değiştirmek için geri yükleyin.',
+  'transports.readOnly.role':
+    'Bu ulaşım kayıtlarını görüntüleyebilirsiniz. Yalnızca seyahatin sahibi ve düzenleyiciler değiştirebilir.',
   'transports.title': 'Yolculuklar',
   'transports.empty': 'Henüz bir kayıt yok',
   'transports.count.transports': {

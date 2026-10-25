@@ -47,11 +47,13 @@ const TEXT_DRAG = { dataTransfer: { types: ['text/plain'], files: [] } }
 function renderLibrary(
   canWrite = true,
   files: ReadonlyArray<FileData> = [],
+  archived = false,
 ): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <FileLibrary
         canWrite={canWrite}
+        archived={archived}
         tripId="trip-1"
         files={files}
         people={[]}
@@ -164,6 +166,17 @@ describe('the drop zone', () => {
     fireEvent.dragLeave(zone, FILES_DRAG)
     expect(stateOf(zone)).toBe('idle')
   })
+})
+
+it('says the trip is archived, not that the role is short, to a reader of an archived trip', () => {
+  renderLibrary(false, [], true)
+  expect(
+    screen.getByText(
+      'This trip is archived, so its files are read-only. You can still download them. Restore the trip to change them.',
+    ),
+  ).toBeTruthy()
+  expect(screen.queryByText(/Only trip owners and editors/)).toBeNull()
+  expect(document.querySelector('[data-part="file-drop"]')).toBeNull()
 })
 
 it('a reader has no upload surface or paste listener', () => {

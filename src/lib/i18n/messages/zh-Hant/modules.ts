@@ -1196,6 +1196,12 @@ const messages = {
   'files.readOnly.title': '唯讀檔案',
   'files.readOnly.role':
     '只有旅行擁有者和編輯者可以上傳、重新命名或刪除檔案。你仍然可以下載檔案。',
+  'files.readOnly.archived':
+    '此行程已封存，因此檔案為唯讀。你仍然可以下載。還原該行程後才能變更。',
+  'lists.readOnly.role':
+    '你可以查看這些清單。只有行程的擁有者和編輯者可以變更。',
+  'lists.readOnly.archived':
+    '此行程已封存，因此清單為唯讀。還原該行程後才能變更。',
   'vacay.kind.vacation': '休假',
   'vacay.kind.half_day': '半天休假',
   'vacay.kind.sick': '病假',

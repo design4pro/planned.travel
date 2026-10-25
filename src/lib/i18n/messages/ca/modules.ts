@@ -1415,6 +1415,12 @@ const messages = {
   'files.readOnly.title': 'Fitxers de només lectura',
   'files.readOnly.role':
     'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
+  'files.readOnly.archived':
+    'Aquest viatge està arxivat, així que els fitxers són només de lectura. Encara els pots baixar. Restaura el viatge per canviar-los.',
+  'lists.readOnly.role':
+    'Pots veure aquestes llistes. Només el propietari del viatge i qui pot editar les poden canviar.',
+  'lists.readOnly.archived':
+    'Aquest viatge està arxivat, així que les llistes són només de lectura. Restaura el viatge per canviar-les.',
   'vacay.kind.vacation': 'Vacances',
   'vacay.kind.half_day': 'Mig dia de vacances',
   'vacay.kind.sick': 'Baixa mèdica',

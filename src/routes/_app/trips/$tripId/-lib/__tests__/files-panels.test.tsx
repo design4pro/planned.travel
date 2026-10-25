@@ -51,6 +51,7 @@ afterEach(cleanup)
 it('renders the places and PDF panels together without duplicate React keys', () => {
   vi.spyOn(Route, 'useLoaderData').mockReturnValue({
     canWrite: true,
+    archived: false,
     files: [],
     tripBytes: 0,
     workspaceBytes: 0,
@@ -77,6 +78,7 @@ it.each([false, true])(
   (canWrite) => {
     vi.spyOn(Route, 'useLoaderData').mockReturnValue({
       canWrite,
+      archived: false,
       files: [],
       tripBytes: 0,
       workspaceBytes: 0,

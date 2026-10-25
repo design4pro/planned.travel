@@ -1287,6 +1287,12 @@ const messages = {
   'files.readOnly.title': 'Tệp chỉ đọc',
   'files.readOnly.role':
     'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể tải lên, đổi tên hoặc xóa tệp. Bạn vẫn có thể tải tệp xuống.',
+  'files.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ nên các tệp chỉ có thể xem. Bạn vẫn có thể tải xuống. Hãy khôi phục chuyến đi để thay đổi.',
+  'lists.readOnly.role':
+    'Bạn có thể xem các danh sách này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
+  'lists.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ nên các danh sách chỉ có thể xem. Hãy khôi phục chuyến đi để thay đổi.',
   'vacay.kind.vacation': 'Nghỉ phép',
   'vacay.kind.half_day': 'Nửa ngày nghỉ phép',
   'vacay.kind.sick': 'Nghỉ ốm',

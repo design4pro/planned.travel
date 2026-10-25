@@ -310,6 +310,8 @@ const messages = {
   'book.pinnedCaption': 'Vastgezet op een dag van de route',
   'book.readOnly.archived':
     'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
+  'book.readOnly.role':
+    'Je kunt deze boekingen en verblijven lezen. Alleen de eigenaar van de reis en bewerkers kunnen ze wijzigen.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Deze wijziging is geweigerd. Bekijk de huidige reis voordat je meer wijzigingen aanbrengt.',
@@ -317,6 +319,8 @@ const messages = {
     'De reis kon niet worden vernieuwd. Probeer het opnieuw voordat je wijzigingen aanbrengt.',
   'transports.readOnly.archived':
     'Deze reis is gearchiveerd. Herstel de reis om vervoer te wijzigen.',
+  'transports.readOnly.role':
+    'Je kunt dit vervoer lezen. Alleen de eigenaar van de reis en bewerkers kunnen het wijzigen.',
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',
   'transports.count.transports': {

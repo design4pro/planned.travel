@@ -62,7 +62,11 @@ function ListsPage() {
               ? 'No items yet'
               : `${formatNumber(overall.done, locale)} of ${formatNumber(overall.total, locale)} packed · ${formatPercent(overall.ratio, locale)}`
           }
-          actions={<NewListAction onClick={() => setNewListOpen(true)} />}
+          actions={
+            data.canWrite ? (
+              <NewListAction onClick={() => setNewListOpen(true)} />
+            ) : undefined
+          }
         />
 
         {overall.total === 0 && data.lists.length === 0 ? null : (
@@ -127,6 +131,8 @@ function ListsPage() {
           lists={data.lists}
           people={data.people}
           viewerUserId={shell.session.user.id}
+          canWrite={data.canWrite}
+          archived={data.archived}
           newListOpen={newListOpen}
           onNewListOpenChange={setNewListOpen}
         />

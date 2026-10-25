@@ -322,10 +322,11 @@ export function TransportsTimeline({
   }
 
   let noticeCopy = t('trips.transports.recovery.refused')
+  if (!canWrite) noticeCopy = t('trips.transports.readOnly.role')
   if (archived) noticeCopy = t('trips.transports.readOnly.archived')
   if (recovery === 'failed') noticeCopy = t('trips.transports.recovery.failed')
   const archiveNotice =
-    archived || recovery !== 'idle' ? (
+    archived || !canWrite || recovery !== 'idle' ? (
       <Alert
         ref={noticeRef}
         aria-busy={recovery === 'refreshing'}
