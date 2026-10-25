@@ -1172,4 +1172,108 @@ describe('the costs boundary', () => {
       expect(await shareUsers()).toEqual(before)
     })
   })
+
+  describe('a payer who has left the trip and holds no share, and a party to a payment who has left it', () => {
+    let ferryId: string
+    let paidAwayId: string
+    let owedAwayId: string
+
+    beforeEach(async () => {
+      paidAwayId = await tenant.addUser('Pia who paid and left')
+      owedAwayId = await tenant.addUser('Otto who was paid and left')
+      const paying = await addTripMember(tenant.scope, {
+        tripId,
+        userId: paidAwayId,
+        role: 'editor',
+      })
+      const owed = await addTripMember(tenant.scope, {
+        tripId,
+        userId: owedAwayId,
+        role: 'editor',
+      })
+      const ferry = await createExpense(tenant.scope, {
+        tripId,
+        title: 'Ferry',
+        amountMinor: 4_000,
+        spentOn: '2026-04-11',
+        paidBy: paidAwayId,
+        participants: [{ userId: ownerId }, { userId: payerId }],
+      })
+      ferryId = ferry.expense.id
+      await createSettlement(tenant.scope, {
+        ...payment(),
+        fromUserId: ownerId,
+        toUserId: owedAwayId,
+      })
+      await removeTripMember(tenant.scope, paying.id)
+      await removeTripMember(tenant.scope, owed.id)
+    })
+
+    it('lists them by name, so every part of the screen can word them', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      const byUser = new Map(
+        payload.departedPeople.map((person) => [person.userId, person.name]),
+      )
+      expect(byUser.get(paidAwayId)).toBe('Pia who paid and left')
+      expect(byUser.get(owedAwayId)).toBe('Otto who was paid and left')
+    })
+
+    it('lists a departed payer once, and never someone who is still on the trip', async () => {
+      const payload = await costsPayload(tenant.scope, tripId)
+
+      const ids = payload.departedPeople.map((person) => person.userId)
+      expect(ids.filter((id) => id === paidAwayId)).toHaveLength(1)
+      expect(ids).not.toContain(ownerId)
+      expect(ids).not.toContain(payerId)
+    })
+
+    it('keeps the payer when the edit sends it back unchanged', async () => {
+      stubs.scope = editor
+
+      await inStart(() =>
+        updateExpenseFn({
+          data: {
+            tripId,
+            expenseId: ferryId,
+            expense: {
+              ...body,
+              title: 'Ferry',
+              amountMinor: 4_000,
+              paidBy: paidAwayId,
+              participants: [{ userId: ownerId }, { userId: payerId }],
+            },
+          },
+        }),
+      )
+
+      const stored = (await costsPayload(tenant.scope, tripId)).expenses.find(
+        (row) => row.id === ferryId,
+      )
+      expect(stored?.paidBy).toBe(paidAwayId)
+    })
+
+    it('still refuses a departed person taken from another expense as the payer', async () => {
+      stubs.scope = editor
+      const error = await captureError(() =>
+        inStart(() =>
+          updateExpenseFn({
+            data: {
+              tripId,
+              expenseId: ferryId,
+              expense: {
+                ...body,
+                title: 'Ferry',
+                amountMinor: 4_000,
+                paidBy: owedAwayId,
+                participants: [{ userId: ownerId }, { userId: payerId }],
+              },
+            },
+          }),
+        ),
+      )
+
+      expect(error).toBeInstanceOf(NotFoundError)
+    })
+  })
 })

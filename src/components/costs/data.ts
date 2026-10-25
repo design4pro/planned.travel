@@ -27,6 +27,7 @@ import type { DisplayCurrency } from '#/lib/money'
 import type {
   CostsBalance,
   CostsCategoryTotal,
+  CostsDepartedPerson,
   CostsDisplayChoices,
   CostsExpense,
   CostsPayload,
@@ -145,6 +146,23 @@ export function offeredPeople(
   return people.filter(
     (person) =>
       person.leftWorkspace !== true || carried.includes(person.userId),
+  )
+}
+
+/**
+ * The one lookup every part of the costs screen names a person through: trip members first, then
+ * the departed travellers the payload lists. `undefined` is a person the payload does not know at
+ * all; a `null` name is a departed traveller this workspace has no profile for. Each caller words
+ * both from the catalogue, so the fallback stays where the sentence is.
+ */
+export function findPerson(
+  people: ReadonlyArray<CostsPerson>,
+  departedPeople: ReadonlyArray<CostsDepartedPerson>,
+  userId: string,
+): { readonly name: string | null; readonly image: string | null } | undefined {
+  return (
+    people.find((person) => person.userId === userId) ??
+    departedPeople.find((person) => person.userId === userId)
   )
 }
 

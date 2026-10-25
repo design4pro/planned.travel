@@ -70,6 +70,7 @@ function mount(
       <CostsRail
         snapshot={snapshot}
         people={PEOPLE}
+        departedPeople={[]}
         viewerUserId="u-1"
         currency="EUR"
         display={{ mode: 'per-trip', code: 'EUR' }}

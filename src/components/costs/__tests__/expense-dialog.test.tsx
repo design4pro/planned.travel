@@ -987,3 +987,88 @@ describe('the expense dialog in the reader’s language (#1217)', () => {
     expect(forint).not.toBe('Hungarian forint')
   })
 })
+
+describe('the payer of an expense whose payer has left the trip', () => {
+  const DEPARTED: ReadonlyArray<CostsDepartedPerson> = [
+    { userId: 'u9', name: 'Cy', image: null },
+    { userId: 'u8', name: 'Di', image: null },
+  ]
+  // Cy paid and holds no share; Di holds a share and did not pay.
+  const FERRY = expenseRow({
+    paidBy: 'u9',
+    shares: [
+      { userId: 'u1', shareMinor: 3_000, weight: 1, isSettled: false },
+      { userId: 'u8', shareMinor: 3_000, weight: 1, isSettled: false },
+    ],
+  })
+
+  async function payerOptions(
+    user: ReturnType<typeof userEvent.setup>,
+  ): Promise<Array<string | null>> {
+    await user.click(screen.getByRole('combobox', { name: 'Paid by' }))
+    return (await screen.findAllByRole('option')).map(
+      (option) => option.textContent,
+    )
+  }
+
+  it('keeps the payer selected under their name, with no email', async () => {
+    const user = hand()
+    open(undefined, { expense: FERRY, departedPeople: DEPARTED })
+
+    expect(screen.getByRole('combobox', { name: 'Paid by' }).textContent).toBe(
+      'Cy',
+    )
+    expect(await payerOptions(user)).toContain('Cy')
+  })
+
+  it('offers them only as the payer, not a departed share holder who did not pay', async () => {
+    const user = hand()
+    open(undefined, { expense: FERRY, departedPeople: DEPARTED })
+
+    const options = await payerOptions(user)
+    expect(options.some((name) => name?.includes('Di'))).toBe(false)
+  })
+
+  it('still offers them after the editor picks someone else, and sends them back unchanged', async () => {
+    const onSubmit = vi.fn(async (_value: ExpenseFormValue) => {})
+    const user = hand()
+    open(undefined, { expense: FERRY, departedPeople: DEPARTED, onSubmit })
+
+    await payerOptions(user)
+    await user.click(screen.getByRole('option', { name: /Bo/ }))
+    expect(await payerOptions(user)).toContain('Cy')
+    await user.click(screen.getByRole('option', { name: 'Cy' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    expect(onSubmit.mock.calls[0]?.[0].paidBy).toBe('u9')
+  })
+
+  it('words a payer the workspace no longer knows from the catalogue', async () => {
+    const user = hand()
+    open(undefined, {
+      expense: FERRY,
+      departedPeople: [{ userId: 'u9', name: null, image: null }],
+    })
+
+    expect(await payerOptions(user)).toContain('Removed traveller')
+  })
+
+  it('offers a departed person on no new expense', async () => {
+    const user = hand()
+    open(undefined, { departedPeople: DEPARTED })
+
+    const options = await payerOptions(user)
+    expect(options.some((name) => name?.includes('Cy'))).toBe(false)
+  })
+
+  it('does not offer a departed payer of another expense', async () => {
+    const user = hand()
+    open(undefined, {
+      expense: expenseRow({ paidBy: 'u1' }),
+      departedPeople: DEPARTED,
+    })
+
+    const options = await payerOptions(user)
+    expect(options.some((name) => name?.includes('Cy'))).toBe(false)
+  })
+})

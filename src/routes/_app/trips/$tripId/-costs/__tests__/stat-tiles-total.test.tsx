@@ -8,6 +8,7 @@ import De from '#/lib/i18n/messages/de/costs'
 import En from '#/lib/i18n/messages/en/costs'
 import { StatTiles } from '../stat-tiles'
 
+import type { ComponentProps } from 'react'
 import type { Catalogue, Locale } from '#/lib/i18n'
 import type { CostsSnapshot } from '#/components/costs'
 import type { CostsExpense, CostsPerson } from '#/server/fns/costs'
@@ -72,13 +73,19 @@ function snapshotOf(expenses: ReadonlyArray<CostsExpense>): CostsSnapshot {
   }
 }
 
-function mount(locale: Locale, messages: Catalogue, snapshot: CostsSnapshot) {
+function mount(
+  locale: Locale,
+  messages: Catalogue,
+  snapshot: CostsSnapshot,
+  departedPeople: ComponentProps<typeof StatTiles>['departedPeople'] = [],
+) {
   return render(
     <I18nProvider locale={locale} messages={messages}>
       <StatTiles
         snapshot={snapshot}
         totals={totalsFor(snapshot, 'u-me')}
         people={PEOPLE}
+        departedPeople={departedPeople}
         viewerUserId="u-me"
         currency="EUR"
         budgetTargetMinor={null}
@@ -109,6 +116,32 @@ describe('the "Total trip spend" tile', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['You, 40%', 'Mika, 40%', 'Removed traveller, 20%'])
+  })
+
+  it('names a departed traveller by name, and the catalogue only when the workspace has none', () => {
+    mount('en', namespaceCatalogue('costs', En), snapshot, [
+      { userId: 'u-gone', name: 'Gil', image: null },
+    ])
+
+    const list = screen.getByRole('list', { name: 'Who it was spent on' })
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['You, 40%', 'Mika, 40%', 'Gil, 20%'])
+  })
+
+  it('words a departed traveller with no name from the reader’s own locale', () => {
+    mount('de', namespaceCatalogue('costs', De), snapshot, [
+      { userId: 'u-gone', name: null, image: null },
+    ])
+
+    const list = screen.getByRole('list', { name: De['memberBar.label'] })
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toContainEqual(expect.stringContaining(De['person.removed']))
   })
 
   it('renders its label, caption and figures from the catalogue', () => {

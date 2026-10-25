@@ -145,6 +145,7 @@ function open(
         onOpenChange={handles.onOpenChange}
         currency="EUR"
         people={PEOPLE}
+        departedPeople={[]}
         loadPreview={handles.loadPreview}
         commit={handles.commit}
         readCurrency={handles.readCurrency}
@@ -1032,6 +1033,7 @@ describe('the currency picker in the reader’s language (#1217)', () => {
           onOpenChange={() => {}}
           currency="EUR"
           people={PEOPLE}
+          departedPeople={[]}
           loadPreview={async () => preview()}
           commit={async () => undefined}
           readCurrency={async () => 'EUR'}

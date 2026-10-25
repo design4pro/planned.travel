@@ -51,6 +51,7 @@ function show(rows: ReadonlyArray<CostsExpense>, canWrite = true): void {
       <ExpenseList
         rows={rows}
         people={[]}
+        departedPeople={[]}
         viewerUserId="u1"
         currency="EUR"
         display={{ mode: 'per-trip', code: 'EUR' }}
