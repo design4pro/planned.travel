@@ -101,7 +101,7 @@ export interface TripCard {
   readonly copyPending: boolean
   readonly placeCount: number
   /**
-   * Members plus guests on this trip (`countTripPeople`, `01-S7`) — the companion figure on the
+   * Members plus guests on this trip (`readTripCardFacts`, `01-S7`) — the companion figure on the
    * prominent card and the list row. Zero only when the count answered nothing for this trip.
    */
   readonly peopleCount: number

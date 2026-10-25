@@ -98,6 +98,7 @@ import {
   updateFile,
 } from '../files'
 import { createPlace } from '../places'
+import { readTripCardFacts } from '../trip-cards'
 import {
   clearReservationImported,
   createReservation,
@@ -133,7 +134,6 @@ import {
   updateTripMember,
 } from '../trips'
 import {
-  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -268,11 +268,11 @@ describe('member isolation', () => {
         displayName: 'Anna',
       })
       expect(
-        (await countTripPeople(alpha.scope, [fixture.tripId])).get(
+        (await readTripCardFacts(alpha.scope, [fixture.tripId])).get(
           fixture.tripId,
-        ),
+        )?.peopleCount,
       ).toBe(2)
-      expect(await countTripPeople(stranger, [fixture.tripId])).toEqual(
+      expect(await readTripCardFacts(stranger, [fixture.tripId])).toEqual(
         new Map(),
       )
 
