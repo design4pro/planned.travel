@@ -553,6 +553,70 @@ describe('a write the server refused', () => {
     expect(document.activeElement?.tagName).toBe('H1')
   })
 
+  describe('on a phone, where the plan lives in a modal sheet', () => {
+    /** Whether the focused element sits in content a modal hides from a screen reader. */
+    function focusIsHidden(): boolean {
+      for (
+        let node: Element | null = document.activeElement;
+        node !== null;
+        node = node.parentElement
+      ) {
+        if (
+          node.getAttribute('aria-hidden') === 'true' ||
+          node.hasAttribute('inert')
+        )
+          return true
+      }
+      return false
+    }
+
+    beforeEach(() => {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn(() => ({
+          matches: false,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
+      )
+    })
+
+    it('hands focus to the sheet title when the sheet shows the places tab', async () => {
+      mocks.write.mockRejectedValue(failedWith('refusal'))
+      const view = await mount()
+      mocks.invalidate.mockImplementation(async () => demoted(view))
+      await userEvent.click(screen.getByRole('button', { name: 'Places' }))
+      await userEvent.click(
+        screen.getByRole('button', { name: /^Add a place$/ }),
+      )
+      await userEvent.type(screen.getByLabelText(/^Name/), 'New place')
+      submit()
+      await act(async () => {})
+
+      expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+      expect(mocks.write).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('dialog', { name: 'Plan' })).toBeTruthy()
+      // The itinerary is not mounted on this tab and the page title is behind the modal sheet.
+      expect(document.activeElement?.textContent).toBe('Plan')
+      expect(document.activeElement?.getAttribute('tabindex')).toBe('-1')
+      expect(focusIsHidden()).toBe(false)
+    })
+
+    it('hands focus to the itinerary inside the sheet when it shows that tab', async () => {
+      mocks.write.mockRejectedValue(failedWith('refusal'))
+      const view = await mount()
+      mocks.invalidate.mockImplementation(async () => demoted(view))
+      await userEvent.click(screen.getByRole('button', { name: 'Days' }))
+      await menu('Edit place')
+      submit()
+      await act(async () => {})
+
+      expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+      expect(document.activeElement?.textContent).toContain('Select Place p1')
+      expect(focusIsHidden()).toBe(false)
+    })
+  })
+
   it('puts a refused move back when the re-read changes nothing', async () => {
     mocks.write.mockRejectedValue(failedWith('refusal'))
     await mount()

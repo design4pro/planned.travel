@@ -895,6 +895,7 @@ export function PlanScreen({
     null,
   )
   const titleRef = React.useRef<HTMLHeadingElement | null>(null)
+  const sheetTitleRef = React.useRef<HTMLHeadingElement | null>(null)
   React.useEffect(() => {
     if (wasEditable.current && !editable) {
       lostWrite.current = { refusal: formRefusal.current }
@@ -911,7 +912,9 @@ export function PlanScreen({
     }
     lostWrite.current = null
     if (lost.refusal !== null) toast.error(lost.refusal)
-    ;(railRef.current ?? titleRef.current)?.focus()
+    // An open phone sheet is modal and hides the page behind it, so its own title comes before the
+    // page title: the itinerary is only mounted while the sheet shows that tab.
+    ;(railRef.current ?? sheetTitleRef.current ?? titleRef.current)?.focus()
   }, [closeDialog, dialog, editable])
 
   /**
@@ -1435,6 +1438,7 @@ export function PlanScreen({
         addButton={addButton}
         railFooter={railFooter}
         titleRef={titleRef}
+        sheetTitleRef={sheetTitleRef}
         scheduledCount={String(model.scheduledCount)}
         placesCount={String(
           placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,

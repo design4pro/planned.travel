@@ -174,6 +174,7 @@ export function PlanWorkspace({
   resizeLeftLabel,
   resizeRightLabel,
   titleRef,
+  sheetTitleRef,
   children,
 }: {
   readonly layout: ReturnType<typeof usePlanWorkspace>
@@ -189,6 +190,8 @@ export function PlanWorkspace({
   readonly resizeRightLabel: string
   /** A focus target that is always mounted, for when the panels are collapsed or closed. */
   readonly titleRef?: React.Ref<HTMLHeadingElement>
+  /** The same for the open mobile sheet: the page behind a modal sheet is hidden from a screen reader. */
+  readonly sheetTitleRef?: React.Ref<HTMLHeadingElement>
   readonly children: React.ReactNode
 }) {
   const t = useTranslate()
@@ -327,7 +330,13 @@ export function PlanWorkspace({
       >
         <SheetContent side="bottom" className="max-h-[86dvh]">
           <SheetHeader className="pe-14">
-            <SheetTitle>{t('shell.trip.tab.plan')}</SheetTitle>
+            <SheetTitle
+              ref={sheetTitleRef}
+              tabIndex={-1}
+              className="outline-none"
+            >
+              {t('shell.trip.tab.plan')}
+            </SheetTitle>
           </SheetHeader>
           <SheetBody className="px-3 py-3">
             <Tabs
