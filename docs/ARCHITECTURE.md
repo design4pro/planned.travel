@@ -207,7 +207,8 @@ slices that matter.
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
 entry rule. These are architectural paths; some surfaces remain planned. Bounded
 `…Unscoped` repo functions take a plain `Database` only under SPEC §5 FU-3; this does not add
-another catalog member.
+another catalog member. Better Auth's own tables reached through its adapter (the passkey plugin's
+user-keyed `passkey` table) are not application SQL and not a fourth path (SPEC §6).
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
   `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three

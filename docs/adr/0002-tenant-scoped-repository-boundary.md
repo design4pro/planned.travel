@@ -18,3 +18,7 @@ The repository layer is the deep module of this codebase: a small interface hidi
 ### Amendment, 2026-10-24 - the stated exceptions are three, and closed
 
 The Decision above names `server/catalog` as the single stated exception. `docs/SPEC.md` §6 now names three, and closes the list: `server/catalog`, the bounded `…Unscoped` repository shape, and the identity-table SQL of `src/server/auth/provisioning.ts` (`user` read, `organization` and `member` written; a create has no tenant scope yet, so there is none to pass). The module predates the rule's wording and the contract is brought into line with the code rather than the writes being moved (#989). Adding a table to that module is a contract change.
+
+### Clarification, 2026-10-25 - Better Auth's adapter is not application SQL
+
+The Decision and the amendment above speak of application SQL. Better Auth's own tables reached through the library's adapter, as `src/server/auth/passkey/plugin.ts` does for the user-keyed `passkey` table, are not application SQL and are neither a fourth exception nor a precedent (SPEC §6; #1187). Tenant queries still pass through the tenant-scoped repository, and the catalog, `…Unscoped` and provisioning rules above are unchanged.

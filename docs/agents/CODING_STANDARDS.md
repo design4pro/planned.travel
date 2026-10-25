@@ -5,6 +5,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 ## Layering (contract, not style)
 
 - All SQL lives in `src/server/repos` and passes through the tenant-scoped base repository — the tenant filter must not be removable. The stated exceptions are three, and closed (SPEC §6): `src/server/auth/provisioning.ts` (identity tables `user`, `organization`, `member` only), the `…Unscoped` shape below and `server/catalog` (exactly four members: global tables, the bounded reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and the ids-only tenant audit retention discovery read, SPEC §5). An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6); raw SQL against an auth table outside the provisioning module is still a violation.
 - Routes call server functions (`server/fns`); server functions call repos. No SQL anywhere else.
 - `components/ui` never fetches data and never imports from `server/`.
 - `server/public` returns only named, column-whitelisted read-only projections.
