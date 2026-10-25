@@ -892,7 +892,7 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
     })
   })
 
-  it('refreshes, names the new currency, keeps what was typed and moves the price to it', async () => {
+  it('refreshes, names the new currency and keeps what was typed in the currency it is saved in', async () => {
     const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
     reservations.update.mockRejectedValue(REFUSAL)
     const dialog = mountAt('JPY')
@@ -911,11 +911,25 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
       await screen.findByText(/budget currency of this trip is now EUR/u),
     ).not.toBeNull()
     expect(priceInput()?.value).toBe('31000')
-    expect(document.body.textContent).toContain('EUR')
+    expect(document.body.textContent).toContain('JPY')
     expect(error).not.toHaveBeenCalled()
   })
 
-  it('saves again under the refreshed currency', async () => {
+  it('moves a price that only mirrored the trip to the new currency', async () => {
+    reservations.update.mockRejectedValue(REFUSAL)
+    const dialog = mountAt('JPY', { ...DINNER, currency: null })
+    submitTheForm()
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(1))
+
+    dialog.refresh('EUR')
+
+    await screen.findByText(/budget currency of this trip is now EUR/u)
+    expect(priceInput()?.value).toBe('24000')
+    expect(document.body.textContent).toContain('EUR')
+    expect(document.body.textContent).not.toContain('JPY')
+  })
+
+  it('does not save again until the price has been looked at, and keeps the booking in its own currency', async () => {
     reservations.update.mockRejectedValueOnce(REFUSAL).mockResolvedValueOnce({
       reservationId: 'booking-3',
       ...written('updated'),
@@ -927,10 +941,21 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
     await screen.findByText(/budget currency of this trip is now EUR/u)
 
     submitTheForm()
+    await act(async () => {})
+    expect(reservations.update).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(priceInput() as HTMLInputElement, {
+      target: { value: '25000' },
+    })
+    submitTheForm()
 
     await vi.waitFor(() => expect(reservations.update).toHaveBeenCalledTimes(2))
     expect(reservations.update.mock.calls[1]?.[0]).toMatchObject({
-      data: { expectedTripCurrency: 'EUR', currency: 'EUR' },
+      data: {
+        expectedTripCurrency: 'EUR',
+        currency: 'JPY',
+        priceMinor: 25_000,
+      },
     })
   })
 

@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   CurrencyRefusalError,
   TripArchivedError,
+  TripRoleError,
   addTripMember,
   archiveTrip,
   createTrip,
@@ -491,6 +492,7 @@ describe('a stay saved under a trip currency that is no longer the trip’s', ()
       ),
     )
 
+    expect(error).toBeInstanceOf(TripRoleError)
     expect(error).not.toBeInstanceOf(CurrencyRefusalError)
     expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
   })

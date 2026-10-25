@@ -254,13 +254,14 @@ export function BookingDialog({
   const [saving, setSaving] = useState(false)
   const priceRef = useRef<HTMLInputElement>(null)
   // The trip was re-based while this was open and the save was refused: what was typed stays, the
-  // screen refreshes, and the currency control follows the trip (adopted below).
+  // screen refreshes, and a currency that only mirrored the trip follows it (adopted below).
   const stale = useStaleTripCurrency(currency, saving, () => priceRef.current)
   const adopt = stale.adopt
   if (adopt !== null) {
     stale.adopted()
+    // A booking saved with a currency of its own keeps it: its digits are still right in it.
     setDraft((current) =>
-      currencyCode(current.currency) === adopt.from
+      booking?.currency == null && currencyCode(current.currency) === adopt.from
         ? { ...current, currency: adopt.to }
         : current,
     )
@@ -409,6 +410,9 @@ export function BookingDialog({
     [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
+  // After the refusal the typed digits may be in the old currency: the price has to be looked at
+  // (edited) before it is saved again, as in the Costs dialogs. No price typed, nothing to look at.
+  const priceBlocked = stale.messageFor !== null && draft.price.trim() !== ''
   const saveError =
     stale.messageFor === null
       ? action.error
@@ -466,7 +470,7 @@ export function BookingDialog({
 
   async function submit(): Promise<void> {
     setTouched(true)
-    if (invalid) {
+    if (invalid || priceBlocked) {
       return
     }
     const session = sessionRef.current
@@ -789,7 +793,10 @@ export function BookingDialog({
                   <Input
                     ref={priceRef}
                     value={draft.price}
-                    onChange={(event) => set('price', event.target.value)}
+                    onChange={(event) => {
+                      stale.dismiss()
+                      set('price', event.target.value)
+                    }}
                     inputMode="decimal"
                     placeholder="0.00"
                     trailing={
@@ -975,7 +982,7 @@ export function BookingDialog({
             form={splitStale ? undefined : formId}
             variant="primary"
             shape="pill"
-            disabled={!splitStale && touched && invalid}
+            disabled={(!splitStale && touched && invalid) || priceBlocked}
             loading={action.pending}
             loadingLabel={t('modules.book.action.saving')}
             onClick={splitStale ? () => onOpenChange(false) : undefined}

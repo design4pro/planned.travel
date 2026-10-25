@@ -323,7 +323,8 @@ The booking and stay editors are guarded the same way (#1247): `createBookingFn`
 booking and on the stay schemas separately), compare it with the trip `requireWritableBookingTrip`
 already resolved, after the role and, on an update, after the row is matched to the trip, and never
 store it. Booking sync still passes none. The editors send the currency their loader returned and
-answer the refusal the way the Costs dialogs do.
+answer the refusal the way the Costs dialogs do: a booking saved with a currency of its own keeps it, a price that only
+mirrored the trip moves to the new currency, and either way a typed price has to be edited before it is saved again.
 
 **The window that stays, named.** The check and the write are two statements (`createExpense`
 et al. insert in several), so a stale write that lands between a re-basing's read and its batch is
