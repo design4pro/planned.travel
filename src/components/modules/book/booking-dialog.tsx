@@ -12,6 +12,7 @@
  * stay's own writes, which record the booking and its nights together.
  */
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import {
   Bed,
   Landmark,
@@ -40,9 +41,11 @@ import {
   Textarea,
   toast,
 } from '#/components/ui'
+import { useStaleTripCurrency } from '#/components/costs/stale-trip-currency'
 import { cn } from '#/lib/cn'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { useLocale, useTranslate } from '#/lib/i18n'
-import { formatMoney } from '#/lib/money'
+import { currencyCode, formatMoney } from '#/lib/money'
 import { createBookingFn, updateBookingFn } from '#/server/fns/reservations'
 import { createStayFn, updateStayFn } from '#/server/fns/stays'
 import { NOT_SET, fromSelectValue, toSelectValue, useAction } from '../shared'
@@ -239,6 +242,7 @@ export function BookingDialog({
 }) {
   const locale = useLocale()
   const t = useTranslate()
+  const router = useRouter()
 
   const editing = booking !== undefined
   const formId = useId()
@@ -247,6 +251,24 @@ export function BookingDialog({
     newDraft(currency, initialStayDayId),
   )
   const [touched, setTouched] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const priceRef = useRef<HTMLInputElement>(null)
+  // The trip was re-based while this was open and the save was refused: what was typed stays, the
+  // screen refreshes, and the currency control follows the trip (adopted below).
+  const stale = useStaleTripCurrency(currency, saving, () => priceRef.current)
+  const adopt = stale.adopt
+  if (adopt !== null) {
+    stale.adopted()
+    setDraft((current) =>
+      currencyCode(current.currency) === adopt.from
+        ? { ...current, currency: adopt.to }
+        : current,
+    )
+  }
+  // Read by the reset below without being one of its triggers: a refreshed currency must not wipe
+  // the draft the refusal told the reader to check.
+  const currencyRef = useRef(currency)
+  currencyRef.current = currency
   /** Saved, with its cost line's split no longer adding up: the one thing left is to say so. */
   const [splitStale, setSplitStale] = useState(false)
   const splitStaleNoticeRef = useRef<HTMLDivElement>(null)
@@ -300,12 +322,13 @@ export function BookingDialog({
     }
     setDraft(
       booking === undefined
-        ? newDraft(currency, initialStayDayId)
-        : draftFrom(booking, currency),
+        ? newDraft(currencyRef.current, initialStayDayId)
+        : draftFrom(booking, currencyRef.current),
     )
     setTouched(false)
     setSplitStale(false)
-  }, [open, booking, currency, initialStayDayId])
+    stale.dismiss()
+  }, [open, booking, initialStayDayId])
 
   // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
   // the form, so a warning shown or still held for it goes. Another booking, or a new one, leaves
@@ -319,21 +342,39 @@ export function BookingDialog({
     }
   }, [open, bookingId])
 
+  // A save made under a currency the trip no longer has is refused with a key, not a sentence: it
+  // is answered inline, once the refreshed currency is known, and the screen is reloaded to get it.
+  const staleCurrency = {
+    refusal: (cause: unknown) =>
+      currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged'
+        ? t('costs.refusal.rebaseChanged')
+        : null,
+    onError: (cause: unknown) => {
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(currency))
+        void router.invalidate()
+      }
+    },
+  }
   const create = useAction(createBookingFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const update = useAction(updateBookingFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
   const createStay = useAction(createStayFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.added')),
     description: t('modules.book.toast.addedBody'),
     failure: t('modules.book.toast.addFailed'),
   })
   const updateStay = useAction(updateStayFn, {
+    ...staleCurrency,
     success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
@@ -368,6 +409,10 @@ export function BookingDialog({
     [draft, stopIds, stayBranch, days],
   )
   const invalid = hasBookingErrors(errors)
+  const saveError =
+    stale.messageFor === null
+      ? action.error
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
   const saveLabel: MessageKey = editing
     ? 'modules.book.action.save'
     : 'modules.book.action.add'
@@ -426,9 +471,11 @@ export function BookingDialog({
     }
     const session = sessionRef.current
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
-    const result = stayBranch
-      ? await saveStay(priceMinor)
-      : await saveBooking(priceMinor)
+    stale.dismiss()
+    setSaving(true)
+    const result = await (
+      stayBranch ? saveStay(priceMinor) : saveBooking(priceMinor)
+    ).finally(() => setSaving(false))
     if (result === null) {
       return
     }
@@ -486,6 +533,7 @@ export function BookingDialog({
       priceMinor,
       currency: priceMinor === 0 ? '' : draft.currency,
       notes: draft.notes,
+      expectedTripCurrency: currencyCode(currency),
       startDayId: draft.startDayId,
       endDayId: draft.endDayId,
       checkInTime: draft.startTime,
@@ -520,6 +568,7 @@ export function BookingDialog({
       dayId: draft.dayId,
       assignmentId: draft.assignmentId,
       notes: draft.notes,
+      expectedTripCurrency: currencyCode(currency),
     }
     return booking === undefined
       ? create.run({ data: payload })
@@ -563,9 +612,9 @@ export function BookingDialog({
               void submit()
             }}
           >
-            {action.error === null ? null : (
+            {saveError === null ? null : (
               <Alert tone="danger" title={t('modules.form.saveError')}>
-                {action.error}
+                {saveError}
               </Alert>
             )}
 
@@ -738,6 +787,7 @@ export function BookingDialog({
                   hint={t('modules.book.field.priceHint')}
                 >
                   <Input
+                    ref={priceRef}
                     value={draft.price}
                     onChange={(event) => set('price', event.target.value)}
                     inputMode="decimal"

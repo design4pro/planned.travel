@@ -318,6 +318,13 @@ payment dialog sends, while `recordPaymentFn` keeps writing `trip.currency`. A m
 today's behaviour for one release (`BACKWARD_COMPATIBILITY.md` §2) and becoming required is a
 follow-up.
 
+The booking and stay editors are guarded the same way (#1247): `createBookingFn`, `updateBookingFn`,
+`createStay` and `updateStay` accept the optional, upper-cased `expectedTripCurrency` (declared on the
+booking and on the stay schemas separately), compare it with the trip `requireWritableBookingTrip`
+already resolved, after the role and, on an update, after the row is matched to the trip, and never
+store it. Booking sync still passes none. The editors send the currency their loader returned and
+answer the refusal the way the Costs dialogs do.
+
 **The window that stays, named.** The check and the write are two statements (`createExpense`
 et al. insert in several), so a stale write that lands between a re-basing's read and its batch is
 caught by the batch's own stale check (above), but one whose check passes just before a re-basing
