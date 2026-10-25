@@ -73,6 +73,34 @@ describe('parseServerMessage - a valid frame of each kind', () => {
     expect(result.ok).toBe(true)
   })
 
+  // The shapes the real room sends that a later tightening of the schema would break first.
+  it.each([
+    ['an avatar URL', { avatarUrl: 'https://example.com/a.png' }],
+    ['a null avatar URL', { avatarUrl: null }],
+    [
+      'the "?" initials of a user without a name',
+      { name: null, initials: '?' },
+    ],
+  ])('parses a presence peer with %s', (_label, user) => {
+    const result = parseServerMessage(
+      frame({ t: 'presence', peers: [member(user)] }),
+    )
+
+    expect(result.ok).toBe(true)
+  })
+
+  it.each([
+    ['no field', { entity: { kind: 'stop', id: 's-1' } }],
+    ['a null field', { entity: { kind: 'stop', id: 's-1' }, field: null }],
+    ['a named field', { entity: { kind: 'stop', id: 's-1' }, field: 'title' }],
+  ])('parses a presence peer focused with %s', (_label, focus) => {
+    const result = parseServerMessage(
+      frame({ t: 'presence', peers: [{ ...member(), focus }] }),
+    )
+
+    expect(result.ok).toBe(true)
+  })
+
   it('keeps the fields the client does not validate', () => {
     const result = parseServerMessage(
       frame({
