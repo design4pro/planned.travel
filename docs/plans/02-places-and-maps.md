@@ -1812,6 +1812,16 @@ reader can override in the preview**, never a constraint enforced by the databas
   ceiling, then writes through `placesRepository`, which stamps `organization_id` from the scope.
   Every read it makes is built on `tenantFilter()` from `src/server/repos/base.ts`, so
   `organization_id` is the leading predicate of the duplicate lookup as well as of the write.
+- **Write guards, inside `createPlaces`.** Reading a trip and being allowed to write to it are two
+  different questions, and a bulk writer that answers only the first lets a trip viewer, or a member
+  of an archived trip, write through it. `createPlaces` therefore enforces both **in the repository,
+  not only in the route**: `requireWritableTrip` (`src/server/repos/trips.ts`, refuses an archived
+  trip) and the owner-or-editor role check (`assertTripRole` against `TRIP_WRITE_ROLES`, the pair
+  `createPlace` already runs through `requirePlaceWriteRole`), both before any draft is resolved or
+  any row is written. It asserts the saved-place quota **once for the whole batch**, with the
+  number of rows it will insert, never once per row. Source: the collections spec
+  `.ai/specs/2026-10-11-places-into-collections.md` (Risks & Impact Review, Resolved assumption 3)
+  and issue #1131, which deliberately does not build this direction.
 - **Server function.** `src/routes/_app/trips/$tripId/-server/place-import.ts`:
   `loadImportSourcesFn` (`GET`) returns the workspace's collections with their place counts and, for
   a chosen collection, its places already marked with whether the trip has one that looks like each;
