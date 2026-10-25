@@ -288,6 +288,10 @@ export function BookingDialog({
   openRef.current = open
   /** Counts the times this dialog was opened, to tell a save's own open from a later one. */
   const sessionRef = useRef(0)
+  /** The session the running save started in; a refusal that lands in a later one is not shown there. */
+  const submittedRef = useRef(0)
+  /** `useAction`'s reset, set once the action exists: opening the dialog clears a refusal it kept. */
+  const resetActionRef = useRef<() => void>(() => {})
   const mountedRef = useRef(true)
   const flushWarnings = useCallback(() => {
     const pending = [...pendingWarningsRef.current.values()]
@@ -329,6 +333,7 @@ export function BookingDialog({
     setTouched(false)
     setSplitStale(false)
     stale.dismiss()
+    resetActionRef.current()
   }, [open, booking, initialStayDayId])
 
   // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
@@ -351,9 +356,21 @@ export function BookingDialog({
         ? t('costs.refusal.rebaseChanged')
         : null,
     onError: (cause: unknown) => {
-      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+      if (currencyRefusalOf(cause) !== 'costs.refusal.tripCurrencyChanged') {
+        return
+      }
+      void router.invalidate()
+      // The dialog was closed or opened again since the save started: nothing here would show it.
+      if (
+        mountedRef.current &&
+        openRef.current &&
+        submittedRef.current === sessionRef.current
+      ) {
         stale.refuse(currencyCode(currency))
-        void router.invalidate()
+      } else {
+        toast.error(t('modules.form.saveError'), {
+          description: t('costs.refusal.rebaseChanged'),
+        })
       }
     },
   }
@@ -393,6 +410,7 @@ export function BookingDialog({
   const bookingAction = editing ? update : create
   const stayAction = editing ? updateStay : createStay
   const action = stayBranch ? stayAction : bookingAction
+  resetActionRef.current = action.reset
   /*
    * The type of an existing stay is fixed: switching it out would retype a booking whose nights are
    * still linked to it.
@@ -412,11 +430,18 @@ export function BookingDialog({
   const invalid = hasBookingErrors(errors)
   // After the refusal the typed digits may be in the old currency: the price has to be looked at
   // (edited) before it is saved again, as in the Costs dialogs. No price typed, nothing to look at.
-  const priceBlocked = stale.messageFor !== null && draft.price.trim() !== ''
-  const saveError =
+  // A booking that keeps a currency of its own is saved in it as before: its digits are still right.
+  const priceBlocked =
+    stale.messageFor !== null &&
+    draft.price.trim() !== '' &&
+    booking?.currency == null
+  const staleMessage =
     stale.messageFor === null
-      ? action.error
+      ? undefined
       : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
+  const saveError =
+    staleMessage ??
+    (stale.pending ? t('costs.refusal.rebaseChanged') : action.error)
   const saveLabel: MessageKey = editing
     ? 'modules.book.action.save'
     : 'modules.book.action.add'
@@ -474,6 +499,7 @@ export function BookingDialog({
       return
     }
     const session = sessionRef.current
+    submittedRef.current = session
     const priceMinor = parseMoneyToMinor(draft.price, draft.currency) ?? 0
     stale.dismiss()
     setSaving(true)
@@ -787,7 +813,10 @@ export function BookingDialog({
               {showsField(draft.type, 'price') ? (
                 <Field
                   label={t('modules.field.price')}
-                  error={errorFor('price')}
+                  error={
+                    (priceBlocked ? staleMessage : undefined) ??
+                    errorFor('price')
+                  }
                   hint={t('modules.book.field.priceHint')}
                 >
                   <Input
@@ -795,6 +824,7 @@ export function BookingDialog({
                     value={draft.price}
                     onChange={(event) => {
                       stale.dismiss()
+                      action.reset()
                       set('price', event.target.value)
                     }}
                     inputMode="decimal"

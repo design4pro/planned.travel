@@ -923,13 +923,13 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
 
     dialog.refresh('EUR')
 
-    await screen.findByText(/budget currency of this trip is now EUR/u)
+    await screen.findAllByText(/budget currency of this trip is now EUR/u)
     expect(priceInput()?.value).toBe('24000')
     expect(document.body.textContent).toContain('EUR')
     expect(document.body.textContent).not.toContain('JPY')
   })
 
-  it('does not save again until the price has been looked at, and keeps the booking in its own currency', async () => {
+  it('saves a booking that keeps its own currency again at once, in that currency', async () => {
     reservations.update.mockRejectedValueOnce(REFUSAL).mockResolvedValueOnce({
       reservationId: 'booking-3',
       ...written('updated'),
@@ -941,22 +941,81 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
     await screen.findByText(/budget currency of this trip is now EUR/u)
 
     submitTheForm()
-    await act(async () => {})
-    expect(reservations.update).toHaveBeenCalledTimes(1)
-
-    fireEvent.change(priceInput() as HTMLInputElement, {
-      target: { value: '25000' },
-    })
-    submitTheForm()
 
     await vi.waitFor(() => expect(reservations.update).toHaveBeenCalledTimes(2))
     expect(reservations.update.mock.calls[1]?.[0]).toMatchObject({
       data: {
         expectedTripCurrency: 'EUR',
         currency: 'JPY',
-        priceMinor: 25_000,
+        priceMinor: 24_000,
       },
     })
+  })
+
+  it('holds a price that followed the trip until it has been edited, and then drops the refusal', async () => {
+    reservations.update.mockRejectedValueOnce(REFUSAL).mockResolvedValueOnce({
+      reservationId: 'booking-3',
+      ...written('updated'),
+    })
+    const dialog = mountAt('JPY', { ...DINNER, currency: null })
+    submitTheForm()
+    await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+    dialog.refresh('EUR')
+    await screen.findAllByText(/budget currency of this trip is now EUR/u)
+    expect(priceInput()?.getAttribute('aria-invalid')).toBe('true')
+
+    submitTheForm()
+    await act(async () => {})
+    expect(reservations.update).toHaveBeenCalledTimes(1)
+
+    fireEvent.change(priceInput() as HTMLInputElement, {
+      target: { value: '25000' },
+    })
+    // The refusal has done its job: neither it nor the copy of the confirming flow stays.
+    expect(document.body.textContent).not.toContain('budget currency')
+    expect(document.body.textContent).not.toContain('nothing was changed')
+    submitTheForm()
+
+    await vi.waitFor(() => expect(reservations.update).toHaveBeenCalledTimes(2))
+    expect(reservations.update.mock.calls[1]?.[0]).toMatchObject({
+      data: {
+        expectedTripCurrency: 'EUR',
+        currency: 'EUR',
+        priceMinor: 2_500_000,
+      },
+    })
+  })
+
+  it('says so with a toast when the dialog was closed while the save ran', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    let refuse: (cause: Error) => void = () => {}
+    reservations.update.mockReturnValue(
+      new Promise((_, reject) => {
+        refuse = reject
+      }),
+    )
+    const ui = (open: boolean) => (
+      <I18nProvider locale="en" messages={EN}>
+        <BookingDialog
+          tripId="trip-1"
+          booking={DINNER}
+          days={DAYS}
+          currency="JPY"
+          open={open}
+          onOpenChange={() => {}}
+        />
+      </I18nProvider>
+    )
+    const view = render(ui(true))
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.update).toHaveBeenCalled())
+    view.rerender(ui(false))
+
+    await act(async () => refuse(REFUSAL))
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(1))
+    view.rerender(ui(true))
+    expect(document.querySelector('[role="alert"]')).toBeNull()
   })
 
   it('answers a stay the same way', async () => {
