@@ -81,6 +81,13 @@ The 23 locales are one contract: every key exists in every locale (docs/SPEC.md 
   optional; a removed field is read as absent, not as an error.
 - **Durable Object state** (`src/server/do/`): stored state may predate the new code. Readers
   tolerate the previous shape; migrations happen on read.
+- **Trip-room socket frames** (`ServerMessage` and `ClientMessage` in `src/server/do/protocol.ts`):
+  a tab that loaded the previous bundle keeps its socket open across a deploy. A change to a
+  frame's shape (removing or renaming a field, changing a type, tightening or nulling a field)
+  either bumps `TRIP_ROOM_PROTOCOL_VERSION`, which takes an old client offline through the existing
+  `protocol-mismatch` error, or lands in two deploys: first a client that tolerates both shapes
+  (`serverMessageSchema` drops a frame it does not understand), then the server change. Adding an
+  optional field is not breaking.
 - **Email templates** (`src/server/email/`): a rendered email is immutable once sent, but the
   message union in `src/server/auth/email.ts` is shared with the queue, so a variant is removed
   only after the queue is drained of it.
