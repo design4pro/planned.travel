@@ -28,6 +28,7 @@ import { runBatch } from './batch'
 import { ForbiddenError, NotFoundError, RepositoryError } from './context'
 import { requirePlaceOfTrip } from './places'
 import {
+  TRIP_WRITE_ROLES,
   assertTripRole,
   requireTrip,
   requireWritableTrip,
@@ -55,7 +56,6 @@ import type {
   CollabPollVote,
 } from '#/server/db/types'
 import type { CursorPage, TenantScope } from './base'
-import type { TripRole } from './trips'
 
 export const collabMessagesRepository = createTenantRepository(collabMessages, 'message')
 export const collabMessageReactionsAccess = createTenantTableAccess(
@@ -72,14 +72,6 @@ export const checkInsRepository = createTenantRepository(checkIns, 'check-in')
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Trip roles that may write a trip's conversation, notes and polls: post, edit, react, vote, close
- * and delete. A `viewer` reads the trip, and so does a workspace member who only sees an
- * organization-visible one (`CONTEXT.md`, "Trip member"); ADR 0007 draws the same line, "a member who
- * reads ... but does not write".
- */
-export const COLLAB_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
-
-/**
  * The two guards every writer ends with, in the order the boundary needs them:
  * {@link requireWritableTrip} first, so a caller who may not see the trip is answered with
  * {@link NotFoundError} and learns nothing, and an archived trip refuses before anyone's role is
@@ -91,7 +83,7 @@ async function requireCollabTrip(
   tripId: string,
 ): Promise<void> {
   await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, COLLAB_WRITE_ROLES)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
 }
 
 /** A stale switch may not hide the final enabled section. Handlers return this refusal as data. */
@@ -108,7 +100,7 @@ export async function setTripCollabSections(
   change: { readonly section: CollabSectionId; readonly on: boolean },
 ): Promise<CollabSections> {
   const trip = await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, COLLAB_WRITE_ROLES)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   const input = collabSectionChangeSchema.parse({ tripId, ...change })
   const sections = {
     ...resolveCollabSections(trip.collabModules),

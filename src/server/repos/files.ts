@@ -15,7 +15,7 @@ import { requireExpenseOfTrip } from './expenses'
 import { requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
 import { requireTransportOfTrip } from './transports'
-import { assertTripRole, requireWritableTrip } from './trips'
+import { TRIP_WRITE_ROLES, assertTripRole, requireWritableTrip } from './trips'
 import {
   definedOnly,
   idSchema,
@@ -26,7 +26,6 @@ import {
 } from './validation'
 import type { Trip, TripFile } from '#/server/db/types'
 import type { TenantScope } from './base'
-import type { TripRole } from './trips'
 
 export const tripFilesRepository = createTenantRepository(tripFiles, 'file')
 
@@ -165,13 +164,6 @@ export async function getTripStorageBytes(scope: TenantScope, tripId: string): P
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * Trip roles that may change a trip's files. A `viewer` reads and downloads them and writes none.
- * Declared once: whether a caller holds one of them is {@link assertTripRole}'s answer, so a refusal
- * here is the `TripRoleError` every other trip writer raises.
- */
-export const FILE_WRITE_ROLES: ReadonlyArray<TripRole> = ['owner', 'editor']
-
-/**
  * Resolves a trip whose files the caller may change, or throws: {@link requireWritableTrip} first
  * (`NotFoundError` for a trip they cannot see, then `TripArchivedError`), then the role - the order
  * the day-notes writers document. Exported because the upload handler writes bytes to the bucket
@@ -182,7 +174,7 @@ export async function requireTripForFileWrite(
   tripId: string,
 ): Promise<Trip> {
   const trip = await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, FILE_WRITE_ROLES)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   return trip
 }
 

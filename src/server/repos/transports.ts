@@ -40,9 +40,13 @@ import {
   RepositoryError,
 } from './context'
 import { listTripDays, requireTripDay } from './days'
-import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
+import {
+  TRIP_WRITE_ROLES,
+  assertTripRole,
+  requireTrip,
+  requireWritableTrip,
+} from './trips'
 
-import type { TripRole } from './trips'
 import { ID_PATTERN, ID_TIME_LENGTH } from '#/lib/ids'
 import { resolveTimeZone } from '#/lib/time'
 import {
@@ -92,13 +96,6 @@ export const transportLegsRepository = createTenantRepository(
   transportLegs,
   'transport leg',
 )
-
-/* -------------------------------------------------------------------------------------------------
- * Who may write here
- * ---------------------------------------------------------------------------------------------- */
-
-/** The roles that may change a trip's transports. */
-const WRITERS: ReadonlyArray<TripRole> = ['owner', 'editor']
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -370,7 +367,7 @@ export async function createTransport(
 ): Promise<Transport> {
   const values = createTransportInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, WRITERS)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireDayPair(
     scope,
     values.tripId,
@@ -399,7 +396,7 @@ async function requireWritableTransport(
 ): Promise<Transport> {
   const existing = await transportsRepository.requireById(scope, transportId)
   await requireWritableTrip(scope, existing.tripId)
-  await assertTripRole(scope, existing.tripId, WRITERS)
+  await assertTripRole(scope, existing.tripId, TRIP_WRITE_ROLES)
   return existing
 }
 
@@ -927,7 +924,7 @@ export async function saveTransport(
     throw new NotFoundError('transport', transportId)
   }
   await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, WRITERS)
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   // An insert needs a title and an update does not. The check sits after the scoped lookup, the
   // trip agreement and the role, so it tells a caller nothing about a row they cannot see: a
   // foreign id and an id that never existed are both "not here yet" and are refused alike.

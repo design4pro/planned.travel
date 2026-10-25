@@ -24,6 +24,7 @@ import { z } from 'zod'
 
 import {
   DAY_NOTE_ICONS,
+  TRIP_WRITE_ROLES,
   assertTripRole,
   canWritePlan,
   createDayNote,
@@ -120,7 +121,7 @@ async function writableTripDay(
   dayId: string,
 ): Promise<void> {
   await requireWritableTrip(scope, tripId)
-  await assertTripRole(scope, tripId, ['owner', 'editor'])
+  await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, tripId, dayId)
 }
 

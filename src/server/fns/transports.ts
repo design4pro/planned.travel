@@ -18,6 +18,8 @@ import { z } from 'zod'
 import { enqueueTripRollup } from '#/server/queue/travel-stats-fanout'
 import { TRANSPORT_STATUSES } from '#/server/db/schema'
 import {
+  TRIP_WRITE_ROLES,
+  isTripWriteRole,
   assertTripRole,
   tripRoleFor,
   deleteTransport,
@@ -285,7 +287,7 @@ export const loadTransportDeskFn = createServerFn({ method: 'GET' })
       found: true,
       canWrite: canWritePlan(trip, role),
       isArchived: trip.isArchived,
-      canSearchConnections: role === 'owner' || role === 'editor',
+      canSearchConnections: isTripWriteRole(role),
       currency: trip.currency,
       byMode,
       totalDistanceMetres,
@@ -556,7 +558,7 @@ export async function searchConnections(
   ports: ConnectionSearchPorts,
 ): Promise<ConnectionSearchOutcome> {
   const trip = await requireTrip(scope, data.tripId)
-  await assertTripRole(scope, trip.id, ['owner', 'editor'])
+  await assertTripRole(scope, trip.id, TRIP_WRITE_ROLES)
 
   const ceiling = await ports.ceiling(scope)
   const query = {
