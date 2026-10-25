@@ -429,7 +429,7 @@ export class TripRoom implements DurableObject {
         if (session.identity.role !== 'editor') {
           this.send(ws, {
             t: 'error',
-            code: 'not-joined',
+            code: 'read-only',
             message: 'This connection is read-only',
             requestId: parsed.value.requestId,
           })

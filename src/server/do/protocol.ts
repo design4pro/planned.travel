@@ -230,6 +230,12 @@ export type TripRoomErrorCode =
   | 'payload-too-large'
   | 'rate-limited'
   | 'not-joined'
+  /**
+   * The connection's role cannot write. Distinct from `not-joined` so a client
+   * that answers `not-joined` by re-sending `hello` does not loop for a viewer.
+   * An addition to the vocabulary, not a wire change: no protocol version bump.
+   */
+  | 'read-only'
   | 'internal'
 
 export type ServerMessage =
