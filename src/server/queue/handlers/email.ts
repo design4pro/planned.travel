@@ -36,13 +36,9 @@ export async function handleEmail(
         headers: {
           authorization: `Bearer ${apiKey}`,
           'content-type': 'application/json',
-          // Provider-side idempotency: a queue redelivery cannot double-send.
-          'idempotency-key':
-            payload.eventId ??
-            `${payload.tag ?? 'email'}:${payload.subject}:${payload.to.join(',')}`.slice(
-              0,
-              256,
-            ),
+          // Provider-side idempotency: the email's own identity, so a queue redelivery
+          // cannot double-send and two different envelopes never share a key.
+          'idempotency-key': payload.eventId ?? context.taskId,
         },
         body: JSON.stringify({
           from,

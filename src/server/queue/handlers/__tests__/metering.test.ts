@@ -142,29 +142,59 @@ describe('email', () => {
     }
   })
 
-  it('keeps the previous identity for old queued messages without an event id', async () => {
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('{}', { status: 200 }))
-    const { context } = harness()
-    try {
-      await handleEmail(
-        {
-          to: ['owner@example.com'],
-          subject: 'Hi',
-          html: '<p>Hi</p>',
-          tag: 'auth',
-        },
-        context,
-      )
-      expect(
-        new Headers(fetchSpy.mock.calls[0]?.[1]?.headers).get(
-          'idempotency-key',
-        ),
-      ).toBe('auth:Hi:owner@example.com')
-    } finally {
-      fetchSpy.mockRestore()
+  describe('without an event id', () => {
+    const payload = {
+      to: ['owner@example.com'],
+      subject: 'Your export is ready',
+      html: '<p>Ready</p>',
+      tag: 'export-ready',
     }
+
+    async function keysFor(
+      sends: ReadonlyArray<{
+        readonly payload: Parameters<typeof handleEmail>[0]
+        readonly taskId: string
+      }>,
+    ) {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(new Response('{}', { status: 200 }))
+      const { context } = harness()
+      try {
+        for (const send of sends) {
+          await handleEmail(send.payload, { ...context, taskId: send.taskId })
+        }
+        return fetchSpy.mock.calls.map(([, init]) =>
+          new Headers(init?.headers).get('idempotency-key'),
+        )
+      } finally {
+        fetchSpy.mockRestore()
+      }
+    }
+
+    it('keys on the envelope id, so identical emails from two envelopes are both sent', async () => {
+      const keys = await keysFor([
+        { payload, taskId: 'export-ready:task_a' },
+        { payload, taskId: 'export-ready:task_b' },
+      ])
+      expect(keys).toEqual(['export-ready:task_a', 'export-ready:task_b'])
+    })
+
+    it('keeps one key across redeliveries of the same envelope', async () => {
+      const keys = await keysFor([
+        { payload, taskId: 'export-ready:task_a' },
+        { payload, taskId: 'export-ready:task_a' },
+      ])
+      expect(keys).toEqual(['export-ready:task_a', 'export-ready:task_a'])
+    })
+
+    it('lets the event id win over the envelope id', async () => {
+      const eventId = crypto.randomUUID()
+      const keys = await keysFor([
+        { payload: { ...payload, eventId }, taskId: 'export-ready:task_a' },
+      ])
+      expect(keys).toEqual([eventId])
+    })
   })
 
   it('propagates provider failure so the queue can retry the same event', async () => {
