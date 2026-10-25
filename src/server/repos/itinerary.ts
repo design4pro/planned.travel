@@ -1064,7 +1064,7 @@ export async function setAssignmentParticipants(
     assignmentId,
   )
   await requireTrip(scope, assignment.tripId)
-  await assertTripRole(scope, assignment.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   const parsed = [
     ...new Set(
       z
