@@ -364,7 +364,7 @@ export async function consumeTaskBatch(
       // abandoned task names the requester, and it logs a returned value as `outcome: 'ok'`, which
       // would count an abandoned task as completed. An abandoned task gets its own line instead.
       const startedAt = now()
-      let metrics: Awaited<ReturnType<typeof runHandler>>
+      let metrics: TaskMetrics
       try {
         metrics = await runHandler(envelope, registry, context)
       } catch (error) {
