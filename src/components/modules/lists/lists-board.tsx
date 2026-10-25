@@ -540,6 +540,10 @@ function ListPanel(props: ListPanelProps) {
   const groups = useMemo(() => groupByCategory(rendered), [rendered])
   const t = useTranslate()
   const hasCategories = !isUngrouped(groups)
+  // The body asks for a tick, which a reader who may not write cannot give.
+  const doneEmptyBody = canWrite
+    ? t('modules.lists.items.doneEmpty.body')
+    : undefined
   const showGroups = hasCategories && mode === 'grouped'
 
   const visible = rendered.filter((item) => matchesFilter(item.isDone, filter))
@@ -625,7 +629,7 @@ function ListPanel(props: ListPanelProps) {
               {nameFor(people, list.ownerUserId, t).split(' ')[0]}
             </Badge>
           )}
-          {hasCategories ? (
+          {hasCategories && canWrite ? (
             <Tooltip
               content={
                 showGroups
@@ -735,7 +739,7 @@ function ListPanel(props: ListPanelProps) {
             }
             description={
               filter === 'done'
-                ? t('modules.lists.items.doneEmpty.body')
+                ? doneEmptyBody
                 : t('modules.lists.items.todoEmpty.body', {
                     label: t('modules.filter.all'),
                   })
@@ -1017,19 +1021,26 @@ function ItemRow({
         checked={item.isDone}
         disabled={!canWrite}
         onCheckedChange={(next) => onTick(next === true)}
-        aria-label={t(
-          item.isDone
-            ? 'modules.lists.action.untickItem'
-            : 'modules.lists.action.tickOffItem',
-          { name: item.name },
-        )}
+        aria-label={
+          canWrite
+            ? t(
+                item.isDone
+                  ? 'modules.lists.action.untickItem'
+                  : 'modules.lists.action.tickOffItem',
+                { name: item.name },
+              )
+            : item.name
+        }
         className="shrink-0"
       />
 
       <span className="flex min-w-0 flex-1 items-baseline gap-2">
         <span
           className={cn(
-            'min-w-0 truncate text-label',
+            // A reader has no Edit dialog to read a long name in full, so it wraps for them.
+            canWrite
+              ? 'min-w-0 truncate text-label'
+              : 'min-w-0 break-words text-label',
             item.isDone ? 'text-ink-4 line-through' : 'text-ink',
           )}
         >

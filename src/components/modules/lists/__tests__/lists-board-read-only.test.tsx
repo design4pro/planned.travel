@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { TooltipProvider } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
@@ -128,7 +128,7 @@ describe('ListsBoard', () => {
     expect(screen.queryByRole('button', { name: 'From a template' })).toBeNull()
     expect(
       screen
-        .getByRole('checkbox', { name: 'Tick off Sunscreen' })
+        .getByRole('checkbox', { name: 'Sunscreen' })
         .hasAttribute('disabled'),
     ).toBe(true)
   })
@@ -149,6 +149,24 @@ describe('ListsBoard', () => {
 
     expect(screen.getByText('This list is empty')).not.toBeNull()
     expect(screen.queryByText(/the field below/u)).toBeNull()
+  })
+
+  it('offers a reader neither the reorder toggle nor a tick prompt on the Done filter', () => {
+    const categorised: ListData = {
+      ...PACKING,
+      items: [
+        { ...PACKING.items[0], category: 'Beach' },
+        { ...PACKING.items[0], id: 'item-2', name: 'Towel', category: 'Bag' },
+      ],
+    }
+    mount([categorised], false)
+
+    expect(
+      screen.queryByRole('button', { name: /draggable order/u }),
+    ).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+    expect(screen.getByText('Nothing ticked off yet')).not.toBeNull()
+    expect(screen.queryByText(/Tick something off/u)).toBeNull()
   })
 
   it('points a writer of an empty list at the composer', () => {
