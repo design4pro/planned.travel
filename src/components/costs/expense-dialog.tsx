@@ -286,6 +286,24 @@ export function ExpenseDialog({
       expense?.shares.some((share) => share.userId === person.userId),
     ),
   )
+  // The edited expense's own payer when they have left the trip: the select must keep offering
+  // them, or its stored value has no option and picking someone else cannot be undone. Never a
+  // payer of another expense, and a share holder who is not the payer stays out of the select.
+  const [departedPayer] = useState(() => {
+    const payerId = expense?.paidBy ?? null
+    if (
+      payerId === null ||
+      people.some((person) => person.userId === payerId)
+    ) {
+      return null
+    }
+    return (
+      departedPeople?.find((person) => person.userId === payerId) ?? {
+        userId: payerId,
+        name: null,
+      }
+    )
+  })
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
       ? emptyDraft(offered)
@@ -638,6 +656,15 @@ export function ExpenseDialog({
               <SimpleSelect
                 options={[
                   { value: NO_PAYER, label: t('costs.expense.nobodyYet') },
+                  ...(departedPayer === null
+                    ? []
+                    : [
+                        {
+                          value: departedPayer.userId,
+                          label:
+                            departedPayer.name ?? t('costs.person.removed'),
+                        },
+                      ]),
                   ...offered.map((person) => ({
                     value: person.userId,
                     label:
