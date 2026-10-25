@@ -305,6 +305,8 @@ const messages = {
   'book.pinnedCaption': 'Fäst vid en dag i planen',
   'book.readOnly.archived':
     'Den här resan är arkiverad, så bokningarna och boendena är skrivskyddade. Återställ resan för att ändra dem.',
+  'book.readOnly.role':
+    'Du kan läsa de här bokningarna och boendena. Bara resans ägare och redigerare kan ändra dem.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Ändringen nekades. Kontrollera resans aktuella läge innan du gör fler ändringar.',
@@ -312,6 +314,8 @@ const messages = {
     'Resan kunde inte uppdateras. Försök igen innan du gör ändringar.',
   'transports.readOnly.archived':
     'Den här resan är arkiverad. Återställ den för att ändra transporter.',
+  'transports.readOnly.role':
+    'Du kan läsa de här transporterna. Bara resans ägare och redigerare kan ändra dem.',
   'transports.title': 'Färder',
   'transports.empty': 'Inget noterat än',
   'transports.count.transports': {

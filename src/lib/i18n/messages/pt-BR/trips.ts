@@ -314,6 +314,8 @@ const messages = {
   'book.pinnedCaption': 'Fixado a um dia do roteiro',
   'book.readOnly.archived':
     'Esta viagem está arquivada, então as reservas e as hospedagens são somente leitura. Restaure a viagem para alterá-las.',
+  'book.readOnly.role':
+    'Você pode ver estas reservas e hospedagens. Só o proprietário da viagem e quem pode editar podem alterá-las.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Esta alteração foi recusada. Confira o estado atual da viagem antes de fazer outras alterações.',
@@ -321,6 +323,8 @@ const messages = {
     'Não foi possível atualizar a viagem. Tente novamente antes de fazer alterações.',
   'transports.readOnly.archived':
     'Esta viagem está arquivada. Restaure-a para alterar os transportes.',
+  'transports.readOnly.role':
+    'Você pode ver estes transportes. Só o proprietário da viagem e quem pode editar podem alterá-los.',
   'transports.title': 'Deslocamentos',
   'transports.empty': 'Nada registrado ainda',
   'transports.count.transports': {

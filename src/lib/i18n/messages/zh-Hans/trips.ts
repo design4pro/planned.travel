@@ -286,12 +286,16 @@ const messages = {
   'book.pinnedCaption': '已固定到行程中的某一天',
   'book.readOnly.archived':
     '此行程已归档，因此预订和住宿为只读。恢复该行程后才能更改。',
+  'book.readOnly.role':
+    '你可以查看这些预订和住宿。只有行程的所有者和编辑者可以更改。',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     '此更改已被拒绝。继续更改前，请查看行程的当前状态。',
   'transports.recovery.failed': '无法刷新行程。请重试后再进行更改。',
   'transports.readOnly.archived':
     '此行程已归档。请先恢复行程，再修改交通安排。',
+  'transports.readOnly.role':
+    '你可以查看这些交通安排。只有行程的所有者和编辑者可以更改。',
   'transports.title': '交通',
   'transports.empty': '尚未记录',
   'transports.count.transports': {

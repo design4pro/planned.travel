@@ -1307,6 +1307,12 @@ const messages = {
   'files.readOnly.title': 'Berkas hanya baca',
   'files.readOnly.role':
     'Hanya pemilik dan editor perjalanan yang dapat mengunggah, mengganti nama, atau menghapus berkas. Kamu tetap dapat mengunduhnya.',
+  'files.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi berkasnya hanya bisa dibaca. Anda masih bisa mengunduhnya. Pulihkan perjalanan untuk mengubahnya.',
+  'lists.readOnly.role':
+    'Anda bisa melihat daftar ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
+  'lists.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi daftarnya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
   'vacay.kind.vacation': 'Cuti',
   'vacay.kind.half_day': 'Cuti setengah hari',
   'vacay.kind.sick': 'Izin sakit',

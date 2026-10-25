@@ -310,6 +310,8 @@ const messages = {
   'book.pinnedCaption': 'Az útiterv egy napjához rögzítve',
   'book.readOnly.archived':
     'Ez az utazás archiválva van, ezért a foglalások és a szállások csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
+  'book.readOnly.role':
+    'Ezeket a foglalásokat és szállásokat megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják őket.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'A módosítást elutasítottuk. További módosítások előtt ellenőrizd az utazás aktuális állapotát.',
@@ -317,6 +319,8 @@ const messages = {
     'Az utazást nem sikerült frissíteni. Módosítás előtt próbáld újra.',
   'transports.readOnly.archived':
     'Ez az utazás archiválva van. Állítsd vissza a közlekedés módosításához.',
+  'transports.readOnly.role':
+    'Ezeket a közlekedési tételeket megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják őket.',
   'transports.title': 'Utak',
   'transports.empty': 'Még nincs rögzítve semmi',
   'transports.count.transports': {

@@ -28,7 +28,7 @@ import {
   tripRoleFor,
   listTripPlacesWithTags,
   listUnscheduledPlaces,
-  isTripWriteRole,
+  canWritePlan,
   listUserProfiles,
   requireTrip,
   resolveQuotas,
@@ -356,6 +356,10 @@ export interface ListCard {
 }
 
 export interface ListsPayload {
+  /** `canWritePlan`: an archived trip is read-only for an owner and an editor too. */
+  readonly canWrite: boolean
+  /** The reason a writer is refused, for the notice: an archived trip says to restore it. */
+  readonly archived: boolean
   readonly lists: ReadonlyArray<ListCard>
   readonly people: ReadonlyArray<PersonChip>
   readonly itemCount: number
@@ -369,9 +373,10 @@ export const loadTripLists = createServerFn({ method: 'GET' })
     const trip = await nullWhenMissing(() => requireTrip(scope, data.tripId))
     if (trip === null) return ABSENT
 
-    const [progress, people] = await Promise.all([
+    const [progress, people, role] = await Promise.all([
       listTripListsWithProgress(scope, trip.id),
       loadPeople(trip.id, scope),
+      tripRoleFor(scope, trip.id, scope.ctx.userId),
     ])
 
     const items = await Promise.all(
@@ -403,6 +408,8 @@ export const loadTripLists = createServerFn({ method: 'GET' })
 
     return {
       found: true,
+      canWrite: canWritePlan(trip, role),
+      archived: trip.isArchived,
       lists,
       people,
       itemCount: lists.reduce((total, list) => total + list.itemCount, 0),
@@ -544,7 +551,10 @@ export interface FileRow {
 }
 
 export interface FilesPayload {
+  /** `canWritePlan`: an archived trip is read-only for an owner and an editor too. */
   readonly canWrite: boolean
+  /** The reason a writer is refused, for the notice: an archived trip says to restore it. */
+  readonly archived: boolean
   readonly hasPlaces: boolean
   readonly files: ReadonlyArray<FileRow>
   readonly tripBytes: number
@@ -580,7 +590,8 @@ export const loadTripFiles = createServerFn({ method: 'GET' })
 
     return {
       found: true,
-      canWrite: isTripWriteRole(role),
+      canWrite: canWritePlan(trip, role),
+      archived: trip.isArchived,
       hasPlaces: placeCount > 0,
       tripBytes,
       people,

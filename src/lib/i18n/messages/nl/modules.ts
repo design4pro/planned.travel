@@ -1367,6 +1367,12 @@ const messages = {
   'files.readOnly.title': 'Alleen-lezenbestanden',
   'files.readOnly.role':
     'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
+  'files.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de bestanden zijn alleen-lezen. Je kunt ze nog steeds downloaden. Herstel de reis om ze te wijzigen.',
+  'lists.readOnly.role':
+    'Je kunt deze lijsten lezen. Alleen de eigenaar van de reis en bewerkers kunnen ze wijzigen.',
+  'lists.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de lijsten zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
   'vacay.kind.vacation': 'Verlof',
   'vacay.kind.half_day': 'Halve verlofdag',
   'vacay.kind.sick': 'Ziektedag',

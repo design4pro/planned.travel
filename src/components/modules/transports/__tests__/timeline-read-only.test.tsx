@@ -117,11 +117,21 @@ it.each([false, true])(
   },
 )
 
-it('offers viewers no writer controls or archive notice', () => {
+it('offers viewers no writer controls, and says why instead of the archive notice', () => {
   render(timeline(false, false))
   expect(screen.queryByRole('button')).toBeNull()
   expect(screen.queryByRole('dialog')).toBeNull()
+  expect(
+    screen.getByText(
+      'You can read these transports. Only the trip’s owner and editors can change them.',
+    ),
+  ).toBeTruthy()
   expect(screen.queryByText(/Restore it to change transports/)).toBeNull()
+})
+
+it('says nothing about roles to a writer of a live trip', () => {
+  render(timeline(true, false))
+  expect(screen.queryByText(/Only the trip’s owner and editors/)).toBeNull()
 })
 
 it('removes an already-open writer dialog when the trip becomes archived', () => {

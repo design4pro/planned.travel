@@ -316,6 +316,8 @@ const messages = {
   'book.pinnedCaption': 'Fijado a un día del plan',
   'book.readOnly.archived':
     'Este viaje está archivado, así que las reservas y los alojamientos son de solo lectura. Restaura el viaje para cambiarlos.',
+  'book.readOnly.role':
+    'Puedes ver estas reservas y alojamientos. Solo el propietario del viaje y quienes pueden editar pueden cambiarlos.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Este cambio se ha rechazado. Revisa el estado actual del viaje antes de hacer más cambios.',
@@ -323,6 +325,8 @@ const messages = {
     'No se ha podido actualizar el viaje. Inténtalo de nuevo antes de hacer cambios.',
   'transports.readOnly.archived':
     'Este viaje está archivado. Restáuralo para cambiar los transportes.',
+  'transports.readOnly.role':
+    'Puedes ver estos transportes. Solo el propietario del viaje y quienes pueden editar pueden cambiarlos.',
   'transports.title': 'Trayectos',
   'transports.empty': 'Nada registrado aún',
   'transports.count.transports': {

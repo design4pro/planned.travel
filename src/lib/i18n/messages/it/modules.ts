@@ -1417,6 +1417,12 @@ const messages = {
   'files.readOnly.title': 'File in sola lettura',
   'files.readOnly.role':
     'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',
+  'files.readOnly.archived':
+    'Questo viaggio è archiviato, quindi i file sono di sola lettura. Puoi comunque scaricarli. Ripristina il viaggio per modificarli.',
+  'lists.readOnly.role':
+    'Puoi visualizzare queste liste. Solo il proprietario del viaggio e chi può modificare possono cambiarle.',
+  'lists.readOnly.archived':
+    'Questo viaggio è archiviato, quindi le liste sono di sola lettura. Ripristina il viaggio per modificarle.',
   'vacay.kind.vacation': 'Ferie',
   'vacay.kind.half_day': 'Mezza giornata di ferie',
   'vacay.kind.sick': 'Malattia',

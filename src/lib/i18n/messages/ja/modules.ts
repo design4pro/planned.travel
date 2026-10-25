@@ -1274,6 +1274,12 @@ const messages = {
   'files.readOnly.title': '読み取り専用のファイル',
   'files.readOnly.role':
     'ファイルのアップロード、名前の変更、削除ができるのは旅行のオーナーと編集者のみです。ダウンロードは引き続き利用できます。',
+  'files.readOnly.archived':
+    'この旅行はアーカイブ済みのため、ファイルは閲覧専用です。ダウンロードは引き続き利用できます。変更するには旅行を元に戻してください。',
+  'lists.readOnly.role':
+    'このリストは閲覧のみできます。変更できるのは旅行のオーナーと編集者だけです。',
+  'lists.readOnly.archived':
+    'この旅行はアーカイブ済みのため、リストは閲覧専用です。変更するには旅行を元に戻してください。',
   'vacay.kind.vacation': '休暇',
   'vacay.kind.half_day': '半日休暇',
   'vacay.kind.sick': '病気休暇',

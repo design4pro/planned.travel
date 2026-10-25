@@ -326,6 +326,8 @@ const messages = {
   'book.pinnedCaption': 'Przypięte do dnia planu',
   'book.readOnly.archived':
     'Ta podróż jest zarchiwizowana, więc rezerwacje i noclegi są tylko do odczytu. Przywróć podróż, aby je zmienić.',
+  'book.readOnly.role':
+    'Możesz przeglądać te rezerwacje i noclegi. Zmieniać je mogą tylko właściciel podróży i edytorzy.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Zmiana została odrzucona. Sprawdź aktualny stan podróży przed kolejną zmianą.',
@@ -333,6 +335,8 @@ const messages = {
     'Nie udało się odświeżyć podróży. Spróbuj ponownie przed wprowadzeniem zmian.',
   'transports.readOnly.archived':
     'Ta podróż jest zarchiwizowana. Przywróć ją, aby zmienić transport.',
+  'transports.readOnly.role':
+    'Możesz przeglądać te przejazdy. Zmieniać je mogą tylko właściciel podróży i edytorzy.',
   'transports.title': 'Przejazdy',
   'transports.empty': 'Nic jeszcze nie zapisano',
   'transports.count.transports': {

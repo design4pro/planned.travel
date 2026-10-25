@@ -1357,6 +1357,12 @@ const messages = {
   'files.readOnly.title': 'Csak olvasható fájlok',
   'files.readOnly.role':
     'Csak az utazás tulajdonosai és szerkesztői tölthetnek fel, nevezhetnek át vagy törölhetnek fájlokat. Továbbra is letöltheted őket.',
+  'files.readOnly.archived':
+    'Ez az utazás archiválva van, ezért a fájlok csak olvashatók. Letölteni továbbra is tudod őket. Állítsd vissza az utazást a módosításukhoz.',
+  'lists.readOnly.role':
+    'Ezeket a listákat megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják őket.',
+  'lists.readOnly.archived':
+    'Ez az utazás archiválva van, ezért a listák csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
   'vacay.kind.vacation': 'Szabadság',
   'vacay.kind.half_day': 'Fél nap szabadság',
   'vacay.kind.sick': 'Betegnap',
