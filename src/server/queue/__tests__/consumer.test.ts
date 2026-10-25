@@ -567,6 +567,8 @@ describe('an abandoned task', () => {
       { registry: abandoningRegistry() },
     )
 
+    // One line in all: an abandoned task is not a completed one, so no `task completed` record.
+    expect(sink.records.filter((r) => r.level === 'info')).toHaveLength(1)
     const lines = sink.records.filter((r) => r.msg === 'task abandoned')
     expect(lines).toHaveLength(1)
     expect(lines[0]).toMatchObject({

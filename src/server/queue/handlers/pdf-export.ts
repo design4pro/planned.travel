@@ -199,8 +199,8 @@ function scopeFor(
  * and the trip is still readable to them. Reads for authorisation only: the document stays the one
  * the request built. The organization is the envelope's, never the payload's.
  *
- * A member row or trip that is gone cannot come back on retry, so both are permanent. Anything
- * else (a D1 hiccup) rethrows, and the queue redelivers.
+ * A member row or trip that is gone cannot come back on retry, so both are abandoned: the consumer
+ * acks them without a dead letter. Anything else (a D1 hiccup) rethrows, and the queue redelivers.
  */
 async function recheckScope(
   db: Database,

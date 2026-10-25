@@ -243,8 +243,8 @@ export type TripPurgePayload = z.infer<typeof tripPurgePayloadSchema>
  * only copy rows its own tenant already holds.
  *
  * `requestedBy` is who receives the completion notification, and whose membership the handler
- * re-reads — a requester who has left the workspace by the time the message lands is a permanent
- * failure, not a copy made on their behalf.
+ * re-reads — a requester who has left the workspace by the time the message lands is an abandoned
+ * task, not a copy made on their behalf.
  *
  * The envelope's own id is deterministic on the **target** id, which the producer has just minted
  * and which cannot repeat: a redelivery is one job, and a second Copy on the same source is a
@@ -599,7 +599,10 @@ export class TaskPermanentError extends Error {
   }
 }
 
-/** Why a task was dropped without being a failure. A code, never prose, so a log line stays free of content. */
+/**
+ * Why a task was dropped without being a failure. A code, never prose, so a log line stays free of content.
+ * `trip-gone` also covers a trip the requester can no longer read: to them it is gone.
+ */
 export type TaskAbandonedReason = 'requester-left' | 'trip-gone'
 
 /**

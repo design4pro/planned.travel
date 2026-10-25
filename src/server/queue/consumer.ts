@@ -360,25 +360,35 @@ export async function consumeTaskBatch(
     }
 
     try {
-      // `track` logs a thrown error at `error` level with its message and stack, which for an
-      // abandoned task would name the requester. It is returned as a value so it never gets there.
-      const metrics = await jobLogger.track('task completed', () =>
-        runHandler(envelope, registry, context).catch((error: unknown) => {
-          if (error instanceof TaskAbandonedError) return error
-          throw error
-        }),
-      )
-      if (metrics instanceof TaskAbandonedError) {
-        // Ids and a code only: the envelope carries the requester and the notify address.
-        jobLogger.info('task abandoned', {
-          kind: envelope.kind,
-          reason: metrics.reason,
+      // Not `jobLogger.track`: it logs a thrown error at `error` level with its message, which for an
+      // abandoned task names the requester, and it logs a returned value as `outcome: 'ok'`, which
+      // would count an abandoned task as completed. An abandoned task gets its own line instead.
+      const startedAt = now()
+      let metrics: Awaited<ReturnType<typeof runHandler>>
+      try {
+        metrics = await runHandler(envelope, registry, context)
+      } catch (error) {
+        if (error instanceof TaskAbandonedError) {
+          // Ids and a code only: the envelope carries the requester and the notify address.
+          jobLogger.info('task abandoned', {
+            kind: envelope.kind,
+            reason: error.reason,
+          })
+          message.ack()
+          result.abandoned += 1
+          result.acked += 1
+          continue
+        }
+        jobLogger.error('task completed', error, {
+          outcome: 'error',
+          durationMs: now() - startedAt,
         })
-        message.ack()
-        result.abandoned += 1
-        result.acked += 1
-        continue
+        throw error
       }
+      jobLogger.info('task completed', {
+        outcome: 'ok',
+        durationMs: now() - startedAt,
+      })
       await env.KV.put(
         taskDoneKey(envelope.id),
         JSON.stringify({ at: now(), ...metrics }),

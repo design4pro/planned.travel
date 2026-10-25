@@ -1636,10 +1636,11 @@ pnpm exec wrangler queues info planned-travel-tasks
 # (ARCHITECTURE.md §2.4). No output means no job has failed terminally in the last 14 days,
 # which is the healthy case. An expected refusal is not a terminal failure and leaves nothing
 # here: a trip export or trip copy whose requester has left the workspace, or whose trip is
-# gone, is acked as abandoned (`TaskAbandonedError`) with one `info` line, `task abandoned`,
-# carrying the task id, kind, workspace id and a reason code (`requester-left`, `trip-gone`).
-# Its envelope holds the whole trip document and the requester's address, so it is not
-# written to `dead-letter/`.
+# gone (or no longer readable to the requester, which reads the same), is acked as abandoned
+# (`TaskAbandonedError`) with one `info` line, `task abandoned`, carrying the task id, kind,
+# workspace id and a reason code (`requester-left`, `trip-gone`). It is not written to
+# `dead-letter/`: an export's envelope holds the whole trip document and the requester's
+# address, and a copy's holds ids only but is an expected refusal, not a fault.
 pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
 
 # The backstop, and the one failure this listing cannot show: if KV or R2 is down, the
@@ -1690,7 +1691,9 @@ unimplemented and still emits its warning. For a finished trip export that means
 days" wording holds for the reader, not for the bytes: after seven days the export is neither
 listed nor downloadable and its KV pointer is gone, but the object stays under
 `exports/<org>/<trip>/` until the same trip is exported again, the trip is deleted (the purge
-takes its export keys), or the weekly export sweep of #1287 is written. Production still has exactly three cron expressions.
+takes the export keys it can list; an export still running when the trip is deleted writes after
+that listing, and a listing that fails is only logged, so either can leave the object), or the
+weekly export sweep of #1287 is written. Production still has exactly three cron expressions.
 
 **Use this read-back, not `wrangler deployments list`.** That command lists Worker _versions_ —
 id, author, source, deployment time — and never prints a cron expression, so it cannot tell you
