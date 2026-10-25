@@ -1018,6 +1018,49 @@ describe('BookingDialog — a save made under a currency the trip no longer has'
     expect(document.querySelector('[role="alert"]')).toBeNull()
   })
 
+  it('keeps a refusal that lands after the dialog was opened again out of the new session', async () => {
+    const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
+    let refuse: (cause: Error) => void = () => {}
+    reservations.update.mockReturnValue(
+      new Promise((_, reject) => {
+        refuse = reject
+      }),
+    )
+    const ui = (open: boolean, booking: BookingRow) => (
+      <I18nProvider locale="en" messages={EN}>
+        <BookingDialog
+          tripId="trip-1"
+          booking={booking}
+          days={DAYS}
+          currency="JPY"
+          open={open}
+          onOpenChange={() => {}}
+        />
+      </I18nProvider>
+    )
+    const view = render(ui(true, DINNER))
+    submitTheForm()
+    await vi.waitFor(() => expect(reservations.update).toHaveBeenCalled())
+    view.rerender(ui(false, DINNER))
+    view.rerender(ui(true, { ...DINNER, id: 'booking-4', title: 'Lunch' }))
+
+    await act(async () => refuse(REFUSAL))
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(1))
+    expect(document.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it('names the currency the price is in, for a reader who cannot see the code beside it', () => {
+    mountAt('JPY')
+
+    const describedBy = priceInput()?.getAttribute('aria-describedby') ?? ''
+    const currency = describedBy
+      .split(' ')
+      .map((id) => document.getElementById(id)?.textContent)
+      .filter((text) => text === 'JPY')
+    expect(currency).toEqual(['JPY'])
+  })
+
   it('answers a stay the same way', async () => {
     stays.update.mockRejectedValue(REFUSAL)
     const dialog = mountAt('JPY', STAY)

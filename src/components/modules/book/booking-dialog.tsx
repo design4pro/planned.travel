@@ -246,6 +246,7 @@ export function BookingDialog({
 
   const editing = booking !== undefined
   const formId = useId()
+  const currencyId = useId()
 
   const [draft, setDraft] = useState<BookingDraft>(() =>
     newDraft(currency, initialStayDayId),
@@ -290,8 +291,8 @@ export function BookingDialog({
   const sessionRef = useRef(0)
   /** The session the running save started in; a refusal that lands in a later one is not shown there. */
   const submittedRef = useRef(0)
-  /** `useAction`'s reset, set once the action exists: opening the dialog clears a refusal it kept. */
-  const resetActionRef = useRef<() => void>(() => {})
+  /** Every action's reset, set once they exist: a refusal one of them kept is dropped on open. */
+  const resetActionsRef = useRef<Array<() => void>>([])
   const mountedRef = useRef(true)
   const flushWarnings = useCallback(() => {
     const pending = [...pendingWarningsRef.current.values()]
@@ -333,7 +334,7 @@ export function BookingDialog({
     setTouched(false)
     setSplitStale(false)
     stale.dismiss()
-    resetActionRef.current()
+    resetActionsRef.current.forEach((reset) => reset())
   }, [open, booking, initialStayDayId])
 
   // Opening the booking a warning is about is the follow-up it asked for, and the toast would cover
@@ -368,6 +369,9 @@ export function BookingDialog({
       ) {
         stale.refuse(currencyCode(currency))
       } else {
+        // `useAction` has already kept the refusal as its error, and this dialog is not the one that
+        // saved: the toast is the only place it is told.
+        resetActionsRef.current.forEach((reset) => reset())
         toast.error(t('modules.form.saveError'), {
           description: t('costs.refusal.rebaseChanged'),
         })
@@ -396,6 +400,12 @@ export function BookingDialog({
     success: unlessLedgerRefused(t('modules.book.toast.updated')),
     failure: t('modules.book.toast.updateFailed'),
   })
+  resetActionsRef.current = [
+    create.reset,
+    update.reset,
+    createStay.reset,
+    updateStay.reset,
+  ]
 
   /*
    * A stay is dated by the trip's days, so it needs days to choose from. An accommodation booking
@@ -410,7 +420,6 @@ export function BookingDialog({
   const bookingAction = editing ? update : create
   const stayAction = editing ? updateStay : createStay
   const action = stayBranch ? stayAction : bookingAction
-  resetActionRef.current = action.reset
   /*
    * The type of an existing stay is fixed: switching it out would retype a booking whose nights are
    * still linked to it.
@@ -819,22 +828,31 @@ export function BookingDialog({
                   }
                   hint={t('modules.book.field.priceHint')}
                 >
-                  <Input
-                    ref={priceRef}
-                    value={draft.price}
-                    onChange={(event) => {
-                      stale.dismiss()
-                      action.reset()
-                      set('price', event.target.value)
-                    }}
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    trailing={
-                      <span className="text-caption text-ink-4">
-                        {draft.currency}
-                      </span>
-                    }
-                  />
+                  <>
+                    <Input
+                      ref={priceRef}
+                      aria-describedby={currencyId}
+                      value={draft.price}
+                      onChange={(event) => {
+                        if (stale.messageFor !== null || stale.pending) {
+                          action.reset()
+                        }
+                        stale.dismiss()
+                        set('price', event.target.value)
+                      }}
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      trailing={
+                        <span className="text-caption text-ink-4">
+                          {draft.currency}
+                        </span>
+                      }
+                    />
+                    {/* The visible code is hidden from assistive technology with the input's trailing slot. */}
+                    <span id={currencyId} className="sr-only">
+                      {draft.currency}
+                    </span>
+                  </>
                 </Field>
               ) : null}
               <Field label={t('modules.field.status')}>
