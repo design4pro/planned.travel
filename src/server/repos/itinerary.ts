@@ -532,6 +532,7 @@ export async function createAssignment(
 ): Promise<DayAssignment> {
   const values = createAssignmentInput.parse(input)
   await requireTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
@@ -552,11 +553,22 @@ async function nextOrderIndex(
   return last === undefined ? 0 : last.orderIndex + 1
 }
 
+/**
+ * Edits one stop. Starts from a row id, so it asks the stop's trip the two questions every
+ * trip-scoped writer asks - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR
+ * 0007), may they edit it - in that order, and writes only after both pass.
+ */
 export async function updateAssignment(
   scope: TenantScope,
   assignmentId: string,
   input: UpdateAssignmentInput,
 ): Promise<DayAssignment> {
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
+  await requireTrip(scope, assignment.tripId)
+  await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   return dayAssignmentsRepository.requireUpdate(
     scope,
     assignmentId,
@@ -564,7 +576,17 @@ export async function updateAssignment(
   )
 }
 
-/** Applies a whole day's new order in one batch. */
+/**
+ * Applies a whole day's new order in one batch.
+ *
+ * The input names bare stop ids, so each distinct trip those stops belong to is asked the two
+ * questions every trip-scoped writer asks, before anything is written:
+ *
+ * - **A stop of a trip the caller may not see is dropped**, exactly like an id the workspace does
+ *   not hold, so the answer never tells an outsider that the stop exists (ADR 0007).
+ * - **A stop of a trip the caller may see but not edit refuses the whole call** with the trip-role
+ *   error, and nothing is written, not even the stops that were editable.
+ */
 export async function reorderAssignments(
   scope: TenantScope,
   input: ReorderAssignmentsInput,
@@ -574,8 +596,24 @@ export async function reorderAssignments(
     scope,
     moves.map((move) => move.assignmentId),
   )
-  const knownIds = new Set(known.map((row) => row.id))
-  const applicable = moves.filter((move) => knownIds.has(move.assignmentId))
+  const visibleIds = new Set<string>()
+  for (const tripId of new Set(known.map((row) => row.tripId))) {
+    try {
+      await requireTrip(scope, tripId)
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        continue
+      }
+      throw error
+    }
+    await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
+    for (const row of known) {
+      if (row.tripId === tripId) {
+        visibleIds.add(row.id)
+      }
+    }
+  }
+  const applicable = moves.filter((move) => visibleIds.has(move.assignmentId))
   if (applicable.length === 0) {
     return []
   }
