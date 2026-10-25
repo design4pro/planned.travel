@@ -299,6 +299,8 @@ const messages = {
   'book.pinnedCaption': 'Disematkan pada satu hari rencana',
   'book.readOnly.archived':
     'Perjalanan ini diarsipkan, jadi pemesanan dan penginapannya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
+  'book.readOnly.role':
+    'Anda bisa melihat pemesanan dan penginapan ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Perubahan ini ditolak. Periksa keadaan perjalanan saat ini sebelum membuat perubahan lain.',
@@ -306,6 +308,8 @@ const messages = {
     'Perjalanan tidak dapat dimuat ulang. Coba lagi sebelum membuat perubahan.',
   'transports.readOnly.archived':
     'Perjalanan ini diarsipkan. Pulihkan untuk mengubah transportasi.',
+  'transports.readOnly.role':
+    'Anda bisa melihat transportasi ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   'transports.title': 'Transportasi',
   'transports.empty': 'Belum ada yang dicatat',
   'transports.count.transports': {
@@ -401,9 +405,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Pilih seseorang yang sudah ada di perjalanan ini',
   'plan.weather.badge.forecast':
-    'Prakiraan: {condition}, tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures}, {condition} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Prakiraan: tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
   'plan.weather.badge.loading': 'Memuat cuaca',
   'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',

@@ -1346,6 +1346,12 @@ const messages = {
   'files.readOnly.title': 'Skrivskyddade filer',
   'files.readOnly.role':
     'Bara resans ägare och redigerare kan ladda upp, byta namn på eller ta bort filer. Du kan fortfarande ladda ner dem.',
+  'files.readOnly.archived':
+    'Den här resan är arkiverad, så filerna är skrivskyddade. Du kan fortfarande ladda ned dem. Återställ resan för att ändra dem.',
+  'lists.readOnly.role':
+    'Du kan läsa de här listorna. Bara resans ägare och redigerare kan ändra dem.',
+  'lists.readOnly.archived':
+    'Den här resan är arkiverad, så listorna är skrivskyddade. Återställ resan för att ändra dem.',
   'vacay.kind.vacation': 'Ledighet',
   'vacay.kind.half_day': 'Halv ledig dag',
   'vacay.kind.sick': 'Sjukdag',

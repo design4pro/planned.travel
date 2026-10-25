@@ -1442,6 +1442,12 @@ const messages = {
   'files.readOnly.title': 'Pliki tylko do odczytu',
   'files.readOnly.role':
     'Tylko właściciele i edytorzy wyjazdu mogą przesyłać pliki, zmieniać ich nazwy lub je usuwać. Nadal możesz je pobierać.',
+  'files.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc pliki są tylko do odczytu. Nadal możesz je pobierać. Przywróć podróż, aby je zmienić.',
+  'lists.readOnly.role':
+    'Możesz przeglądać te listy. Zmieniać je mogą tylko właściciel podróży i edytorzy.',
+  'lists.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc listy są tylko do odczytu. Przywróć podróż, aby je zmienić.',
   'vacay.kind.vacation': 'Urlop',
   'vacay.kind.half_day': 'Pół dnia urlopu',
   'vacay.kind.sick': 'Zwolnienie chorobowe',

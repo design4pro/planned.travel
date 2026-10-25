@@ -797,6 +797,15 @@
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
 }
+/* The shell's side padding: the larger of the gutter and the safe-area inset, in
+   one declaration so no second utility can compete with it. Physical on
+   purpose: the inset belongs to the screen, not to the reading direction, so a
+   logical `ps-` / `pe-` version would put it on the wrong side under
+   `dir="rtl"` (`ar`). Deliberately not named `px-*`, so `cn()` leaves it alone. */
+@utility gutter-x {
+  padding-left: max(var(--gutter-x), var(--safe-left));
+  padding-right: max(var(--gutter-x), var(--safe-right));
+}
 @utility mb-safe {
   margin-bottom: var(--safe-bottom);
 }

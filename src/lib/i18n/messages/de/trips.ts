@@ -311,6 +311,8 @@ const messages = {
   'book.pinnedCaption': 'An einen Tag des Plans geheftet',
   'book.readOnly.archived':
     'Diese Reise ist archiviert, Buchungen und Unterkünfte sind daher schreibgeschützt. Stelle die Reise wieder her, um sie zu ändern.',
+  'book.readOnly.role':
+    'Du kannst diese Buchungen und Unterkünfte lesen. Ändern können sie nur der Inhaber der Reise und die Bearbeiter.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Diese Änderung wurde abgelehnt. Prüfe den aktuellen Stand der Reise vor weiteren Änderungen.',
@@ -318,6 +320,8 @@ const messages = {
     'Die Reise konnte nicht aktualisiert werden. Versuche es vor weiteren Änderungen erneut.',
   'transports.readOnly.archived':
     'Diese Reise ist archiviert. Stelle sie wieder her, um Transporte zu ändern.',
+  'transports.readOnly.role':
+    'Du kannst diese Transporte lesen. Ändern können sie nur der Inhaber der Reise und die Bearbeiter.',
   'transports.title': 'Transfers',
   'transports.empty': 'Noch nichts erfasst',
   'transports.count.transports': {
@@ -419,9 +423,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Wähle jemanden, der bereits auf dieser Reise ist',
   'plan.weather.badge.forecast':
-    'Vorhersage: {condition}, Höchstwert {max}, Tiefstwert {min}',
+    'Vorhersage: {figures}, {condition} (Höchstwert {max}, Tiefstwert {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Vorhersage: Höchstwert {max}, Tiefstwert {min}',
+    'Vorhersage: {figures} (Höchstwert {max}, Tiefstwert {min})',
   'plan.weather.badge.unavailable': 'Wetter für diesen Tag nicht verfügbar',
   'plan.weather.badge.loading': 'Wetter wird geladen',
   'plan.weather.badge.recorded': 'Gemessen: Höchstwert {max}, Tiefstwert {min}',

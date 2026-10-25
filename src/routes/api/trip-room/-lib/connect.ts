@@ -70,10 +70,17 @@ import type { PresenceUser, TripRoomIdentity, TripRoomNamespace } from '#/server
  * Two concurrent sign-outs queue the close twice, which is accepted.
  * The shipped client reconnects through this handler, which is what picks up the
  * stored role. The close is best effort: a room that
- * cannot be reached is logged, and a connect already in flight can reach the room
- * after the close found no socket. The room's maximum socket age (15 minutes) plus
- * alarm interval (5 minutes) bounds either stale role window to about 20 minutes.
- * Refusing a connect minted before a revocation is the exact race fix (#1085).
+ * cannot be reached is logged, and the room's maximum socket age (15 minutes) plus
+ * alarm interval (5 minutes) bounds that stale role window to about 20 minutes.
+ *
+ * **A connect in flight is refused, not accepted with the old role.** The identity carries
+ * `issuedAt`, taken from this Worker's clock before anything that decides the role is read. A close
+ * carries `revokedAt` from the same clock, taken after the revoking write resolved, and the room
+ * remembers it as a watermark (`TripRoom.handleClose`). A connect minted before the watermark plus
+ * `TRIP_ROOM_REVOCATION_SKEW_MS` reaches the room, is answered 101 and closed at once with the
+ * room-closed code, and the client reconnects through this handler. The room never reads its own
+ * clock for that decision. `issuedAt` is set here from this Worker's clock and the identity header is
+ * overwritten by `connectToTripRoom`, so nothing the browser sends can set it.
  */
 
 function json(body: unknown, status: number): Response {
@@ -149,7 +156,11 @@ export async function serveTripRoom(
   namespace: TripRoomNamespace,
   request: Request,
   tripId: string,
+  now: () => number = Date.now,
 ): Promise<Response> {
+  // Taken before the session, the trip and the stored role are read, so a revocation stamped after
+  // those reads is later than this and the room refuses the connect (#1085).
+  const issuedAt = now()
   if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') {
     return json(
       { error: 'This endpoint only accepts a WebSocket upgrade.' },
@@ -216,6 +227,7 @@ export async function serveTripRoom(
     orgId: context.organizationId,
     user,
     role: canCommit ? 'editor' : 'viewer',
+    issuedAt,
   }
 
   return connectToTripRoom(namespace, identity, request)

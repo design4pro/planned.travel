@@ -1379,6 +1379,12 @@ const messages = {
   'files.readOnly.title': 'Dateien nur zum Lesen',
   'files.readOnly.role':
     'Nur Eigentümer und Bearbeiter der Reise können Dateien hochladen, umbenennen oder löschen. Du kannst sie weiterhin herunterladen.',
+  'files.readOnly.archived':
+    'Diese Reise ist archiviert, die Dateien sind daher schreibgeschützt. Du kannst sie weiterhin herunterladen. Stelle die Reise wieder her, um sie zu ändern.',
+  'lists.readOnly.role':
+    'Du kannst diese Listen lesen. Ändern können sie nur der Inhaber der Reise und die Bearbeiter.',
+  'lists.readOnly.archived':
+    'Diese Reise ist archiviert, die Listen sind daher schreibgeschützt. Stelle die Reise wieder her, um sie zu ändern.',
   'vacay.kind.vacation': 'Urlaub',
   'vacay.kind.half_day': 'Halber Urlaubstag',
   'vacay.kind.sick': 'Krankheitstag',

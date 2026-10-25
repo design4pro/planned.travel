@@ -47,6 +47,7 @@ import {
 } from 'lucide-react'
 
 import {
+  Alert,
   Avatar,
   Badge,
   Button,
@@ -155,6 +156,14 @@ export interface ListsBoardProps {
   readonly people: ReadonlyArray<PersonOption>
   readonly viewerUserId: string
   /**
+   * Whether the reader may change the lists (`canWritePlan`, off the lists payload). Required
+   * rather than defaulted: a flag that can be forgotten at a call site draws write controls on a
+   * trip that refuses them.
+   */
+  readonly canWrite: boolean
+  /** The reason a writer is refused, for the notice: an archived trip says to restore it. */
+  readonly archived: boolean
+  /**
    * Whether the "new list" dialog is open. Owned by the screen rather than the
    * board, so the module header can hold the primary action where a primary
    * action belongs while the board keeps the form.
@@ -168,6 +177,8 @@ export function ListsBoard({
   lists,
   people,
   viewerUserId,
+  canWrite,
+  archived,
   newListOpen,
   onNewListOpenChange,
 }: ListsBoardProps) {
@@ -262,6 +273,16 @@ export function ListsBoard({
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
+      {canWrite ? null : (
+        <Alert tone="info" size="sm">
+          {t(
+            archived
+              ? 'modules.lists.readOnly.archived'
+              : 'modules.lists.readOnly.role',
+          )}
+        </Alert>
+      )}
+
       <FilterRow>
         <span className="me-1 shrink-0 text-micro font-semibold tracking-label text-ink-4 uppercase">
           {t('modules.lists.show')}
@@ -298,16 +319,18 @@ export function ListsBoard({
             {t(label)}
           </Chip>
         ))}
-        <Button
-          variant="secondary"
-          size="sm"
-          shape="pill"
-          className="ms-auto"
-          onClick={() => setTemplateOpen(true)}
-        >
-          <Plus aria-hidden />
-          {t('modules.lists.template.from')}
-        </Button>
+        {canWrite ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            shape="pill"
+            className="ms-auto"
+            onClick={() => setTemplateOpen(true)}
+          >
+            <Plus aria-hidden />
+            {t('modules.lists.template.from')}
+          </Button>
+        ) : null}
       </FilterRow>
 
       {visibleLists.length === 0 ? (
@@ -327,14 +350,16 @@ export function ListsBoard({
               : t('modules.lists.empty.shared.body')
           }
           action={
-            <Button
-              variant="primary"
-              shape="pill"
-              onClick={() => onNewListOpenChange(true)}
-            >
-              <Plus aria-hidden strokeWidth={2.5} />
-              {t('modules.lists.action.new')}
-            </Button>
+            canWrite ? (
+              <Button
+                variant="primary"
+                shape="pill"
+                onClick={() => onNewListOpenChange(true)}
+              >
+                <Plus aria-hidden strokeWidth={2.5} />
+                {t('modules.lists.action.new')}
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -348,6 +373,7 @@ export function ListsBoard({
                 tripId={tripId}
                 list={list}
                 people={people}
+                canWrite={canWrite}
                 filter={filter}
                 orderOverride={orders.get(list.id)}
                 tickOverride={ticks.get}
@@ -390,20 +416,22 @@ export function ListsBoard({
         </ul>
       )}
 
-      <ListDialog
-        tripId={tripId}
-        list={editingList ?? undefined}
-        people={people}
-        open={newListOpen || editingList !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setEditingList(null)
-            onNewListOpenChange(false)
-          }
-        }}
-      />
+      {canWrite ? (
+        <ListDialog
+          tripId={tripId}
+          list={editingList ?? undefined}
+          people={people}
+          open={newListOpen || editingList !== null}
+          onOpenChange={(next) => {
+            if (!next) {
+              setEditingList(null)
+              onNewListOpenChange(false)
+            }
+          }}
+        />
+      ) : null}
 
-      {itemDialog === null ? null : (
+      {itemDialog === null || !canWrite ? null : (
         <ItemDialog
           tripId={tripId}
           listId={itemDialog.listId}
@@ -419,11 +447,13 @@ export function ListsBoard({
         />
       )}
 
-      <TemplateDialog
-        tripId={tripId}
-        open={templateOpen}
-        onOpenChange={setTemplateOpen}
-      />
+      {canWrite ? (
+        <TemplateDialog
+          tripId={tripId}
+          open={templateOpen}
+          onOpenChange={setTemplateOpen}
+        />
+      ) : null}
 
       <ConfirmDialog
         request={confirm}
@@ -464,6 +494,7 @@ interface ListPanelProps {
   readonly tripId: string
   readonly list: ListData
   readonly people: ReadonlyArray<PersonOption>
+  readonly canWrite: boolean
   readonly filter: ListFilter
   readonly orderOverride: ReadonlyArray<string> | undefined
   readonly tickOverride: (itemId: string) => boolean | undefined
@@ -485,7 +516,7 @@ interface ListPanelProps {
 }
 
 function ListPanel(props: ListPanelProps) {
-  const { list, people, filter, tickOverride } = props
+  const { list, people, canWrite, filter, tickOverride } = props
   const Icon = iconFor(list.kind)
 
   const [mode, setMode] = useState<'grouped' | 'order'>('grouped')
@@ -509,6 +540,10 @@ function ListPanel(props: ListPanelProps) {
   const groups = useMemo(() => groupByCategory(rendered), [rendered])
   const t = useTranslate()
   const hasCategories = !isUngrouped(groups)
+  // The body asks for a tick, which a reader who may not write cannot give.
+  const doneEmptyBody = canWrite
+    ? t('modules.lists.items.doneEmpty.body')
+    : undefined
   const showGroups = hasCategories && mode === 'grouped'
 
   const visible = rendered.filter((item) => matchesFilter(item.isDone, filter))
@@ -594,7 +629,7 @@ function ListPanel(props: ListPanelProps) {
               {nameFor(people, list.ownerUserId, t).split(' ')[0]}
             </Badge>
           )}
-          {hasCategories ? (
+          {hasCategories && canWrite ? (
             <Tooltip
               content={
                 showGroups
@@ -621,10 +656,12 @@ function ListPanel(props: ListPanelProps) {
               />
             </Tooltip>
           ) : null}
-          <RowMenu
-            label={t('modules.actionsFor', { name: list.name })}
-            items={menuItems}
-          />
+          {canWrite ? (
+            <RowMenu
+              label={t('modules.actionsFor', { name: list.name })}
+              items={menuItems}
+            />
+          ) : null}
         </>
       }
       toolbar={
@@ -669,11 +706,13 @@ function ListPanel(props: ListPanelProps) {
       }
       flush
       footer={
-        <InlineItemComposer
-          tripId={props.tripId}
-          listId={list.id}
-          onOpenFullForm={props.onAddItem}
-        />
+        canWrite ? (
+          <InlineItemComposer
+            tripId={props.tripId}
+            listId={list.id}
+            onOpenFullForm={props.onAddItem}
+          />
+        ) : undefined
       }
     >
       {rendered.length === 0 ? (
@@ -682,7 +721,10 @@ function ListPanel(props: ListPanelProps) {
             size="sm"
             icon={<Icon />}
             title={t('modules.lists.items.empty.title')}
-            description={t('modules.lists.items.empty.body')}
+            // The body points at the composer below, which a reader who may not write is not given.
+            description={
+              canWrite ? t('modules.lists.items.empty.body') : undefined
+            }
           />
         </div>
       ) : visible.length === 0 ? (
@@ -697,7 +739,7 @@ function ListPanel(props: ListPanelProps) {
             }
             description={
               filter === 'done'
-                ? t('modules.lists.items.doneEmpty.body')
+                ? doneEmptyBody
                 : t('modules.lists.items.todoEmpty.body', {
                     label: t('modules.filter.all'),
                   })
@@ -730,6 +772,7 @@ function ListPanel(props: ListPanelProps) {
                       <ItemRow
                         item={item}
                         people={people}
+                        canWrite={canWrite}
                         onTick={(next) => void props.onTick([item.id], next)}
                         onEdit={() => props.onEditItem(item)}
                         onDelete={() => props.onDeleteItem(item)}
@@ -748,6 +791,7 @@ function ListPanel(props: ListPanelProps) {
           items={visible}
           allIds={rendered.map((item) => item.id)}
           people={people}
+          canWrite={canWrite}
           onTick={props.onTick}
           onReorder={props.onReorder}
           onEditItem={props.onEditItem}
@@ -766,6 +810,7 @@ function SortableItems({
   items,
   allIds,
   people,
+  canWrite,
   onTick,
   onReorder,
   onEditItem,
@@ -777,6 +822,7 @@ function SortableItems({
   /** Every id in the list, including the ones a filter is hiding. */
   allIds: ReadonlyArray<string>
   people: ReadonlyArray<PersonOption>
+  canWrite: boolean
   onTick: (itemIds: ReadonlyArray<string>, isDone: boolean) => Promise<void>
   onReorder: (listId: string, itemIds: ReadonlyArray<string>) => Promise<void>
   onEditItem: (item: ListItemData) => void
@@ -842,9 +888,10 @@ function SortableItems({
               key={item.id}
               item={item}
               people={people}
+              canWrite={canWrite}
               // Dragging while a filter hides rows would reorder against a list
               // the traveller cannot see, so the handles step aside instead.
-              draggable={!filtering}
+              draggable={canWrite && !filtering}
               onTick={(next) => void onTick([item.id], next)}
               onEdit={() => onEditItem(item)}
               onDelete={() => onDeleteItem(item)}
@@ -860,6 +907,7 @@ function SortableItems({
 function SortableItemRow({
   item,
   people,
+  canWrite,
   draggable,
   onTick,
   onEdit,
@@ -868,6 +916,7 @@ function SortableItemRow({
 }: {
   item: RenderedItem
   people: ReadonlyArray<PersonOption>
+  canWrite: boolean
   draggable: boolean
   onTick: (next: boolean) => void
   onEdit: () => void
@@ -898,6 +947,7 @@ function SortableItemRow({
       <ItemRow
         item={item}
         people={people}
+        canWrite={canWrite}
         dragging={isDragging}
         handle={
           draggable ? (
@@ -934,6 +984,7 @@ function SortableItemRow({
 function ItemRow({
   item,
   people,
+  canWrite,
   dragging = false,
   handle,
   onTick,
@@ -943,6 +994,7 @@ function ItemRow({
 }: {
   item: RenderedItem
   people: ReadonlyArray<PersonOption>
+  canWrite: boolean
   dragging?: boolean
   handle?: ReactNode
   onTick: (next: boolean) => void
@@ -967,20 +1019,28 @@ function ItemRow({
       <Checkbox
         size="sm"
         checked={item.isDone}
+        disabled={!canWrite}
         onCheckedChange={(next) => onTick(next === true)}
-        aria-label={t(
-          item.isDone
-            ? 'modules.lists.action.untickItem'
-            : 'modules.lists.action.tickOffItem',
-          { name: item.name },
-        )}
+        aria-label={
+          canWrite
+            ? t(
+                item.isDone
+                  ? 'modules.lists.action.untickItem'
+                  : 'modules.lists.action.tickOffItem',
+                { name: item.name },
+              )
+            : item.name
+        }
         className="shrink-0"
       />
 
       <span className="flex min-w-0 flex-1 items-baseline gap-2">
         <span
           className={cn(
-            'min-w-0 truncate text-label',
+            // A reader has no Edit dialog to read a long name in full, so it wraps for them.
+            canWrite
+              ? 'min-w-0 truncate text-label'
+              : 'min-w-0 break-words text-label',
             item.isDone ? 'text-ink-4 line-through' : 'text-ink',
           )}
         >
@@ -1005,27 +1065,34 @@ function ItemRow({
         </Badge>
       ) : null}
 
-      <AssigneeMenu item={item} people={people} onAssign={onAssign} />
-
-      <RowMenu
-        label={t('modules.actionsFor', { name: item.name })}
-        size="sm"
-        className="shrink-0"
-        items={[
-          {
-            label: t('modules.lists.menu.editItem'),
-            icon: <Pencil aria-hidden />,
-            onSelect: onEdit,
-          },
-          {
-            label: t('modules.lists.remove.item'),
-            icon: <Trash2 aria-hidden />,
-            tone: 'danger',
-            separated: true,
-            onSelect: onDelete,
-          },
-        ]}
+      <AssigneeMenu
+        item={item}
+        people={people}
+        canWrite={canWrite}
+        onAssign={onAssign}
       />
+
+      {canWrite ? (
+        <RowMenu
+          label={t('modules.actionsFor', { name: item.name })}
+          size="sm"
+          className="shrink-0"
+          items={[
+            {
+              label: t('modules.lists.menu.editItem'),
+              icon: <Pencil aria-hidden />,
+              onSelect: onEdit,
+            },
+            {
+              label: t('modules.lists.remove.item'),
+              icon: <Trash2 aria-hidden />,
+              tone: 'danger',
+              separated: true,
+              onSelect: onDelete,
+            },
+          ]}
+        />
+      ) : null}
     </div>
   )
 }
@@ -1034,10 +1101,12 @@ function ItemRow({
 function AssigneeMenu({
   item,
   people,
+  canWrite,
   onAssign,
 }: {
   item: ListItemData
   people: ReadonlyArray<PersonOption>
+  canWrite: boolean
   onAssign: (userId: string) => void
 }) {
   const t = useTranslate()
@@ -1046,6 +1115,12 @@ function AssigneeMenu({
     return null
   }
   const assignee = people.find((person) => person.userId === item.assignedTo)
+  // A reader who may not write still sees who the item is for, as a read-out.
+  if (!canWrite) {
+    return assignee === undefined ? null : (
+      <Avatar name={assignee.name} src={assignee.image} size="sm" />
+    )
+  }
 
   return (
     <DropdownMenu>

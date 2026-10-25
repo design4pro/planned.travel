@@ -296,6 +296,8 @@ const messages = {
   'book.pinnedCaption': 'Đã ghim vào một ngày của lịch trình',
   'book.readOnly.archived':
     'Chuyến đi này đã được lưu trữ nên các đặt chỗ và nơi lưu trú chỉ có thể xem. Hãy khôi phục chuyến đi để thay đổi.',
+  'book.readOnly.role':
+    'Bạn có thể xem các đặt chỗ và nơi lưu trú này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Thay đổi này bị từ chối. Hãy kiểm tra trạng thái hiện tại của chuyến đi trước khi thay đổi thêm.',
@@ -303,6 +305,8 @@ const messages = {
     'Không thể tải lại chuyến đi. Hãy thử lại trước khi thay đổi.',
   'transports.readOnly.archived':
     'Chuyến đi này đã được lưu trữ. Hãy khôi phục để thay đổi phương tiện di chuyển.',
+  'transports.readOnly.role':
+    'Bạn có thể xem các phương tiện di chuyển này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
   'transports.title': 'Di chuyển',
   'transports.empty': 'Chưa ghi gì',
   'transports.count.transports': {
@@ -397,9 +401,9 @@ const messages = {
     'Một chuyến đi có tối đa {limit} khách, vì danh sách dài hơn khiến việc chọn người tham gia và đọc phần chia chi phí trở nên khó khăn',
   'people.error.guestMergeTarget': 'Chọn một người đã có trong chuyến đi này',
   'plan.weather.badge.forecast':
-    'Dự báo: {condition}, cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures}, {condition} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Dự báo: cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.unavailable': 'Không có thông tin thời tiết cho ngày này',
   'plan.weather.badge.loading': 'Đang tải thời tiết',
   'plan.weather.badge.recorded': 'Đã ghi nhận: cao nhất {max}, thấp nhất {min}',

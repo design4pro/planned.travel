@@ -310,6 +310,8 @@ const messages = {
   'book.pinnedCaption': 'Vastgezet op een dag van de route',
   'book.readOnly.archived':
     'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
+  'book.readOnly.role':
+    'Je kunt deze boekingen en verblijven lezen. Alleen de eigenaar van de reis en bewerkers kunnen ze wijzigen.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Deze wijziging is geweigerd. Bekijk de huidige reis voordat je meer wijzigingen aanbrengt.',
@@ -317,6 +319,8 @@ const messages = {
     'De reis kon niet worden vernieuwd. Probeer het opnieuw voordat je wijzigingen aanbrengt.',
   'transports.readOnly.archived':
     'Deze reis is gearchiveerd. Herstel de reis om vervoer te wijzigen.',
+  'transports.readOnly.role':
+    'Je kunt dit vervoer lezen. Alleen de eigenaar van de reis en bewerkers kunnen het wijzigen.',
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',
   'transports.count.transports': {
@@ -410,9 +414,9 @@ const messages = {
     'Een reis heeft hooguit {limit} gasten, omdat een langere lijst de deelnemerskeuze en de kostenverdeling moeilijk leesbaar maakt',
   'people.error.guestMergeTarget': 'Kies iemand die al op deze reis staat',
   'plan.weather.badge.forecast':
-    'Voorspelling: {condition}, maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures}, {condition} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Voorspelling: maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.unavailable': 'Weer niet beschikbaar voor deze dag',
   'plan.weather.badge.loading': 'Weer laden',
   'plan.weather.badge.recorded': 'Gemeten: maximaal {max}, minimaal {min}',

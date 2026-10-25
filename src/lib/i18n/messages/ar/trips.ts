@@ -335,6 +335,8 @@ const messages = {
   'book.pinnedCaption': 'مثبَّت على يوم من البرنامج',
   'book.readOnly.archived':
     'هذه الرحلة مؤرشفة، لذا الحجوزات والإقامات للقراءة فقط. استعد الرحلة من الأرشيف لتغييرها.',
+  'book.readOnly.role':
+    'يمكنك قراءة هذه الحجوزات والإقامات. لا يغيّرها إلا مالك الرحلة ومحرّروها.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'تم رفض هذا التغيير. راجع الحالة الحالية للرحلة قبل إجراء تغييرات أخرى.',
@@ -342,6 +344,8 @@ const messages = {
     'تعذر تحديث الرحلة. حاول مرة أخرى قبل إجراء تغييرات.',
   'transports.readOnly.archived':
     'هذه الرحلة مؤرشفة. استعدها لتعديل وسائل النقل.',
+  'transports.readOnly.role':
+    'يمكنك قراءة وسائل النقل هذه. لا يغيّرها إلا مالك الرحلة ومحرّروها.',
   'transports.title': 'التنقلات',
   'transports.empty': 'لا شيء مسجَّل بعد',
   'transports.count.transports': {
@@ -444,9 +448,9 @@ const messages = {
     'تتسع الرحلة لـ {limit} ضيفًا على الأكثر، لأن القائمة الأطول تجعل اختيار المشاركين وتقسيم المصاريف صعب القراءة',
   'people.error.guestMergeTarget': 'اختر شخصًا موجودًا بالفعل في هذه الرحلة',
   'plan.weather.badge.forecast':
-    'التوقعات: {condition}، العظمى {max}، الصغرى {min}',
+    'التوقعات: {figures}، {condition} (العظمى {max}، الصغرى {min})',
   'plan.weather.badge.forecastNoCondition':
-    'التوقعات: العظمى {max}، الصغرى {min}',
+    'التوقعات: {figures} (العظمى {max}، الصغرى {min})',
   'plan.weather.badge.unavailable': 'حالة الطقس غير متاحة لهذا اليوم',
   'plan.weather.badge.loading': 'جارٍ تحميل الطقس',
   'plan.weather.badge.recorded': 'المسجَّل: العظمى {max}، الصغرى {min}',

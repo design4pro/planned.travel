@@ -299,6 +299,8 @@ const messages = {
   'book.pinnedCaption': '旅程の日に紐づけ済み',
   'book.readOnly.archived':
     'この旅行はアーカイブ済みのため、予約と宿泊は閲覧専用です。変更するには旅行を元に戻してください。',
+  'book.readOnly.role':
+    'この予約と宿泊は閲覧のみできます。変更できるのは旅行のオーナーと編集者だけです。',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'この変更は拒否されました。さらに変更する前に、旅行の現在の状態を確認してください。',
@@ -306,6 +308,8 @@ const messages = {
     '旅行を再読み込みできませんでした。変更する前にもう一度お試しください。',
   'transports.readOnly.archived':
     'この旅行はアーカイブされています。移動手段を変更するには復元してください。',
+  'transports.readOnly.role':
+    'この移動手段は閲覧のみできます。変更できるのは旅行のオーナーと編集者だけです。',
   'transports.title': '移動',
   'transports.empty': 'まだ何も記録されていません',
   'transports.count.transports': {
@@ -395,8 +399,10 @@ const messages = {
   'people.error.guestLimit':
     '旅行に追加できるゲストは最大 {limit} 人です。それ以上になると参加者の選択や費用の分担が読みにくくなるためです',
   'people.error.guestMergeTarget': 'すでにこの旅行にいる人を選んでください',
-  'plan.weather.badge.forecast': '予報: {condition}、最高 {max}、最低 {min}',
-  'plan.weather.badge.forecastNoCondition': '予報: 最高 {max}、最低 {min}',
+  'plan.weather.badge.forecast':
+    '予報: {figures}、{condition}（最高 {max}、最低 {min}）',
+  'plan.weather.badge.forecastNoCondition':
+    '予報: {figures}（最高 {max}、最低 {min}）',
   'plan.weather.badge.unavailable': 'この日の天気は取得できません',
   'plan.weather.badge.loading': '天気を読み込み中',
   'plan.weather.badge.recorded': '観測値: 最高 {max}、 最低 {min}',

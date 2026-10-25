@@ -286,12 +286,16 @@ const messages = {
   'book.pinnedCaption': '已固定到行程中的某一天',
   'book.readOnly.archived':
     '此行程已封存，因此預訂和住宿為唯讀。還原該行程後才能變更。',
+  'book.readOnly.role':
+    '你可以查看這些預訂和住宿。只有行程的擁有者和編輯者可以變更。',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     '此變更已被拒絕。繼續變更前，請查看行程的目前狀態。',
   'transports.recovery.failed': '無法重新整理行程。請重試後再進行變更。',
   'transports.readOnly.archived':
     '此行程已封存。請先還原行程，再修改交通安排。',
+  'transports.readOnly.role':
+    '你可以查看這些交通安排。只有行程的擁有者和編輯者可以變更。',
   'transports.title': '交通',
   'transports.empty': '尚未紀錄',
   'transports.count.transports': {
@@ -372,8 +376,10 @@ const messages = {
   'people.error.guestLimit':
     '一次旅行最多 {limit} 位訪客，因為名單更長會讓參與者選擇和費用分攤難以閱讀',
   'people.error.guestMergeTarget': '請選擇已在本次旅行中的人',
-  'plan.weather.badge.forecast': '預報：{condition}，最高 {max}，最低 {min}',
-  'plan.weather.badge.forecastNoCondition': '預報：最高 {max}，最低 {min}',
+  'plan.weather.badge.forecast':
+    '預報：{figures}，{condition}（最高 {max}，最低 {min}）',
+  'plan.weather.badge.forecastNoCondition':
+    '預報：{figures}（最高 {max}，最低 {min}）',
   'plan.weather.badge.unavailable': '這一天的天氣暫時無法使用',
   'plan.weather.badge.loading': '正在載入天氣',
   'plan.weather.badge.recorded': '實測：最高 {max}， 最低 {min}',

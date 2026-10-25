@@ -147,6 +147,7 @@ function FilesPage() {
 
         <FileLibrary
           canWrite={data.canWrite}
+          archived={data.archived}
           tripId={tripId}
           files={data.files}
           people={data.people}

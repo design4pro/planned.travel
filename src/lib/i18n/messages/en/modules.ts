@@ -1539,6 +1539,12 @@ const messages = {
   'files.readOnly.title': 'Read-only files',
   'files.readOnly.role':
     'Only trip owners and editors can upload, rename or delete files. You can still download them.',
+  'files.readOnly.archived':
+    'This trip is archived, so its files are read-only. You can still download them. Restore the trip to change them.',
+  'lists.readOnly.role':
+    'You can read these lists. Only the trip’s owner and editors can change them.',
+  'lists.readOnly.archived':
+    'This trip is archived, so its lists are read-only. Restore the trip to change them.',
   'vacay.kind.vacation': 'Leave',
   'vacay.kind.half_day': 'Half day of leave',
   'vacay.kind.sick': 'Sick day',

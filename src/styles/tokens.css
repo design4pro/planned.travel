@@ -774,6 +774,9 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  /* The shell's side gutter: 16 / 24 / 32px at the base, `sm` and `lg`. `gutter-x`
+     (styles.css) lifts it to the safe-area inset where the inset is larger. */
+  --gutter-x: 1rem;
 
   /* ------------------------------------------------ ink on a chosen colour
      A traveller's own colour, a category's colour and a map pin's colour come
@@ -805,4 +808,15 @@
    changes under the offsets composing it. */
 [data-impersonated] {
   --impersonation-h: 3.5rem; /* 56px */
+}
+
+@media (width >= 40rem) {
+  :root {
+    --gutter-x: 1.5rem;
+  }
+}
+@media (width >= 64rem) {
+  :root {
+    --gutter-x: 2rem;
+  }
 }

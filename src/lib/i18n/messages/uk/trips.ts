@@ -326,6 +326,8 @@ const messages = {
   'book.pinnedCaption': 'Закріплено за днем маршруту',
   'book.readOnly.archived':
     'Ця подорож в архіві, тому бронювання та проживання доступні лише для читання. Відновіть подорож, щоб їх змінити.',
+  'book.readOnly.role':
+    'Ви можете переглядати ці бронювання та проживання. Змінювати їх можуть лише власник подорожі та редактори.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Цю зміну відхилено. Перевірте поточний стан подорожі перед наступними змінами.',
@@ -333,6 +335,8 @@ const messages = {
     'Не вдалося оновити подорож. Спробуйте ще раз перед внесенням змін.',
   'transports.readOnly.archived':
     'Цю подорож архівовано. Відновіть її, щоб змінити транспорт.',
+  'transports.readOnly.role':
+    'Ви можете переглядати цей транспорт. Змінювати його можуть лише власник подорожі та редактори.',
   'transports.title': 'Переїзди',
   'transports.empty': 'Поки нічого не записано',
   'transports.count.transports': {
@@ -431,9 +435,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Оберіть когось, хто вже бере участь у подорожі',
   'plan.weather.badge.forecast':
-    'Прогноз: {condition}, максимум {max}, мінімум {min}',
+    'Прогноз: {figures}, {condition} (максимум {max}, мінімум {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Прогноз: максимум {max}, мінімум {min}',
+    'Прогноз: {figures} (максимум {max}, мінімум {min})',
   'plan.weather.badge.unavailable': 'Погода на цей день недоступна',
   'plan.weather.badge.loading': 'Завантаження погоди',
   'plan.weather.badge.recorded': 'Зафіксовано: максимум {max}, мінімум {min}',
