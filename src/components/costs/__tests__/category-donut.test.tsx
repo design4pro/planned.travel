@@ -39,10 +39,10 @@ function donut(
   }
 }
 
-function renderDonut(rows: ReadonlyArray<DonutRow>) {
+function renderDonut(rows: ReadonlyArray<DonutRow>, currency = 'EUR') {
   return render(
     <I18nProvider locale="en" messages={EN}>
-      <CategoryDonut rows={rows} currency="EUR" />
+      <CategoryDonut rows={rows} currency={currency} />
     </I18nProvider>,
   )
 }
@@ -257,6 +257,31 @@ describe('the legend', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2)
     expect(within(items[2]).queryByRole('button')).toBeNull()
     expect(within(items[3]).queryByRole('button')).toBeNull()
+  })
+
+  it('caps the figures column, so a long planned amount cannot squeeze the name', () => {
+    // jsdom has no layout, so this pins the rule that does the work in a browser: the
+    // column is `fit-content(45%)`, and the name keeps the rest of the row.
+    renderDonut(
+      [
+        donut('food', 32_000_000_000, 5_000_000_000_000, 'Food & drink'),
+        donut('insurance', 0, 5_000_000_000_000, 'Insurance'),
+      ],
+      'IDR',
+    )
+    const [spent, plannedOnly] = legendItems()
+    const grids = [within(spent).getByRole('button'), plannedOnly]
+
+    for (const grid of grids) {
+      expect(grid.className).toContain('fit-content(45%)')
+      expect(grid.className).not.toMatch(/grid-cols-\[[^\]]*_auto\]/)
+    }
+    // On a spent row the planned line has a row of its own under the amount.
+    const planned = within(spent).getByText(/planned$/)
+    expect(planned.className).toContain('row-start-2')
+    expect(within(spent).getByText(/^Food & drink$/).className).toContain(
+      'row-start-1',
+    )
   })
 
   it('puts the category colour on the legend dot', () => {

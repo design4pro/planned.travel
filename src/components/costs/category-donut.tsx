@@ -48,6 +48,13 @@ export interface CategoryDonutProps {
   readonly currency: string
 }
 
+/**
+ * Dot, name, figures. The figures column is as wide as its widest line but stops at
+ * 45% of the row, so a long planned line wraps inside it instead of taking the room
+ * the name needs; a name keeps at least one full word per line.
+ */
+const LEGEND_COLUMNS = 'grid-cols-[auto_minmax(0,1fr)_fit-content(45%)]'
+
 const CENTRE = 50
 const OUTER_RADIUS = 48
 const INNER_RADIUS = 31
@@ -241,7 +248,8 @@ function Legend({
             className={cn(
               // Wider than the list by its own padding, so the row's ground reaches
               // past the text and the inset focus ring stays inside the panel.
-              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption active:bg-surface-inset',
+              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption active:bg-surface-inset',
+              LEGEND_COLUMNS,
               // Pinned is a line as well as a ground, and a box-shadow rather than an
               // outline, which is the property the focus ring uses.
               link.pinned === row.key
@@ -279,7 +287,10 @@ function Legend({
       {plannedOnly.map((row) => (
         <li
           key={row.key}
-          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 text-caption"
+          className={cn(
+            'grid items-baseline gap-x-2.5 text-caption',
+            LEGEND_COLUMNS,
+          )}
         >
           <Dot colour={row.colour} />
           <Name label={row.label} className="col-start-2 row-start-1" />
