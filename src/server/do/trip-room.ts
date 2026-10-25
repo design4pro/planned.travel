@@ -32,6 +32,7 @@ import {
   TRIP_ROOM_PONG_FRAME,
   TRIP_ROOM_PROTOCOL_VERSION,
   TRIP_ROOM_RATE_LIMIT,
+  TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
   TRIP_ROOM_REVOCATION_SKEW_MS,
   TRIP_ROOM_REVOCATION_TTL_MS,
   TRIP_ROOM_REVOKED_AT_HEADER,
@@ -271,10 +272,14 @@ export class TripRoom implements DurableObject {
     server.serializeAttachment(attachment)
 
     if (revoked) {
-      // Answered 101 and closed at once, like any other eviction: a browser socket cannot read a
-      // refused upgrade, and the close reason is what makes the client reconnect through the app
-      // Worker. The socket is never joined, so it is no presence and gets no frame.
-      server.close(CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON)
+      // Answered 101 and closed straight after, like any other eviction: a browser socket cannot
+      // read a refused upgrade, and the close reason is what makes the client reconnect through the
+      // app Worker. The socket is never joined, so it is no presence and gets no frame. The close
+      // waits for the upgrade to finish (see TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS).
+      setTimeout(
+        () => server.close(CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON),
+        TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
+      )
       this.logger.info('trip room connect refused: minted before a revocation', {
         tripId: identity.value.tripId,
         orgId: identity.value.orgId,

@@ -65,6 +65,14 @@ export const TRIP_ROOM_REVOCATION_SKEW_MS = 1_000
 export const TRIP_ROOM_REVOCATION_TTL_MS = 15 * 60 * 1000
 
 /**
+ * How long after the 101 a refused connect is closed. A close sent before the upgrade response
+ * left the client open and never closed in a browser run against the dev server (#1085 QA), stuck on
+ * "Reconnecting"; a short delay lets the upgrade finish first. shortcut: a fixed delay, not an
+ * acknowledgement; revisit if a client is ever seen holding a refused socket open.
+ */
+export const TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS = 250
+
+/**
  * Header the app Worker puts on a `/close` request: when, by its clock, the revoking write had
  * resolved (epoch milliseconds). A header, not the body, so the empty-body and `{ userId }`
  * contracts are unchanged and a room that predates it still evicts.

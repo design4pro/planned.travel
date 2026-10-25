@@ -17,6 +17,7 @@ import {
   TRIP_ROOM_IDENTITY_HEADER,
   TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
+  TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
   TRIP_ROOM_REVOCATION_SKEW_MS,
   TRIP_ROOM_REVOCATION_TTL_MS,
   TRIP_ROOM_REVOKED_AT_HEADER,
@@ -605,6 +606,7 @@ describe('refusing a connect minted before a revocation reached the room', () =>
   let sink: ReturnType<typeof createMemorySink>
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
     now = REVOKED_AT
     storage = fakeStorage()
     accepted = []
@@ -658,6 +660,7 @@ describe('refusing a connect minted before a revocation reached the room', () =>
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.unstubAllGlobals()
   })
 
@@ -666,6 +669,7 @@ describe('refusing a connect minted before a revocation reached the room', () =>
     userId: string,
     issuedAt: number | undefined,
     via: 'header' | 'query' = 'header',
+    settle = true,
   ): Promise<FakeSocket> {
     const identity = {
       ...identityWith('editor', userId),
@@ -690,6 +694,8 @@ describe('refusing a connect minted before a revocation reached the room', () =>
             ),
           )
     expect(response.status).toBe(200)
+    // A refused socket is closed after the upgrade finished; let that happen before the test reads it.
+    if (settle) await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
     return pending
   }
 
@@ -711,6 +717,14 @@ describe('refusing a connect minted before a revocation reached the room', () =>
     expect(socket.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
     expect(socket.sent).toEqual([])
   }
+
+  it('closes a refused socket only after the upgrade finished', async () => {
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    const ana = await connect('ana', BEFORE, 'header', false)
+    expect(ana.closedWith).toBeNull()
+    await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
+    expectRefused(ana)
+  })
 
   it('refuses the stale connect of the person a close named, and not another person’s', async () => {
     await closeAt(REVOKED_AT, { userId: 'ana' })
