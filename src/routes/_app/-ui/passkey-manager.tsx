@@ -357,8 +357,9 @@ export function PasskeyManager() {
     void addPasskey()
   }
 
-  // `loading` disables the button, which drops focus; every outcome hands it back here, to the
-  // list heading when the button stays disabled, so it never falls to <body>.
+  // A busy button stays focusable (aria-disabled, not natively disabled), but an outcome can
+  // disable it for real (the ceiling, a list that failed), which drops focus; every outcome hands
+  // it back here, to the list heading when the button stays disabled, so it never falls to <body>.
   useEffect(() => {
     if (focusTarget === null || enrolling) return
     let target: HTMLElement | null = headingRef.current
@@ -376,7 +377,14 @@ export function PasskeyManager() {
     setStatus(null)
     setEnrolling(true)
     const result = await registerPasskey()
-    setEnrolling(false)
+    // No answer reached us (status 0), so the row may or may not be written: the Add button stays
+    // busy until the list says which, and the status and focus are set once, after that.
+    const lostReply =
+      !result.ok &&
+      !result.aborted &&
+      !result.alreadyEnrolled &&
+      result.failure?.status === 0
+    if (!lostReply) setEnrolling(false)
 
     if (result.ok) {
       setList((previous) =>
@@ -407,21 +415,23 @@ export function PasskeyManager() {
 
     // Whatever the server said, the list on screen may no longer match it (a reply lost after the
     // row was written, a second tab): read it again, and keep it when the read fails.
-    if (!result.aborted) {
+    if (lostReply) {
+      const next = await fetchList()
+      if (next.status === 'ready') setList(next)
+      setEnrolling(false)
+      // The row is there: the write succeeded, so the status must not tell the person to try again.
+      if (
+        next.status === 'ready' &&
+        before !== null &&
+        next.passkeys.length > before
+      ) {
+        setStatus(ADDED)
+        startRename(next.passkeys[0].id)
+        return
+      }
+    } else if (!result.aborted) {
       void fetchList().then((next) => {
-        if (next.status !== 'ready') return
-        setList(next)
-        // No answer reached us (status 0), yet the row is there: the write succeeded, so the
-        // status must not tell the person to try again.
-        if (
-          !result.alreadyEnrolled &&
-          result.failure?.status === 0 &&
-          before !== null &&
-          next.passkeys.length > before
-        ) {
-          setStatus(ADDED)
-          startRename(next.passkeys[0].id)
-        }
+        if (next.status === 'ready') setList(next)
       })
     }
 
