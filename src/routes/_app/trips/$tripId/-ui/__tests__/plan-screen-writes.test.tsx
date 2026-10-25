@@ -3,6 +3,7 @@ import * as React from 'react'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import type * as RouterModule from '@tanstack/react-router'
 import type * as MapModule from '#/components/map'
@@ -37,6 +38,7 @@ vi.mock('../../-server/plan', () => ({
   updatePlanPlaceFn: mocks.write,
   updateStopFn: mocks.write,
   deletePlanPlaceFn: mocks.write,
+  unschedulePlaceFn: mocks.write,
 }))
 vi.mock('../../-server/day-notes', () => ({
   createDayNoteFn: mocks.write,
@@ -421,5 +423,142 @@ describe('planner write callers', () => {
     await act(async () => pending.resolve())
     expect(screen.getByTestId('selection').textContent).toBe('p1')
     expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+})
+
+/** What a server function's refusal looks like once the redaction middleware has wrapped it. */
+function failedWith(kind: 'refusal' | 'validation' | 'unexpected'): Error {
+  return new Error(
+    encodePublicFailure(
+      kind === 'unexpected'
+        ? { kind, reference: 'ref-1' }
+        : { kind, message: 'You can no longer edit this trip.' },
+    ),
+  )
+}
+
+/** Whether a stop's menu still offers a write, read after the dialogs that hide it are gone. */
+async function offersEdit(): Promise<boolean> {
+  await userEvent.click(
+    screen.getAllByRole('button', { name: 'Actions for Place p2' })[0],
+  )
+  const offered =
+    screen.queryByRole('menuitem', { name: 'Edit place' }) !== null
+  await userEvent.keyboard('{Escape}')
+  return offered
+}
+
+/** The same screen as {@link mount}, as the loader hands it over once the reader is a viewer. */
+function demoted(view: Awaited<ReturnType<typeof mount>>) {
+  view.rerender(
+    <I18nProvider locale="en" messages={messages}>
+      <PlanScreen
+        payload={{ ...payload, editable: false }}
+        notes={notes([note('n1', 'd1', 2)], false)}
+        transports={transports()}
+        tripTitle="Trip"
+      />
+    </I18nProvider>,
+  )
+}
+
+describe('a write the server refused', () => {
+  it('re-reads the board, keeps the refusal in the form and takes the controls away', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    const view = await mount()
+    mocks.invalidate.mockImplementation(async () => demoted(view))
+    await menu('Edit place')
+    submit()
+    await act(async () => {})
+
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert').textContent).toContain(
+      'You can no longer edit this trip.',
+    )
+
+    // The dialog outlived the permission, and it must not write with it.
+    submit()
+    await act(async () => {})
+    expect(mocks.write).toHaveBeenCalledTimes(1)
+
+    await close()
+    expect(await offersEdit()).toBe(false)
+  })
+
+  it('re-reads after a refused day-note write too', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    await mount()
+    await userEvent.click(screen.getByRole('button', { name: 'Delete note' }))
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', {
+        name: 'Delete note',
+      }),
+    )
+    await act(async () => {})
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('toasts a refused late write and still re-reads', async () => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    await mount()
+    await menu('Edit place')
+    submit()
+    await close()
+    await act(async () => pending.reject(failedWith('refusal')))
+    expect(mocks.error).toHaveBeenCalledWith(
+      'You can no longer edit this trip.',
+    )
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('rolls a refused move back, says so, and then re-reads', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    const view = await mount()
+    mocks.invalidate.mockImplementation(async () => demoted(view))
+    await menu('Back to unplanned')
+    await act(async () => {})
+
+    expect(mocks.error).toHaveBeenCalledWith(
+      'That move did not save',
+      expect.objectContaining({
+        description: 'You can no longer edit this trip.',
+      }),
+    )
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect(mocks.error.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.invalidate.mock.invocationCallOrder[0],
+    )
+    expect(await offersEdit()).toBe(false)
+  })
+
+  it.each(['validation', 'unexpected'] as const)(
+    'does not re-read after a %s failure of a write or a move',
+    async (kind) => {
+      mocks.write.mockRejectedValue(failedWith(kind))
+      await mount()
+      await menu('Back to unplanned')
+      await act(async () => {})
+      await menu('Edit place', 'p2')
+      submit()
+      await act(async () => {})
+
+      expect(mocks.write).toHaveBeenCalledTimes(2)
+      expect(mocks.invalidate).not.toHaveBeenCalled()
+    },
+  )
+
+  it('shows the refusal even when the re-read itself fails', async () => {
+    mocks.write.mockRejectedValue(failedWith('refusal'))
+    mocks.invalidate.mockRejectedValue(new Error('offline'))
+    await mount()
+    await menu('Edit place')
+    submit()
+    await act(async () => {})
+
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert').textContent).toContain(
+      'You can no longer edit this trip.',
+    )
   })
 })

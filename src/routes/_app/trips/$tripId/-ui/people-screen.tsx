@@ -6,7 +6,8 @@
  * workspace guard, and the last-owner rule both membership verbs reach. So a control a reader's role
  * cannot exercise is *not rendered* rather than rendered disabled — a disabled control invites
  * somebody to wonder what they are missing — and a stale payload costs a refused write rather than
- * an unauthorised one. `trip-actions.tsx` takes the same posture for the same reason.
+ * an unauthorised one. A thrown refusal also reads the payload again, so the controls follow the
+ * reader's current role. `trip-actions.tsx` takes the same posture for the same reason.
  *
  * **Named refusals have copy; everything else is the generic failure.** `-server/people.ts` answers
  * `{ ok: false, reason }` for exactly the rules this screen can explain, and the reason is a
@@ -402,6 +403,15 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         repeatable: true,
         write,
       })
+      // A refusal may mean the reader's role changed under this screen: read it again so
+      // `viewerRole` follows. Any other failure keeps the screen it has.
+      if (failed.kind === 'refusal') {
+        try {
+          await router.invalidate()
+        } catch {
+          // The refusal is already on screen; a failed re-read must not replace it.
+        }
+      }
     } finally {
       setBusy(null)
     }
@@ -615,6 +625,9 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
             </CardContent>
           </Card>
 
+          {/* The invite and guest forms leave with the owner's role; a refusal they raised stays here. */}
+          {isOwner ? null : (failureAt('invite') ?? failureAt('guest-add'))}
+
           {/* The link-sharing card lands here. `COL-10` and `COL-11`
               (docs/plans/07-collaboration-and-sharing.md) are the tickets that fill it; until then
               this column reserves the space and renders nothing, because a card announcing a feature
@@ -750,6 +763,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
         confirm={t('trips.people.remove.confirm')}
         cancel={t('trips.people.cancel')}
         busy={busy !== null && removing !== null}
+        disabled={!isOwner}
         failure={
           removing === null ? null : failureAt(`remove:${removing.memberId}`)
         }
@@ -775,6 +789,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           if (!open) setRenaming(null)
         }}
         busy={renaming !== null && busy === `guest-rename:${renaming.guestId}`}
+        disabled={!isOwner}
         refusal={
           renaming === null
             ? undefined
@@ -811,6 +826,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           removingGuest !== null &&
           busy === `guest-remove:${removingGuest.guestId}`
         }
+        disabled={!isOwner}
         failure={
           removingGuest === null
             ? null
@@ -835,6 +851,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
           if (!open) setMerging(null)
         }}
         busy={merging !== null && busy === `guest-merge:${merging.guestId}`}
+        disabled={!isOwner}
         failure={
           merging === null ? null : failureAt(`guest-merge:${merging.guestId}`)
         }
@@ -1004,6 +1021,8 @@ interface ConfirmDialogProps {
   readonly confirm: string
   readonly cancel: string
   readonly busy: boolean
+  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
+  readonly disabled?: boolean
   readonly failure: React.ReactNode
   readonly onConfirm: () => void
   /** Overrides where focus lands on close. Left out, the dialog restores it to whatever opened it. */
@@ -1021,6 +1040,7 @@ export function ConfirmDialog({
   confirm,
   cancel,
   busy,
+  disabled = false,
   failure,
   onConfirm,
   onCloseAutoFocus,
@@ -1050,6 +1070,7 @@ export function ConfirmDialog({
             type="button"
             variant={confirmVariant}
             shape="pill"
+            disabled={disabled}
             loading={busy}
             loadingLabel={pendingLabel ?? confirm}
             onClick={onConfirm}
@@ -1143,6 +1164,8 @@ export interface GuestNameDialogProps {
   readonly guest: TripGuestParticipant | null
   readonly onOpenChange: (open: boolean) => void
   readonly busy: boolean
+  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
+  readonly disabled?: boolean
   /** A named refusal, rendered on the field. */
   readonly refusal: string | undefined
   /** An unexpected failure, rendered as an alert with Retry. */
@@ -1157,6 +1180,7 @@ export function GuestNameDialog({
   guest,
   onOpenChange,
   busy,
+  disabled = false,
   refusal,
   failure,
   onEdit,
@@ -1174,7 +1198,7 @@ export function GuestNameDialog({
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            if (filled) onConfirm(value)
+            if (filled && !disabled) onConfirm(value)
           }}
         >
           <DialogHeader>
@@ -1210,7 +1234,7 @@ export function GuestNameDialog({
             <Button
               type="submit"
               shape="pill"
-              disabled={!filled}
+              disabled={!filled || disabled}
               loading={busy}
               loadingLabel={t('trips.people.guest.rename.confirm')}
             >
@@ -1228,6 +1252,8 @@ export interface MergeGuestDialogProps {
   readonly members: ReadonlyArray<TripMemberParticipant>
   readonly onOpenChange: (open: boolean) => void
   readonly busy: boolean
+  /** The reader's role no longer allows the write: the dialog stays to show why, and cannot fire it. */
+  readonly disabled?: boolean
   readonly failure: React.ReactNode
   readonly onConfirm: (memberId: string) => void
   readonly onCloseAutoFocus: (event: Event) => void
@@ -1244,6 +1270,7 @@ export function MergeGuestDialog({
   members,
   onOpenChange,
   busy,
+  disabled = false,
   failure,
   onConfirm,
   onCloseAutoFocus,
@@ -1302,7 +1329,7 @@ export function MergeGuestDialog({
             type="button"
             variant="danger"
             shape="pill"
-            disabled={target === null}
+            disabled={target === null || disabled}
             loading={busy}
             loadingLabel={t('trips.people.guest.merge.confirm')}
             onClick={() => {

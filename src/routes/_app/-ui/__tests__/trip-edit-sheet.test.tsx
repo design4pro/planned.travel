@@ -55,6 +55,7 @@ afterEach(() => {
   cleanup()
   server.update.mockReset()
   upload.upload.mockReset()
+  router.invalidate.mockReset()
 })
 
 /** What a server function's refusal looks like once it has crossed the redaction middleware. */
@@ -279,5 +280,85 @@ describe('the trip edit sheet and the cover image', () => {
     })
     expect(server.update.mock.calls[0][0].data.coverFileId).toBeNull()
     expect(upload.upload).not.toHaveBeenCalled()
+  })
+})
+
+describe('the trip edit sheet when the server refuses the save', () => {
+  const REFUSED = 'You can no longer edit this trip.'
+
+  function sheetFor(role: 'owner' | 'editor') {
+    return (
+      <I18nProvider locale="en" messages={EN}>
+        <TripEditSheet
+          trip={tripCard({ currency: 'EUR', role })}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </I18nProvider>
+    )
+  }
+
+  const saveButton = () => screen.getByRole('button', { name: 'Save changes' })
+
+  it('re-reads the trip, keeps the refusal and disarms the save once the role is gone', async () => {
+    server.update.mockRejectedValue(refusedWith(REFUSED))
+    const view = render(sheetFor('owner'))
+    router.invalidate.mockImplementation(async () => {
+      view.rerender(sheetFor('editor'))
+    })
+
+    await userEvent.click(saveButton())
+
+    expect(router.invalidate).toHaveBeenCalledTimes(1)
+    expect((await screen.findByRole('alert')).textContent).toContain(REFUSED)
+    expect(saveButton().hasAttribute('disabled')).toBe(true)
+
+    await userEvent.click(saveButton())
+    expect(server.update).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-read for the currency refusal it explains itself', async () => {
+    server.update.mockRejectedValue(
+      refusedWith('shell.editTrip.currencyLocked'),
+    )
+    render(sheetFor('owner'))
+
+    await userEvent.click(saveButton())
+
+    await screen.findByRole('alert')
+    expect(router.invalidate).not.toHaveBeenCalled()
+  })
+
+  it.each(['validation', 'unexpected'] as const)(
+    'does not re-read after a %s failure',
+    async (kind) => {
+      server.update.mockRejectedValue(
+        new Error(
+          encodePublicFailure(
+            kind === 'unexpected'
+              ? { kind, reference: 'ref-1' }
+              : { kind, message: REFUSED },
+          ),
+        ),
+      )
+      render(sheetFor('owner'))
+
+      await userEvent.click(saveButton())
+
+      await screen.findByRole('alert')
+      expect(router.invalidate).not.toHaveBeenCalled()
+      expect(saveButton().hasAttribute('disabled')).toBe(false)
+    },
+  )
+
+  it('shows the refusal even when the re-read itself fails', async () => {
+    server.update.mockRejectedValue(refusedWith(REFUSED))
+    router.invalidate.mockRejectedValue(new Error('offline'))
+    render(sheetFor('owner'))
+
+    await userEvent.click(saveButton())
+
+    expect((await screen.findByRole('alert')).textContent).toContain(REFUSED)
+    expect(router.invalidate).toHaveBeenCalledTimes(1)
   })
 })

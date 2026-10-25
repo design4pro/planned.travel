@@ -33,6 +33,8 @@ import { toast } from 'sonner'
 
 import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
+import { readPublicFailure } from '#/lib/errors'
+import { messageOf } from '#/components/modules/shared'
 import { GlassPanel, IconButton, SectionLabel } from '#/components/ui'
 import {
   CategoryFilterBar,
@@ -78,7 +80,6 @@ import {
   draftFromPlace,
   emptyDraft,
   emptyTiming,
-  messageOf,
 } from './plan-actions'
 import {
   filterRows,
@@ -685,11 +686,19 @@ export function PlanScreen({
 
       void applyChange(outcome.change, outcome.order, drop ? itemId : null)
         .then(() => router.invalidate())
-        .catch((cause: unknown) => {
+        .catch(async (cause: unknown) => {
           setOrder(previous)
           toast.error(t('trips.plan.move.error.save'), {
             description: messageOf(cause, t('trips.plan.move.error.retry')),
           })
+          // A refusal may mean the reader's role changed under this screen: read the board again so
+          // `editable` follows. Any other failure keeps the board it has.
+          if (readPublicFailure(cause).kind !== 'refusal') return
+          try {
+            await router.invalidate()
+          } catch {
+            // The refusal is already on screen; a failed re-read must not replace it.
+          }
         })
         .finally(() => {
           markPending(itemId, false)
@@ -889,6 +898,8 @@ export function PlanScreen({
         readonly closeOnLanded?: boolean
       },
     ): Promise<boolean> => {
+      // A refused write re-read `editable`; a form that outlived the permission must not write with it.
+      if (!editable) return false
       const stillOwned = claimWrite()
       const token = Symbol()
       setSavingWrite({ token, owner: dialog })
@@ -912,13 +923,22 @@ export function PlanScreen({
         } else {
           reportLateWriteFailure(report, toast, openInNewTab)
         }
+        // A refusal may mean the reader's role changed under this screen: read the board again so
+        // `editable` and `canWrite` follow. Any other failure keeps the board it has.
+        if (readPublicFailure(cause).kind === 'refusal') {
+          try {
+            await router.invalidate()
+          } catch {
+            // The refusal is already on screen; a failed re-read must not replace it.
+          }
+        }
         return false
       } finally {
         // An older write must not release the newer form's pending state.
         setSavingWrite((current) => (current?.token === token ? null : current))
       }
     },
-    [claimWrite, closeDialog, dialog, router, t],
+    [claimWrite, closeDialog, dialog, editable, router, t],
   )
 
   const submitPlace = React.useCallback(

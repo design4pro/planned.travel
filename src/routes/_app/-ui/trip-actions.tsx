@@ -70,6 +70,7 @@ import {
 } from '#/components/modules/shared'
 import { uploadFile } from '#/components/modules/files/upload'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { inclusiveDays } from '#/lib/trip-dates'
 import { formatNumber } from '../-lib/format'
@@ -188,6 +189,10 @@ export function TripEditSheet({
   }
 
   async function submit({ skipCover = false } = {}): Promise<void> {
+    // A refused save re-read the role; a sheet that outlived it must not write with it.
+    if (!isOwner) {
+      return
+    }
     setSaving(true)
     setError(null)
     setCoverFailure(null)
@@ -220,6 +225,16 @@ export function TripEditSheet({
           ? t(refusal, { current: trip.currency })
           : messageOf(cause, t('shell.editTrip.error')),
       )
+      // Any other refusal may mean the reader's role changed under this sheet: read the trip again
+      // so `trip.role` follows. The currency refusal has its own message, and any other failure
+      // keeps the trip it has.
+      if (refusal === null && readPublicFailure(cause).kind === 'refusal') {
+        try {
+          await router.invalidate()
+        } catch {
+          // The refusal is already on screen; a failed re-read must not replace it.
+        }
+      }
     } finally {
       setSaving(false)
     }
@@ -346,7 +361,7 @@ export function TripEditSheet({
             form={`trip-edit-${trip.id}`}
             variant="primary"
             shape="pill"
-            disabled={!form.canSave}
+            disabled={!form.canSave || !isOwner}
             loading={saving}
             loadingLabel={t('shell.editTrip.saving')}
           >
