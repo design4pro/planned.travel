@@ -186,6 +186,13 @@ const messages = {
   'plan.handoff.day.point': 'Ver en {service}',
   'plan.handoff.day.pointName':
     'Ver en {service}: la única parada con ubicación de {day} (se abre en una pestaña nueva)',
+  'plan.handoff.day.part': 'Parte {n} de {count}',
+  'plan.handoff.day.directionsPartName':
+    'Cómo llegar en {service}, parte {n} de {count}, {day} (se abre en una pestaña nueva)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Cómo llegar en {service}, parte {n} de {count}, paradas: las primeras {carried} de {total}, {day} (se abre en una pestaña nueva)',
+  'plan.handoff.day.pointPartName':
+    'Ver en {service}, parte {n} de {count}, {day} (se abre en una pestaña nueva)',
   'plan.drop.hint':
     'Haz clic derecho en el mapa, o mantén pulsado, para añadir un lugar justo ahí.',
   'plan.drop.armed':

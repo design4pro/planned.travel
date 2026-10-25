@@ -2892,8 +2892,8 @@ six `POST` writes:
 
 `loadTripPeople` returns the invitable set **already filtered** to workspace members who are not yet
 on the trip, so the client never receives a directory it then has to subtract from, plus the trip's
-`visibility` and the caller's role. `setTripVisibilityFn` writes through `updateTrip`, whose
-`assertTripRole` is `owner` (decision 6); `'public'` is not accepted here — it is the share plan's
+`visibility` and the caller's role. `setTripVisibilityFn` writes through `setTripVisibility` (it was `updateTrip` until #1040, which refuses an
+archived trip), whose `assertTripRole` is `owner` (decision 6); `'public'` is not accepted here — it is the share plan's
 value and this switch has two positions.
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; `z.enum(TRIP_MEMBER_ROLES)` for the role,

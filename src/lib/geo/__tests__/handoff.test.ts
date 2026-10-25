@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
+import { TRANSPORT_MODES } from '#/components/modules/transports/vocabulary'
 import {
   GOOGLE_DIRECTIONS_MAX_STOPS,
   GOOGLE_DIRECTIONS_MAX_WAYPOINTS,
+  JOURNEY_SPLIT_MODES,
   MAP_SERVICE_NAME,
   dayHandoff,
+  dayHandoffs,
   pointLink,
 } from '../handoff'
+
+import type { DayHandoffItem } from '../handoff'
 
 /**
  * The map hand-off: the link a stop or a day offers into the map application the reader
@@ -171,5 +176,225 @@ describe('dayHandoff — the waypoint limit', () => {
       carried: GOOGLE_DIRECTIONS_MAX_STOPS,
       total: GOOGLE_DIRECTIONS_MAX_STOPS,
     })
+  })
+})
+
+/** A placed stop at its own whole-degree latitude, as the day's displayed sequence holds it. */
+function stop(lat: number | null): DayHandoffItem {
+  return {
+    kind: 'stop',
+    row: lat === null ? UNPLACED : { lat, lng: 10 },
+  }
+}
+
+function journey(mode: string): DayHandoffItem {
+  return { kind: 'transport', transport: { mode } }
+}
+
+const NOTE: DayHandoffItem = { kind: 'note' }
+
+describe('dayHandoffs — a day split by a journey', () => {
+  it('names the modes that split a day, all of them in the Transport vocabulary', () => {
+    expect([...JOURNEY_SPLIT_MODES].sort()).toEqual([
+      'ferry',
+      'flight',
+      'train',
+    ])
+    const vocabulary: ReadonlyArray<string> = TRANSPORT_MODES
+    for (const mode of JOURNEY_SPLIT_MODES) {
+      expect(vocabulary).toContain(mode)
+    }
+  })
+
+  it('gives exactly the one link dayHandoff gives when nothing splits the day', () => {
+    const stops = [1, 2, 3]
+    expect(dayHandoffs([...stops.map(stop), NOTE])).toEqual([
+      dayHandoff(stops.map((lat) => ({ lat, lng: 10 }))),
+    ])
+  })
+
+  it('gives nothing for a day with no placed stop', () => {
+    expect(dayHandoffs([])).toEqual([])
+    expect(dayHandoffs([stop(null), journey('flight'), stop(null)])).toEqual([])
+  })
+
+  it('gives one link per side of a flight, each by the usual rules', () => {
+    const links = dayHandoffs([
+      stop(1),
+      stop(2),
+      journey('flight'),
+      stop(3),
+      stop(4),
+    ])
+
+    expect(links).toHaveLength(2)
+    const [before, after] = links
+    expect(before).toEqual(
+      dayHandoff([
+        { lat: 1, lng: 10 },
+        { lat: 2, lng: 10 },
+      ]),
+    )
+    expect(after).toEqual(
+      dayHandoff([
+        { lat: 3, lng: 10 },
+        { lat: 4, lng: 10 },
+      ]),
+    )
+    // Never a route from the last stop before the journey to the first after it.
+    expect(new URL(before?.href ?? '').searchParams.get('destination')).toBe(
+      '2,10',
+    )
+    expect(new URL(after?.href ?? '').searchParams.get('origin')).toBe('3,10')
+  })
+
+  it.each(['ferry', 'train'])('splits at a %s too', (mode) => {
+    const links = dayHandoffs([
+      stop(1),
+      stop(2),
+      journey(mode),
+      stop(3),
+      stop(4),
+    ])
+    expect(links.map((link) => link.carried)).toEqual([2, 2])
+  })
+
+  it('gives a point link for a side with one placed stop', () => {
+    const links = dayHandoffs([stop(1), journey('train'), stop(2), stop(3)])
+
+    expect(links.map((link) => link.kind)).toEqual(['point', 'directions'])
+    expect(links[0]?.href).toBe(
+      'https://www.google.com/maps/search/?api=1&query=1%2C10',
+    )
+  })
+
+  it('gives three links for two journeys', () => {
+    const links = dayHandoffs([
+      stop(1),
+      stop(2),
+      journey('flight'),
+      stop(3),
+      journey('ferry'),
+      stop(4),
+      stop(5),
+    ])
+
+    expect(links.map((link) => link.kind)).toEqual([
+      'directions',
+      'point',
+      'directions',
+    ])
+  })
+
+  it('cuts nothing for a journey first or last in the day', () => {
+    const stops = [stop(1), stop(2)]
+    const whole = dayHandoffs(stops)
+
+    expect(whole).toHaveLength(1)
+    expect(dayHandoffs([journey('flight'), ...stops])).toEqual(whole)
+    expect(dayHandoffs([...stops, journey('flight')])).toEqual(whole)
+    expect(
+      dayHandoffs([journey('flight'), ...stops, journey('train')]),
+    ).toEqual(whole)
+  })
+
+  it('drops the empty side between two adjacent journeys', () => {
+    const links = dayHandoffs([
+      stop(1),
+      stop(2),
+      journey('flight'),
+      journey('train'),
+      stop(3),
+      stop(4),
+    ])
+
+    expect(links).toHaveLength(2)
+  })
+
+  it.each([
+    'bus',
+    'taxi',
+    'car',
+    'transit',
+    'metro',
+    'tram',
+    'bike',
+    'walk',
+    'other',
+    'hovercraft',
+  ])('leaves the day whole across a %s', (mode) => {
+    const links = dayHandoffs([stop(1), journey(mode), stop(2)])
+    expect(links).toHaveLength(1)
+    expect(links[0]).toMatchObject({ kind: 'directions', carried: 2 })
+  })
+
+  it('splits at a short ferry between two of the day’s own stops: the mode decides', () => {
+    expect(dayHandoffs([stop(1), journey('ferry'), stop(2)])).toHaveLength(2)
+  })
+
+  it('cuts at the position in the sequence it is given, never by a coordinate', () => {
+    // The stop before the journey is the northernmost: only the order says which side it is on.
+    const links = dayHandoffs([stop(9), journey('flight'), stop(1), stop(2)])
+
+    expect(links.map((link) => link.kind)).toEqual(['point', 'directions'])
+    expect(links[0]?.href).toBe(
+      'https://www.google.com/maps/search/?api=1&query=9%2C10',
+    )
+  })
+
+  it('still splits at a cancelled journey: the mode marks the distance, status is not read', () => {
+    const cancelled = {
+      kind: 'transport',
+      transport: { mode: 'flight', status: 'cancelled' },
+    } as const
+
+    expect(dayHandoffs([stop(1), cancelled, stop(2)])).toHaveLength(2)
+  })
+
+  it('skips an unplaced stop on either side without shifting the others', () => {
+    const links = dayHandoffs([
+      stop(null),
+      stop(1),
+      stop(2),
+      stop(null),
+      journey('flight'),
+      stop(null),
+      stop(3),
+      stop(4),
+    ])
+
+    expect(links).toHaveLength(2)
+    expect(links[0]).toMatchObject({ kind: 'directions', total: 2 })
+    expect(links[1]).toMatchObject({ kind: 'directions', total: 2 })
+  })
+
+  it('counts the cap per side', () => {
+    const over = GOOGLE_DIRECTIONS_MAX_STOPS + 2
+    const side = (from: number) =>
+      Array.from({ length: over }, (_, index) => stop(from + index))
+    const [before, after] = dayHandoffs([
+      ...side(1),
+      journey('flight'),
+      ...side(100),
+    ])
+
+    for (const link of [before, after]) {
+      expect(link).toMatchObject({
+        carried: GOOGLE_DIRECTIONS_MAX_STOPS,
+        total: over,
+      })
+    }
+  })
+
+  it('carries no travel mode on any link', () => {
+    for (const link of dayHandoffs([
+      stop(1),
+      stop(2),
+      journey('flight'),
+      stop(3),
+      stop(4),
+    ])) {
+      expect(new URL(link.href).searchParams.has('travelmode')).toBe(false)
+    }
   })
 })

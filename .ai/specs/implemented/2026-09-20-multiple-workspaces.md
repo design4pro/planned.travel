@@ -165,7 +165,9 @@ personal workspace the only one carrying it, and what to do about that.
 
 ```ts
 export const createWorkspaceInput = z.strictObject({
-  name: z.string().trim().min(1).max(60),
+  // The refinement (#990) is the shared `hasVisibleCharacter` rule (`src/lib/workspace-name.ts`):
+  // a name of zero-width characters only is refused, here and in the dialog.
+  name: z.string().trim().min(1).max(60).refine(hasVisibleCharacter),
 })
 
 export type CreateWorkspaceResult =
@@ -308,6 +310,7 @@ the `i18n-messages` skill; the parity test enforces it.
 | `workspace.createTitle`           | `Create a workspace`                                                                                                      |
 | `workspace.createDescription`     | `A separate space for its own trips, places and people. It starts on the Free plan.`                                      |
 | `workspace.createName`            | `Workspace name`                                                                                                          |
+| `workspace.createNameRequired`    | `Enter a workspace name.`                                                                                                 |
 | `workspace.createUpgrade`         | `Creating more workspaces is part of a paid plan.`                                                                        |
 | `workspace.createLimitReached`    | `You have reached the most workspaces one account can belong to.`                                                         |
 | `workspace.createRoleRequired`    | `Only a workspace admin can create a workspace. Ask an admin of this workspace, or switch to a workspace you administer.` |

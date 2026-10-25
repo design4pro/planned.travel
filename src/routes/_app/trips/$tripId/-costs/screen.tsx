@@ -303,6 +303,7 @@ export function CostsScreen({
         people: data.people,
         viewerUserId: data.viewerUserId,
         display: data.displayCurrency,
+        t,
       }),
     )
     toast.success(t('costs.export.ready.title'), {

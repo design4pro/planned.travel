@@ -296,6 +296,7 @@ import {
   removeTripMember,
   requireTrip,
   restoreTrip,
+  setTripVisibility,
   shareLinksRepository,
   startTripCopy,
   tripMembersRepository,
@@ -583,11 +584,6 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     placeId: place.id,
     startTime: '09:30',
   })
-  await setAssignmentParticipants(scope, assignment.id, [
-    tenant.ownerUserId,
-    secondUserId,
-  ])
-
   const accommodation = await createAccommodation(scope, {
     tripId: trip.id,
     startDayId: firstDay.id,
@@ -627,6 +623,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     userId: companionUserId,
     role: 'editor',
   })
+  await setAssignmentParticipants(scope, assignment.id, [
+    tenant.ownerUserId,
+    companionUserId,
+  ])
   const expense = await createExpense(scope, {
     tripId: trip.id,
     dayId: firstDay.id,
@@ -1402,6 +1402,24 @@ describe('tenant isolation', () => {
           eq(collectionPlaceLabels.collectionPlaceId, alpha.collectionPlaceId),
         )
       expect(links).toHaveLength(0)
+    })
+
+    it('refuses a user of another workspace as a stop’s participant', async () => {
+      const error = await captureError(() =>
+        setAssignmentParticipants(alpha.tenant.scope, alpha.assignmentId, [
+          beta.tenant.ownerUserId,
+        ]),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+
+      const rows = await harness.db
+        .select()
+        .from(assignmentParticipants)
+        .where(eq(assignmentParticipants.assignmentId, alpha.assignmentId))
+      expect(rows.map((row) => row.userId)).not.toContain(
+        beta.tenant.ownerUserId,
+      )
+      expect(rows).toHaveLength(2)
     })
 
     it('refuses to set participants on a foreign assignment', async () => {
@@ -4605,6 +4623,7 @@ describe('tenant isolation', () => {
 
       for (const attempt of [
         () => updateTrip(scope, beta.tripId, { title: 'Hijacked' }),
+        () => setTripVisibility(scope, beta.tripId, 'organization'),
         () => archiveTrip(scope, beta.tripId),
         () => restoreTrip(scope, beta.tripId),
         () => deleteTrip(scope, beta.tripId),
@@ -4882,8 +4901,8 @@ describe('tenant isolation', () => {
   /**
    * The purge is the one half of a delete that leaves the database entirely, so it is the one place
    * a boundary could be crossed without a tenant filter to stop it (PRD #104 decision 3). R2 has no
-   * `organization_id`; what it has is a key namespace, and every key this product mints names its
-   * organization in the second path segment. The envelope's `orgId` is the authority and the keys are
+   * `organization_id`; what it has is a key namespace, and every workspace-scoped key (`trips/<org>/…`)
+   * names its organization in the second path segment. The envelope's `orgId` is the authority and the keys are
    * a request, so an envelope forged under A that names B's objects deletes nothing.
    */
   describe('the storage purge', () => {

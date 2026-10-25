@@ -118,6 +118,17 @@ describe('the input', () => {
     ).toBe(true)
   })
 
+  it.each(['\u200B', '\u200D', '\uFEFF', ' \u200B\u200C '])(
+    'refuses a name with no visible character (%j)',
+    (name) => {
+      expect(createWorkspaceInput.safeParse({ name }).success).toBe(false)
+    },
+  )
+
+  it('accepts a name made of one symbol', () => {
+    expect(createWorkspaceInput.parse({ name: '🌍' })).toEqual({ name: '🌍' })
+  })
+
   it.each(['organizationId', 'userId', 'slug'])(
     "rejects an extra %s: the tenant and the slug are never the client's to name",
     (field) => {
@@ -199,6 +210,18 @@ describe.each(['solo', 'crew'] as const)('on the %s plan', (plan) => {
 })
 
 describe('a refusal writes nothing', () => {
+  it('refuses a zero-width-only name at the input, before anything is written', async () => {
+    const given = await ports({ role: 'owner', plan: 'solo' })
+    const before = await counts()
+
+    const parsed = createWorkspaceInput.safeParse({ name: '\u200B\u200D' })
+
+    expect(parsed.success).toBe(false)
+    if (parsed.success) await createWorkspace(given, parsed.data)
+    expect(await counts()).toEqual(before)
+    expect(given.activate).not.toHaveBeenCalled()
+  })
+
   it('refuses a member with role-required, never the upgrade prompt, on any plan', async () => {
     for (const plan of ['free', 'solo'] as const) {
       const given = await ports({ role: 'member', plan })

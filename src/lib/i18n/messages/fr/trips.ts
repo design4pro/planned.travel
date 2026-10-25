@@ -189,6 +189,13 @@ const messages = {
   'plan.handoff.day.point': 'Afficher dans {service}',
   'plan.handoff.day.pointName':
     'Afficher dans {service} : la seule étape localisée de {day} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.part': 'Partie {n} sur {count}',
+  'plan.handoff.day.directionsPartName':
+    'Itinéraire dans {service}, partie {n} sur {count}, {day} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Itinéraire dans {service}, partie {n} sur {count}, étapes : les {carried} premières sur {total}, {day} (s’ouvre dans un nouvel onglet)',
+  'plan.handoff.day.pointPartName':
+    'Afficher dans {service}, partie {n} sur {count}, {day} (s’ouvre dans un nouvel onglet)',
   'plan.drop.hint':
     'Faites un clic droit sur la carte, ou maintenez-la enfoncée, pour ajouter un lieu à cet endroit précis.',
   'plan.drop.armed':

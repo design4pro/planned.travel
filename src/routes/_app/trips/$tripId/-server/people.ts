@@ -47,9 +47,9 @@ import {
   removeTripMember,
   renameTripGuest,
   requireTrip,
+  setTripVisibility,
   shortTextSchema,
   tripRoleFor,
-  updateTrip,
   updateTripMember,
 } from '#/server/repos'
 import { readTripInvite } from '#/server/repos/invites'
@@ -317,9 +317,9 @@ async function memberOnTrip(
 }
 
 /**
- * Closes a person's open sockets in the trip's room, so a role change, a removal or a leave reaches
- * a tab that is already open instead of waiting for it to reconnect (the room reads the role once,
- * at connect).
+ * Closes a person's open sockets in the trip's room, so a role change, an add, a removal or a leave
+ * reaches a tab that is already open instead of waiting for it to reconnect (the room reads the role
+ * once, at connect).
  *
  * Called only once the write has succeeded, with the trip and person from the rows the repository
  * resolved. The bridge is reached at call time for the reason `plan.ts` records at `mirrorDayOrder`:
@@ -405,6 +405,9 @@ export const addTripMemberFn = createServerFn({ method: 'POST' })
           userId: data.userId,
           role: data.role,
         })
+        // Straight after the write, so the actor-name read below cannot skip it: a workspace member
+        // watching an organization-visible trip holds a `viewer` socket that this add outdates.
+        await evictFromRoom(scope, member.tripId, member.userId)
 
         await announceInvitation(
           scope,
@@ -498,10 +501,11 @@ export const leaveTripFn = createServerFn({ method: 'POST' })
 /**
  * Decides who can find the trip.
  *
- * Written through `updateTrip`, whose `requireOwnedTrip` is the owner guard PRD #104 decision 6
- * asks for — there is no visibility writer of this module's own. It has no expected refusal, so it
- * keeps a plain return: a non-owner is `FORBIDDEN`, which is the generic failure, and the screen
- * shows no switch to them in the first place.
+ * Written through `setTripVisibility`, whose owner guard is the one PRD #104 decision 6 asks for.
+ * It is not `updateTrip`, which refuses an archived trip: who can see a trip is not what the record
+ * says, so the owner can still withdraw a share without restoring the trip first (#1040). It has no
+ * expected refusal, so it keeps a plain return: a non-owner is `FORBIDDEN`, which is the generic
+ * failure, and the screen shows no switch to them in the first place.
  */
 export const setTripVisibilityFn = createServerFn({ method: 'POST' })
   .validator(setTripVisibilityInput)
@@ -515,9 +519,7 @@ export const setTripVisibilityFn = createServerFn({ method: 'POST' })
       const scope = await appScope()
       // Read before the write: only the row as it stood knows whether this narrows the trip.
       const before = await requireTrip(scope, data.tripId)
-      const trip = await updateTrip(scope, data.tripId, {
-        visibility: data.visibility,
-      })
+      const trip = await setTripVisibility(scope, data.tripId, data.visibility)
       if (
         visibilityOf(before) === 'organization' &&
         visibilityOf(trip) === 'private'

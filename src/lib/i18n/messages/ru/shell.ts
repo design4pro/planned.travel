@@ -87,6 +87,7 @@ const messages = {
   'workspace.createPermanent':
     'В planned.travel пока нет возможности удалить пространство. Каждое пространство, которое вы создаёте или к которому присоединяетесь, входит в лимит: когда вы состоите в {limit} пространствах, создать ещё одно нельзя.',
   'workspace.createName': 'Название пространства',
+  'workspace.createNameRequired': 'Введите название пространства.',
   'workspace.createUpgrade':
     '«{workspace}» на тарифе «Бесплатный», а создать ещё одно пространство может только пространство с платным тарифом. Если у какого-то из ваших других пространств платный тариф, переключитесь на него и создайте пространство оттуда. Иначе переведите «{workspace}» на платный тариф.',
   'workspace.createLimitReached':
@@ -730,6 +731,7 @@ const messages = {
   'trips.card.copying': 'Копируется',
   'trips.card.copyingLabel': '{title} ещё копируется',
   'trips.card.copyingReason': 'Дождитесь окончания копирования.',
+  'trips.card.archivedReason': 'Восстановите эту поездку, чтобы её редактировать.',
   'metric.trips': 'Поездки',
   'metric.places': 'Места',
   'metric.members': 'Участники',

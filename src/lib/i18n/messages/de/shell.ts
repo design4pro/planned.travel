@@ -88,6 +88,7 @@ const messages = {
   'workspace.createPermanent':
     'In planned.travel gibt es noch keine Möglichkeit, einen Arbeitsbereich zu löschen. Jeder Arbeitsbereich, den du erstellst oder dem du beitrittst, zählt zum Limit: Gehörst du {limit} Arbeitsbereichen an, kannst du keinen weiteren erstellen.',
   'workspace.createName': 'Name des Arbeitsbereichs',
+  'workspace.createNameRequired': 'Gib einen Namen für den Arbeitsbereich ein.',
   'workspace.createUpgrade':
     '„{workspace}“ ist im Tarif Gratis, und nur ein Arbeitsbereich mit Bezahltarif kann einen weiteren erstellen. Hat einer deiner anderen Arbeitsbereiche einen Bezahltarif, wechsle zu ihm und erstelle von dort aus. Andernfalls stelle „{workspace}“ auf einen Bezahltarif um.',
   'workspace.createLimitReached':
@@ -692,6 +693,7 @@ const messages = {
   'trips.card.copying': 'Wird kopiert',
   'trips.card.copyingLabel': '{title} wird noch kopiert',
   'trips.card.copyingReason': 'Warte, bis die Kopie fertig ist.',
+  'trips.card.archivedReason': 'Stelle diese Reise wieder her, um sie zu bearbeiten.',
   'metric.trips': 'Reisen',
   'metric.places': 'Orte',
   'metric.members': 'Mitglieder',

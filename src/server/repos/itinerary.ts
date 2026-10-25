@@ -47,13 +47,15 @@ import {
   listTripDays,
   requireTripDay,
 } from './days'
-import {
-  PLACE_WRITE_ROLES,
-  placesRepository,
-  requirePlaceOfTrip,
-} from './places'
+import { placesRepository, requirePlaceOfTrip } from './places'
 import { requireReservationOfTrip } from './reservations'
-import { assertTripRole, requireTrip, requireWritableTrip } from './trips'
+import {
+  TRIP_WRITE_ROLES,
+  assertTripRole,
+  requireTrip,
+  requireWritableTrip,
+  tripMemberUserIds,
+} from './trips'
 import {
   currencySchema,
   definedOnly,
@@ -326,8 +328,14 @@ export interface ItineraryDay {
 }
 
 /**
- * The whole itinerary in four scoped queries: days, assignments, places and participants.
- * Stops are ordered by `order_index` then id, so ties from a fractional reorder stay stable.
+ * The whole itinerary in five scoped queries: days, assignments, places, participants and the
+ * trip's members. Stops are ordered by `order_index` then id, so ties from a fractional reorder stay
+ * stable.
+ *
+ * A stop lists only the participants who are **current trip members** (#1086): a person who leaves
+ * the trip disappears from its stops, but their `assignment_participants` rows are kept, so they
+ * reappear if they rejoin. Permanent deletion belongs to the erasure work (#811). The membership is
+ * read once per itinerary, in the same parallel read as the places and participants.
  */
 export async function getTripItinerary(
   scope: TenantScope,
@@ -344,18 +352,23 @@ export async function getTripItinerary(
   const placeIds = [...new Set(assignments.map((row) => row.placeId))]
   const assignmentIds = assignments.map((row) => row.id)
 
-  const [placeRows, participantRows] = await Promise.all([
+  const [placeRows, participantRows, memberIds] = await Promise.all([
     placesRepository.findByIds(scope, placeIds),
     assignmentIds.length === 0
       ? Promise.resolve([])
       : assignmentParticipantsAccess.findMany(scope, {
           where: inArray(assignmentParticipants.assignmentId, assignmentIds),
         }),
+    tripMemberUserIds(scope, tripId),
   ])
 
   const placesById = new Map(placeRows.map((row) => [row.id, row]))
+  const currentMembers = new Set(memberIds)
   const participantsByAssignment = new Map<string, Array<string>>()
   for (const row of participantRows) {
+    if (!currentMembers.has(row.userId)) {
+      continue
+    }
     const bucket = participantsByAssignment.get(row.assignmentId)
     if (bucket) {
       bucket.push(row.userId)
@@ -676,7 +689,7 @@ export async function reorderDayTimelines(
   // see it can be told `FORBIDDEN` (PRD #104 decisions 1 and 6). Nothing is written
   // until all of them have passed.
   await requireTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await Promise.all(
     values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
   )
@@ -935,7 +948,7 @@ export async function scheduleAssignment(
 }> {
   const values = scheduleAssignmentInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
@@ -980,7 +993,7 @@ export async function unscheduleAssignment(
 ): Promise<Array<WrittenDayJourneys>> {
   const values = unscheduleAssignmentInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
 
   const stop = await dayAssignmentsRepository.findById(
     scope,
@@ -1021,7 +1034,7 @@ export async function deletePlaceWithJourneys(
 ): Promise<Array<WrittenDayJourneys>> {
   const values = deletePlaceWithJourneysInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, PLACE_WRITE_ROLES)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
   const stops = await dayAssignmentsRepository.findMany(scope, {
@@ -1046,13 +1059,33 @@ export async function deletePlaceWithJourneys(
   return writtenDays(restated.map((day) => day.written))
 }
 
-/** Replaces the participant set of one stop. */
+/**
+ * Replaces the participant set of one stop.
+ *
+ * Starts from a row id, so it asks the stop's trip the two questions every trip-scoped writer asks
+ * - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR 0007), may they edit it -
+ * in that order, and writes only after both pass.
+ *
+ * Only a **current member of the stop's trip** (any role) may be listed (#1086). A list naming
+ * anyone else - a workspace member who is not on the trip, a person who has left it, a user of
+ * another workspace, an id that matches no user - is refused as a whole with one
+ * `NotFoundError('trip member', 'named in the request')` that names no id, and the stored set is
+ * untouched. A stop carries no debt, so unlike an expense a person who has left is not kept
+ * listable: re-saving a set without them succeeds, naming them is refused. The membership check runs
+ * after the two guards above, so a caller who may not see the trip is answered the trip's refusal.
+ * {@link getTripItinerary} applies the same definition of member when it reads the set back.
+ */
 export async function setAssignmentParticipants(
   scope: TenantScope,
   assignmentId: string,
   userIds: ReadonlyArray<string>,
 ): Promise<Array<string>> {
-  await dayAssignmentsRepository.requireById(scope, assignmentId)
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
+  await requireTrip(scope, assignment.tripId)
+  await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   const parsed = [
     ...new Set(
       z
@@ -1061,6 +1094,10 @@ export async function setAssignmentParticipants(
         .parse([...userIds]),
     ),
   ]
+  const members = new Set(await tripMemberUserIds(scope, assignment.tripId))
+  if (parsed.some((userId) => !members.has(userId))) {
+    throw new NotFoundError('trip member', 'named in the request')
+  }
 
   await assignmentParticipantsAccess.removeWhere(
     scope,
@@ -1085,7 +1122,7 @@ export async function createAccommodation(
 ): Promise<DayAccommodation> {
   const values = createAccommodationInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
-  await assertTripRole(scope, values.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   const start = await requireTripDay(scope, values.tripId, values.startDayId)
   const end = await requireTripDay(scope, values.tripId, values.endDayId)
   if (end.dayNumber < start.dayNumber) {
@@ -1111,7 +1148,7 @@ export async function updateAccommodation(
     accommodationId,
   )
   await requireWritableTrip(scope, existing.tripId)
-  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, existing.tripId, TRIP_WRITE_ROLES)
   if (values.startDayId) {
     await requireTripDay(scope, existing.tripId, values.startDayId)
   }
@@ -1140,7 +1177,7 @@ export async function deleteAccommodation(
     accommodationId,
   )
   await requireWritableTrip(scope, existing.tripId)
-  await assertTripRole(scope, existing.tripId, ['owner', 'editor'])
+  await assertTripRole(scope, existing.tripId, TRIP_WRITE_ROLES)
   await dayAccommodationsRepository.requireRemove(scope, accommodationId)
 }
 

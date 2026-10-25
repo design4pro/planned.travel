@@ -83,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'In planned.travel is er nog geen optie om een werkruimte te verwijderen. Elke werkruimte die je aanmaakt of waartoe je toetreedt, telt mee voor de limiet: zodra je bij {limit} werkruimtes hoort, kun je er geen nieuwe meer aanmaken.',
   'workspace.createName': 'Naam van de werkruimte',
+  'workspace.createNameRequired': 'Geef de werkruimte een naam.',
   'workspace.createUpgrade':
     '“{workspace}” heeft het abonnement Gratis, en alleen een werkruimte met een betaald abonnement kan er nog een maken. Heeft een van je andere werkruimtes een betaald abonnement, wissel daar dan naartoe en maak de nieuwe werkruimte vanaf daar. Anders upgrade je “{workspace}”.',
   'workspace.createLimitReached':
@@ -681,6 +682,7 @@ const messages = {
   'trips.card.copying': 'Wordt gekopieerd',
   'trips.card.copyingLabel': '{title} wordt nog gekopieerd',
   'trips.card.copyingReason': 'Wacht tot de kopie klaar is.',
+  'trips.card.archivedReason': 'Herstel deze reis om hem te bewerken.',
   'metric.trips': 'Reizen',
   'metric.places': 'Plekken',
   'metric.members': 'Leden',

@@ -377,6 +377,15 @@ const messages = {
     one: '{expenses} expense written to CSV.',
     other: '{expenses} expenses written to CSV.',
   },
+  /** The CSV's column headings; the date, amount, currency, payer and share columns reuse `field.*` and `totalTile.yourShare`. `{currency}` is the display currency's code. */
+  'export.csv.title': 'Title',
+  'export.csv.category': 'Category',
+  'export.csv.originalAmount': 'Original amount',
+  'export.csv.originalCurrency': 'Original currency',
+  'export.csv.rate': 'Rate',
+  'export.csv.splitMethod': 'Split method',
+  'export.csv.notes': 'Notes',
+  'export.csv.amountIn': 'Amount in {currency}',
   /** A day's heading in the list: what the day's expenses came to. */
   'list.daySpent': '{amount} spent',
   'skeleton.loading': 'Loading the expenses',

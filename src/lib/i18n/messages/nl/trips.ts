@@ -185,6 +185,13 @@ const messages = {
   'plan.handoff.day.point': 'Toon in {service}',
   'plan.handoff.day.pointName':
     'Toon in {service}: de enige stop met locatie op {day} (opent in een nieuw tabblad)',
+  'plan.handoff.day.part': 'Deel {n} van {count}',
+  'plan.handoff.day.directionsPartName':
+    'Route in {service}, deel {n} van {count}, {day} (opent in een nieuw tabblad)',
+  'plan.handoff.day.directionsPartialPartName':
+    'Route in {service}, deel {n} van {count}, stops: de eerste {carried} van {total}, {day} (opent in een nieuw tabblad)',
+  'plan.handoff.day.pointPartName':
+    'Toon in {service}, deel {n} van {count}, {day} (opent in een nieuw tabblad)',
   'plan.drop.hint':
     'Klik met de rechtermuisknop op de kaart, of houd je vinger erop, om precies daar een plek toe te voegen.',
   'plan.drop.armed':

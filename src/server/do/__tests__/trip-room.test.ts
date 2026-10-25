@@ -187,6 +187,25 @@ function joinedRoom(roles: Array<'editor' | 'viewer'>) {
 }
 
 describe('the trip room write gate', () => {
+  it('keeps not-joined for a patch sent before hello, whatever the role', async () => {
+    const storage = fakeStorage()
+    const state: TripRoomState = {
+      storage,
+      acceptWebSocket: () => undefined,
+      getWebSockets: () => [],
+    }
+    const room = new TripRoom(state, {})
+
+    for (const role of ['editor', 'viewer'] as const) {
+      const socket = fakeSocket(identityWith(role, 'ana'), `early-${role}`)
+      await room.webSocketMessage(socket, PATCH)
+      expect(socket.sent).toEqual([
+        expect.objectContaining({ t: 'error', code: 'not-joined', requestId: 'req-1' }),
+      ])
+    }
+    expect(storage.writes).toBe(0)
+  })
+
   it('refuses a viewer socket’s patch without writing, moving the version or telling anyone else', async () => {
     const { room, storage, sockets } = await joinedRoom(['viewer', 'editor'])
     const [viewer, editor] = sockets
@@ -196,6 +215,7 @@ describe('the trip room write gate', () => {
     expect(viewer.sent).toEqual([
       expect.objectContaining({
         t: 'error',
+        code: 'read-only',
         message: 'This connection is read-only',
         requestId: 'req-1',
       }),

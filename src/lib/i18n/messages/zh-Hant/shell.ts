@@ -64,6 +64,7 @@ const messages = {
   'workspace.createPermanent':
     'planned.travel 目前還沒有刪除工作區的選項。你建立或加入的每個工作區都計入上限：屬於 {limit} 個工作區後，就無法再建立新的。',
   'workspace.createName': '工作區名稱',
+  'workspace.createNameRequired': '請輸入工作區名稱。',
   'workspace.createUpgrade':
     '「{workspace}」使用的是免費版，只有付費方案中的工作區才能再建立工作區。如果你的其他工作區屬於付費方案，請切換過去再建立；否則請升級「{workspace}」。',
   'workspace.createLimitReached': '你所屬的工作區數量已達上限，因此無法再建立新的。',
@@ -536,6 +537,7 @@ const messages = {
   'trips.card.copying': '複製中',
   'trips.card.copyingLabel': '{title} 仍在複製中',
   'trips.card.copyingReason': '請等複製完成。',
+  'trips.card.archivedReason': '請先還原這趟旅程，再進行編輯。',
   'metric.trips': '行程',
   'metric.places': '地點',
   'metric.members': '成員',

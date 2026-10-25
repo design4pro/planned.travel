@@ -128,4 +128,31 @@ describe('the trip action menu', () => {
     expect(enabled('Archive')).toBe(false)
     expect(enabled('Delete')).toBe(true)
   })
+
+  /**
+   * The repository refuses every details write on an archived trip (#1040), so the menu does not
+   * offer an edit it cannot honour; Restore is how the owner gets it back.
+   */
+  it('turns Edit off on an archived trip, says why, and keeps Restore live', async () => {
+    const items = await openMenu(tripCard({ role: 'owner', isArchived: true }))
+
+    expect(items).toEqual([
+      'Copy',
+      'Favourite',
+      'Edit',
+      'Restore',
+      'Delete permanently',
+    ])
+    expect(screen.queryByText('Restore this trip to edit it.')).not.toBeNull()
+    expect(enabled('Edit')).toBe(false)
+    expect(enabled('Restore')).toBe(true)
+    expect(enabled('Delete permanently')).toBe(true)
+  })
+
+  it('keeps Edit live, and says nothing, on a trip that is not archived', async () => {
+    await openMenu(tripCard({ role: 'owner' }))
+
+    expect(enabled('Edit')).toBe(true)
+    expect(screen.queryByText('Restore this trip to edit it.')).toBeNull()
+  })
 })

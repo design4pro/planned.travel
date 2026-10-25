@@ -231,3 +231,48 @@ describe('the source attributions HERE sends with a route', () => {
     expect(screen.queryByText(NOTICE.text, { exact: false })).toBeNull()
   })
 })
+
+describe('the markup of the credit caption (#1038)', () => {
+  function caption() {
+    outcome({
+      outcome: {
+        ...ANSWER,
+        connections: [CONNECTION],
+        attributions: [NOTICE, PLAIN_NOTICE],
+      },
+      results: [CONNECTION],
+    })
+    const credit = document.querySelector('[data-part="connection-credit"]')
+    if (!credit) throw new Error('the credit caption is not rendered')
+    return credit
+  }
+
+  it('wraps an unbroken vendor string instead of overflowing', () => {
+    expect(caption().classList.contains('wrap-anywhere')).toBe(true)
+  })
+
+  it('isolates the direction of every notice in its own bdi', () => {
+    const bdis = Array.from(caption().querySelectorAll('bdi'))
+
+    expect(bdis.map((bdi) => bdi.textContent)).toEqual([
+      NOTICE.text,
+      PLAIN_NOTICE.text,
+    ])
+  })
+
+  it('keeps single real spaces around each aria-hidden separator', () => {
+    const credit = caption()
+    const separators = Array.from(credit.querySelectorAll('[aria-hidden]'))
+
+    // The credit and the first notice, then the two notices: one separator each.
+    expect(separators).toHaveLength(2)
+    for (const separator of separators) {
+      expect(separator.getAttribute('aria-hidden')).toBe('true')
+      expect(separator.previousSibling?.textContent?.endsWith(' ')).toBe(true)
+      expect(separator.nextSibling?.textContent?.startsWith(' ')).toBe(true)
+    }
+    expect(credit.textContent).toBe(
+      `Timetable data from HERE · ${NOTICE.text} · ${PLAIN_NOTICE.text}`,
+    )
+  })
+})
