@@ -143,13 +143,15 @@ export const presenceFocusSchema = z.object({
 
 export type PresenceFocus = z.infer<typeof presenceFocusSchema>
 
-export interface PresenceMember {
-  connectionId: string
-  user: PresenceUser
-  joinedAt: number
-  lastSeenAt: number
-  focus: PresenceFocus | null
-}
+export const presenceMemberSchema = z.object({
+  connectionId: z.string(),
+  user: presenceUserSchema,
+  joinedAt: z.number(),
+  lastSeenAt: z.number(),
+  focus: presenceFocusSchema.nullable(),
+})
+
+export type PresenceMember = z.infer<typeof presenceMemberSchema>
 
 export const patchOps = ['upsert', 'delete'] as const
 export type PatchOp = (typeof patchOps)[number]
@@ -320,8 +322,31 @@ export function encodeServerMessage(message: ServerMessage): string {
 }
 
 /**
- * Client-side counterpart. Server frames are trusted (they come from our own
- * Durable Object) so this only guards against a version skew during deploys.
+ * What the client reads from a server frame, and nothing more. Plain `z.object` (never `.strict()`)
+ * so a field a newer server adds does not fail an older tab; commit entries and snapshots are not
+ * walked, because the commit frame is only a signal to re-read the loader. `error.code` is a plain
+ * string so a code added later still reaches the `protocol-mismatch` check.
+ */
+export const serverMessageSchema = z.discriminatedUnion('t', [
+  z.object({
+    t: z.literal('welcome'),
+    protocol: z.number(),
+    version: z.number(),
+    you: presenceMemberSchema,
+    peers: z.array(presenceMemberSchema),
+  }),
+  z.object({ t: z.literal('presence'), peers: z.array(presenceMemberSchema) }),
+  z.object({ t: z.literal('commit'), version: z.number(), entries: z.array(z.unknown()) }),
+  z.object({ t: z.literal('ack') }),
+  z.object({ t: z.literal('pong') }),
+  z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
+])
+
+/**
+ * Client-side counterpart. A tab that loaded the previous bundle keeps its socket across a deploy,
+ * so a frame is checked against `serverMessageSchema` and one the client does not understand is
+ * refused whole instead of being rendered. The original frame is returned, not the schema's
+ * output, so fields the client does not validate (`commits`, `snapshot`) stay available.
  */
 export function parseServerMessage(raw: string): ParseResult<ServerMessage> {
   let json: unknown
@@ -332,6 +357,14 @@ export function parseServerMessage(raw: string): ParseResult<ServerMessage> {
   }
   if (typeof json !== 'object' || json === null || !('t' in json)) {
     return { ok: false, code: 'invalid-message', message: 'Frame has no message type' }
+  }
+  const parsed = serverMessageSchema.safeParse(json)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: 'invalid-message',
+      message: parsed.error.issues[0]?.message ?? 'Frame does not match the protocol',
+    }
   }
   return { ok: true, value: json as ServerMessage }
 }
