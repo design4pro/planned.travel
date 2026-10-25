@@ -1,5 +1,10 @@
 import { cn } from '#/lib/cn'
-import { formatNumber, formatPercent } from '#/lib/format'
+import {
+  formatNumber,
+  formatPercent,
+  formatPrecipitation,
+  formatSpeed,
+} from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { CONDITION_ICON } from './weather-icons'
 import { CONDITION_LABEL, SLOT_LABEL, panelModel } from './weather-model'
@@ -45,9 +50,9 @@ export function DayWeatherPanel({
   const model = panelModel(reading, unit)
 
   const precipitation = [
-    model.precipitation === null
+    model.precipitationMm === null
       ? null
-      : `${formatNumber(model.precipitation.value, locale)} ${model.precipitation.unit}`,
+      : formatPrecipitation(model.precipitationMm, unit, locale),
     model.probability === null
       ? null
       : t('trips.plan.weather.panel.probability', {
@@ -73,9 +78,9 @@ export function DayWeatherPanel({
             {precipitation.join(' · ')}
           </Row>
         )}
-        {model.wind === null ? null : (
+        {model.windMs === null ? null : (
           <Row label={t('trips.plan.weather.panel.wind')}>
-            {`${formatNumber(model.wind.value, locale)} ${model.wind.unit}`}
+            {formatSpeed(model.windMs, unit, locale)}
           </Row>
         )}
         {sun === null ? null : (

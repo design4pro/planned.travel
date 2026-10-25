@@ -62,6 +62,11 @@ export interface DayWeatherBadgeProps {
   readonly unit: WeatherUnit
   /** The day's date as the header writes it, for the fuller reading's title. */
   readonly dateLabel: string
+  /**
+   * The day's header button. When the day stops being a forecast with the popover (or its trigger)
+   * holding focus, focus lands here instead of falling to the page.
+   */
+  readonly headerRef?: React.RefObject<HTMLElement | null>
 }
 
 /**
@@ -80,9 +85,9 @@ export function DayWeatherBadge({
   weather,
   unit,
   dateLabel,
+  headerRef,
 }: DayWeatherBadgeProps) {
   const t = useTranslate()
-  const titleId = React.useId()
   const locale = useLocale()
   const model = badgeModel(weather, unit)
 
@@ -126,60 +131,107 @@ export function DayWeatherBadge({
   if (face === null) {
     return <UnavailableBadge />
   }
+  return (
+    <div data-part="day-weather" className={BOX}>
+      <ForecastPopover
+        model={model}
+        face={face}
+        unit={unit}
+        dateLabel={dateLabel}
+        headerRef={headerRef}
+      />
+    </div>
+  )
+}
+
+/**
+ * The forecast button and the popover it opens.
+ *
+ * Its own component because it is what unmounts when the day stops being a forecast (loading,
+ * unavailable, nothing, or no weather passed at all): the trigger and the open dialog go with it,
+ * and focus inside either would fall to the page. The cleanup runs before the DOM is removed, so
+ * it can still see where focus is, and hands it to the day's header button when it was here.
+ */
+function ForecastPopover({
+  model,
+  face,
+  unit,
+  dateLabel,
+  headerRef,
+}: {
+  readonly model: ReadingModel
+  readonly face: NonNullable<ReturnType<typeof readingFace>>
+  readonly unit: WeatherUnit
+  readonly dateLabel: string
+  readonly headerRef: DayWeatherBadgeProps['headerRef']
+}) {
+  const t = useTranslate()
+  const titleId = React.useId()
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
   const { name, Icon, muted, lead, trail } = face
   const approximate = model.kind === 'estimate'
 
+  React.useLayoutEffect(
+    () => () => {
+      const focused = document.activeElement
+      const hadFocus =
+        focused !== null &&
+        (triggerRef.current?.contains(focused) === true ||
+          contentRef.current?.contains(focused) === true)
+      if (hadFocus && headerRef?.current?.isConnected === true) {
+        headerRef.current.focus()
+      }
+    },
+    [headerRef],
+  )
+
   return (
-    <div data-part="day-weather" className={BOX}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={name}
-            className={cn(
-              'inline-flex h-7 items-center gap-1 rounded-md px-1 text-caption tabular-nums',
-              transitionBase,
-              focusRing,
-              'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
-              // An estimate is outlined, so it is not mistaken for a forecast at a glance.
-              approximate && 'border border-dashed border-info',
-            )}
-          >
-            <Icon
-              size={15}
-              strokeWidth={2}
-              aria-hidden="true"
-              className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
-            />
-            {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
-            <span dir="ltr" className="whitespace-nowrap">
-              {approximate ? (
-                <span aria-hidden="true" className="text-info">
-                  ≈
-                </span>
-              ) : null}
-              <span className="font-semibold text-ink-2">{lead}</span>
-              {trail === null ? null : (
-                <span className="text-ink-3">/{trail}</span>
-              )}
-              <span className="text-ink-4">{model.unit}</span>
-            </span>
-          </button>
-        </PopoverTrigger>
-        <PopoverContent align="end" aria-labelledby={titleId}>
-          <PopoverHeader>
-            <h2 id={titleId} className="text-label font-semibold">
-              {t('trips.plan.weather.panel.title', { date: dateLabel })}
-            </h2>
-          </PopoverHeader>
-          <DayWeatherPanel
-            reading={model.reading}
-            sun={model.sun}
-            unit={unit}
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-label={name}
+          className={cn(
+            'inline-flex h-7 items-center gap-1 rounded-md px-1 text-caption tabular-nums',
+            transitionBase,
+            focusRing,
+            'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
+            // An estimate is outlined, so it is not mistaken for a forecast at a glance.
+            approximate && 'border border-dashed border-info',
+          )}
+        >
+          <Icon
+            size={15}
+            strokeWidth={2}
+            aria-hidden="true"
+            className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
           />
-        </PopoverContent>
-      </Popover>
-    </div>
+          {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
+          <span dir="ltr" className="whitespace-nowrap">
+            {approximate ? (
+              <span aria-hidden="true" className="text-info">
+                ≈
+              </span>
+            ) : null}
+            <span className="font-semibold text-ink-2">{lead}</span>
+            {trail === null ? null : (
+              <span className="text-ink-3">/{trail}</span>
+            )}
+            <span className="text-ink-4">{model.unit}</span>
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent ref={contentRef} align="end" aria-labelledby={titleId}>
+        <PopoverHeader>
+          <h2 id={titleId} className="text-label font-semibold">
+            {t('trips.plan.weather.panel.title', { date: dateLabel })}
+          </h2>
+        </PopoverHeader>
+        <DayWeatherPanel reading={model.reading} sun={model.sun} unit={unit} />
+      </PopoverContent>
+    </Popover>
   )
 }
 
