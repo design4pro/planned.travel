@@ -33,6 +33,8 @@ import { toast } from 'sonner'
 
 import { directionOf, useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
+import { readPublicFailure } from '#/lib/errors'
+import { messageOf } from '#/components/modules/shared'
 import { GlassPanel, IconButton, SectionLabel } from '#/components/ui'
 import {
   CategoryFilterBar,
@@ -78,7 +80,6 @@ import {
   draftFromPlace,
   emptyDraft,
   emptyTiming,
-  messageOf,
 } from './plan-actions'
 import {
   filterRows,
@@ -685,11 +686,19 @@ export function PlanScreen({
 
       void applyChange(outcome.change, outcome.order, drop ? itemId : null)
         .then(() => router.invalidate())
-        .catch((cause: unknown) => {
+        .catch(async (cause: unknown) => {
           setOrder(previous)
           toast.error(t('trips.plan.move.error.save'), {
             description: messageOf(cause, t('trips.plan.move.error.retry')),
           })
+          // A refusal may mean the reader's role changed under this screen: read the board again so
+          // `editable` follows. Any other failure keeps the board it has.
+          if (readPublicFailure(cause).kind !== 'refusal') return
+          try {
+            await router.invalidate()
+          } catch {
+            // The refusal is already on screen; a failed re-read must not replace it.
+          }
         })
         .finally(() => {
           markPending(itemId, false)
@@ -874,6 +883,40 @@ export function PlanScreen({
     setFormErrorAction(null)
   }, [releaseDialog])
 
+  // A refused write re-reads the board, and the re-read can take `editable` away from a screen the
+  // reader is working in: the form that outlived the permission is closed, its refusal moves to a
+  // toast, and focus goes to the itinerary (or the title when the panels are shut), since the
+  // control that held it is gone. Toast and focus wait for the form to go: a modal form traps focus
+  // and hides the rest of the page from a screen reader.
+  const wasEditable = React.useRef(editable)
+  /** What the form of a refused write showed, for the toast that replaces the form. */
+  const formRefusal = React.useRef<string | null>(null)
+  const lostWrite = React.useRef<{ readonly refusal: string | null } | null>(
+    null,
+  )
+  const titleRef = React.useRef<HTMLHeadingElement | null>(null)
+  const sheetTitleRef = React.useRef<HTMLHeadingElement | null>(null)
+  React.useEffect(() => {
+    if (wasEditable.current && !editable) {
+      lostWrite.current = { refusal: formRefusal.current }
+      formRefusal.current = null
+      // A pin being placed is a write mode too.
+      setPicking(null)
+    }
+    wasEditable.current = editable
+    const lost = lostWrite.current
+    if (lost === null) return
+    if (dialog !== null) {
+      closeDialog()
+      return
+    }
+    lostWrite.current = null
+    if (lost.refusal !== null) toast.error(lost.refusal)
+    // An open phone sheet is modal and hides the page behind it, so its own title comes before the
+    // page title: the itinerary is only mounted while the sheet shows that tab.
+    ;(railRef.current ?? sheetTitleRef.current ?? titleRef.current)?.focus()
+  }, [closeDialog, dialog, editable])
+
   /**
    * Runs a write and reports whether it landed. The form that was open when it started (if any)
    * owns it: its error slot shows a failure and `closeOnLanded` closes it. When that form is gone,
@@ -889,9 +932,12 @@ export function PlanScreen({
         readonly closeOnLanded?: boolean
       },
     ): Promise<boolean> => {
+      // A refused write re-read `editable`; a form that outlived the permission must not write with it.
+      if (!editable) return false
       const stillOwned = claimWrite()
       const token = Symbol()
       setSavingWrite({ token, owner: dialog })
+      formRefusal.current = null
       setFormError(null)
       setFormErrorAction(null)
       try {
@@ -909,8 +955,19 @@ export function PlanScreen({
         if (stillOwned()) {
           setFormError(report.message)
           setFormErrorAction(report.action)
+          formRefusal.current =
+            readPublicFailure(cause).kind === 'refusal' ? report.message : null
         } else {
           reportLateWriteFailure(report, toast, openInNewTab)
+        }
+        // A refusal may mean the reader's role changed under this screen: read the board again so
+        // `editable` and `canWrite` follow. Any other failure keeps the board it has.
+        if (readPublicFailure(cause).kind === 'refusal') {
+          try {
+            await router.invalidate()
+          } catch {
+            // The refusal is already on screen; a failed re-read must not replace it.
+          }
         }
         return false
       } finally {
@@ -918,7 +975,7 @@ export function PlanScreen({
         setSavingWrite((current) => (current?.token === token ? null : current))
       }
     },
-    [claimWrite, closeDialog, dialog, router, t],
+    [claimWrite, closeDialog, dialog, editable, router, t],
   )
 
   const submitPlace = React.useCallback(
@@ -1212,7 +1269,11 @@ export function PlanScreen({
   /* ------------------------------------------------------------------ panels */
 
   const itinerary = (
-    <div ref={railRef} className="flex flex-col gap-1">
+    <div
+      ref={railRef}
+      tabIndex={-1}
+      className="flex flex-col gap-1 outline-none"
+    >
       {model.days.length === 0 ? (
         <div className="px-2 py-6 text-center">
           <SectionLabel as="h3" className="justify-center">
@@ -1376,6 +1437,8 @@ export function PlanScreen({
         ideas={ideas}
         addButton={addButton}
         railFooter={railFooter}
+        titleRef={titleRef}
+        sheetTitleRef={sheetTitleRef}
         scheduledCount={String(model.scheduledCount)}
         placesCount={String(
           placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,
