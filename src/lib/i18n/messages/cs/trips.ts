@@ -426,9 +426,9 @@ const messages = {
     'Výlet pojme nejvýše {limit} hostů, protože delší seznam znepřehledňuje výběr účastníků i rozdělení nákladů',
   'people.error.guestMergeTarget': 'Vyber někoho, kdo už je na tomto výletě',
   'plan.weather.badge.forecast':
-    'Předpověď: {condition}, maximum {max}, minimum {min}',
+    'Předpověď: {figures}, {condition} (maximum {max}, minimum {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Předpověď: maximum {max}, minimum {min}',
+    'Předpověď: {figures} (maximum {max}, minimum {min})',
   'plan.weather.badge.unavailable': 'Počasí pro tento den není k dispozici',
   'plan.weather.badge.loading': 'Načítání počasí',
   'plan.weather.badge.recorded': 'Naměřeno: maximum {max}, minimum {min}',

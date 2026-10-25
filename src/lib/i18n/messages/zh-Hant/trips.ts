@@ -372,8 +372,10 @@ const messages = {
   'people.error.guestLimit':
     '一次旅行最多 {limit} 位訪客，因為名單更長會讓參與者選擇和費用分攤難以閱讀',
   'people.error.guestMergeTarget': '請選擇已在本次旅行中的人',
-  'plan.weather.badge.forecast': '預報：{condition}，最高 {max}，最低 {min}',
-  'plan.weather.badge.forecastNoCondition': '預報：最高 {max}，最低 {min}',
+  'plan.weather.badge.forecast':
+    '預報：{figures}，{condition}（最高 {max}，最低 {min}）',
+  'plan.weather.badge.forecastNoCondition':
+    '預報：{figures}（最高 {max}，最低 {min}）',
   'plan.weather.badge.unavailable': '這一天的天氣暫時無法使用',
   'plan.weather.badge.loading': '正在載入天氣',
   'plan.weather.badge.recorded': '實測：最高 {max}， 最低 {min}',

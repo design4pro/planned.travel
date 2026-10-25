@@ -397,9 +397,9 @@ const messages = {
     'Một chuyến đi có tối đa {limit} khách, vì danh sách dài hơn khiến việc chọn người tham gia và đọc phần chia chi phí trở nên khó khăn',
   'people.error.guestMergeTarget': 'Chọn một người đã có trong chuyến đi này',
   'plan.weather.badge.forecast':
-    'Dự báo: {condition}, cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures}, {condition} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Dự báo: cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.unavailable': 'Không có thông tin thời tiết cho ngày này',
   'plan.weather.badge.loading': 'Đang tải thời tiết',
   'plan.weather.badge.recorded': 'Đã ghi nhận: cao nhất {max}, thấp nhất {min}',

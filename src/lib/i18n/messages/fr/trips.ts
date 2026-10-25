@@ -429,9 +429,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Choisissez quelqu’un qui fait déjà partie de ce voyage',
   'plan.weather.badge.forecast':
-    'Prévisions : {condition}, max. {max}, min. {min}',
+    'Prévisions : {figures}, {condition} (max. {max}, min. {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Prévisions : max. {max}, min. {min}',
+    'Prévisions : {figures} (max. {max}, min. {min})',
   'plan.weather.badge.unavailable': 'Météo indisponible pour ce jour',
   'plan.weather.badge.loading': 'Chargement de la météo',
   'plan.weather.badge.recorded': 'Relevé : max. {max}, min. {min}',

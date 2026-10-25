@@ -444,9 +444,9 @@ const messages = {
     'تتسع الرحلة لـ {limit} ضيفًا على الأكثر، لأن القائمة الأطول تجعل اختيار المشاركين وتقسيم المصاريف صعب القراءة',
   'people.error.guestMergeTarget': 'اختر شخصًا موجودًا بالفعل في هذه الرحلة',
   'plan.weather.badge.forecast':
-    'التوقعات: {condition}، العظمى {max}، الصغرى {min}',
+    'التوقعات: {figures}، {condition} (العظمى {max}، الصغرى {min})',
   'plan.weather.badge.forecastNoCondition':
-    'التوقعات: العظمى {max}، الصغرى {min}',
+    'التوقعات: {figures} (العظمى {max}، الصغرى {min})',
   'plan.weather.badge.unavailable': 'حالة الطقس غير متاحة لهذا اليوم',
   'plan.weather.badge.loading': 'جارٍ تحميل الطقس',
   'plan.weather.badge.recorded': 'المسجَّل: العظمى {max}، الصغرى {min}',

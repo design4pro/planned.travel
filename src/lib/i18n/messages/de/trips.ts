@@ -419,9 +419,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Wähle jemanden, der bereits auf dieser Reise ist',
   'plan.weather.badge.forecast':
-    'Vorhersage: {condition}, Höchstwert {max}, Tiefstwert {min}',
+    'Vorhersage: {figures}, {condition} (Höchstwert {max}, Tiefstwert {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Vorhersage: Höchstwert {max}, Tiefstwert {min}',
+    'Vorhersage: {figures} (Höchstwert {max}, Tiefstwert {min})',
   'plan.weather.badge.unavailable': 'Wetter für diesen Tag nicht verfügbar',
   'plan.weather.badge.loading': 'Wetter wird geladen',
   'plan.weather.badge.recorded': 'Gemessen: Höchstwert {max}, Tiefstwert {min}',

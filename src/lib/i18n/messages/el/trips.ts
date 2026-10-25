@@ -417,9 +417,9 @@ const messages = {
     'Ένα ταξίδι χωράει έως {limit} καλεσμένους, γιατί μια μεγαλύτερη λίστα δυσκολεύει την επιλογή συμμετεχόντων και την ανάγνωση του καταμερισμού εξόδων',
   'people.error.guestMergeTarget': 'Επίλεξε κάποιον που είναι ήδη στο ταξίδι',
   'plan.weather.badge.forecast':
-    'Πρόγνωση: {condition}, μέγιστη {max}, ελάχιστη {min}',
+    'Πρόγνωση: {figures}, {condition} (μέγιστη {max}, ελάχιστη {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Πρόγνωση: μέγιστη {max}, ελάχιστη {min}',
+    'Πρόγνωση: {figures} (μέγιστη {max}, ελάχιστη {min})',
   'plan.weather.badge.unavailable':
     'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
   'plan.weather.badge.loading': 'Φόρτωση καιρού',

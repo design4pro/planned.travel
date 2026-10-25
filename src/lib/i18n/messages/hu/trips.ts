@@ -412,9 +412,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Válassz valakit, aki már részt vesz az utazáson',
   'plan.weather.badge.forecast':
-    'Előrejelzés: {condition}, maximum {max}, minimum {min}',
+    'Előrejelzés: {figures}, {condition} (maximum {max}, minimum {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Előrejelzés: maximum {max}, minimum {min}',
+    'Előrejelzés: {figures} (maximum {max}, minimum {min})',
   'plan.weather.badge.unavailable': 'Az időjárás nem érhető el erre a napra',
   'plan.weather.badge.loading': 'Időjárás betöltése',
   'plan.weather.badge.recorded': 'Mért adat: maximum {max}, minimum {min}',

@@ -433,9 +433,9 @@ const messages = {
     'В поездке может быть не больше {limit} гостей: длинный список затрудняет выбор участников и чтение разделения расходов',
   'people.error.guestMergeTarget': 'Выберите того, кто уже участвует в поездке',
   'plan.weather.badge.forecast':
-    'Прогноз: {condition}, максимум {max}, минимум {min}',
+    'Прогноз: {figures}, {condition} (максимум {max}, минимум {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Прогноз: максимум {max}, минимум {min}',
+    'Прогноз: {figures} (максимум {max}, минимум {min})',
   'plan.weather.badge.unavailable': 'Погода на этот день недоступна',
   'plan.weather.badge.loading': 'Загрузка погоды',
   'plan.weather.badge.recorded': 'Зафиксировано: максимум {max}, минимум {min}',
