@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                                           |
-| ------------------ | ----------------------------------------------- |
-| **Status**         | in-progress                                     |
-| **Issue**          | #631                                            |
-| **Spec PR**        | #636                                            |
-| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501 |
+| Field              | Value                                                  |
+| ------------------ | ------------------------------------------------------ |
+| **Status**         | in-progress                                            |
+| **Issue**          | #631                                                   |
+| **Spec PR**        | #636                                                   |
+| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501, #1610 |
 
 ## 📝 TLDR
 
@@ -835,4 +835,5 @@ What ships with the browser proof (#826) differs from the design above in these 
 46. **"No outbound call" is asserted twice.** The browser cannot see what the Worker fetches, so the journey checks that the page itself requests nothing from `api.met.no` or `power.larc.nasa.gov`, and reads the `met-norway` and `nasa-power` call counts on `/console/providers` (the provider ledger counts every outbound call the Worker makes) before and after and requires them to be equal.
 47. **The layout-shift assertion covers the weather answer, not the whole visit.** The shell's top navigation shifts by 0.00073 at about 0.7 s, before any weather request, when its font loads. The journey counts the shifts reported after the read is released and requires exactly 0, with no tolerance; the whole-visit total is attached to the test as an annotation. The proof found one real shift of 0.000027, a `not-yet-recorded` clock drawn into the skeleton's own `<span>`, and `day-weather-badge.tsx` gives it a `key` so the element is replaced; the journey fails without it. The shell navigation is not changed here.
 48. **The pictures are taken when `WEATHER_EVIDENCE_DIR` is set.** One PNG per theme, width (360, 1280, 2560) and state, written to that directory; the test is skipped otherwise, and no frame is compared in the suite. On a phone the days are behind the "Days" sheet, which the journey opens first.
-49. **The forecast badge's name contains its visible text (WCAG 2.5.3, #1090).** `plan.weather.badge.forecast` and `forecastNoCondition` gain a `{figures}` placeholder right after the localised "Forecast" prefix, filled with the exact visible run (`12°/4°C`), and the spelled-out high and low follow in parentheses: `Forecast: 12°/4°C, Rain (high 12°C, low 4°C)`. All 23 locales. The recorded and estimate names are unchanged.
+49. **The keyboard test opens the forecast badge with both keys.** The forecast day is opened with Enter and again with Space, and each time closed with Escape, with focus asserted back on the badge; the recorded and estimate badges stay on Enter. The rest of what #1088 asked for (the seed, the development-only `serverNow()`, the unavailable day, the stable header) had already shipped with items 42 to 48.
+50. **The forecast badge's name contains its visible text (WCAG 2.5.3, #1090).** `plan.weather.badge.forecast` and `forecastNoCondition` gain a `{figures}` placeholder right after the localised "Forecast" prefix, filled with the exact visible run (`12°/4°C`), and the spelled-out high and low follow in parentheses: `Forecast: 12°/4°C, Rain (high 12°C, low 4°C)`. All 23 locales. The recorded and estimate names are unchanged.
