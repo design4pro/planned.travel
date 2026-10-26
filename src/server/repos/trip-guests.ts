@@ -16,23 +16,16 @@
  * module imports the trip guards, and `trips.ts` never imports this one.
  */
 
-import { asc, count, eq, inArray } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import {
-  TRIP_MEMBER_ROLES,
-  tripGuests,
-  tripMembers,
-  trips,
-} from '#/server/db/schema'
+import { TRIP_MEMBER_ROLES, tripGuests, tripMembers } from '#/server/db/schema'
 import { allOf, createTenantRepository, tenantFilter } from './base'
 import { runBatch } from './batch'
 import { NotFoundError, RepositoryError } from './context'
 import { listUserProfiles } from './members'
 import {
-  ID_FILTER_CHUNK,
   assertTripRole,
   listTripMembers,
-  readableTripFilter,
   requireTrip,
   tripMembersRepository,
 } from './trips'
@@ -294,84 +287,6 @@ export async function listTripParticipants(
       colour: guest.colour,
     })),
   ]
-}
-
-/**
- * How many people are on each of the given trips — members plus guests — keyed by trip id (`01-S7`).
- *
- * Two grouped statements per ninety ids, one per table, because its callers are the trip index
- * and the dashboard, and a query per card is the shape `countTripsByStatus` and `readTripCardFacts`
- * already refuse. D1 bills rows read, and both tables lead their composite index with
- * `organization_id`, so each scan is bounded by the tenant.
- *
- * Both statements count only rows of trips the caller may **read**: the ids are narrowed through
- * `readableTripFilter` inside the statement, so a foreign id and a private trip the caller is not on
- * get **no entry at all** — not a zero — and the shape of the answer says nothing about whether such
- * a trip exists.
- */
-export async function countTripPeople(
-  scope: TenantScope,
-  tripIds: ReadonlyArray<string>,
-): Promise<Map<string, number>> {
-  const counts = new Map<string, number>()
-  // Chunked because the read predicate binds five parameters of its own beside one per id, so a
-  // full page of a hundred trips is a statement D1 refuses. A trip id sits in exactly one chunk, so
-  // the chunks' counts never overlap and simply add up.
-  const chunks: Array<ReadonlyArray<string>> = []
-  for (let index = 0; index < tripIds.length; index += ID_FILTER_CHUNK) {
-    chunks.push(tripIds.slice(index, index + ID_FILTER_CHUNK))
-  }
-  const rows = await Promise.all(
-    chunks.map((chunk) => countPeopleInChunk(scope, chunk)),
-  )
-  for (const row of rows.flat()) {
-    counts.set(row.tripId, (counts.get(row.tripId) ?? 0) + row.value)
-  }
-  return counts
-}
-
-/** One chunk's two grouped statements, members and guests, over the ids the caller may read. */
-async function countPeopleInChunk(
-  scope: TenantScope,
-  tripIds: ReadonlyArray<string>,
-): Promise<ReadonlyArray<{ tripId: string; value: number }>> {
-  const readableIds = scope.db
-    .select({ id: trips.id })
-    .from(trips)
-    .where(
-      tenantFilter(
-        scope,
-        trips,
-        inArray(trips.id, [...tripIds]),
-        readableTripFilter(scope),
-      ),
-    )
-
-  const [members, guests] = await Promise.all([
-    scope.db
-      .select({ tripId: tripMembers.tripId, value: count() })
-      .from(tripMembers)
-      .where(
-        tenantFilter(
-          scope,
-          tripMembers,
-          inArray(tripMembers.tripId, readableIds),
-        ),
-      )
-      .groupBy(tripMembers.tripId),
-    scope.db
-      .select({ tripId: tripGuests.tripId, value: count() })
-      .from(tripGuests)
-      .where(
-        tenantFilter(
-          scope,
-          tripGuests,
-          inArray(tripGuests.tripId, readableIds),
-        ),
-      )
-      .groupBy(tripGuests.tripId),
-  ])
-  return [...members, ...guests]
 }
 
 /* -------------------------------------------------------------------------------------------------

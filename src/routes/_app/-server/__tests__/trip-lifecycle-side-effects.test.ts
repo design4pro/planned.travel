@@ -68,6 +68,10 @@ const stubs = vi.hoisted(() => ({
   /** Every whole-room eviction asked for, as the trip it was asked for. */
   evicted: [] as Array<string>,
   reset: [] as Array<string>,
+  /** Awaited inside a whole-room close, before it is recorded: reads the database as the close sees it. */
+  onClose: null as (() => Promise<void>) | null,
+  /** How many envelopes had been sent when the room was reset; null until it is. */
+  sentAtReset: null as number | null,
   /** The `FILES` bucket `filesBucket()` answers with: the export listing a delete reads. */
   bucket: null as ExportStore | null,
   /** Every record the module's logger wrote at `warn`. */
@@ -81,10 +85,12 @@ const stubs = vi.hoisted(() => ({
  */
 vi.mock('#/server/fns/context', () => ({
   closeRoom: async (_scope: TenantScope, tripId: string): Promise<void> => {
+    await stubs.onClose?.()
     stubs.evicted.push(tripId)
   },
   resetRoom: async (scope: TenantScope, tripId: string): Promise<void> => {
     expect(await canReadTrip(scope, tripId)).toBe(false)
+    stubs.sentAtReset = stubs.batches.flat().length
     stubs.reset.push(tripId)
   },
   filesBucket: (): ExportStore => {
@@ -304,6 +310,8 @@ beforeEach(async () => {
   stubs.queueRejects = false
   stubs.evicted = []
   stubs.reset = []
+  stubs.onClose = null
+  stubs.sentAtReset = null
   stubs.bucket = fakeBucket()
   stubs.warnings = []
 })
@@ -1193,6 +1201,47 @@ describe('the trip room after a lifecycle write', () => {
     expect(await canReadTrip(tenant.scope, otherTripId)).toBe(true)
   })
 
+  it('closes an archived or restored room only once the flag has flipped', async () => {
+    const tripId = await sketchTrip()
+    const seen: Array<boolean> = []
+    stubs.onClose = async () => {
+      seen.push((await requireTrip(tenant.scope, tripId)).isArchived)
+    }
+
+    await archiveTrip({ tripId })
+    await restoreTrip({ tripId })
+
+    expect(seen).toEqual([true, false])
+  })
+
+  it('resets the deleted trip room last, after the purge and the statistics were enqueued', async () => {
+    const tripId = await sketchTrip()
+    await recordFile(tenant.scope, {
+      tripId,
+      storageKey: `trips/${tenant.organizationId}/${tripId}/f1-booking.pdf`,
+      filename: 'booking.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 1024,
+    })
+    stubs.batches = []
+
+    await deleteTrip({ tripId, confirmTitle: 'Lisbon' })
+
+    const envelopes = sent()
+    expect(envelopes.map((envelope) => envelope.kind)).toContain('trip-purge')
+    expect(travelStats(envelopes).length).toBeGreaterThan(0)
+    expect(stubs.sentAtReset).toBe(envelopes.length)
+  })
+
+  it('evicts nobody for a create, an edit or a copy', async () => {
+    const tripId = await sketchTrip()
+    await updateTrip({ tripId, title: 'Lisbon again' })
+    await copyTrip({ tripId, title: 'Lisbon, again' })
+
+    expect(stubs.evicted).toEqual([])
+    expect(stubs.reset).toEqual([])
+  })
+
   it('does not reset a room when D1 refuses the deletion', async () => {
     const tripId = await sketchTrip()
     harness.sqlite.exec(`CREATE TRIGGER refuse_trip_delete BEFORE DELETE ON trips
@@ -1236,12 +1285,15 @@ describe('the trip room after a lifecycle write', () => {
     })
     stubs.scope = tenant.scopeFor(editor)
 
+    stubs.batches = []
+
     await expect(archiveTrip({ tripId })).rejects.toThrow()
     await expect(restoreTrip({ tripId })).rejects.toThrow()
     await expect(deleteTrip({ tripId })).rejects.toThrow()
 
     expect(stubs.evicted).toEqual([])
     expect(stubs.reset).toEqual([])
+    expect(sent()).toEqual([])
   })
 
   it('asks for nothing for a private trip the caller cannot read, or one in another workspace', async () => {

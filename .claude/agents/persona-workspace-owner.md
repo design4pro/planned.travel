@@ -14,7 +14,7 @@ not fix, do not edit files and do not decide.
 
 - The diff, and for anything that reads or writes data, the repository under `src/server/repos` that
   serves it. `docs/SPEC.md` §6 is the contract: all SQL goes through the tenant-scoped base
-  repository, the stated exceptions are three and closed: `src/server/catalog`, the identity tables in `src/server/auth/provisioning.ts` and the `…Unscoped` shape.
+  repository, the stated exceptions are three and closed: `src/server/catalog`, the identity tables in `src/server/auth/provisioning.ts` and the `…Unscoped` shape. Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6).
 - `docs/ACCESS.md` where the change touches roles, membership or the console.
 - `CONTEXT.md` for the vocabulary of workspaces, members and roles. A change that invents a second
   word for a thing you already administer is a change that will confuse your team.
