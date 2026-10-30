@@ -998,4 +998,4 @@ whole trip; neither pruning nor storage, allowance or queue shapes change.
 
 The producer `src/server/fns/exports.ts` already derives `notify` from the session;
 its request tests enforce this. The payload field comment records that clients cannot supply it.
-All copy changes ship in all 23 locales. Implementation PR: pending.
+All copy changes ship in all 23 locales. Implementation PR: #1652.
