@@ -490,6 +490,8 @@ const messages = {
   'plan.weather.panel.low': 'الصغرى',
   'plan.weather.panel.recordedNote': 'قيم مقيسة لهذا اليوم.',
   'plan.weather.panel.temperatureTypical': 'العظمى / الصغرى المعتادة',
+  'plan.weather.panel.typicalHigh': 'العظمى المعتادة',
+  'plan.weather.panel.typicalLow': 'الصغرى المعتادة',
   'plan.weather.panel.estimateNote':
     'متوسط طويل الأمد لهذا الشهر، وليس توقعًا.',
   'plan.weather.attribution.metNorway': 'بيانات التنبؤ: MET Norway، CC BY 4.0',

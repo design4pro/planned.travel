@@ -443,6 +443,8 @@ const messages = {
   'plan.weather.panel.low': 'Thấp nhất',
   'plan.weather.panel.recordedNote': 'Giá trị đo được của ngày này.',
   'plan.weather.panel.temperatureTypical': 'Cao nhất / thấp nhất thường gặp',
+  'plan.weather.panel.typicalHigh': 'Cao nhất thường gặp',
+  'plan.weather.panel.typicalLow': 'Thấp nhất thường gặp',
   'plan.weather.panel.estimateNote':
     'Mức trung bình dài hạn của tháng này, không phải dự báo.',
   'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',

@@ -465,6 +465,8 @@ const messages = {
   'plan.weather.panel.low': 'Tiefstwert',
   'plan.weather.panel.recordedNote': 'Gemessene Werte für diesen Tag.',
   'plan.weather.panel.temperatureTypical': 'Typischer Höchst- / Tiefstwert',
+  'plan.weather.panel.typicalHigh': 'Typischer Höchstwert',
+  'plan.weather.panel.typicalLow': 'Typischer Tiefstwert',
   'plan.weather.panel.estimateNote':
     'Ein langjähriger Durchschnitt für diesen Monat, keine Vorhersage.',
   'plan.weather.attribution.metNorway':

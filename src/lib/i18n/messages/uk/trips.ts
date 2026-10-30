@@ -477,6 +477,8 @@ const messages = {
   'plan.weather.panel.low': 'Мінімум',
   'plan.weather.panel.recordedNote': 'Виміряні значення за цей день.',
   'plan.weather.panel.temperatureTypical': 'Типові макс. / мін.',
+  'plan.weather.panel.typicalHigh': 'Типовий максимум',
+  'plan.weather.panel.typicalLow': 'Типовий мінімум',
   'plan.weather.panel.estimateNote':
     'Багаторічне середнє за цей місяць, а не прогноз.',
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',

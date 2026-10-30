@@ -458,6 +458,8 @@ const messages = {
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Mért értékek erre a napra.',
   'plan.weather.panel.temperatureTypical': 'Jellemző max. / min.',
+  'plan.weather.panel.typicalHigh': 'Jellemző maximum',
+  'plan.weather.panel.typicalLow': 'Jellemző minimum',
   'plan.weather.panel.estimateNote':
     'Az adott hónap hosszú távú átlaga, nem előrejelzés.',
   'plan.weather.attribution.metNorway':
