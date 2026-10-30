@@ -358,7 +358,7 @@ export function PasskeyManager() {
   }
 
   // A busy button stays focusable (aria-disabled, not natively disabled), but an outcome can
-  // disable it for real (the ceiling, a list that failed), which drops focus; every outcome hands
+  // disable it for real (the ceiling), which drops focus; every outcome hands
   // it back here, to the list heading when the button stays disabled, so it never falls to <body>.
   useEffect(() => {
     if (focusTarget === null || enrolling) return
