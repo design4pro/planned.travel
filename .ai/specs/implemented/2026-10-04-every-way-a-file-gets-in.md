@@ -699,7 +699,7 @@ Implementation notes from #1283 (Phase 4), followed by later corrections.
 
 ## Amendment - GPX markup safeguards
 
-Follow-up #1249 extends the implemented markup safeguards to `application/gpx+xml`: a claimed
+PR #1655 (follow-up #1249) extends the implemented markup safeguards to `application/gpx+xml`: a claimed
 GPX type is bound to `.gpx` when an extension is present, and the download helper re-types GPX
 blobs (including parameterized types, extensionless claims and existing objects) to
 `application/octet-stream` without changing bytes or filenames. The original decisions above
