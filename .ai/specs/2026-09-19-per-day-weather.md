@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                                                  |
-| ------------------ | ------------------------------------------------------ |
-| **Status**         | in-progress                                            |
-| **Issue**          | #631                                                   |
-| **Spec PR**        | #636                                                   |
-| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501, #1610 |
+| Field              | Value                                                         |
+| ------------------ | ------------------------------------------------------------- |
+| **Status**         | in-progress                                                   |
+| **Issue**          | #631                                                          |
+| **Spec PR**        | #636                                                          |
+| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501, #1610, #1654 |
 
 ## 📝 TLDR
 
@@ -841,4 +841,4 @@ What ships with the browser proof (#826) differs from the design above in these 
 48. **The pictures are taken when `WEATHER_EVIDENCE_DIR` is set.** One PNG per theme, width (360, 1280, 2560) and state, written to that directory; the test is skipped otherwise, and no frame is compared in the suite. On a phone the days are behind the "Days" sheet, which the journey opens first.
 49. **The keyboard test opens the forecast badge with both keys.** The forecast day is opened with Enter and again with Space, and each time closed with Escape, with focus asserted back on the badge; the recorded and estimate badges stay on Enter. The rest of what #1088 asked for (the seed, the development-only `serverNow()`, the unavailable day, the stable header) had already shipped with items 42 to 48.
 50. **The forecast badge's name contains its visible text (WCAG 2.5.3, #1090).** `plan.weather.badge.forecast` and `forecastNoCondition` gain a `{figures}` placeholder right after the localised "Forecast" prefix, filled with the exact visible run (`12°/4°C`), and the spelled-out high and low follow in parentheses: `Forecast: 12°/4°C, Rain (high 12°C, low 4°C)`. All 23 locales. The recorded and estimate names are unchanged.
-51. **A lone estimate figure is "typical" and the note leads the panel (#1205, a follow-up to #1204).** Supersedes the sentence of item 40 that has the panel label the lone figure `High` or `Low`: for an estimate it is `Typical high` or `Typical low` (`plan.weather.panel.typicalHigh` and `typicalLow`, in all 23 locales, each with the word the locale already uses in its `estimateHigh` and `estimateLow` badge names), so a single average never reads as a prediction. A recorded or forecast reading keeps the plain `High` / `Low`. The note of a recorded day and of an estimate ("Measured values for this day.", "A long-term average for this month, not a forecast.") is now the first element of the panel, directly under the popover title and before the rows, moved in the DOM and not with CSS ordering, so a phone reader and a screen reader learn what the figures are before they read them. The credit line stays last for all three kinds. No new copy for the note; the badge's accessible name is unchanged; the visible "Estimate" word in the badge stays out of scope.
+51. **A lone estimate figure is "typical" and the note leads the panel (#1205, PR #1654, a follow-up to #1204).** Supersedes the sentence of item 40 that has the panel label the lone figure `High` or `Low`: for an estimate it is `Typical high` or `Typical low` (`plan.weather.panel.typicalHigh` and `typicalLow`, in all 23 locales, each with the word the locale already uses in its `estimateHigh` and `estimateLow` badge names), so a single average never reads as a prediction. A recorded or forecast reading keeps the plain `High` / `Low`. The note of a recorded day and of an estimate ("Measured values for this day.", "A long-term average for this month, not a forecast.") is now the first element of the panel, directly under the popover title and before the rows, moved in the DOM and not with CSS ordering, so a phone reader and a screen reader learn what the figures are before they read them. The credit line stays last for all three kinds. No new copy for the note; the badge's accessible name is unchanged; the visible "Estimate" word in the badge stays out of scope.
