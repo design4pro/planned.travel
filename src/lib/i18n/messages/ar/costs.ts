@@ -67,7 +67,12 @@ const messages = {
   'split.everyone': 'الجميع',
   'split.nobody': 'لا أحد',
   'split.departed': 'غادر الرحلة',
-  'split.departedHint': 'إلغاء تحديد شخص غادر الرحلة يزيل حصته نهائيًا.',
+  'split.departedHint':
+    'عند الحفظ، تُحذف نهائيًا حصة أي شخص غادر الرحلة وألغيت تحديده.',
+  'split.removedNumbered': 'مسافر مُزال {number}',
+  'split.includeRemoved': 'تضمين المسافر المُزال في هذا التقسيم',
+  'split.includeRemovedNumbered':
+    'تضمين المسافر المُزال {number} في هذا التقسيم',
   'split.includeFor': 'تضمين {name} في هذا التقسيم',
   'split.how': 'كيف يُقسَّم هذا المصروف',
   'split.method.equal': 'بالتساوي',

@@ -304,18 +304,54 @@ export function SplitEditor({
   const included = draft.rows.filter((row) => row.included).length
   // A person who rejoined the trip while the dialog was open is a member again, not a second row.
   const memberIds = new Set(people.map((person) => person.userId))
-  const departed = departedPeople.filter(
-    (person) => !memberIds.has(person.userId),
-  )
+  // Every draft row stays visible, including someone who left since this dialog opened.
+  const departed = draft.rows
+    .filter((row) => !memberIds.has(row.userId))
+    .map(
+      (row) =>
+        departedPeople.find((person) => person.userId === row.userId) ?? {
+          userId: row.userId,
+          name: null,
+          image: null,
+        },
+    )
   const departedIds = new Set(departed.map((person) => person.userId))
   const currentRows = draft.rows.filter((row) => !departedIds.has(row.userId))
+  const unnamedCount = departed.filter((person) => person.name === null).length
+  let unnamedNumber = 0
   const listed = [
-    ...people.map((person) => ({ ...person, departed: false })),
-    ...departed.map((person) => ({
+    ...people.map((person) => ({
       ...person,
-      name: person.name ?? t('costs.person.removed'),
-      departed: true,
+      departed: false,
+      includeLabel: t('costs.split.includeFor', { name: person.name }),
+      initials: undefined,
     })),
+    ...departed.map((person) => {
+      if (person.name !== null) {
+        return {
+          ...person,
+          name: person.name,
+          departed: true,
+          includeLabel: t('costs.split.includeFor', { name: person.name }),
+          initials: undefined,
+        }
+      }
+      unnamedNumber += 1
+      const number = String(unnamedNumber)
+      return {
+        ...person,
+        name:
+          unnamedCount > 1
+            ? t('costs.split.removedNumbered', { number })
+            : t('costs.person.removed'),
+        departed: true,
+        includeLabel:
+          unnamedCount > 1
+            ? t('costs.split.includeRemovedNumbered', { number })
+            : t('costs.split.includeRemoved'),
+        initials: unnamedCount > 1 ? number : undefined,
+      }
+    }),
   ]
   const shareOf = new Map(
     preview.rows.map((row) => [row.userId, row.shareMinor]),
@@ -455,10 +491,15 @@ export function SplitEditor({
                 onCheckedChange={(next) =>
                   setRow(person.userId, { included: next === true })
                 }
-                aria-label={t('costs.split.includeFor', { name: person.name })}
+                aria-label={person.includeLabel}
                 aria-describedby={person.departed ? departedHintId : undefined}
               />
-              <Avatar name={person.name} src={person.image} size="xs" />
+              <Avatar
+                name={person.name}
+                src={person.image}
+                size="xs"
+                initials={person.initials}
+              />
               <span className="min-w-0 flex-1 basis-32 truncate text-caption font-medium text-ink">
                 {person.userId === viewerUserId
                   ? t('costs.person.you')

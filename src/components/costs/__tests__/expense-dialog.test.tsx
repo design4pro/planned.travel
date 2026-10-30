@@ -609,10 +609,14 @@ describe('the split of an expense that names someone who has left the trip', () 
     expect(row?.textContent).toContain('Removed traveller')
   })
 
-  it('says that unticking them removes the share for good', () => {
+  it('says that unticking removes the share once saved', () => {
     open(undefined, { expense: DINNER, departedPeople: DEPARTED })
 
-    expect(screen.getByText(/removes their share for good/)).toBeTruthy()
+    expect(
+      screen.getByText(
+        'Once you save, unticking someone who left the trip removes their share for good.',
+      ),
+    ).toBeTruthy()
   })
 
   it('sends every stored share back when the split is not touched', async () => {
@@ -652,7 +656,7 @@ describe('the split of an expense that names someone who has left the trip', () 
     ])
   })
 
-  it('ties their checkbox to the warning that unticking is final', () => {
+  it('ties their checkbox to the warning about saving an unticked share', () => {
     open(undefined, { expense: DINNER, departedPeople: DEPARTED })
 
     const hint = screen.getByText(/removes their share for good/)
@@ -676,6 +680,62 @@ describe('the split of an expense that names someone who has left the trip', () 
 
     expect(screen.queryByRole('checkbox', { name: /Cy/ })).toBeNull()
   })
+
+  it.each([true, false])(
+    'keeps a draft row visible as departed after a member reload (included: %s)',
+    async (included) => {
+      const onSubmit = vi.fn(async (_value: ExpenseFormValue) => {})
+      const user = hand()
+      const expense = expenseRow({
+        shares: [
+          { userId: 'u1', shareMinor: 3000, weight: 1, isSettled: false },
+          { userId: 'u2', shareMinor: 3000, weight: 1, isSettled: false },
+        ],
+      })
+      const dialog = (people: ReadonlyArray<CostsPerson>) => (
+        <I18nProvider locale="en" messages={EN}>
+          <ExpenseDialog
+            open
+            onOpenChange={() => {}}
+            expense={expense}
+            people={people}
+            departedPeople={[]}
+            viewerUserId="u1"
+            tripCurrency="EUR"
+            categories={[{ value: 'food', label: 'Food', icon: null }]}
+            defaultCategory="food"
+            today="2026-10-12"
+            onSubmit={onSubmit}
+          />
+        </I18nProvider>
+      )
+      const view = render(dialog(PEOPLE))
+      if (!included) {
+        await user.click(
+          screen.getByRole('checkbox', { name: 'Include Bo in this split' }),
+        )
+      }
+      view.rerender(dialog(PEOPLE.slice(0, 1)))
+      const box = screen.getByRole('checkbox', {
+        name: 'Include Removed traveller in this split',
+      })
+      expect(box.closest('li')?.textContent).toContain('Left the trip')
+      expect(box.getAttribute('aria-checked')).toBe(String(included))
+      await user.click(screen.getByRole('button', { name: 'Save changes' }))
+      expect(onSubmit.mock.calls[0]?.[0].shares).toEqual(
+        included
+          ? [
+              { userId: 'u1', shareMinor: 3000, weight: 1 },
+              { userId: 'u2', shareMinor: 3000, weight: 1 },
+            ]
+          : [{ userId: 'u1', shareMinor: 6000, weight: 1 }],
+      )
+      await user.click(screen.getByRole('button', { name: 'Nobody' }))
+      expect(box.getAttribute('aria-checked')).toBe(String(included))
+      await user.click(screen.getByRole('button', { name: 'Everyone' }))
+      expect(box.getAttribute('aria-checked')).toBe(String(included))
+    },
+  )
 
   it('shows none on a new expense', () => {
     open(undefined, { departedPeople: DEPARTED })

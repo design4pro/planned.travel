@@ -63,7 +63,11 @@ const messages = {
   'split.nobody': 'なし',
   'split.departed': '旅行から抜けました',
   'split.departedHint':
-    '旅行から抜けた人のチェックを外すと、その人の負担分は完全に削除されます。',
+    '保存すると、旅行から抜けた人のうちチェックを外した人の負担分が完全に削除されます。',
+  'split.removedNumbered': '削除された旅行者 {number}',
+  'split.includeRemoved': '削除された旅行者をこの割り勘に含める',
+  'split.includeRemovedNumbered':
+    '削除された旅行者 {number} をこの割り勘に含める',
   'split.includeFor': '{name}をこの分割に含める',
   'split.how': 'この支出の分け方',
   'split.method.equal': '均等',

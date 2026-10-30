@@ -65,7 +65,11 @@ const messages = {
   'split.nobody': 'Senki',
   'split.departed': 'Elhagyta az utat',
   'split.departedHint':
-    'Ha valakit, aki elhagyta az utat, kijelölés nélkül hagysz, a részesedése végleg törlődik.',
+    'Mentéskor végleg törlődik annak a részesedése, aki elhagyta az utat, és akinél törölted a kijelölést.',
+  'split.removedNumbered': 'Eltávolított utazó {number}',
+  'split.includeRemoved': 'Eltávolított utazó bevonása ebbe a felosztásba',
+  'split.includeRemovedNumbered':
+    'Eltávolított utazó {number} bevonása ebbe a felosztásba',
   'split.includeFor': '{name} szerepeljen ebben a felosztásban',
   'split.how': 'Hogyan oszlik meg ez a kiadás',
   'split.method.equal': 'Egyenlően',

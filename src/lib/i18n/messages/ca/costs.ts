@@ -63,7 +63,11 @@ const messages = {
   'split.nobody': 'Ningú',
   'split.departed': 'Ha deixat el viatge',
   'split.departedHint':
-    "Si desmarques algú que ha deixat el viatge, la seva part s'elimina definitivament.",
+    'En desar, s’elimina definitivament la part de les persones que han deixat el viatge i que has desmarcat.',
+  'split.removedNumbered': 'Viatger eliminat {number}',
+  'split.includeRemoved': 'Inclou el viatger eliminat en aquest repartiment',
+  'split.includeRemovedNumbered':
+    'Inclou el viatger eliminat {number} en aquest repartiment',
   'split.includeFor': 'Inclou {name} en aquesta divisió',
   'split.how': 'Com es reparteix aquesta despesa',
   'split.method.equal': 'A parts iguals',

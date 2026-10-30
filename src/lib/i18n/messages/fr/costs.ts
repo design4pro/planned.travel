@@ -66,7 +66,11 @@ const messages = {
   'split.nobody': 'Personne',
   'split.departed': 'A quitté le voyage',
   'split.departedHint':
-    'Décocher une personne qui a quitté le voyage supprime définitivement sa part.',
+    'Une fois enregistré, la part des personnes qui ont quitté le voyage et que vous avez décochées est supprimée définitivement.',
+  'split.removedNumbered': 'Voyageur retiré {number}',
+  'split.includeRemoved': 'Inclure le voyageur retiré dans ce partage',
+  'split.includeRemovedNumbered':
+    'Inclure le voyageur retiré {number} dans ce partage',
   'split.includeFor': 'Inclure {name} dans ce partage',
   'split.how': 'Comment cette dépense se partage',
   'split.method.equal': 'À parts égales',

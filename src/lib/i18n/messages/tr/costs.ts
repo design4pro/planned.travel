@@ -61,7 +61,11 @@ const messages = {
   'split.nobody': 'Kimse',
   'split.departed': 'Geziden ayrıldı',
   'split.departedHint':
-    'Geziden ayrılan birinin işaretini kaldırmak payını kalıcı olarak siler.',
+    'Kaydettiğinizde, geziden ayrılan ve işaretini kaldırdığınız kişinin payı kalıcı olarak silinir.',
+  'split.removedNumbered': 'Kaldırılan gezgin {number}',
+  'split.includeRemoved': 'Kaldırılan gezgini bu paylaşıma dahil et',
+  'split.includeRemovedNumbered':
+    'Kaldırılan gezgin {number} kişisini bu paylaşıma dahil et',
   'split.includeFor': '{name} bu bölüşüme dahil edilsin',
   'split.how': 'Bu masraf nasıl bölünüyor',
   'split.method.equal': 'Eşit olarak',

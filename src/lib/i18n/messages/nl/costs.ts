@@ -62,7 +62,11 @@ const messages = {
   'split.nobody': 'Niemand',
   'split.departed': 'Heeft de reis verlaten',
   'split.departedHint':
-    'Als je iemand uitvinkt die de reis heeft verlaten, wordt het aandeel definitief verwijderd.',
+    'Bij het opslaan wordt het aandeel van iemand die de reis heeft verlaten en is uitgevinkt definitief verwijderd.',
+  'split.removedNumbered': 'Verwijderde reiziger {number}',
+  'split.includeRemoved': 'Verwijderde reiziger meenemen in deze verdeling',
+  'split.includeRemovedNumbered':
+    'Verwijderde reiziger {number} meenemen in deze verdeling',
   'split.includeFor': '{name} opnemen in deze verdeling',
   'split.how': 'Hoe deze uitgave verdeeld wordt',
   'split.method.equal': 'Gelijk',

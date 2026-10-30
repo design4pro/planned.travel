@@ -66,7 +66,11 @@ const messages = {
   'split.nobody': 'Nikdo',
   'split.departed': 'Už na cestě není',
   'split.departedHint':
-    'Odškrtnutím někoho, kdo cestu opustil, jeho podíl nadobro odstraníte.',
+    'Po uložení se podíl odškrtnuté osoby, která cestu opustila, nadobro odstraní.',
+  'split.removedNumbered': 'Odebraný cestovatel {number}',
+  'split.includeRemoved': 'Zahrnout odebraného cestovatele do tohoto rozdělení',
+  'split.includeRemovedNumbered':
+    'Zahrnout odebraného cestovatele {number} do tohoto rozdělení',
   'split.includeFor': 'Zahrnout {name} do tohoto rozdělení',
   'split.how': 'Jak se tento výdaj dělí',
   'split.method.equal': 'Rovným dílem',

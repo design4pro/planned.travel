@@ -83,7 +83,11 @@ const messages = {
   'split.nobody': 'Nobody',
   'split.departed': 'Left the trip',
   'split.departedHint':
-    'Unticking someone who left the trip removes their share for good.',
+    'Once you save, unticking someone who left the trip removes their share for good.',
+  'split.removedNumbered': 'Removed traveller {number}',
+  'split.includeRemoved': 'Include Removed traveller in this split',
+  'split.includeRemovedNumbered':
+    'Include Removed traveller {number} in this split',
   'split.includeFor': 'Include {name} in this split',
   'split.how': 'How this expense divides',
   'split.method.equal': 'Equally',

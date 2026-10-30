@@ -61,7 +61,11 @@ const messages = {
   'split.nobody': 'Tidak ada',
   'split.departed': 'Sudah keluar dari perjalanan',
   'split.departedHint':
-    'Menghapus centang orang yang sudah keluar dari perjalanan akan menghapus bagiannya secara permanen.',
+    'Saat disimpan, bagian orang yang sudah keluar dari perjalanan dan centangnya dihapus akan dihapus secara permanen.',
+  'split.removedNumbered': 'Pelancong yang dihapus {number}',
+  'split.includeRemoved': 'Sertakan pelancong yang dihapus dalam pembagian ini',
+  'split.includeRemovedNumbered':
+    'Sertakan pelancong yang dihapus {number} dalam pembagian ini',
   'split.includeFor': 'Sertakan {name} dalam pembagian ini',
   'split.how': 'Bagaimana pengeluaran ini dibagi',
   'split.method.equal': 'Rata',
