@@ -48,12 +48,8 @@ export interface CategoryDonutProps {
   readonly currency: string
 }
 
-/**
- * Dot, name, figures. The figures column is as wide as its widest line but stops at
- * 45% of the row, so a long planned line wraps inside it instead of taking the room
- * the name needs; a name keeps at least one full word per line.
- */
-const LEGEND_COLUMNS = 'grid-cols-[auto_minmax(0,1fr)_fit-content(45%)]'
+// Reserve a full word for the name; figures may wrap and planned amounts span both columns.
+const LEGEND_COLUMNS = 'grid-cols-[auto_minmax(min-content,1fr)_minmax(0,1fr)]'
 
 const CENTRE = 50
 const OUTER_RADIUS = 48
@@ -268,13 +264,13 @@ function Legend({
               />
             </span>
             <Separator />
-            <span className="col-start-3 row-start-1 text-end font-semibold tabular-nums text-ink">
+            <span className="min-w-0 col-start-3 row-start-1 [overflow-wrap:anywhere] text-end font-semibold tabular-nums text-ink">
               {formatMoney(row.spentMinor, currency, locale)}
             </span>
             {row.plannedMinor > 0 ? (
               <Fragment>
                 <Separator />
-                <span className="col-start-3 row-start-2 text-end tabular-nums text-ink-4">
+                <span className="min-w-0 col-span-2 col-start-2 row-start-3 [overflow-wrap:anywhere] text-end tabular-nums text-ink-4">
                   {t('costs.categories.planned', {
                     amount: formatMoney(row.plannedMinor, currency, locale),
                   })}
@@ -295,7 +291,7 @@ function Legend({
           <Dot colour={row.colour} />
           <Name label={row.label} className="col-start-2 row-start-1" />
           <Separator />
-          <span className="col-start-3 row-start-1 text-end tabular-nums text-ink-3">
+          <span className="min-w-0 col-span-2 col-start-2 row-start-2 [overflow-wrap:anywhere] text-end tabular-nums text-ink-3">
             {t('costs.categories.planned', {
               amount: formatMoney(row.plannedMinor, currency, locale),
             })}
@@ -318,13 +314,7 @@ function Dot({ colour }: { colour: string }) {
 
 /** The category name wraps; it is never cut off. */
 function Name({ label, className }: { label: string; className: string }) {
-  return (
-    <span
-      className={cn('min-w-0 text-ink-2 [overflow-wrap:anywhere]', className)}
-    >
-      {label}
-    </span>
-  )
+  return <span className={cn('text-ink-2', className)}>{label}</span>
 }
 
 /** Punctuation only a screen reader needs, so a row reads as one phrase. */

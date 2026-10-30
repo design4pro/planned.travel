@@ -259,29 +259,26 @@ describe('the legend', () => {
     expect(within(items[3]).queryByRole('button')).toBeNull()
   })
 
-  it('caps the figures column, so a long planned amount cannot squeeze the name', () => {
-    // jsdom has no layout, so this pins the rule that does the work in a browser: the
-    // column is `fit-content(45%)`, and the name keeps the rest of the row.
+  it('gives long planned figures a separate row for spent and planned-only categories', () => {
     renderDonut(
       [
-        donut('food', 32_000_000_000, 5_000_000_000_000, 'Food & drink'),
-        donut('insurance', 0, 5_000_000_000_000, 'Insurance'),
+        donut('food', 32_000_000_000, 5_000_000_000_000, 'Δραστηριότητες'),
+        donut('insurance', 0, 5_000_000_000_000, 'Transportasi'),
       ],
       'IDR',
     )
     const [spent, plannedOnly] = legendItems()
-    const grids = [within(spent).getByRole('button'), plannedOnly]
-
-    for (const grid of grids) {
-      expect(grid.className).toContain('fit-content(45%)')
-      expect(grid.className).not.toMatch(/grid-cols-\[[^\]]*_auto\]/)
-    }
-    // On a spent row the planned line has a row of its own under the amount.
     const planned = within(spent).getByText(/planned$/)
-    expect(planned.className).toContain('row-start-2')
-    expect(within(spent).getByText(/^Food & drink$/).className).toContain(
-      'row-start-1',
-    )
+    expect(planned.className).toContain('col-span-2')
+    expect(planned.className).toContain('row-start-3')
+    const plannedOnlyFigure = within(plannedOnly).getByText(/planned$/)
+    expect(plannedOnlyFigure.className).toContain('col-span-2')
+    expect(plannedOnlyFigure.className).toContain('row-start-2')
+    for (const item of [spent, plannedOnly]) {
+      const label = within(item).getByText(/Δραστηριότητες|Transportasi/)
+      expect(label.className).toContain('row-start-1')
+      expect(label.className).not.toContain('overflow-wrap:anywhere')
+    }
   })
 
   it('puts the category colour on the legend dot', () => {
