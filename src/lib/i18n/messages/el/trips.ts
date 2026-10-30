@@ -464,6 +464,8 @@ const messages = {
   'plan.weather.panel.low': 'Ελάχιστη',
   'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
   'plan.weather.panel.temperatureTypical': 'Τυπική μέγιστη / ελάχιστη',
+  'plan.weather.panel.typicalHigh': 'Τυπική μέγιστη',
+  'plan.weather.panel.typicalLow': 'Τυπική ελάχιστη',
   'plan.weather.panel.estimateNote':
     'Μακροπρόθεσμος μέσος όρος για αυτόν τον μήνα, όχι πρόγνωση.',
   'plan.weather.attribution.metNorway':

@@ -440,6 +440,8 @@ const messages = {
   'plan.weather.panel.low': '최저',
   'plan.weather.panel.recordedNote': '이 날의 관측값입니다.',
   'plan.weather.panel.temperatureTypical': '평년 최고 / 최저',
+  'plan.weather.panel.typicalHigh': '평년 최고',
+  'plan.weather.panel.typicalLow': '평년 최저',
   'plan.weather.panel.estimateNote': '이 달의 장기 평균이며 예보가 아닙니다.',
   'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

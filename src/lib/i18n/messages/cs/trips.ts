@@ -472,6 +472,8 @@ const messages = {
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Naměřené hodnoty pro tento den.',
   'plan.weather.panel.temperatureTypical': 'Typické max. / min.',
+  'plan.weather.panel.typicalHigh': 'Typické maximum',
+  'plan.weather.panel.typicalLow': 'Typické minimum',
   'plan.weather.panel.estimateNote':
     'Dlouhodobý průměr pro tento měsíc, nikoli předpověď.',
   'plan.weather.attribution.metNorway':

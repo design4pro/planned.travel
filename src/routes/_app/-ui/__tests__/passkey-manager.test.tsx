@@ -557,6 +557,127 @@ describe('adding a passkey', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1)
   })
 
+  describe('when the reply is lost', () => {
+    const NOT_ADDED = 'The passkey was not added. Try again.'
+
+    /** Every non-empty text the status region shows, in order, consecutive repeats dropped. */
+    function recordStatus(): string[] {
+      const spoken: string[] = []
+      const region = screen.getByRole('status')
+      new MutationObserver(() => {
+        const text = region.textContent ?? ''
+        if (text !== '' && spoken.at(-1) !== text) spoken.push(text)
+      }).observe(region, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      })
+      return spoken
+    }
+
+    /** Lets the registration answer with a lost reply and holds the reload on a promise. */
+    async function mountWithHeldReload(initial: PasskeySummary[] = []) {
+      client.registerPasskey.mockResolvedValue({
+        ok: false,
+        aborted: false,
+        alreadyEnrolled: false,
+        failure: { code: null, status: 0, message: '' },
+      })
+      client.listPasskeys.mockResolvedValueOnce({ ok: true, passkeys: initial })
+      await mount()
+      let settle: (value: unknown) => void = () => {}
+      client.listPasskeys.mockReturnValueOnce(
+        new Promise((resolve) => {
+          settle = resolve
+        }),
+      )
+      const spoken = recordStatus()
+      await userEvent.click(addButton())
+      return { settle, spoken }
+    }
+
+    it('says nothing, keeps the button busy and keeps focus put until the reload settles', async () => {
+      const { settle, spoken } = await mountWithHeldReload()
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+
+      expect(screen.getByRole('status').textContent).toBe('')
+      expect(addButton().getAttribute('aria-busy')).toBe('true')
+      expect(addButton().getAttribute('aria-disabled')).toBe('true')
+      expect(addButton()).toHaveProperty('disabled', false)
+      expect(document.activeElement).toBe(addButton())
+      await userEvent.keyboard('{Enter}')
+      expect(client.registerPasskey).toHaveBeenCalledTimes(1)
+
+      settle({ ok: true, passkeys: [] })
+      await waitFor(() =>
+        expect(addButton().getAttribute('aria-busy')).toBeNull(),
+      )
+      expect(spoken).toEqual([NOT_ADDED])
+    })
+
+    it('says the passkey was added once, and puts focus in the new row, when the reload holds it', async () => {
+      const { settle, spoken } = await mountWithHeldReload()
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+
+      settle({ ok: true, passkeys: [passkey({ id: 'pk_written' })] })
+
+      await waitFor(() => expect(document.activeElement).toBe(renameInput()))
+      expect(screen.getByRole('status').textContent).toBe('Passkey added')
+      expect(spoken).toEqual(['Passkey added'])
+    })
+
+    it('says it was not added once, with focus on Add, when the reload shows no new row', async () => {
+      const { settle, spoken } = await mountWithHeldReload([
+        passkey({ id: 'pk_old' }),
+      ])
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+
+      settle({ ok: true, passkeys: [passkey({ id: 'pk_old' })] })
+
+      await waitFor(() => expect(document.activeElement).toBe(addButton()))
+      expect(addButton().getAttribute('aria-busy')).toBeNull()
+      expect(screen.getByRole('status').textContent).toBe(NOT_ADDED)
+      expect(spoken).toEqual([NOT_ADDED])
+      expect(screen.queryByRole('textbox')).toBeNull()
+    })
+
+    it('says it was not added once, with focus on Add, when the reload fails', async () => {
+      const { settle, spoken } = await mountWithHeldReload()
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+
+      settle(failure(500))
+
+      await waitFor(() => expect(document.activeElement).toBe(addButton()))
+      expect(screen.getByRole('status').textContent).toBe(NOT_ADDED)
+      expect(spoken).toEqual([NOT_ADDED])
+    })
+
+    it('says it was not added once when the list never loaded, so the count before is unknown', async () => {
+      client.registerPasskey.mockResolvedValue({
+        ok: false,
+        aborted: false,
+        alreadyEnrolled: false,
+        failure: { code: null, status: 0, message: '' },
+      })
+      client.listPasskeys.mockResolvedValueOnce(failure(500))
+      await mount()
+      const spoken = recordStatus()
+      client.listPasskeys.mockResolvedValueOnce({
+        ok: true,
+        passkeys: [passkey({ id: 'pk_written' })],
+      })
+
+      await userEvent.click(
+        screen.getByRole('button', { name: 'Add a passkey' }),
+      )
+
+      await waitFor(() => expect(spoken).toEqual([NOT_ADDED]))
+      expect(document.activeElement).toBe(addButton())
+      expect(addButton().getAttribute('aria-busy')).toBeNull()
+      expect(screen.queryByRole('textbox')).toBeNull()
+    })
+  })
+
   it('keeps the ceiling on screen, tied to the disabled button, and puts focus on the heading', async () => {
     client.registerPasskey.mockResolvedValue({
       ok: false,

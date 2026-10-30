@@ -469,6 +469,8 @@ const messages = {
   'plan.weather.panel.low': 'Mínima',
   'plan.weather.panel.recordedNote': 'Valores medidos de este día.',
   'plan.weather.panel.temperatureTypical': 'Máxima / mínima habituales',
+  'plan.weather.panel.typicalHigh': 'Máxima habitual',
+  'plan.weather.panel.typicalLow': 'Mínima habitual',
   'plan.weather.panel.estimateNote':
     'Promedio a largo plazo de este mes, no una previsión.',
   'plan.weather.attribution.metNorway':
