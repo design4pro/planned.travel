@@ -49,13 +49,18 @@ describe('ci.yml attestation gate', () => {
       const text = block(job)
       const packages =
         job === 'scope' ? 'git tar gzip xz-utils' : 'git gh tar gzip xz-utils'
-      expect(text).toContain('sudo apt-get update')
       expect(text).toContain(
-        `sudo apt-get install -y --no-install-recommends ${packages}`,
+        'apt-get -o Dir::State::lists="$tools/lists" update',
+      )
+      expect(text).not.toContain('sudo')
+      expect(text).toContain('dpkg-deb --extract "$package" "$tools"')
+      expect(text).toContain('echo "$tools/usr/bin" >> "$GITHUB_PATH"')
+      expect(text).toContain(
+        `apt-get -o Dir::State::lists="$tools/lists" download ${packages}`,
       )
       expect(text).toContain('uses: actions/setup-node@v7')
       expect(text).toContain('node-version: 24.x')
-      expect(text.indexOf('sudo apt-get install')).toBeLessThan(
+      expect(text.indexOf('dpkg-deb --extract')).toBeLessThan(
         text.indexOf('uses: actions/setup-node@v7'),
       )
       expect(text.indexOf('uses: actions/setup-node@v7')).toBeLessThan(

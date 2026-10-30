@@ -61,11 +61,18 @@ jobs:
     outputs:
       valid: ${{ steps.judge.outputs.valid }}
     steps:
-      # Install control tools explicitly; archive tools are used by setup-node.
+      # The pool is unprivileged: install signed distro packages into this job only.
       - name: Install control tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git gh tar gzip xz-utils
+          tools="$RUNNER_TEMP/control-tools"
+          mkdir -p "$tools/lists/partial" "$tools/packages"
+          apt-get -o Dir::State::lists="$tools/lists" update
+          (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" download git gh tar gzip xz-utils)
+          for package in "$tools"/packages/*.deb; do
+            dpkg-deb --extract "$package" "$tools"
+          done
+          echo "$tools/usr/bin" >> "$GITHUB_PATH"
+          echo "GIT_EXEC_PATH=$tools/usr/lib/git-core" >> "$GITHUB_ENV"
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -185,11 +192,18 @@ jobs:
       e2e: ${{ steps.classify.outputs.e2e }}
 
     steps:
-      # Install control tools explicitly; archive tools are used by setup-node.
+      # The pool is unprivileged: install signed distro packages into this job only.
       - name: Install control tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git tar gzip xz-utils
+          tools="$RUNNER_TEMP/control-tools"
+          mkdir -p "$tools/lists/partial" "$tools/packages"
+          apt-get -o Dir::State::lists="$tools/lists" update
+          (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" download git tar gzip xz-utils)
+          for package in "$tools"/packages/*.deb; do
+            dpkg-deb --extract "$package" "$tools"
+          done
+          echo "$tools/usr/bin" >> "$GITHUB_PATH"
+          echo "GIT_EXEC_PATH=$tools/usr/lib/git-core" >> "$GITHUB_ENV"
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -396,12 +410,19 @@ jobs:
           echo "::error::Required E2E shards did not pass: $SHARDS_RESULT"
           exit 1
 
-      # Install control tools explicitly; archive tools are used by setup-node.
+      # The pool is unprivileged: install signed distro packages into this job only.
       - name: Install control tools
         if: ${{ always() && github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends git gh tar gzip xz-utils
+          tools="$RUNNER_TEMP/control-tools"
+          mkdir -p "$tools/lists/partial" "$tools/packages"
+          apt-get -o Dir::State::lists="$tools/lists" update
+          (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" download git gh tar gzip xz-utils)
+          for package in "$tools"/packages/*.deb; do
+            dpkg-deb --extract "$package" "$tools"
+          done
+          echo "$tools/usr/bin" >> "$GITHUB_PATH"
+          echo "GIT_EXEC_PATH=$tools/usr/lib/git-core" >> "$GITHUB_ENV"
 
       - name: Set up Node
         if: ${{ always() && github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) }}

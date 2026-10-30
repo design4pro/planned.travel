@@ -89,6 +89,8 @@ timeouts, existing control commands, checkout refs and required-check semantics 
 Additive preparation installs Git, GitHub CLI where used, and Node 24 via the established
 `actions/setup-node` pattern with its archive prerequisites; it installs no application dependencies.
 The host-store artifact download action uses Node filesystem copies, not an external unpacker.
+The unprivileged pool has no sudo: signed distro packages are downloaded using job-local apt
+indexes and extracted into the job's temporary directory, without system writes or privilege changes.
 This narrow setup scope was explicitly authorized to meet CODE_REVIEW's runner-tool requirement. Attestation trust,
 tree binding, base-gate comparison, excluded paths and fail-open behavior are unchanged; artifacts
 remain diagnostic data, with no new execution or deployment credential access.
