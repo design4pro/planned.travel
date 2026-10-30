@@ -696,3 +696,11 @@ Implementation notes from #1283 (Phase 4), followed by later corrections.
 - **WebKit.** The Phase 4 browser tests were run on `chromium` only in the implementing run, whose host lacks the libraries WebKit needs; `mobile-safari` is the nightly `e2e-webkit` run's to confirm. The layout-shift test is skipped there, stated in the test.
 
 - **Pasted queue visibility (#1308).** Scroll instantly to the center rather than smoothly to the nearest edge. Centering clears the sticky trip header; an instant scroll avoids targeting stale geometry when upload completion removes the progress bars. The E2E check keeps the viewport assertion and also checks that the queue owns the element at its midpoint, so a queue covered by sticky chrome cannot pass.
+
+## Amendment - GPX markup safeguards
+
+Follow-up #1249 extends the implemented markup safeguards to `application/gpx+xml`: a claimed
+GPX type is bound to `.gpx` when an extension is present, and the download helper re-types GPX
+blobs (including parameterized types, extensionless claims and existing objects) to
+`application/octet-stream` without changing bytes or filenames. The original decisions above
+describe the HTML/SVG scope.
