@@ -61,6 +61,17 @@ jobs:
     outputs:
       valid: ${{ steps.judge.outputs.valid }}
     steps:
+      # Install control tools explicitly; archive tools are used by setup-node.
+      - name: Install control tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git gh tar gzip xz-utils
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+
       # The pull request's own head, not the merge commit: the attestation is of the tree the
       # agent ran the gate on.
       - name: Check out the head
@@ -174,6 +185,17 @@ jobs:
       e2e: ${{ steps.classify.outputs.e2e }}
 
     steps:
+      # Install control tools explicitly; archive tools are used by setup-node.
+      - name: Install control tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git tar gzip xz-utils
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
+
       # The merge commit and both of its parents. `HEAD^1` is the base tip the
       # merge was computed against, so the diff below is exactly what merging
       # this pull request would change - not what the branch changed since it
@@ -373,6 +395,19 @@ jobs:
           fi
           echo "::error::Required E2E shards did not pass: $SHARDS_RESULT"
           exit 1
+
+      # Install control tools explicitly; archive tools are used by setup-node.
+      - name: Install control tools
+        if: ${{ always() && github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends git gh tar gzip xz-utils
+
+      - name: Set up Node
+        if: ${{ always() && github.event_name == 'pull_request' && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.x
 
       # One comment per pull request, updated in place: the verdict of every gate and the journey
       # totals for the head commit, so "the app works" is a statement about that SHA. A promotion PR

@@ -85,6 +85,10 @@ in `ci.yml`; no billing change, new pool or new variable is needed.
 
 The trade-off is pool availability and queue delay: short control jobs may again wait behind full
 gates, and the report may wait after the shards. Names, dependencies, conditions, permissions,
-timeouts, commands, checkout refs and required-check semantics are unchanged. Attestation trust,
+timeouts, existing control commands, checkout refs and required-check semantics are unchanged.
+Additive preparation installs Git, GitHub CLI where used, and Node 24 via the established
+`actions/setup-node` pattern with its archive prerequisites; it installs no application dependencies.
+The host-store artifact download action uses Node filesystem copies, not an external unpacker.
+This narrow setup scope was explicitly authorized to meet CODE_REVIEW's runner-tool requirement. Attestation trust,
 tree binding, base-gate comparison, excluded paths and fail-open behavior are unchanged; artifacts
 remain diagnostic data, with no new execution or deployment credential access.

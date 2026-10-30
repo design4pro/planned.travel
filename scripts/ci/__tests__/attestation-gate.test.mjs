@@ -44,6 +44,27 @@ describe('ci.yml attestation gate', () => {
   })
 
   it.each(['attestation', 'scope', 'e2e-report'])(
+    '%s prepares its tools before checkout and control commands',
+    (job) => {
+      const text = block(job)
+      const packages =
+        job === 'scope' ? 'git tar gzip xz-utils' : 'git gh tar gzip xz-utils'
+      expect(text).toContain('sudo apt-get update')
+      expect(text).toContain(
+        `sudo apt-get install -y --no-install-recommends ${packages}`,
+      )
+      expect(text).toContain('uses: actions/setup-node@v7')
+      expect(text).toContain('node-version: 24.x')
+      expect(text.indexOf('sudo apt-get install')).toBeLessThan(
+        text.indexOf('uses: actions/setup-node@v7'),
+      )
+      expect(text.indexOf('uses: actions/setup-node@v7')).toBeLessThan(
+        text.indexOf('uses: actions/checkout@v7'),
+      )
+    },
+  )
+
+  it.each(['attestation', 'scope', 'e2e-report'])(
     '%s uses the existing RUNNER_CI routing and recovery expression',
     (job) => {
       expect(block(job).match(/^ {4}runs-on: (.*)$/m)?.[1]).toBe(
