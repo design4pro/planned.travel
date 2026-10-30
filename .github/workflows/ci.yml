@@ -34,8 +34,7 @@ env:
   VITE_POLAR_PRODUCT_CREW_MONTHLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_MONTHLY }}
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
-# `runs-on` in every job below except `attestation`, `scope` and `e2e-report` (seconds of work,
-# GitHub-hosted, ADR 0045) reads through `vars.RUNNER_CI`, a repository
+# `runs-on` in every job below reads through `vars.RUNNER_CI`, a repository
 # variable that is deliberately unset: unset, each job's own default selects the
 # `ci` slots of the VPS pool - two ephemeral x64 containers of 4 CPU / 8 GB on KVM
 # Haswell vCPUs, about three times slower per core than the machines most numbers
@@ -49,12 +48,12 @@ jobs:
   # `develop` or `main` always runs both, and the deploys wait on them. Never a verdict of its own:
   # `valid` is `true` only for an attestation scripts/ci/attestation.mjs accepts, and anything else
   # - no comment, another tree, a diff that touches the gate itself, an error here - leaves both jobs
-  # to run, as they did before. GitHub-hosted on purpose: it is a few seconds of API calls, and on
-  # the two-slot pool it would queue behind the jobs it exists to skip.
+  # to run, as they did before. Uses the configured CI pool so hosted account availability cannot
+  # block it; the short control jobs may queue behind full gates (ADR 0045 amendment).
   attestation:
     name: agent attestation
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
     permissions:
       contents: read
@@ -167,9 +166,9 @@ jobs:
   scope:
     name: change scope
     if: github.event_name == 'pull_request' && !github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref)
-    # GitHub-hosted: a few seconds of `git diff`, and on the pool it queued ~44 min for a slot
-    # (median over 25 green PR runs, 2026-10-22). ADR 0045.
-    runs-on: ubuntu-latest
+    # Uses RUNNER_CI like the full gates; accepts pool queue delay to avoid a hosted-only
+    # dependency (ADR 0045 amendment).
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
     outputs:
       e2e: ${{ steps.classify.outputs.e2e }}
@@ -353,9 +352,9 @@ jobs:
     needs: [scope, e2e, verify, test]
     # Not on a draft: its gates did not run, so there is nothing to report.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
-    # GitHub-hosted: it only reads the shards' verdict, and on the pool it queued ~31 min after the
-    # last shard had finished (median over 25 green PR runs, 2026-10-22). ADR 0045.
-    runs-on: ubuntu-latest
+    # Uses RUNNER_CI like the shards; reporting may queue after them, but no longer requires
+    # hosted account availability (ADR 0045 amendment).
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
     # The only job that writes to a pull request, and only the comment below.
     permissions:

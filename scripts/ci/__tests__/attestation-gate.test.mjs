@@ -44,9 +44,11 @@ describe('ci.yml attestation gate', () => {
   })
 
   it.each(['attestation', 'scope', 'e2e-report'])(
-    '%s runs GitHub-hosted: seconds of work must not queue for a pool slot',
+    '%s uses the existing RUNNER_CI routing and recovery expression',
     (job) => {
-      expect(block(job)).toMatch(/^ {4}runs-on: ubuntu-latest$/m)
+      expect(block(job).match(/^ {4}runs-on: (.*)$/m)?.[1]).toBe(
+        '${{ fromJSON(vars.RUNNER_CI || \'["self-hosted","linux","X64","ci"]\') }}',
+      )
     },
   )
 })
