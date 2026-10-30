@@ -11,6 +11,7 @@ import { createAuthEndpoint, sessionMiddleware } from 'better-auth/api'
 import { setSessionCookie } from 'better-auth/cookies'
 import * as z from 'zod'
 import { queueAuthEmail } from '../email'
+import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import type { BetterAuthPlugin } from 'better-auth'
 import {
@@ -60,14 +61,7 @@ const DELETE_RATE_LIMIT = { window: 300, max: 5 } as const
 const DELETE_PATH = '/passkey/delete'
 
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
-export const PASSKEY_ERROR_CODES = {
-  limitReached: 'PASSKEY_LIMIT_REACHED',
-  sessionNotFresh: 'PASSKEY_SESSION_NOT_FRESH',
-  impersonated: 'PASSKEY_IMPERSONATED',
-  notFound: 'PASSKEY_NOT_FOUND',
-  passwordRequired: 'PASSKEY_PASSWORD_REQUIRED',
-  invalidPassword: 'PASSKEY_INVALID_PASSWORD',
-} as const
+export { PASSKEY_ERROR_CODES }
 
 export type PasskeyPluginOptions = {
   /** Relying-party id — the registrable domain, no scheme and no port. */
