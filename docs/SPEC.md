@@ -790,6 +790,13 @@ Rules:
   and removes only rows that same call wrote (the organization, its membership and its participation
   anchor): the withdrawal is never pointed at an organization that already exists. Adding a table is
   a contract change.
+- Better Auth's own tables, reached through the library's adapter (`ctx.context.adapter`), are
+  not application SQL and sit outside this contract: this is not a fourth exception and not a
+  precedent for SQL. The passkey plugin (`src/server/auth/passkey/plugin.ts`) reads and writes the
+  `passkey` table that way; that table is user-keyed and has no `organization_id`, but other
+  Better Auth tables do relate to a workspace, so being auth-owned says nothing about tenancy.
+  Application queries still pass through the tenant-scoped repository, and raw SQL against an auth
+  table stays limited to the provisioning module above.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a

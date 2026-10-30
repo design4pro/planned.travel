@@ -97,6 +97,7 @@ MCP token issuance; catalogue and packs curation.
   identity-table SQL of `src/server/auth/provisioning.ts` and the bounded `…Unscoped`
   repo functions, which may take a plain `Database` under SPEC §5 FU-3 (suffix, header justification,
   one named caller and a narrow projection without tenant content). `components/ui` never fetches data and never imports from `server/`.
+- Better Auth's own tables, reached through its adapter (the user-keyed `passkey` table), are not application SQL and not an exception (SPEC §6).
 - Every server-function input is validated with Zod.
 - Ships in **23 locales** (`ar ca cs de el en es fr hu id it ja ko nl pl pt-BR ru sv tr uk vi
 zh-Hans zh-Hant`), source locale `en`, negotiated server-side before first paint. No user-facing

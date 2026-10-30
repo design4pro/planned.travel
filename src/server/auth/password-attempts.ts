@@ -5,6 +5,7 @@ import {
   isAPIError,
 } from 'better-auth/api'
 import { z } from 'zod'
+import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import type { BetterAuthPlugin } from 'better-auth'
 
 const PATHS = new Set([
@@ -154,7 +155,7 @@ export const passwordAttempts = {
             count = reservation.count
             if (
               result.body?.code === 'INVALID_PASSWORD' ||
-              result.body?.code === 'PASSKEY_INVALID_PASSWORD'
+              result.body?.code === PASSKEY_ERROR_CODES.invalidPassword
             )
               count++
           }
