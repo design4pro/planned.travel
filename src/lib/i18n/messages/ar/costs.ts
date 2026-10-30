@@ -182,7 +182,7 @@ const messages = {
   'memberBar.others': {
     zero: '{others} مسافر آخر',
     one: '{others} مسافر آخر',
-    two: '{others} مسافران آخران',
+    two: 'مسافران آخران',
     few: '{others} مسافرين آخرين',
     many: '{others} مسافرًا آخر',
     other: '{others} مسافر آخر',

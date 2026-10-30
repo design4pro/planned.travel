@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import ArCosts from '#/lib/i18n/messages/ar/costs'
 import Costs from '#/lib/i18n/messages/en/costs'
 import { MEMBER_TINTS, MemberBar } from '../member-bar'
 
@@ -49,6 +50,24 @@ function rows(): Array<string> {
 }
 
 describe('MemberBar', () => {
+  it('uses the Arabic dual without a repeated numeral for two other travellers', () => {
+    render(
+      <I18nProvider locale="ar" messages={namespaceCatalogue('costs', ArCosts)}>
+        <MemberBar
+          members={Array.from({ length: 5 }, (_, index) =>
+            member(`u${index}`, 200),
+          )}
+          spentMinor={1_000}
+        />
+      </I18nProvider>,
+    )
+
+    const list = screen.getByRole('list', { name: ArCosts['memberBar.label'] })
+    expect(
+      within(list).getByText('مسافران آخران', { exact: true }),
+    ).toBeTruthy()
+  })
+
   it('hides the bar from assistive technology', () => {
     const { container } = renderBar(
       [member('a', 600, 'Ana'), member('b', 400, 'Ben')],

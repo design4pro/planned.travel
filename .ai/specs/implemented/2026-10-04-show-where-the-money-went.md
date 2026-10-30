@@ -615,3 +615,6 @@ people payload and share calculations are unchanged. Carried members in expense
 and payment pickers, including split-editor visible and accessible labels, use
 the same localized fallback. Payer search matches the displayed localized
 removed-traveller label.
+
+The Arabic `memberBar.others.two` uses the dual without a repeated numeral;
+`balances.count.two` remains unchanged.
