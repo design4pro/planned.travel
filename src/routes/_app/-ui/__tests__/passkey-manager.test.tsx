@@ -672,6 +672,8 @@ describe('adding a passkey', () => {
       )
 
       await waitFor(() => expect(spoken).toEqual([NOT_ADDED]))
+      expect(document.activeElement).toBe(addButton())
+      expect(addButton().getAttribute('aria-busy')).toBeNull()
       expect(screen.queryByRole('textbox')).toBeNull()
     })
   })
