@@ -18,7 +18,7 @@
 
 import { addIntegration, replayIntegration } from '@sentry/react'
 
-import { holdsJoinPath, scrubTelemetry } from '#/lib/sentry-scrub'
+import { holdsSensitiveLocation, scrubTelemetry } from '#/lib/sentry-scrub'
 
 /**
  * Nothing about a join URL is recorded beyond its (redacted) address. No request detail is captured
@@ -27,7 +27,7 @@ import { holdsJoinPath, scrubTelemetry } from '#/lib/sentry-scrub'
  */
 const JOIN_URL = /\/join\//i
 
-const onJoinLocation = () => holdsJoinPath(window.location.href)
+const onSensitiveLocation = () => holdsSensitiveLocation(window.location.href)
 
 /**
  * Calls `listener` after every change of the address, router navigations included: they use
@@ -49,14 +49,14 @@ function watchLocation(listener: () => void): void {
 }
 
 /**
- * The recorder never runs on a join location: the page itself, and a sign-in page whose `redirect`
- * or `callbackURL` carries the link. Masking hides text, not attributes, and a link on that page
+ * The recorder never runs on a credential-query or join location, including one whose `redirect`
+ * or `callbackURL` carries the secret. Masking hides text, not attributes, and a link on that page
  * holds the secret in its `href`; the recorder's Meta event holds the address. No SDK hook reaches
  * either, so the only safe recording of these pages is none.
  *
- * Once it has been off for a join location it stays off until the next document load, which is
+ * Once it has been off for a sensitive location it stays off until the next document load, which is
  * where every way into or out of the flow ends (a pasted link, `window.location.assign` after
- * joining). The cost, stated in `docs/DEPLOY.md` section 17: a session that opens a join link
+ * joining). The cost, stated in `docs/DEPLOY.md` section 17: a session that opens a credential query or join link
  * is not replayed for the rest of that page load, and uses no replay quota for it.
  */
 export function startSessionReplay(): void {
@@ -68,15 +68,15 @@ export function startSessionReplay(): void {
     /**
      * Applies to the custom events the SDK writes itself - navigations, requests, breadcrumbs,
      * performance spans - and, as a second line behind the stop below, drops every event while
-     * the address holds a join path.
+     * the address holds a credential query or join path.
      */
     beforeAddRecordingEvent: (event) =>
-      onJoinLocation() ? null : scrubTelemetry(event),
+      onSensitiveLocation() ? null : scrubTelemetry(event),
   })
   let state: 'idle' | 'recording' | 'retired' = 'idle'
 
   const sync = () => {
-    if (onJoinLocation()) {
+    if (onSensitiveLocation()) {
       if (state === 'recording') void replay.stop({ flush: false })
       state = 'retired'
     } else if (state === 'idle') {

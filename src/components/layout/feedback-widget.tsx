@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
-import { holdsJoinPath } from '#/lib/sentry-scrub'
+import { holdsSensitiveLocation } from '#/lib/sentry-scrub'
 import { useTheme } from '#/lib/theme'
 
 import type { Feedback } from '#/lib/sentry-feedback'
@@ -15,7 +15,7 @@ import type { Feedback } from '#/lib/sentry-feedback'
  * nothing, a sentence that means the opposite in Polish. None of that reaches Sentry on its own,
  * and none of it has an error panel to hang a report off.
  *
- * Not on a join location (`/join/<secret>`, or a sign-in page carrying one): a screenshot is an
+ * Not on a credential-query or join location, including nested redirects: a screenshot is an
  * attachment no scrub can read, and a window capture shows the address bar. The same rule as the
  * session replay (`src/lib/sentry-replay.ts`), and the button comes back when the visitor leaves.
  *
@@ -66,7 +66,7 @@ export function FeedbackWidget() {
   const locale = useLocale()
   const { resolved } = useTheme()
   const offered = !useRouterState({
-    select: ({ location }) => holdsJoinPath(location.href),
+    select: ({ location }) => holdsSensitiveLocation(location.href),
   })
 
   /**

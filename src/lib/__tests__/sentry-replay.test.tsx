@@ -52,6 +52,11 @@ describe('startSessionReplay', () => {
   })
 
   it.each([
+    ['the reset page', `/reset-password?token=${secret}`],
+    [
+      'nested reset URL',
+      `/login?redirect=${encodeURIComponent(encodeURIComponent(`/reset-password?token=${secret}`))}`,
+    ],
     ['the join page', `/join/${secret}`],
     [
       'a sign-in page carrying it in redirect',
@@ -88,6 +93,19 @@ describe('startSessionReplay', () => {
       `/login?redirect=${encodeURIComponent(`/join/${secret}`)}`,
     )
     expect(replay.stop).toHaveBeenCalledOnce()
+  })
+
+  it('retires replay on a credential query and drops callbacks', async () => {
+    const replay = await start('/trips')
+    const event = { data: { url: `/reset-password?token=${secret}` } }
+    expect(
+      JSON.stringify(replay.options.beforeAddRecordingEvent(event)),
+    ).not.toContain(secret)
+    window.history.replaceState(null, '', `/reset-password?token=${secret}`)
+    expect(replay.stop).toHaveBeenCalledWith({ flush: false })
+    expect(replay.options.beforeAddRecordingEvent(event)).toBeNull()
+    window.history.pushState(null, '', '/trips')
+    expect(sentry.addIntegration).toHaveBeenCalledTimes(1)
   })
 
   it('does not start again when the visitor navigates away from a join location', async () => {
