@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { useSession, hasSession } from './helpers/session'
+import {
+  useSession,
+  hasSession,
+  signIn as signInFixture,
+} from './helpers/session'
 import { unblockCrossOriginFonts, visit, watchConsole } from './helpers/console'
 import { settle } from './helpers/settle'
 
@@ -439,6 +443,191 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         .getByRole('button', { name: 'Delete permanently', exact: true })
         .click()
       await expect(deletion).toBeHidden()
+    }
+  })
+})
+
+test.describe('trip-room revocation lifecycle', () => {
+  test.use({ extraHTTPHeaders: {} })
+
+  test('reauthorizes after room and person close and refuses removed or deleted access @chromium-only', async ({
+    context,
+    page,
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(180_000)
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+    await visit(
+      page,
+      { name: 'revocation-trips', path: '/trips', ready: 'main' },
+      'light',
+    )
+    const title = `Revocation lifecycle ${Date.now()}`
+    await page
+      .getByRole('button', { name: 'New trip', exact: true })
+      .first()
+      .click()
+    const creation = page.getByRole('dialog')
+    await creation.getByLabel('Trip name').fill(title)
+    await creation
+      .getByRole('button', { name: 'Create trip', exact: true })
+      .click()
+    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+    const root = new URL(page.url()).pathname.replace(/\/plan$/, '')
+    const watcher = await context.newPage()
+    const guestContext = await browser.newContext({
+      baseURL,
+      extraHTTPHeaders: {},
+    })
+    const guest = await guestContext.newPage()
+    const track = (target: typeof page) => {
+      const connections: Array<{ closed: boolean; welcomed: boolean }> = []
+      target.on('websocket', (socket) => {
+        if (!socket.url().includes('/api/trip-room/')) return
+        const connection = { closed: false, welcomed: false }
+        connections.push(connection)
+        socket.on('close', () => {
+          connection.closed = true
+        })
+        socket.on('framereceived', ({ payload }) => {
+          const frame: unknown = JSON.parse(payload.toString())
+          if (
+            typeof frame === 'object' &&
+            frame !== null &&
+            't' in frame &&
+            frame.t === 'welcome'
+          )
+            connection.welcomed = true
+        })
+      })
+      return connections
+    }
+    const ownerConnections = track(watcher)
+    const guestConnections = track(guest)
+    const live = (target: typeof page) =>
+      target.getByRole('status').filter({ hasText: /^Live$/ })
+    try {
+      await watcher.goto(`${root}/collab`, { waitUntil: 'networkidle' })
+      await expect(live(watcher)).toBeVisible({ timeout: 30_000 })
+      const original = ownerConnections.find(
+        (connection) => connection.welcomed && !connection.closed,
+      )
+      expect(original).toBeDefined()
+      const before = ownerConnections.length
+      await visit(
+        page,
+        { name: 'revocation-trips', path: '/trips', ready: 'main' },
+        'light',
+      )
+      await page
+        .getByRole('button', { name: `Actions for ${title}`, exact: true })
+        .click()
+      await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
+      await expect
+        .poll(
+          () =>
+            original?.closed === true &&
+            ownerConnections
+              .slice(before)
+              .some((connection) => connection.welcomed && !connection.closed),
+          { timeout: 30_000 },
+        )
+        .toBe(true)
+      await expect(live(watcher)).toBeVisible({ timeout: 30_000 })
+      await page.reload({ waitUntil: 'networkidle' })
+      await settle(page, {
+        name: 'revocation-trips',
+        path: '/trips',
+        ready: 'main',
+      })
+      await page.getByRole('button', { name: /^Archived/ }).click()
+      await page
+        .getByRole('button', { name: `Actions for ${title}`, exact: true })
+        .click()
+      await page.getByRole('menuitem', { name: 'Restore', exact: true }).click()
+      await visit(
+        page,
+        { name: 'revocation-people', path: `${root}/people`, ready: 'main' },
+        'light',
+      )
+      await page
+        .getByRole('button', { name: 'Add somebody', exact: true })
+        .click()
+      await page
+        .getByRole('option', { name: 'Mika Tanaka', exact: true })
+        .click()
+      await page
+        .getByRole('button', { name: 'Add to trip', exact: true })
+        .click()
+      const role = page.getByRole('combobox', {
+        name: 'Role · Mika Tanaka',
+        exact: true,
+      })
+      await expect(role).toBeVisible()
+      expect(await signInFixture(guest, baseURL, 'mika@planned.travel')).toBe(
+        true,
+      )
+      await guest.goto(`${root}/collab`, { waitUntil: 'networkidle' })
+      await expect(live(guest)).toBeVisible({ timeout: 30_000 })
+      const firstGuest = guestConnections.find(
+        (connection) => connection.welcomed && !connection.closed,
+      )
+      expect(firstGuest).toBeDefined()
+      const guestBefore = guestConnections.length
+      await role.click()
+      await page.getByRole('option', { name: 'Viewer', exact: true }).click()
+      await expect
+        .poll(
+          () =>
+            firstGuest?.closed === true &&
+            guestConnections
+              .slice(guestBefore)
+              .some((connection) => connection.welcomed && !connection.closed),
+          { timeout: 30_000 },
+        )
+        .toBe(true)
+      await expect(live(guest)).toBeVisible({ timeout: 30_000 })
+      await page
+        .getByRole('button', {
+          name: 'Remove Mika Tanaka from this trip',
+          exact: true,
+        })
+        .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Remove', exact: true })
+        .click()
+      await expect(live(guest)).toHaveCount(0, { timeout: 30_000 })
+      const denied = await guest.request.get(
+        `/api/trip-room/${root.split('/').pop()}`,
+        { headers: { upgrade: 'websocket' } },
+      )
+      expect(denied.status()).toBe(404)
+      await visit(
+        page,
+        { name: 'revocation-trips', path: '/trips', ready: 'main' },
+        'light',
+      )
+      await page
+        .getByRole('button', { name: `Actions for ${title}`, exact: true })
+        .click()
+      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Delete permanently', exact: true })
+        .click()
+      await expect(page).toHaveURL(/\/trips$/)
+      await expect(live(watcher)).toHaveCount(0, { timeout: 30_000 })
+      const deleted = await watcher.request.get(
+        `/api/trip-room/${root.split('/').pop()}`,
+        { headers: { upgrade: 'websocket' } },
+      )
+      expect(deleted.status()).toBe(404)
+    } finally {
+      await watcher.close()
+      await guestContext.close()
     }
   })
 })

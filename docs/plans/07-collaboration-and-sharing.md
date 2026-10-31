@@ -13,8 +13,8 @@ only two unauthenticated surfaces in the product.
 - **The room is complete.** `src/server/do/trip-room.ts` is one SQLite-backed Durable Object per
   trip on the WebSocket Hibernation API, with `acceptWebSocket` at `:238`, a ping/pong auto-response
   installed at `:180-181`, a rate-limit close at `:751`, an alarm at `:420` and an idle
-  `deleteAll()` at `:430`. `src/server/do/trip-room-client.ts:33` states the addressing rule in one
-  line — one object per trip, the trip id is the shard key — and `src/server/do/protocol.ts` is the
+  erasure that retains unexpired revocation barriers (#1608). `src/server/do/trip-room-client.ts:33`
+  states the addressing rule in one line — one object per trip, the trip id is the shard key — and `src/server/do/protocol.ts` is the
   isomorphic Zod contract both ends validate against.
 - **One component subscribes.** `grep -rn useTripRoom src/` returns the definition, the barrel
   re-export at `src/components/modules/collab/index.ts:8`, and a single call site:

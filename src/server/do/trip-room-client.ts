@@ -151,11 +151,19 @@ export function closeTripRoomFor(
  * Closes a room's sockets and erases its stored state (see `TripRoom.handleReset`). For a trip that
  * is gone or whose people are being erased: a live room never clears itself. Call it **after** the
  * trip's rows are gone, so a socket that reconnects is refused at the connect handler instead of
- * rebuilding the room from rows that are about to be deleted.
+ * rebuilding the room from rows that are about to be deleted. The timestamp also refuses connects
+ * already authorized before deletion; reset retains only a non-personal room barrier.
  */
-export async function resetTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+export async function resetTripRoom(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  now: () => number = Date.now,
+): Promise<void> {
   const response = await stubFor(namespace, tripId).fetch(
-    new Request(tripRoomUrl(tripId, 'reset'), { method: 'POST' }),
+    new Request(tripRoomUrl(tripId, 'reset'), {
+      method: 'POST',
+      headers: { [TRIP_ROOM_REVOKED_AT_HEADER]: String(now()) },
+    }),
   )
   if (!response.ok) {
     throw new Error(`Trip room reset failed with ${response.status}`)
