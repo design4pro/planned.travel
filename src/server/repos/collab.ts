@@ -30,7 +30,6 @@ import { requirePlaceOfTrip } from './places'
 import {
   TRIP_WRITE_ROLES,
   assertTripRole,
-  requireTrip,
   requireWritableTrip,
   tripsRepository,
 } from './trips'
@@ -124,8 +123,8 @@ export async function setTripCollabSections(
 
 function assertRowOnTrip(
   entity: string,
-  row: { readonly id: string; readonly tripId: string },
-  tripId: string,
+  row: { readonly id: string; readonly tripId: string | null },
+  tripId: string | null,
 ): void {
   if (row.tripId !== tripId) {
     throw new NotFoundError(entity, row.id)
@@ -563,7 +562,7 @@ export async function createCheckIn(
 ): Promise<CheckIn> {
   const values = createCheckInInput.parse(input)
   if (values.tripId) {
-    await requireTrip(scope, values.tripId)
+    await requireCollabTrip(scope, values.tripId)
     if (values.placeId) {
       await requirePlaceOfTrip(scope, values.tripId, values.placeId)
     }
@@ -598,8 +597,16 @@ export async function listTripCheckIns(
   })
 }
 
-export async function deleteCheckIn(scope: TenantScope, checkInId: string): Promise<void> {
+export async function deleteCheckIn(
+  scope: TenantScope,
+  tripId: string | null,
+  checkInId: string,
+): Promise<void> {
   const checkIn = await checkInsRepository.requireById(scope, checkInId)
+  assertRowOnTrip(checkInsRepository.entityName, checkIn, tripId)
+  if (tripId !== null) {
+    await requireCollabTrip(scope, tripId)
+  }
   if (checkIn.userId !== scope.ctx.userId && scope.ctx.role === 'member') {
     throw new ForbiddenError('delete another traveller’s check-in', ['owner', 'admin'])
   }
