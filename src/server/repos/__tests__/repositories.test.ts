@@ -1234,7 +1234,7 @@ describe('repositories', () => {
       await addPhoto(tenant.scope, {
         journeyId: journey.id,
         entryId: last.id,
-        storageKey: `photos/${tenant.organizationId}/lagazuoi.jpg`,
+        storageKey: `journeys/${tenant.organizationId}/lagazuoi.jpg`,
         contentType: 'image/jpeg',
         sizeBytes: 204_800,
       })

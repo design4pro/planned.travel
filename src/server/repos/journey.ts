@@ -869,6 +869,11 @@ export async function addPhoto(
       throw new NotFoundError('journey entry', values.entryId)
     }
   }
+  const ownedKey = z
+    .string()
+    .startsWith(`journeys/${scope.ctx.organizationId}/`)
+  ownedKey.parse(values.storageKey)
+  if (values.thumbnailKey != null) ownedKey.parse(values.thumbnailKey)
   return journeyPhotosRepository.insert(scope, {
     ...values,
     uploadedBy: scope.ctx.userId,
@@ -908,8 +913,8 @@ export async function deletePhoto(
 
 /**
  * Every R2 key the workspace's journey photos name, thumbnails included. Collected before the
- * workspace is deleted: the keys live only in the rows that go with it, and are not under any
- * prefix of the workspace, so `sweepWorkspaceObjects` is handed them. Keys only; administrators only.
+ * workspace is deleted. New keys belong to `journeys/<org>/`; historical rows may name foreign or
+ * unscoped objects, so `sweepWorkspaceObjects` must verify ownership. Keys only; administrators only.
  */
 export async function listWorkspaceJourneyPhotoKeys(
   scope: TenantScope,
