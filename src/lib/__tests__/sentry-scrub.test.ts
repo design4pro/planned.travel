@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   holdsJoinPath,
+  holdsSensitiveLocation,
   scrubEvent,
   scrubOtherEvent,
   scrubTelemetry,
@@ -162,6 +163,9 @@ describe('join-link secret redaction', () => {
 
     expect(scrubTelemetry(url)).not.toContain(secret)
     expect(
+      decodeURIComponent(scrubTelemetry(url).replace(/%ZZ/g, '')),
+    ).not.toContain(secret)
+    expect(
       scrubTelemetry(
         `/verify-email?callbackURL=%2Flogin%3Fredirect%3D%252Fjoin%252F${secret}`,
       ),
@@ -251,5 +255,104 @@ describe('holdsJoinPath', () => {
     const address = '/join/Zk3-Join_Secret42'
     expect(holdsJoinPath(address)).toBe(true)
     expect(holdsJoinPath(address)).toBe(true)
+  })
+})
+
+describe('credential queries', () => {
+  const secret = 'SyntheticCredential42'
+  const keys = [
+    'token',
+    'access_token',
+    'refresh_token',
+    'id_token',
+    'code',
+    'password',
+    'secret',
+    'client_secret',
+    'api_key',
+    'apikey',
+    'authorization',
+  ]
+  const urls = keys.flatMap((key) => {
+    const url = `/reset-password?tab=help&${key.toUpperCase()}=${secret}&token=${secret}&next=home`
+    const encodedKey = [...key]
+      .map((char) => `%${char.charCodeAt(0).toString(16)}`)
+      .join('')
+    return [
+      url,
+      `https://planned.travel${url}`,
+      `GET ${url}`,
+      `?${encodedKey}=${secret}`,
+      `?${[...key.toUpperCase()].map((char) => `%${char.charCodeAt(0).toString(16)}`).join('')}=${secret}`,
+      `?token=%ZZ${secret}`,
+      `?token=prefix?${secret}`,
+      `?token=prefix%26${secret}`,
+      `?token=${[...secret].map((char) => `%${char.charCodeAt(0).toString(16)}`).join('')}`,
+      ...[1, 2, 3, 8].map((depth) => {
+        let nested = url
+        for (let i = 0; i < depth; i++) nested = encodeURIComponent(nested)
+        return `/login?callbackURL=${nested}`
+      }),
+    ]
+  })
+
+  it.each(urls)('redacts and detects %s without mutating the source', (url) => {
+    expect(scrubTelemetry(url)).not.toContain(secret)
+    expect(
+      decodeURIComponent(scrubTelemetry(url).replace(/%ZZ/g, '')),
+    ).not.toContain(secret)
+    expect(holdsSensitiveLocation(url)).toBe(true)
+    expect(holdsSensitiveLocation(url)).toBe(true)
+  })
+
+  it.each([
+    'error',
+    'transaction',
+    'span',
+    'log',
+    'breadcrumb',
+    'feedback',
+    'replay_event',
+    'recording',
+  ])('scrubs the %s channel', (channel) => {
+    const url = `/reset-password?token=${secret}&tab=help`
+    const event = {
+      type: channel,
+      request: {},
+      contexts: { feedback: { url } },
+      urls: [url],
+      description: url,
+      data: { to: url, 'url.full': url },
+      message: `Failed ${url}`,
+    }
+    const scrubbed =
+      channel === 'feedback' || channel === 'replay_event'
+        ? scrubOtherEvent(event)
+        : scrubEvent(event)
+    expect(JSON.stringify(scrubbed)).not.toContain(secret)
+    expect(JSON.stringify(event)).toContain(secret)
+    expect(JSON.stringify(scrubbed)).toContain('tab=help')
+  })
+
+  it('preserves nested noncredential parameters and redacts encoded delimiters inside secrets', () => {
+    const url = '/reset-password?token=prefix%26SyntheticCredential42&tab=help'
+    expect(scrubTelemetry(url)).toBe(
+      '/reset-password?token=[redacted]&tab=help',
+    )
+    for (let depth = 1; depth <= 4; depth++) {
+      let encoded = url
+      for (let i = 0; i < depth; i++) encoded = encodeURIComponent(encoded)
+      const scrubbed = scrubTelemetry(`/login?redirect=${encoded}`)
+      let decoded = scrubbed
+      for (let i = 0; i < depth; i++) decoded = decodeURIComponent(decoded)
+      expect(decoded).toContain('token=[redacted]&tab=help')
+      expect(decoded).not.toContain(secret)
+    }
+  })
+
+  it('preserves paths and ordinary query values', () => {
+    const url = '/reset-password?tab=help&redirect=%2Ftrips%3Fview%3Dmap'
+    expect(scrubTelemetry(url)).toBe(url)
+    expect(holdsSensitiveLocation(url)).toBe(false)
   })
 })

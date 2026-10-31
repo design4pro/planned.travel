@@ -11,8 +11,8 @@
  * pulling in the Cloudflare SDK. The event is described structurally and the function is generic in
  * it, so each SDK's `beforeSend` still gets its own event type back.
  *
- * It also redacts the one secret that lives in a URL path, the trip invite link (`/join/<segment>`),
- * which a rule about query strings would keep.
+ * It also redacts credential query values in every string and the trip invite link secret
+ * (`/join/<segment>`) that a rule about query strings would keep.
  *
  * `sendDefaultPii: false` is set on both clients as well. This is not a duplicate of that: the flag
  * is a request to the SDK, and this is the part that does not depend on the SDK's interpretation of
@@ -41,6 +41,54 @@ const JOIN_PATH = /\/join\/[^\s/?#&"'<>]+/gi
  */
 const ENCODED_JOIN_PATH =
   /(?:%(?:25)*2fjoin(?:%(?:25)*2f|\/)|\/join%(?:25)*2f)(?:[^\s&"'<>?#%]|%(?!(?:25)*(?:2f|3f|23|26)))+/gi
+
+/** Match ASCII query syntax at any percent-encoding depth without decoding ordinary values. */
+function queryCharacter(char: string): string {
+  const hex = char.charCodeAt(0).toString(16)
+  const upperHex = char.toUpperCase().charCodeAt(0).toString(16)
+  return `(?:\\x${hex}|%(?:25)*(?:${hex}|${upperHex}))`
+}
+
+const CREDENTIAL_KEYS = [
+  'token',
+  'access_token',
+  'refresh_token',
+  'id_token',
+  'code',
+  'password',
+  'secret',
+  'client_secret',
+  'api_key',
+  'apikey',
+  'authorization',
+]
+  .map((key) => [...key].map(queryCharacter).join(''))
+  .join('|')
+
+const CREDENTIAL_QUERY = new RegExp(
+  `(?:${queryCharacter('?')}|${queryCharacter('&')})(?:${CREDENTIAL_KEYS})(${queryCharacter('=')})`,
+  'gi',
+)
+
+/** Preserve encoding and harmless parameters; delimiters encoded inside a value belong to it. */
+function scrubCredentialQueries(value: string): string {
+  let result = ''
+  let end = 0
+  for (const match of value.matchAll(CREDENTIAL_QUERY)) {
+    if (match.index < end) continue
+    const start = match.index + match[0].length
+    const depth = match[1] === '=' ? 0 : (match[1].length - 1) / 2
+    // At depth zero all percent-encoded characters are part of the credential value.
+    const encodedDelimiter =
+      depth === 0 ? '' : `|%(?:25){0,${depth - 1}}(?:26|23|22|27|3c|3e|20)`
+    const delimiters = new RegExp(`[\\s&#"'<>]${encodedDelimiter}`, 'gi')
+    delimiters.lastIndex = start
+    const tail = delimiters.exec(value)
+    result += value.slice(end, start) + '[redacted]'
+    end = tail === null ? value.length : tail.index
+  }
+  return result + value.slice(end)
+}
 
 /**
  * Span attributes the tracing integration fills from the matched route's parameters
@@ -121,11 +169,16 @@ export function holdsJoinPath(address: string): boolean {
   )
 }
 
+/** Recording and screenshots cannot scrub credentials held by the current document. */
+export function holdsSensitiveLocation(address: string): boolean {
+  return holdsJoinPath(address) || address.search(CREDENTIAL_QUERY) !== -1
+}
+
 /** Every URL-bearing Sentry channel uses this scrub, including channels that bypass beforeSend. */
 export function scrubTelemetry<T>(value: T): T {
   function walk(item: unknown): unknown {
     if (typeof item === 'string')
-      return item
+      return scrubCredentialQueries(item)
         .replace(/\/api\/feed\/[^\s?#"'<>]+/g, '/api/feed/[redacted]')
         .replace(/%2fapi%2ffeed%2f[^\s&"'<>]+/gi, '%2Fapi%2Ffeed%2F[redacted]')
         .replace(JOIN_PATH, '/join/[redacted]')
