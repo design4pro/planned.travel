@@ -64,7 +64,11 @@ const messages = {
   'split.nobody': 'Niemand',
   'split.departed': 'Hat die Reise verlassen',
   'split.departedHint':
-    'Wenn du jemanden abwählst, der die Reise verlassen hat, wird der Anteil endgültig entfernt.',
+    'Beim Speichern wird der Anteil einer abgewählten Person, die die Reise verlassen hat, endgültig entfernt.',
+  'split.removedNumbered': 'Entfernte Reisende {number}',
+  'split.includeRemoved': 'Entfernte Reisende in diese Aufteilung einbeziehen',
+  'split.includeRemovedNumbered':
+    'Entfernte Reisende {number} in diese Aufteilung einbeziehen',
   'split.includeFor': '{name} in diese Aufteilung einbeziehen',
   'split.how': 'Wie sich diese Ausgabe teilt',
   'split.method.equal': 'Gleichmäßig',

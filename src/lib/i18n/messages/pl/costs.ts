@@ -69,7 +69,11 @@ const messages = {
   'split.nobody': 'Nikt',
   'split.departed': 'Nie ma już w podróży',
   'split.departedHint':
-    'Odznaczenie osoby, której już nie ma w podróży, usuwa jej udział na stałe.',
+    'Po zapisaniu zmian udział odznaczonej osoby, której już nie ma w podróży, zostanie usunięty na stałe.',
+  'split.removedNumbered': 'Usunięty podróżnik {number}',
+  'split.includeRemoved': 'Uwzględnij usuniętego podróżnika w tym podziale',
+  'split.includeRemovedNumbered':
+    'Uwzględnij usuniętego podróżnika {number} w tym podziale',
   'split.includeFor': 'Uwzględnij {name} w tym podziale',
   'split.how': 'Jak dzieli się ten wydatek',
   'split.method.equal': 'Po równo',
