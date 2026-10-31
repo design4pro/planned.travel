@@ -11,6 +11,7 @@ import { ImagePlus } from 'lucide-react'
 
 import { Button, Progress, focusRing } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { usePreventFileNavigation } from '#/lib/use-prevent-file-navigation'
 import { formatStorage } from '#/lib/plans'
 import { COVER_ACCEPT, isCoverContentType } from '#/lib/trip-cover'
 import { useTranslate } from '#/lib/i18n'
@@ -79,21 +80,7 @@ export function TripCoverField({
     }
   }, [file])
 
-  // A file dropped just outside the region would make the browser navigate to it and lose the
-  // form. The region handles its own drops; everywhere else a dragged file is simply ignored.
-  useEffect(() => {
-    const ignoreFiles = (event: DragEvent): void => {
-      if (event.dataTransfer?.types.includes('Files')) {
-        event.preventDefault()
-      }
-    }
-    window.addEventListener('dragover', ignoreFiles)
-    window.addEventListener('drop', ignoreFiles)
-    return () => {
-      window.removeEventListener('dragover', ignoreFiles)
-      window.removeEventListener('drop', ignoreFiles)
-    }
-  }, [])
+  usePreventFileNavigation()
 
   const shown = previewUrl ?? (removed ? null : currentUrl)
   const uploading = progress !== null
