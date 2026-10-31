@@ -19,9 +19,16 @@
 // Why the policy lives in ./policy.ts and not in the prompt: see ./README.md.
 
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import {
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { z } from 'zod'
 
 import {
   buildTrackedIndex,
@@ -37,6 +44,8 @@ import {
   reportSchema,
   selectionVerdict,
 } from './policy'
+
+import { sentryChildEnv } from './child-env'
 
 import { prepareSentryMcp, resolveMcpCommand } from './mcp-preflight'
 import type { McpCommand } from './mcp-preflight'
@@ -154,18 +163,32 @@ function trackedIssues(): ReadonlyArray<TrackedIssue> {
   }))
 }
 
-/**
- * The hallucination guard the prompt cannot enforce on itself.
- *
- * The agent is told to Read the file before reporting a frame; this checks the claim independently
- * against the host checkout, because a confident pointer at a file that does not exist sends the
- * triager somewhere real code never was.
- */
+/** Only the trusted host can inspect a frame, within bounded application source. */
 function frameExists(candidate: Candidate): boolean {
   const frame = candidate.inAppFrame
-  if (frame === null) return false
-  if (!existsSync(frame.file)) return false
-  return readFileSync(frame.file, 'utf8').split('\n').length >= frame.line
+  if (frame === null || isAbsolute(frame.file) || frame.file.includes('\\'))
+    return false
+  const segments = frame.file.split('/')
+  if (segments[0] !== 'src' || segments.includes('..')) return false
+  try {
+    const root = realpathSync(process.cwd())
+    const source = realpathSync(join(root, 'src'))
+    if (source !== join(root, 'src')) return false
+    const file = realpathSync(resolve(root, frame.file))
+    const inside = relative(source, file)
+    if (
+      !inside ||
+      inside === '..' ||
+      inside.startsWith(`..${sep}`) ||
+      isAbsolute(inside)
+    )
+      return false
+    const stat = statSync(file)
+    if (!stat.isFile() || stat.size > 2 * 1024 * 1024) return false
+    return readFileSync(file, 'utf8').split('\n').length >= frame.line
+  } catch {
+    return false
+  }
 }
 
 type Report = ReturnType<typeof reportSchema.parse>
@@ -183,11 +206,7 @@ function renderPrompt(tracked: string): string {
   )
 }
 
-/**
- * One non-interactive Claude Code session on this checkout, read-only by construction: Bash, Edit
- * and Write are removed from the tool set, and `--strict-mcp-config` attaches ./mcp.json alone, so
- * neither a developer's own MCP servers nor a root `.mcp.json` reach a scheduled run.
- */
+/** No built-ins, inherited settings/hooks, permission prompts or GitHub credentials. */
 function survey(prompt: string): Report {
   const run = spawnSync(
     'claude',
@@ -195,16 +214,41 @@ function survey(prompt: string): Report {
       '-p',
       '--model',
       MODEL,
-      '--dangerously-skip-permissions',
+      '--tools',
+      '',
+      '--permission-mode',
+      'dontAsk',
+      '--setting-sources',
+      '',
+      '--settings',
+      JSON.stringify({ disableAllHooks: true }),
+      '--disable-slash-commands',
+      '--no-session-persistence',
       '--mcp-config',
       join(HERE, 'mcp.json'),
       '--strict-mcp-config',
-      '--disallowedTools',
-      'Bash,Edit,Write,NotebookEdit',
+      '--allowedTools',
+      [
+        'find_projects',
+        'search_issues',
+        'search_events',
+        'get_sentry_resource',
+        'search_sentry_tools',
+        'execute_sentry_tool',
+      ]
+        .map((name) => `mcp__sentry__${name}`)
+        .join(','),
       '--output-format',
-      'text',
+      'json',
     ],
     {
+      env: {
+        ...sentryChildEnv(process.env),
+        ENABLE_TOOL_SEARCH: 'false',
+        CLAUDE_CODE_OAUTH_TOKEN: process.env.CLAUDE_CODE_OAUTH_TOKEN,
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+      },
+      timeout: 20 * 60 * 1000,
       input: prompt,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
@@ -214,7 +258,18 @@ function survey(prompt: string): Report {
   if (run.error) throw run.error
   if (run.status !== 0)
     throw new Error(`claude exited with code ${String(run.status)}`)
-  const block = /<sentry-triage>([\s\S]*?)<\/sentry-triage>/.exec(run.stdout)
+  const session = z
+    .object({
+      type: z.literal('result'),
+      subtype: z.literal('success'),
+      is_error: z.literal(false),
+      permission_denials: z.array(z.unknown()).max(0),
+      result: z.string(),
+    })
+    .parse(JSON.parse(run.stdout))
+  const block = /<sentry-triage>([\s\S]*?)<\/sentry-triage>/.exec(
+    session.result,
+  )
   if (block === null)
     throw new Error(
       'the agent emitted no <sentry-triage> block; nothing was looked at',
@@ -432,9 +487,8 @@ for (const candidate of filingOrder(report.candidates, forced)) {
       '--title',
       title,
       // Exactly these two labels and no others: the category and the priority a Sentry finding
-      // earns by clearing the threshold. No run starts from it: the Reconciler trusts maintainer
-      // authors only because its runs hold an unrestricted shell, and this routine files as the
-      // Actions bot. A person reads it and starts a run from the cockpit (ADR 0032).
+      // earns by clearing the threshold. The Reconciler starts code-based triage on this Actions
+      // bot ticket; its untrusted body cannot supply the Agent Brief (ADR 0040).
       '--label',
       'bug',
       '--label',

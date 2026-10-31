@@ -42,8 +42,9 @@ Bash with no allowlist and push rights, so the body is still a path for an instr
 - A brief in the body of a Sentry ticket is ignored by `backlog-status.mjs`, `afk-triage` and
   `implement-ticket` alike, so a forged `## Agent Brief` cannot make triage stop without a trusted
   brief, and only the triage comment is a brief.
-- The sweep's own agent session still runs with `--dangerously-skip-permissions` while it reads
-  Sentry text, so a ticket filed by the Actions bot is worth more than before. Narrowing that session
-  is a separate change.
+- The sweep's session is narrowed by #1295: no built-in tools or permission bypass, only the
+  pinned Sentry MCP inspection tools, and no GitHub credentials in the survey or preflight
+  environment. The trusted host alone verifies source-frame bounds and files issues. This limits
+  the impact of hostile Sentry text; it does not make that text trusted.
 - Up to three tickets a day can each start a triage run, bounded by `BACKLOG_PRESSURE_LIMIT`, the
   per-run cap and the Reconciler's per-project limit.
