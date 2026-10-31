@@ -89,3 +89,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Session password lock** - after five wrong passwords across password-confirming actions, that session cannot confirm a password again. Other sessions remain usable; sign out and sign in again to recover.
 
 - **Visitor language** - the language remembered on a browser for signed-out pages, held for a year in a first-party cookie containing only a language code. A personal or workspace language takes precedence when signed in. Registering seeds the new account's own language from it once; signing in never does. _Avoid_: "anonymous account", "guest profile".
+
+- **Dashboard prompt** - one passive suggestion on the dashboard based on information the current traveller may read. Dismissing it hides that suggestion locally; it neither marks a notification read nor delivers a Reminder.
+- **Nearby suggestion** - a dashboard prompt based on an explicitly requested approximate-location lookup. It is not a saved Place, a location history or a delivered Reminder.
