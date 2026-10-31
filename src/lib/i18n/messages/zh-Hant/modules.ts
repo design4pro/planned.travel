@@ -972,12 +972,15 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 產生於 {when}',
   'files.export.madeAt': '{date} {time}',
-  'files.export.email.subject': '{title} 已準備好',
+  'files.export.email.subject': '匯出已就緒：{title}',
   'files.export.email.body': {
-    other: '行程匯出已準備好。將保留 {count} 天。',
+    other: '{title}的匯出已就緒，將保留{count}天。',
   },
-  'files.export.email.action': '開啟 {title}',
-  'files.export.email.text': '行程匯出已準備好：{url}',
+  'files.export.email.action': '前往匯出',
+  'files.export.email.text': '{body}\n\n{limit}\n\n前往匯出: {url}',
+  'files.export.limit': {
+    other: '每個旅行保留最新的{count}個匯出。',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': '匯出行程',

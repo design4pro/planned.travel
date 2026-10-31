@@ -759,7 +759,7 @@ describe('the people a new line of money may name, once someone has left the wor
     },
   ]
   const deeBox = (): HTMLElement | null =>
-    screen.queryByRole('checkbox', { name: 'Include Dee in this split' })
+    screen.queryByRole('checkbox', { name: Costs['split.includeFor'].replace('{name}', Costs['person.removed']) })
 
   async function payerNames(
     user: ReturnType<typeof userEvent.setup>,
@@ -779,7 +779,7 @@ describe('the people a new line of money may name, once someone has left the wor
     expect(screen.getByRole('checkbox', { name: /Include Bo/ })).toBeTruthy()
     const names = await payerNames(user)
     expect(names.some((name) => name?.includes('Bo'))).toBe(true)
-    expect(names.some((name) => name?.includes('Dee'))).toBe(false)
+    expect(names.some((name) => name?.includes(Costs['person.removed']))).toBe(false)
 
     await user.keyboard('{Escape}')
     await user.type(screen.getByLabelText(/^What was it for/), 'Pub lunch')
@@ -805,7 +805,7 @@ describe('the people a new line of money may name, once someone has left the wor
     })
 
     expect(deeBox()?.getAttribute('aria-checked')).toBe('true')
-    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+    expect((await payerNames(user)).some((name) => name?.includes(Costs['person.removed']))).toBe(
       true,
     )
   })
@@ -837,7 +837,7 @@ describe('the people a new line of money may name, once someone has left the wor
       }),
     })
 
-    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+    expect((await payerNames(user)).some((name) => name?.includes(Costs['person.removed']))).toBe(
       true,
     )
   })
@@ -854,7 +854,7 @@ describe('the people a new line of money may name, once someone has left the wor
     })
 
     expect(deeBox()).toBeNull()
-    expect((await payerNames(user)).some((name) => name?.includes('Dee'))).toBe(
+    expect((await payerNames(user)).some((name) => name?.includes(Costs['person.removed']))).toBe(
       false,
     )
   })

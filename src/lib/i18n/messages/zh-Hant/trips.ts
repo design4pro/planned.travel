@@ -418,6 +418,8 @@ const messages = {
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': '這一天的實測數值。',
   'plan.weather.panel.temperatureTypical': '常年最高 / 最低',
+  'plan.weather.panel.typicalHigh': '常年最高',
+  'plan.weather.panel.typicalLow': '常年最低',
   'plan.weather.panel.estimateNote': '本月的長期平均值，並非預報。',
   'plan.weather.attribution.metNorway': '預報資料：MET Norway，CC BY 4.0',
   'plan.weather.attribution.nasaPower':

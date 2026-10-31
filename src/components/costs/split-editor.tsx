@@ -320,12 +320,17 @@ export function SplitEditor({
   const unnamedCount = departed.filter((person) => person.name === null).length
   let unnamedNumber = 0
   const listed = [
-    ...people.map((person) => ({
-      ...person,
-      departed: false,
-      includeLabel: t('costs.split.includeFor', { name: person.name }),
-      initials: undefined,
-    })),
+    ...people.map((person) => {
+      const name =
+        person.leftWorkspace === true ? t('costs.person.removed') : person.name
+      return {
+        ...person,
+        name,
+        departed: false,
+        includeLabel: t('costs.split.includeFor', { name }),
+        initials: undefined,
+      }
+    }),
     ...departed.map((person) => {
       if (person.name !== null) {
         return {

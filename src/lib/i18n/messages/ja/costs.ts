@@ -179,7 +179,7 @@ const messages = {
   'memberBar.others': {
     other: 'ほか{others}人',
   },
-  'memberBar.notSplit': '誰にも割り当てなし',
+  'memberBar.notSplit': '誰にも分担されていない',
   'totalTile.label': '旅行の支出合計',
   'totalTile.captionPlanned': '全員で{amount}を予定',
   'totalTile.captionBudget': '旅行の予算は{amount}',

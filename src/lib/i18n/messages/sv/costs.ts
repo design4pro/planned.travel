@@ -178,7 +178,7 @@ const messages = {
     one: '{others} annan resenär',
     other: '{others} andra resenärer',
   },
-  'memberBar.notSplit': 'Inte tilldelat någon',
+  'memberBar.notSplit': 'Inte fördelat mellan någon',
   'totalTile.label': 'Reseutgifter totalt',
   'totalTile.captionPlanned': '{amount} planerat för alla resenärer',
   'totalTile.captionBudget': '{amount} i budget för resan',

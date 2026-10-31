@@ -183,7 +183,7 @@ const messages = {
     one: '{others} további utazó',
     other: '{others} további utazó',
   },
-  'memberBar.notSplit': 'Senkihez nincs rendelve',
+  'memberBar.notSplit': 'Senki között nincs felosztva',
   'totalTile.label': 'Az utazás teljes költése',
   'totalTile.captionPlanned': '{amount} tervezve az összes utazónak',
   'totalTile.captionBudget': '{amount} költségvetés az utazásra',

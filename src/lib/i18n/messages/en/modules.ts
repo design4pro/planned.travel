@@ -1254,13 +1254,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - generated {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} is ready',
+  'files.export.email.subject': 'Export ready: {title}',
   'files.export.email.body': {
-    one: 'Your trip export is ready. It is kept for {count} day.',
-    other: 'Your trip export is ready. It is kept for {count} days.',
+    one: 'Your export of {title} is ready. It is kept for {count} day.',
+    other: 'Your export of {title} is ready. It is kept for {count} days.',
   },
-  'files.export.email.action': 'Open {title}',
-  'files.export.email.text': 'Your trip export is ready: {url}',
+  'files.export.email.action': 'Go to the export',
+  'files.export.email.text': '{body}\n\n{limit}\n\nGo to the export: {url}',
+  'files.export.limit': {
+    one: 'A trip keeps its {count} newest export.',
+    other: 'A trip keeps its {count} newest exports.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Export the trip',

@@ -177,10 +177,10 @@ const messages = {
   /* ------------------------------------------------- member bar (#833) */
   'memberBar.label': 'Para kimin için harcandı',
   'memberBar.others': {
-    one: '{others} diğer gezgin',
-    other: '{others} diğer gezgin',
+    one: 'diğer {others} gezgin',
+    other: 'diğer {others} gezgin',
   },
-  'memberBar.notSplit': 'Kimseye atanmadı',
+  'memberBar.notSplit': 'Kimseyle bölüşülmedi',
   'totalTile.label': 'Toplam gezi harcaması',
   'totalTile.captionPlanned': 'Tüm gezginler için {amount} planlandı',
   'totalTile.captionBudget': 'Gezi için {amount} bütçe',

@@ -39,10 +39,10 @@ function donut(
   }
 }
 
-function renderDonut(rows: ReadonlyArray<DonutRow>) {
+function renderDonut(rows: ReadonlyArray<DonutRow>, currency = 'EUR') {
   return render(
     <I18nProvider locale="en" messages={EN}>
-      <CategoryDonut rows={rows} currency="EUR" />
+      <CategoryDonut rows={rows} currency={currency} />
     </I18nProvider>,
   )
 }
@@ -257,6 +257,28 @@ describe('the legend', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2)
     expect(within(items[2]).queryByRole('button')).toBeNull()
     expect(within(items[3]).queryByRole('button')).toBeNull()
+  })
+
+  it('gives long planned figures a separate row for spent and planned-only categories', () => {
+    renderDonut(
+      [
+        donut('food', 32_000_000_000, 5_000_000_000_000, 'Δραστηριότητες'),
+        donut('insurance', 0, 5_000_000_000_000, 'Transportasi'),
+      ],
+      'IDR',
+    )
+    const [spent, plannedOnly] = legendItems()
+    const planned = within(spent).getByText(/planned$/)
+    expect(planned.className).toContain('col-span-2')
+    expect(planned.className).toContain('row-start-3')
+    const plannedOnlyFigure = within(plannedOnly).getByText(/planned$/)
+    expect(plannedOnlyFigure.className).toContain('col-span-2')
+    expect(plannedOnlyFigure.className).toContain('row-start-2')
+    for (const item of [spent, plannedOnly]) {
+      const label = within(item).getByText(/Δραστηριότητες|Transportasi/)
+      expect(label.className).toContain('row-start-1')
+      expect(label.className).not.toContain('overflow-wrap:anywhere')
+    }
   })
 
   it('puts the category colour on the legend dot', () => {

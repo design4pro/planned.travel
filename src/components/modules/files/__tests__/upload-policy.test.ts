@@ -609,6 +609,22 @@ describe('the refusal list', () => {
 })
 
 describe('the markup types are bound to their extensions', () => {
+  it('stores a text file claiming GPX as plain text', () => {
+    expect(resolveContentType('notes.txt', 'application/gpx+xml')).toBe(
+      'text/plain',
+    )
+  })
+
+  it('keeps GPX claims for route names and extensionless files', () => {
+    expect(resolveContentType('route.GPX', 'application/gpx+xml')).toBe(
+      'application/gpx+xml',
+    )
+    // The download guard covers extensionless claims and already-stored objects.
+    expect(resolveContentType('route', 'application/gpx+xml')).toBe(
+      'application/gpx+xml',
+    )
+  })
+
   it('stores a PDF that claims text/html as a PDF', () => {
     expect(resolveContentType('ticket.pdf', 'text/html')).toBe(
       'application/pdf',
@@ -625,7 +641,7 @@ describe('the markup types are bound to their extensions', () => {
     expect(resolveContentType('logo.svg', 'text/html')).toBe('image/svg+xml')
   })
 
-  it.each(['text/html', 'image/svg+xml'])(
+  it.each(['text/html', 'image/svg+xml', 'application/gpx+xml'])(
     'refuses an .exe that claims %s as an unsupported type',
     (claimed) => {
       expect(

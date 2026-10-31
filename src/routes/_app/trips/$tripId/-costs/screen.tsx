@@ -199,8 +199,9 @@ export function CostsScreen({
         filters,
         data.people,
         data.viewerUserId,
+        t('costs.person.removed'),
       ),
-    [snapshot.expenses, filters, data.people, data.viewerUserId],
+    [snapshot.expenses, filters, data.people, data.viewerUserId, t],
   )
 
   const visibleMinor = visible.reduce(

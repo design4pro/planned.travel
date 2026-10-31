@@ -187,7 +187,7 @@ const messages = {
     many: '{others} dalšího cestovatele',
     other: '{others} dalších cestovatelů',
   },
-  'memberBar.notSplit': 'Nikomu nepřiřazeno',
+  'memberBar.notSplit': 'Nerozděleno mezi nikoho',
   'totalTile.label': 'Celkové výdaje na cestu',
   'totalTile.captionPlanned': 'Plánováno {amount} pro všechny cestovatele',
   'totalTile.captionBudget': 'Rozpočet cesty: {amount}',

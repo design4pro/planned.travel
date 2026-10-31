@@ -182,7 +182,7 @@ const messages = {
     one: '{others} ακόμη ταξιδιώτης',
     other: '{others} ακόμη ταξιδιώτες',
   },
-  'memberBar.notSplit': 'Δεν έχει ανατεθεί σε κανέναν',
+  'memberBar.notSplit': 'Δεν έχει μοιραστεί σε κανέναν',
   'totalTile.label': 'Συνολικά έξοδα ταξιδιού',
   'totalTile.captionPlanned':
     'Προγραμματισμένα {amount} για όλους τους ταξιδιώτες',
