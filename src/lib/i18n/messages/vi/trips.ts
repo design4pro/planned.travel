@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ. Cộng tác chỉ có thể đọc.',
+  'collab.readOnly.role':
+    'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể thay đổi cuộc trò chuyện, ghi chú và cuộc thăm dò.',
   'notFound.title': 'Không tìm thấy chuyến đi này',
   'notFound.body':
     'Chuyến đi này không nằm trong số những chuyến đi bạn có thể mở trong không gian làm việc hiện tại. Có thể chuyến đi đã bị xóa hoặc bạn không có quyền truy cập.',

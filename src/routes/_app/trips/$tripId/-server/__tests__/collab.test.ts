@@ -209,6 +209,32 @@ describe('collaboration handlers', () => {
     ).toBe(false)
   })
 
+  it.each([
+    ['owner', false, true],
+    ['editor', false, true],
+    ['viewer', false, false],
+    [null, false, false],
+    ['owner', true, false],
+    ['editor', true, false],
+  ] as const)(
+    'projects write permission for %s (archived: %s)',
+    async (role, archived, expected) => {
+      await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
+      if (role !== null && role !== 'owner') {
+        await addTripMember(tenant.scope, { tripId, userId: readerId, role })
+      }
+      if (archived) await archiveTrip(tenant.scope, tripId)
+      stubs.scope =
+        role === 'owner' ? tenant.scope : tenant.scopeFor(readerId, 'admin')
+      const payload = requireFound(await loadTripCollab({ data: { tripId } }))
+      expect(payload).toMatchObject({
+        canWrite: expected,
+        isArchived: archived,
+      })
+      expect(payload.canConfigure).toBe(expected)
+    },
+  )
+
   it('does not read child payloads for an invisible trip', async () => {
     stubs.scope = tenant.scopeFor(readerId)
     await expect(loadTripCollab({ data: { tripId } })).resolves.toStrictEqual({

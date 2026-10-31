@@ -30,6 +30,7 @@ export function PollsBoard({
   onNewPollOpenChange,
   onDirtyChange,
   turnedOff = false,
+  canWrite,
 }: {
   tripId: string
   polls: ReadonlyArray<PollData>
@@ -38,6 +39,7 @@ export function PollsBoard({
   onNewPollOpenChange: (open: boolean) => void
   onDirtyChange?: (dirty: boolean) => void
   turnedOff?: boolean
+  canWrite: boolean
 }) {
   const t = useTranslate()
   useEffect(() => {
@@ -66,6 +68,7 @@ export function PollsBoard({
     if (poll.isClosed) {
       return
     }
+    if (!canWrite) return
     const key = `${poll.id}:${optionId}`
     // A single-choice poll moves the vote, so the option being left has to be
     // painted as well as the one being taken.
@@ -92,6 +95,7 @@ export function PollsBoard({
           variant="primary"
           size="sm"
           shape="pill"
+          disabled={!canWrite}
           onClick={() => onNewPollOpenChange(true)}
         >
           <Plus aria-hidden strokeWidth={2.5} />
@@ -110,6 +114,7 @@ export function PollsBoard({
               variant="secondary"
               size="sm"
               shape="pill"
+              disabled={!canWrite}
               onClick={() => onNewPollOpenChange(true)}
             >
               {t('modules.collab.polls.empty.action')}
@@ -166,12 +171,13 @@ export function PollsBoard({
                       {
                         label: t('modules.collab.poll.menu.close'),
                         icon: <Lock aria-hidden />,
-                        disabled: poll.isClosed,
+                        disabled: !canWrite || poll.isClosed,
                         onSelect: () => {
                           void close.run({ data: { tripId, pollId: poll.id } })
                         },
                       },
                       {
+                        disabled: !canWrite,
                         label: t('modules.collab.poll.remove'),
                         icon: <Trash2 aria-hidden />,
                         tone: 'danger',
@@ -211,7 +217,7 @@ export function PollsBoard({
                               count: total,
                             },
                           )}
-                          disabled={poll.isClosed || vote.pending}
+                          disabled={!canWrite || poll.isClosed || vote.pending}
                           onClick={() => castVote(poll, row.optionId, row.mine)}
                           className={cn(
                             'group/option w-full rounded-lg border px-3 py-2 text-start focus-ring',
@@ -280,6 +286,7 @@ export function PollsBoard({
       )}
 
       <PollDialog
+        canWrite={canWrite}
         turnedOff={turnedOff}
         tripId={tripId}
         open={newPollOpen}
@@ -287,7 +294,7 @@ export function PollsBoard({
       />
 
       <ConfirmDialog
-        request={confirm}
+        request={canWrite ? confirm : null}
         pending={remove.pending}
         onOpenChange={(next) => {
           if (!next) {

@@ -56,6 +56,7 @@ const window50: ReadonlyArray<MessageData> = Array.from(
   }),
 )
 const base: CollabScreenData = {
+  canWrite: true,
   sections: { conversation: true, notes: true, polls: true },
   messages: window50,
   messageCount: 400,
