@@ -448,7 +448,7 @@ describe('member isolation', () => {
       })
       const photo = await addPhoto(alpha.scope, {
         journeyId: journey.id,
-        storageKey: 'journeys/lisbon/tram.jpg',
+        storageKey: `journeys/${alpha.organizationId}/lisbon/tram.jpg`,
         contentType: 'image/jpeg',
       })
 
@@ -469,7 +469,7 @@ describe('member isolation', () => {
         () =>
           addPhoto(stranger, {
             journeyId: journey.id,
-            storageKey: 'journeys/lisbon/planted.jpg',
+            storageKey: `journeys/${alpha.organizationId}/lisbon/planted.jpg`,
             contentType: 'image/jpeg',
           }),
         () => attachPhotoToEntry(stranger, photo.id, entry.id),
@@ -1055,7 +1055,7 @@ describe('member isolation', () => {
       photoId = (
         await addPhoto(alpha.scope, {
           journeyId,
-          storageKey: 'journeys/lisbon/tram.jpg',
+          storageKey: `journeys/${alpha.organizationId}/lisbon/tram.jpg`,
           contentType: 'image/jpeg',
         })
       ).id
@@ -1102,7 +1102,7 @@ describe('member isolation', () => {
         () =>
           addPhoto(reader, {
             journeyId,
-            storageKey: 'journeys/lisbon/planted.jpg',
+            storageKey: `journeys/${alpha.organizationId}/lisbon/planted.jpg`,
             contentType: 'image/jpeg',
           }),
         () => deletePhoto(reader, photoId),

@@ -763,7 +763,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   const photo = await addPhoto(scope, {
     journeyId: journey.id,
     entryId: journeyEntry.id,
-    storageKey: `photos/${tenant.organizationId}/tarts.jpg`,
+    storageKey: `journeys/${tenant.organizationId}/tarts.jpg`,
     contentType: 'image/jpeg',
     sizeBytes: 102_400,
   })
@@ -1687,7 +1687,7 @@ describe('tenant isolation', () => {
           addPhoto(scope, {
             journeyId: alpha.journeyId,
             entryId: beta.journeyEntryId,
-            storageKey: 'photos/stolen.jpg',
+            storageKey: `journeys/${scope.ctx.organizationId}/stolen.jpg`,
             contentType: 'image/jpeg',
           }),
         ),

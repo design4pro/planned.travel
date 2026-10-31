@@ -345,8 +345,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
         sortOrder: 1,
         photos: [
           {
-            storageKey: 'demo/journeys/dolomites/braies-boathouse.jpg',
-            thumbnailKey: 'demo/journeys/dolomites/braies-boathouse-thumb.jpg',
+            storageKey: 'dolomites/braies-boathouse.jpg',
+            thumbnailKey: 'dolomites/braies-boathouse-thumb.jpg',
             caption: 'The boathouse at 06:20, before anyone else arrived.',
             contentType: 'image/jpeg',
             sizeBytes: 3_284_112,
@@ -379,9 +379,8 @@ export const journeys: ReadonlyArray<SeedJourney> = [
         sortOrder: 2,
         photos: [
           {
-            storageKey: 'demo/journeys/dolomites/tre-cime-north-faces.jpg',
-            thumbnailKey:
-              'demo/journeys/dolomites/tre-cime-north-faces-thumb.jpg',
+            storageKey: 'dolomites/tre-cime-north-faces.jpg',
+            thumbnailKey: 'dolomites/tre-cime-north-faces-thumb.jpg',
             caption:
               'North faces from the path below Locatelli, about half five.',
             contentType: 'image/jpeg',

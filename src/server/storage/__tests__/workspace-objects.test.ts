@@ -68,6 +68,25 @@ describe('sweepWorkspaceObjects', () => {
     expect([...bucket.remaining].sort()).toEqual([...others].sort())
   })
 
+  it('skips supplied foreign and legacy keys from every namespace', async () => {
+    const retained = [
+      'trips/org-b/t/file',
+      'exports/org-ab/t/export',
+      'avatars/org-ab/user',
+      'journeys/org-ab/photo.jpg',
+      'journeys/org-ab/thumb.jpg',
+      'demo/journeys/shared.jpg',
+      'journeys/org-a',
+    ]
+    const owned = 'journeys/org-a/photo.jpg'
+    const bucket = fakeBucket([owned, ...retained])
+    expect(
+      await sweepWorkspaceObjects(bucket, 'org-a', [...retained, owned]),
+    ).toBe(1)
+    expect([...bucket.remaining].sort()).toEqual([...retained].sort())
+    expect(bucket.calls.flat()).toEqual([owned])
+  })
+
   it('is repeatable: a second run after a finished one succeeds and deletes nothing', async () => {
     const bucket = fakeBucket([
       'trips/org-a/t1/file-1',
