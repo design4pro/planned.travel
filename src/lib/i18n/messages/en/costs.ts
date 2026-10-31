@@ -216,7 +216,7 @@ const messages = {
     one: '{others} other traveller',
     other: '{others} other travellers',
   },
-  'memberBar.notSplit': 'Not assigned to anyone',
+  'memberBar.notSplit': 'Not split between anyone',
   'totalTile.label': 'Total trip spend',
   'totalTile.captionPlanned': 'Planned {amount} across all travellers',
   'totalTile.captionBudget': '{amount} budgeted for the trip',

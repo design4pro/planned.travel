@@ -177,7 +177,7 @@ const messages = {
     one: '{others} andere reiziger',
     other: '{others} andere reizigers',
   },
-  'memberBar.notSplit': 'Aan niemand toegewezen',
+  'memberBar.notSplit': 'Onder niemand verdeeld',
   'totalTile.label': 'Totale reiskosten',
   'totalTile.captionPlanned': '{amount} gepland voor alle reizigers',
   'totalTile.captionBudget': '{amount} budget voor de reis',

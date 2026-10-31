@@ -182,7 +182,7 @@ const messages = {
     many: 'ще {others} мандрівників',
     other: 'ще {others} мандрівника',
   },
-  'memberBar.notSplit': 'Нікому не призначено',
+  'memberBar.notSplit': 'Ні між ким не поділено',
   'totalTile.label': 'Загальні витрати на подорож',
   'totalTile.captionPlanned': 'Заплановано {amount} на всіх мандрівників',
   'totalTile.captionBudget': 'Бюджет подорожі: {amount}',

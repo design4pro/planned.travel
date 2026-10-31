@@ -184,7 +184,7 @@ const messages = {
     many: '{others} autres voyageurs',
     other: '{others} autres voyageurs',
   },
-  'memberBar.notSplit': 'Non attribué',
+  'memberBar.notSplit': 'Non réparti entre les voyageurs',
   'totalTile.label': 'Dépenses totales du voyage',
   'totalTile.captionPlanned': '{amount} prévus pour tous les voyageurs',
   'totalTile.captionBudget': '{amount} de budget pour le voyage',

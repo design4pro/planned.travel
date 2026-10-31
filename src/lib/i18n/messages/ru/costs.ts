@@ -186,7 +186,7 @@ const messages = {
     many: 'ещё {others} путешественников',
     other: 'ещё {others} путешественника',
   },
-  'memberBar.notSplit': 'Не отнесено ни к кому',
+  'memberBar.notSplit': 'Не разделено ни между кем',
   'totalTile.label': 'Общие расходы на поездку',
   'totalTile.captionPlanned': 'Запланировано {amount} на всех путешественников',
   'totalTile.captionBudget': 'Бюджет поездки: {amount}',

@@ -174,7 +174,7 @@ const messages = {
   'memberBar.others': {
     other: '{others} pelancong lainnya',
   },
-  'memberBar.notSplit': 'Tidak ditetapkan ke siapa pun',
+  'memberBar.notSplit': 'Tidak dibagi di antara siapa pun',
   'totalTile.label': 'Total pengeluaran perjalanan',
   'totalTile.captionPlanned': 'Direncanakan {amount} untuk semua pelancong',
   'totalTile.captionBudget': 'Anggaran {amount} untuk perjalanan',

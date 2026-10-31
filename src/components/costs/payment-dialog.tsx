@@ -234,9 +234,11 @@ export function PaymentDialog({
     setSourceCurrency(next)
   }
 
-  const nameOf = (userId: string): string =>
-    people.find((person) => person.userId === userId)?.name ??
-    t('costs.rebase.someone')
+  const nameOf = (userId: string): string => {
+    const person = people.find((entry) => entry.userId === userId)
+    if (person?.leftWorkspace === true) return t('costs.person.removed')
+    return person?.name ?? t('costs.rebase.someone')
+  }
 
   async function submit(): Promise<void> {
     // `canSave` already proves the amount parsed, so narrowing follows from it.
@@ -269,14 +271,17 @@ export function PaymentDialog({
     }
   }
 
-  const options = offered.map((person) => ({
-    value: person.userId,
-    label:
-      person.userId === viewerUserId
-        ? t('costs.payment.youSuffix', { name: person.name })
-        : person.name,
-    description: person.email === '' ? undefined : person.email,
-  }))
+  const options = offered.map((person) => {
+    const name = nameOf(person.userId)
+    return {
+      value: person.userId,
+      label:
+        person.userId === viewerUserId
+          ? t('costs.payment.youSuffix', { name })
+          : name,
+      description: person.email === '' ? undefined : person.email,
+    }
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
