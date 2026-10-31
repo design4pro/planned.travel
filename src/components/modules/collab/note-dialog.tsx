@@ -37,6 +37,7 @@ export function NoteDialog({
   open,
   onOpenChange,
   turnedOff = false,
+  canWrite,
 }: {
   tripId: string
   /** Absent for a new note. */
@@ -46,6 +47,7 @@ export function NoteDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
   turnedOff?: boolean
+  canWrite: boolean
 }) {
   const t = useTranslate()
   const off = useRef(turnedOff)
@@ -97,9 +99,10 @@ export function NoteDialog({
   const action = editing ? update : create
 
   const trimmed = title.trim()
-  const canSave = trimmed.length > 0 && !action.pending
+  const canSave = canWrite && trimmed.length > 0 && !action.pending
 
   async function submit(): Promise<void> {
+    if (!canWrite) return
     const payload = {
       tripId,
       title: trimmed,
@@ -117,7 +120,7 @@ export function NoteDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && canWrite} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>

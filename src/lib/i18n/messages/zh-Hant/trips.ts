@@ -14,6 +14,8 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived': '此旅行已封存。協作內容僅供閱讀。',
+  'collab.readOnly.role': '只有旅行擁有者和編輯者可以變更對話、筆記和投票。',
   'notFound.title': '找不到此行程',
   'notFound.body':
     '此行程不在你目前工作空間可開啟的行程中。它可能已被刪除，或是你沒有存取權限。',
