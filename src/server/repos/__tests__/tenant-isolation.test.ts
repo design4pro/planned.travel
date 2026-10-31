@@ -7527,6 +7527,7 @@ describe('tenant isolation', () => {
 
   describe('the collaboration writers', () => {
     const rowsOf = (world: World): CollabRowIds => ({
+      checkInId: world.checkInId,
       messageId: world.messageId,
       noteId: world.collabNoteId,
       pollId: world.pollId,
