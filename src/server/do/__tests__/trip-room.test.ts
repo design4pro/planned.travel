@@ -15,6 +15,7 @@ import {
   TRIP_ROOM_CLOSED_REASON,
   TRIP_ROOM_ALARM_INTERVAL_MS,
   TRIP_ROOM_IDENTITY_HEADER,
+  TRIP_ROOM_IDLE_TTL_MS,
   TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
   TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
@@ -71,13 +72,14 @@ function fakeStorage(): TripRoomStorage & {
       storage.writes += 1
       data.clear()
     },
-    getAlarm: async () => null,
+    getAlarm: async () => storage.alarmAt,
     setAlarm: async (scheduledTime: number) => {
       storage.alarmAt = scheduledTime
       storage.alarmSet += 1
     },
     deleteAlarm: async () => {
       storage.alarmDeleted += 1
+      storage.alarmAt = null
     },
   }
   return storage
@@ -574,6 +576,7 @@ describe('socket age backstop', () => {
     now += 1
     young.sent.length = 0
     const armedBefore = storage.alarmSet
+    storage.alarmAt = null
     await resumed.alarm()
     for (const expired of [old, silent]) {
       expect(expired.closedWith).toBe(CLOSE_ROOM_CLOSED)
@@ -744,6 +747,7 @@ describe('refusing a connect minted before a revocation reached the room', () =>
   })
 
   it('applies the later of the room’s watermark and the person’s, and never moves one back', async () => {
+    now = REVOKED_AT + 40_000
     await closeAt(REVOKED_AT + 20_000)
     await closeAt(REVOKED_AT, { userId: 'ana' })
     expect(storage.data.get('w:room')).toBe(REVOKED_AT + 20_000)
@@ -797,7 +801,7 @@ describe('refusing a connect minted before a revocation reached the room', () =>
     expectRefused(ana)
     await room.webSocketClose(ana, CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON, true)
 
-    expect(peer.sent.filter((frame) => frame.t !== 'presence' || 'joined' in frame)).toEqual([])
+    expect(peer.sent).toEqual([])
     expect(storage.data.has('meta')).toBe(false)
     const snapshot = await room.fetch(new Request('https://room/snapshot'))
     await expect(snapshot.json()).resolves.toMatchObject({ peers: [{ user: { id: 'ben' } }] })
@@ -847,5 +851,167 @@ describe('refusing a connect minted before a revocation reached the room', () =>
     expect(storage.data.has('w:room')).toBe(false)
     expect(storage.alarmAt).toBeNull()
     expect((await connect('ana', undefined)).closedWith).toBeNull()
+  })
+  function resetAt(stamp: number | string | null) {
+    return room.fetch(
+      new Request('https://room/reset', {
+        method: 'POST',
+        headers:
+          stamp === null
+            ? {}
+            : { [TRIP_ROOM_REVOKED_AT_HEADER]: String(stamp) },
+      }),
+    )
+  }
+
+  it('resets content and person identifiers while retaining the latest applicable barrier', async () => {
+    await room.fetch(commitRequest())
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    now += 500
+    await closeAt(now, { userId: 'ben' })
+    await resetAt(REVOKED_AT)
+    expect([...storage.data]).toEqual([['w:room', now]])
+    expectRefused(await connect('ana', BEFORE))
+    expectRefused(await connect('ben', undefined))
+    expect((await connect('ana', now + SKEW)).closedWith).toBeNull()
+    expect(storage.alarmAt).not.toBeNull()
+    for (const legacy of [null, 'soon', '-1', '1.5']) {
+      await resetAt(legacy)
+      expect([...storage.data]).toEqual([['w:room', now]])
+    }
+  })
+
+  it('orders reset after an in-flight commit and erases its result', async () => {
+    const put = storage.put
+    let release = () => {}
+    const paused = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let started = () => {}
+    const entered = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    storage.put = async (entries) => {
+      if ('meta' in entries) {
+        started()
+        await paused
+      }
+      await put(entries)
+    }
+    const commit = room.fetch(commitRequest())
+    await entered
+    const reset = resetAt(REVOKED_AT)
+    release()
+    await Promise.all([commit, reset])
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('preserves barriers during idle erasure, then prunes them at expiry', async () => {
+    await room.fetch(commitRequest())
+    now += TRIP_ROOM_IDLE_TTL_MS + 1
+    await closeAt(now)
+    storage.alarmAt = null
+    await room.alarm()
+    expect([...storage.data]).toEqual([['w:room', now]])
+    expect(storage.alarmAt).not.toBeNull()
+    now += TRIP_ROOM_REVOCATION_TTL_MS + 1
+    storage.alarmAt = null
+    await room.alarm()
+    expect(storage.data.size).toBe(0)
+    expect(storage.alarmAt).toBeNull()
+  })
+
+  it('rejects timestamps beyond the allowed skew without weakening an existing barrier', async () => {
+    await closeAt(REVOKED_AT)
+    await closeAt(REVOKED_AT + SKEW + 1)
+    await resetAt('999999999999999')
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+    expectRefused(await connect('ana', BEFORE))
+    expect((await connect('ana', REVOKED_AT + SKEW)).closedWith).toBeNull()
+  })
+
+  it('still evicts and answers 200 when close cannot persist its watermark', async () => {
+    const ana = await connect('ana', BEFORE)
+    storage.put = async () => {
+      throw new Error('storage unavailable')
+    }
+    expect((await closeAt(REVOKED_AT)).status).toBe(200)
+    expectRefused(ana)
+    expect(sink.records.some((record) => record.level === 'error')).toBe(true)
+  })
+
+  it('makes a failed reset observable and retryable without discarding a newer barrier', async () => {
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    const put = storage.put
+    storage.put = async () => {
+      throw new Error('storage unavailable')
+    }
+    await expect(resetAt(REVOKED_AT - 1)).rejects.toThrow('storage unavailable')
+    expect(storage.data.get('w:u:ana')).toBe(REVOKED_AT)
+    storage.put = put
+    await resetAt(REVOKED_AT - 1)
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('never postpones an earlier alarm while recording, resetting or pruning barriers', async () => {
+    storage.alarmAt = now + 10
+    await closeAt(REVOKED_AT)
+    expect(storage.alarmAt).toBe(now + 10)
+    await resetAt(REVOKED_AT)
+    expect(storage.alarmAt).toBe(now + 10)
+    await room.alarm()
+    expect(storage.alarmAt).toBe(now + 10)
+  })
+
+  it('closes refused sockets on communication and by alarm if their timer is lost', async () => {
+    await closeAt(REVOKED_AT)
+    const speaking = await connect('ana', BEFORE, 'header', false)
+    const silent = await connect('ben', BEFORE, 'header', false)
+    vi.clearAllTimers()
+    await room.webSocketMessage(speaking, HELLO)
+    expectRefused(speaking)
+    now += TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS + 1
+    storage.alarmAt = null
+    const resumed = new TripRoom(
+      { storage, acceptWebSocket: () => {}, getWebSockets: () => accepted },
+      {},
+      { now: () => now },
+    )
+    await resumed.alarm()
+    expectRefused(silent)
+  })
+
+  it('tolerates a peer closure and repeated close before the delayed refusal', async () => {
+    await closeAt(REVOKED_AT)
+    const ana = await connect('ana', BEFORE, 'header', false)
+    ana.close = () => {
+      throw new Error('already closed')
+    }
+    await room.webSocketClose(ana, 1000, '', true)
+    await closeAt(REVOKED_AT)
+    await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
+  })
+
+  it('erases a large room within the storage batch bound and preserves the barrier', async () => {
+    for (let index = 0; index < 300; index++)
+      storage.data.set(`e:${index}`, { by: 'ana' })
+    const remove = storage.delete
+    storage.delete = async (keys) => {
+      expect(keys.length).toBeLessThanOrEqual(128)
+      return remove(keys)
+    }
+    await resetAt(REVOKED_AT)
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('prunes watermarks without skipping the maximum socket age backstop', async () => {
+    const ana = await connect('ana', BEFORE)
+    await room.webSocketMessage(ana, HELLO)
+    await closeAt(REVOKED_AT, { userId: 'ben' })
+    now += TRIP_ROOM_MAX_SOCKET_AGE_MS + 1
+    storage.alarmAt = null
+    await room.alarm()
+    expect(ana.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect(storage.data.has('w:u:ben')).toBe(false)
   })
 })

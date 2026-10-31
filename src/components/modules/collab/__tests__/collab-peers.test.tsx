@@ -43,6 +43,7 @@ const messages = {
   ...namespaceCatalogue('modules', Modules),
 }
 const data: CollabScreenData = {
+  canWrite: true,
   sections: { conversation: true, notes: true, polls: true },
   messages: [],
   messageCount: 0,

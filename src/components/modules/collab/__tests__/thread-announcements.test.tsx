@@ -56,6 +56,7 @@ function tree(messages: ReadonlyArray<MessageData>) {
     <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
       <TooltipProvider>
         <Thread
+          canWrite={true}
           tripId="trip-1"
           messages={messages}
           people={PEOPLE}

@@ -1008,12 +1008,11 @@ Sourced from `wiki: Budget-Tracking`.
 - `src/routes/_app/trips/$tripId/-costs/category-editor.tsx` — new.
 - `src/routes/_app/trips/$tripId/-costs/category-model.ts` — new. The pure half of this stage: the
   grouping resolver described above, and the mapping from a row to the palette position its swatch
-  class comes from. It **calls** `swatchFor()` (`src/routes/_app/-lib/tone.ts:157`), which already
-  cycles with `index % CATEGORY_SWATCHES.length`, and re-implements neither that function nor the
-  array behind it — a second swatch resolver would be the defect, and `tone.ts` is the foundations
-  stage's to extend, not this one's. No JSX and no import of `#/components/ui`, so the module is
-  collectable by the `server` project; `tone.ts` is a module of class-name strings and imports
-  nothing that needs a DOM. `src/routes/_app/-ui/plan-model.ts` is the precedent for a route-local
+  class comes from. It owns the stored-index resolver for this stage: wrap a non-negative
+  `colour_index` modulo eight and select the corresponding literal `text-data-1` … `text-data-8`
+  class on `bg-surface-inset`. The eight data tokens already ship in foundations (#1502);
+  no unused shared swatch array or resolver is kept in `tone.ts`. No JSX and no import of
+  `#/components/ui`, so the module is collectable by the `server` project. `src/routes/_app/-ui/plan-model.ts` is the precedent for a route-local
   model module beside the screen that uses it.
 - `src/routes/_app/trips/$tripId/-costs/__tests__/category-model.test.ts` — new. `.ts` and not
   `.tsx` on a measurement: `vitest.config.ts:49-51` includes `src/routes/**/*.test.ts` in the
@@ -1178,18 +1177,17 @@ grouping resolver and palette-index lookup it and the ledger both read. No new p
   because nothing can file an expense into one until `04-S3`, and the dialog reads "Nothing is filed
   here yet" for that case rather than pluralising a zero.
 
-**Tokens — one requirement filed.** The palette is a **token requirement for
-`00-foundations.md`**: `--color-data-1` … `--color-data-8`, plus a `-soft` companion for each,
-declared in `src/styles/tokens.css` with dark values re-declared rather than inverted, and every
-swatch verified at WCAG 2.2 AA against `--color-surface` and `--color-surface-2` in both themes.
-Eight rather than more: a warm neutral canvas will not carry a dozen distinguishable hues at AA, and
-a palette that cycles predictably beats one that is merely long. `colour_index` stores the position;
-the class comes from the palette map beside `CATEGORY_SWATCHES`
-(`src/routes/_app/-lib/tone.ts:148`), which today has six entries built on semantic tokens and is
-extended by the foundations stage, not by this one. **This stage hard-codes no hex.**
-
-The foundations register currently records "none required — no wave-1 plan has filed a token
-requirement yet". This filing changes that, and it is the only token this plan asks for.
+**Tokens — requirement shipped by #1502.** Foundations declares `--color-data-1` …
+`--color-data-8` in `src/styles/tokens.css`, with identical explicit and media-dark declarations.
+Every colour clears 3:1 against `--color-surface`, `--color-surface-2` and
+`--color-surface-inset`, and 4.5:1 against the inset ground used by category chips, in both themes.
+No `-soft` companions are needed: chips use the existing inset ground. The eight values are
+pairwise at least 15 CIE76 apart per theme, a product distinguishability requirement rather than
+an additional WCAG level. Any subset of categories can be neighbours, including the ring wrap.
+`colour_index` stores the position; this stage's `category-model.ts` resolves that position to
+one of the eight data utility classes. The built-in enum still uses `EXPENSE_CATEGORY_TINT`
+from `src/routes/_app/-lib/tone.ts`, which also supplies the donut's hue. **This stage hard-codes
+no hex.** The foundations register records this delivered token set.
 
 Amounts rendered in a category header — the category's total — carry
 `font-variant-numeric: tabular-nums`, as does the count beside it.
@@ -1252,9 +1250,8 @@ database already carrying `0000` and `0001`.
   resolver, both branches: a row carrying a `cost_category_id` resolves to that category's name and
   palette index, and a row carrying `NULL` — which in wave 1 is every row — resolves to the legacy
   enum's existing label. Also that a `colour_index` past the end of the palette still resolves to a
-  swatch class — the wrap is `swatchFor`'s, already at `src/routes/_app/-lib/tone.ts:157-159`, and
-  the test asserts this stage keeps routing through it rather than indexing the array itself, which
-  is the mistake that renders a swatch with no colour token behind it.
+  swatch class — the resolver wraps modulo eight and selects a declared data token; test the
+  first index, the last index and an index beyond the palette so no swatch loses its colour.
 
 **Browser evidence.** `describe` block `04-S2 — trip cost categories` in
 `e2e/budget-and-currencies.visual.spec.ts`, using the shared helpers and re-implementing none.

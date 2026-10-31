@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Tato cesta je archivována. Spolupráce je pouze pro čtení.',
+  'collab.readOnly.role':
+    'Pouze vlastníci a editoři cesty mohou měnit konverzaci, poznámky a ankety.',
   'notFound.title': 'Tuto cestu nemůžeme najít',
   'notFound.body':
     'Není mezi cestami, které můžete otevřít v aktuálním pracovním prostoru. Možná byla smazána nebo k ní nemáte přístup.',

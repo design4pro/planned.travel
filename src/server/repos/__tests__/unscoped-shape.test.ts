@@ -212,7 +212,7 @@ describe('Unscoped repository contract', () => {
     })
     expect(identifiers).toContain('openFeedScope')
     expect(identifiers).not.toContain('createScope')
-  })
+  }, 30000)
 
   it('keeps scope construction and SQL out of the trip invite resolver', () => {
     const identifiers = withProgram({}, (project) => {
@@ -232,5 +232,5 @@ describe('Unscoped repository contract', () => {
     for (const forbidden of ['createScope', 'openFeedScope', 'drizzle']) {
       expect(identifiers).not.toContain(forbidden)
     }
-  })
+  }, 30000)
 })

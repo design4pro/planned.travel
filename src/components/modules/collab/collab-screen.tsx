@@ -20,6 +20,8 @@ import { COLLAB_SECTION_PRESENTATION } from './sections'
 import type { CollabPerson, MessageData, NoteData, PollData } from './types'
 
 export interface CollabScreenData {
+  readonly canWrite?: boolean
+  readonly isArchived?: boolean
   readonly sections: CollabSections
   readonly messages: ReadonlyArray<MessageData>
   /** The whole conversation's size; `messages` is only its newest window. Null: no count to print. */
@@ -46,6 +48,8 @@ export function CollabScreen({
   const t = useTranslate()
   const locale = useLocale()
   const baseId = useId()
+  const canWrite = data.canWrite === true
+  const readOnlyId = `${baseId}-read-only`
   const [withDraft, setWithDraft] = useState<ReadonlySet<CollabSectionId>>(
     () => new Set(),
   )
@@ -158,6 +162,7 @@ export function CollabScreen({
           }}
           tabIndex={-1}
           aria-labelledby={heading}
+          aria-describedby={canWrite ? undefined : readOnlyId}
           className={cn(
             'min-w-0 focus-ring data-[state=inactive]:hidden xl:data-[state=inactive]:block xl:data-[state=active]:animate-none scroll-mt-[var(--collab-clearance)] [&_*]:scroll-mt-[var(--collab-clearance)]',
             id === 'conversation' && [
@@ -195,6 +200,15 @@ export function CollabScreen({
       data-slot="collab-root"
       className="flex flex-col gap-6 lg:gap-8 [--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+3.5rem)] lg:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+3.5rem)] xl:[--collab-clearance:calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+2rem)]"
     >
+      {!canWrite ? (
+        <p id={readOnlyId} role="status" className="text-caption text-ink-3">
+          {t(
+            data.isArchived
+              ? 'trips.collab.readOnly.archived'
+              : 'trips.collab.readOnly.role',
+          )}
+        </p>
+      ) : null}
       {hidden ? (
         <p className="text-caption text-ink-3">
           {t('trips.collab.sections.someHidden')}
@@ -233,7 +247,8 @@ export function CollabScreen({
                 messages={data.messages}
                 people={data.people}
                 viewerUserId={data.viewerUserId}
-                canModerate={canModerate}
+                canWrite={canWrite}
+                canModerate={canWrite && canModerate}
                 timeZone={data.timeZone}
                 onDirtyChange={conversationDirty}
                 turnedOff={!data.sections.conversation}
@@ -248,6 +263,7 @@ export function CollabScreen({
               'notes',
               <NotesBoard
                 tripId={tripId}
+                canWrite={canWrite}
                 notes={data.notes}
                 people={data.people}
                 newNoteOpen={newNoteOpen}
@@ -260,6 +276,7 @@ export function CollabScreen({
               'polls',
               <PollsBoard
                 tripId={tripId}
+                canWrite={canWrite}
                 polls={data.polls}
                 viewerUserId={data.viewerUserId}
                 newPollOpen={newPollOpen}
