@@ -18,6 +18,7 @@ import { downloadTripFileFn } from '#/server/fns/files'
 const MARKUP_TYPES: ReadonlySet<string> = new Set([
   'text/html',
   'image/svg+xml',
+  'application/gpx+xml',
 ])
 
 const GENERIC_BINARY = 'application/octet-stream'

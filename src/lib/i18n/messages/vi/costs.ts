@@ -175,7 +175,7 @@ const messages = {
   'memberBar.others': {
     other: '{others} người đi khác',
   },
-  'memberBar.notSplit': 'Chưa gán cho ai',
+  'memberBar.notSplit': 'Chưa chia cho ai',
   'totalTile.label': 'Tổng chi phí chuyến đi',
   'totalTile.captionPlanned': 'Dự kiến {amount} cho tất cả người đi',
   'totalTile.captionBudget': 'Ngân sách chuyến đi {amount}',

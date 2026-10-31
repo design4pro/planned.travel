@@ -48,6 +48,9 @@ export interface CategoryDonutProps {
   readonly currency: string
 }
 
+// Reserve a full word for the name; figures may wrap and planned amounts span both columns.
+const LEGEND_COLUMNS = 'grid-cols-[auto_minmax(min-content,1fr)_minmax(0,1fr)]'
+
 const CENTRE = 50
 const OUTER_RADIUS = 48
 const INNER_RADIUS = 31
@@ -241,7 +244,8 @@ function Legend({
             className={cn(
               // Wider than the list by its own padding, so the row's ground reaches
               // past the text and the inset focus ring stays inside the panel.
-              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption active:bg-surface-inset',
+              'focus-ring-inset -mx-2 grid w-[calc(100%+1rem)] items-baseline gap-x-2.5 gap-y-0.5 rounded-md px-2 py-1 text-start text-caption active:bg-surface-inset',
+              LEGEND_COLUMNS,
               // Pinned is a line as well as a ground, and a box-shadow rather than an
               // outline, which is the property the focus ring uses.
               link.pinned === row.key
@@ -260,13 +264,13 @@ function Legend({
               />
             </span>
             <Separator />
-            <span className="col-start-3 row-start-1 text-end font-semibold tabular-nums text-ink">
+            <span className="min-w-0 col-start-3 row-start-1 [overflow-wrap:anywhere] text-end font-semibold tabular-nums text-ink">
               {formatMoney(row.spentMinor, currency, locale)}
             </span>
             {row.plannedMinor > 0 ? (
               <Fragment>
                 <Separator />
-                <span className="col-start-3 row-start-2 text-end tabular-nums text-ink-4">
+                <span className="min-w-0 col-span-2 col-start-2 row-start-3 [overflow-wrap:anywhere] text-end tabular-nums text-ink-4">
                   {t('costs.categories.planned', {
                     amount: formatMoney(row.plannedMinor, currency, locale),
                   })}
@@ -279,12 +283,15 @@ function Legend({
       {plannedOnly.map((row) => (
         <li
           key={row.key}
-          className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 text-caption"
+          className={cn(
+            'grid items-baseline gap-x-2.5 text-caption',
+            LEGEND_COLUMNS,
+          )}
         >
           <Dot colour={row.colour} />
           <Name label={row.label} className="col-start-2 row-start-1" />
           <Separator />
-          <span className="col-start-3 row-start-1 text-end tabular-nums text-ink-3">
+          <span className="min-w-0 col-span-2 col-start-2 row-start-2 [overflow-wrap:anywhere] text-end tabular-nums text-ink-3">
             {t('costs.categories.planned', {
               amount: formatMoney(row.plannedMinor, currency, locale),
             })}
@@ -307,13 +314,7 @@ function Dot({ colour }: { colour: string }) {
 
 /** The category name wraps; it is never cut off. */
 function Name({ label, className }: { label: string; className: string }) {
-  return (
-    <span
-      className={cn('min-w-0 text-ink-2 [overflow-wrap:anywhere]', className)}
-    >
-      {label}
-    </span>
-  )
+  return <span className={cn('text-ink-2', className)}>{label}</span>
 }
 
 /** Punctuation only a screen reader needs, so a row reads as one phrase. */

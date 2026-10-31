@@ -96,7 +96,7 @@ export const pdfExportPayloadSchema = z.object({
   tripId: z.string().min(1).max(64),
   requestedBy: z.string().min(1).max(64),
   document: exportDocumentSchema,
-  /** Notify this address when the artifact is ready. */
+  /** Notify when ready; the producer sets this address from the session, never from client input. */
   notify: z.string().email().optional(),
   /**
    * The requester's language, for the document shell and the "ready" email.

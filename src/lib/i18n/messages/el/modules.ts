@@ -1081,14 +1081,19 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - δημιουργήθηκε στις {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Έτοιμο: {title}',
+  'files.export.email.subject': 'Η εξαγωγή είναι έτοιμη: {title}',
   'files.export.email.body': {
-    one: 'Η εξαγωγή του ταξιδιού είναι έτοιμη. Διατηρείται για {count} ημέρα.',
+    one: 'Η εξαγωγή του ταξιδιού {title} είναι έτοιμη. Διατηρείται για {count} ημέρα.',
     other:
-      'Η εξαγωγή του ταξιδιού είναι έτοιμη. Διατηρείται για {count} ημέρες.',
+      'Η εξαγωγή του ταξιδιού {title} είναι έτοιμη. Διατηρείται για {count} ημέρες.',
   },
-  'files.export.email.action': 'Άνοιγμα: {title}',
-  'files.export.email.text': 'Η εξαγωγή του ταξιδιού είναι έτοιμη: {url}',
+  'files.export.email.action': 'Μετάβαση στην εξαγωγή',
+  'files.export.email.text':
+    '{body}\n\n{limit}\n\nΜετάβαση στην εξαγωγή: {url}',
+  'files.export.limit': {
+    one: 'Ένα ταξίδι διατηρεί την {count} πιο πρόσφατη εξαγωγή του.',
+    other: 'Ένα ταξίδι διατηρεί τις {count} πιο πρόσφατες εξαγωγές του.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Εξαγωγή του ταξιδιού',

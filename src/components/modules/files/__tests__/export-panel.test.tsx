@@ -1,3 +1,4 @@
+import { EXPORT_KEEP_COUNT } from '#/server/storage/export-artifacts'
 import '#/components/ui/__tests__/test-env'
 
 import { Profiler } from 'react'
@@ -851,4 +852,21 @@ it('does not show an earlier editing request after the traveller becomes a viewe
     'Only owners and editors can create an export. You can download the ones that exist.',
   )
   expect(document.querySelector('[data-state="pending"]')).toBeNull()
+})
+
+it.each([
+  ['owner', true],
+  ['editor', true],
+  ['viewer', false],
+])('states the shared export limit for %s', async (_role, canRequest) => {
+  listTripExportsFn.mockResolvedValue({ ...TWO, canRequest })
+  mount()
+  await screen.findByText(
+    canRequest ? 'Export the trip' : Modules['files.export.viewer'],
+  )
+  expect(
+    screen.getByText(`A trip keeps its ${EXPORT_KEEP_COUNT} newest exports.`, {
+      exact: false,
+    }),
+  ).toBeTruthy()
 })

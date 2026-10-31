@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { namespaceTranslate } from '#/lib/i18n/__tests__/namespace-translate'
+import ArCosts from '#/lib/i18n/messages/ar/costs'
 import DeCosts from '#/lib/i18n/messages/de/costs'
 import EnCosts from '#/lib/i18n/messages/en/costs'
 
@@ -270,6 +271,18 @@ describe('findPerson', () => {
   it('returns nothing for someone the payload does not name', () => {
     expect(findPerson([MEMBER], DEPARTED, 'u-nobody')).toBeUndefined()
   })
+
+  it('returns a null name for a trip member the workspace has no profile for, keeping the picture', () => {
+    const left = {
+      ...MEMBER,
+      userId: 'u-left',
+      name: 'Removed traveller',
+      leftWorkspace: true,
+    }
+    const found = findPerson([MEMBER, left], DEPARTED, 'u-left')
+    expect(found?.name).toBeNull()
+    expect(found?.image).toBe('ada.png')
+  })
 })
 
 describe('shareTotalOf', () => {
@@ -332,6 +345,29 @@ describe('sharesDoNotAddUp', () => {
 })
 
 describe('filterExpenses', () => {
+  it('matches a removed payer by the name displayed in the reader’s locale', () => {
+    const row = expense({ paidBy: 'u-gone' })
+    const people: ReadonlyArray<CostsPerson> = [
+      {
+        userId: 'u-gone',
+        name: 'Removed traveller',
+        email: '',
+        image: null,
+        role: 'member',
+        leftWorkspace: true,
+      },
+    ]
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: ArCosts['person.removed'] },
+        people,
+        'u-rafal',
+        ArCosts['person.removed'],
+      ),
+    ).toEqual([row])
+  })
+
   it('returns everything when nothing is filtered', () => {
     expect(filterExpenses(ROWS, ALL, PEOPLE, 'u-rafal')).toHaveLength(3)
   })

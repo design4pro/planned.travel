@@ -456,6 +456,8 @@ const messages = {
   'plan.weather.panel.low': 'Laagste',
   'plan.weather.panel.recordedNote': 'Gemeten waarden voor deze dag.',
   'plan.weather.panel.temperatureTypical': 'Typisch hoogste / laagste',
+  'plan.weather.panel.typicalHigh': 'Typisch hoogste',
+  'plan.weather.panel.typicalLow': 'Typisch laagste',
   'plan.weather.panel.estimateNote':
     'Een langjarig gemiddelde voor deze maand, geen voorspelling.',
   'plan.weather.attribution.metNorway':

@@ -120,6 +120,12 @@ function badge(
   )
 }
 
+/** True when `later` comes after `earlier` in document order. */
+const follows = (earlier: Node, later: Node) =>
+  (earlier.compareDocumentPosition(later) &
+    Node.DOCUMENT_POSITION_FOLLOWING) !==
+  0
+
 describe('the forecast badge name contains its visible text (WCAG 2.5.3)', () => {
   const noCondition = forecast({ ...READING, symbol: null })
 
@@ -506,6 +512,23 @@ describe('the fuller reading of a recorded day', () => {
     expect(screen.getByText('2°C')).toBeDefined()
     expect(screen.queryByText('High / low')).toBeNull()
   })
+
+  it('reads the note before the figures and keeps the credit last', async () => {
+    const { dialog } = await open()
+
+    const note = within(dialog).getByText('Measured values for this day.')
+    expect(follows(note, within(dialog).getByText('8° / 2°C'))).toBe(true)
+    expect(
+      follows(
+        within(dialog).getByText('8° / 2°C'),
+        within(dialog).getByText(
+          'Data: NASA Langley Research Center POWER Project',
+        ),
+      ),
+    ).toBe(true)
+    expect(note.tagName).toBe('P')
+    expect(note.className).toContain('text-caption')
+  })
 })
 
 describe('the fuller reading of an estimated day', () => {
@@ -522,6 +545,38 @@ describe('the fuller reading of an estimated day', () => {
     expect(within(dialog).getByText('Typical high / low')).toBeDefined()
     expect(within(dialog).queryByText('High / low')).toBeNull()
     expect(within(dialog).getByText('8° / 2°C')).toBeDefined()
+  })
+
+  it.each([
+    ['high', { tempMinC: null }, 'Typical high', '8°C'],
+    ['low', { tempMaxC: null }, 'Typical low', '2°C'],
+  ])(
+    'labels an estimate with only a %s as typical, so it does not read as a prediction',
+    (_name, missing, label, figure) => {
+      render(
+        <DayWeatherPanel reading={{ ...ESTIMATE, ...missing }} unit="metric" />,
+      )
+
+      expect(screen.getByText(label)).toBeDefined()
+      expect(screen.getByText(figure)).toBeDefined()
+      expect(screen.queryByText(/^(High|Low)$/)).toBeNull()
+    },
+  )
+
+  it('reads the note before the figures and keeps the credit last', async () => {
+    const { dialog } = await open()
+
+    const note = within(dialog).getByText(
+      'A long-term average for this month, not a forecast.',
+    )
+    const figures = within(dialog).getByText('8° / 2°C')
+    const credit = within(dialog).getByText(
+      'Data: NASA Langley Research Center POWER Project',
+    )
+    expect(follows(note, figures)).toBe(true)
+    expect(follows(figures, credit)).toBe(true)
+    expect(note.tagName).toBe('P')
+    expect(note.className).toContain('text-caption')
   })
 
   it('says it is a long-term average and not a forecast', async () => {
@@ -570,6 +625,22 @@ describe('the fuller reading of an estimated day', () => {
 })
 
 describe('DayWeatherPanel', () => {
+  it('orders the parts as note, rows and credit for a non-forecast, and rows then credit for a forecast', () => {
+    const order = (reading: DayReading) => {
+      const { container, unmount } = render(
+        <DayWeatherPanel reading={reading} unit="metric" />,
+      )
+      const panel = container.querySelector('[data-part="day-weather-panel"]')
+      const parts = Array.from(panel?.children ?? []).map((c) => c.tagName)
+      unmount()
+      return parts
+    }
+
+    expect(order(RECORDED)).toEqual(['P', 'DL', 'P'])
+    expect(order(ESTIMATE)).toEqual(['P', 'DL', 'P'])
+    expect(order(READING)).toEqual(['DL', 'UL', 'P'])
+  })
+
   it('omits the slots region entirely for a reading with no slots', () => {
     render(
       <DayWeatherPanel reading={{ ...READING, slots: null }} unit="metric" />,

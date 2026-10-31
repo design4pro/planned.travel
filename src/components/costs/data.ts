@@ -150,20 +150,22 @@ export function offeredPeople(
 }
 
 /**
- * The one lookup every part of the costs screen names a person through: trip members first, then
+ * The shared lookup for costs summaries, balances and expense rows: trip members first, then
  * the departed travellers the payload lists. `undefined` is a person the payload does not know at
- * all; a `null` name is a departed traveller this workspace has no profile for. Each caller words
- * both from the catalogue, so the fallback stays where the sentence is.
+ * all; a `null` name is a traveller this workspace has no profile for, whether they left the trip or
+ * only the workspace (`leftWorkspace`). Each caller words both from the catalogue, so the fallback
+ * stays where the sentence is.
  */
 export function findPerson(
   people: ReadonlyArray<CostsPerson>,
   departedPeople: ReadonlyArray<CostsDepartedPerson>,
   userId: string,
 ): { readonly name: string | null; readonly image: string | null } | undefined {
-  return (
-    people.find((person) => person.userId === userId) ??
-    departedPeople.find((person) => person.userId === userId)
-  )
+  const member = people.find((person) => person.userId === userId)
+  // The server names a member the workspace no longer has a profile for in English (#1034); a
+  // `null` name lets the caller word them from the catalogue instead.
+  if (member?.leftWorkspace === true) return { ...member, name: null }
+  return member ?? departedPeople.find((person) => person.userId === userId)
 }
 
 /**
@@ -177,10 +179,17 @@ export function filterExpenses(
   filters: CostsFilters,
   people: ReadonlyArray<CostsPerson>,
   viewerUserId: string,
+  removedPersonName?: string,
 ): Array<CostsExpense> {
   const needle = (filters.q ?? '').trim().toLowerCase()
   const nameOf = new Map(
-    people.map((person) => [person.userId, person.name.toLowerCase()]),
+    people.map((person) => [
+      person.userId,
+      (person.leftWorkspace === true && removedPersonName !== undefined
+        ? removedPersonName
+        : person.name
+      ).toLowerCase(),
+    ]),
   )
 
   return rows.filter((row) => {

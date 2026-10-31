@@ -1053,13 +1053,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - oluşturulma: {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} hazır',
+  'files.export.email.subject': 'Dışa aktarım hazır: {title}',
   'files.export.email.body': {
-    one: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
-    other: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+    one: '{title} için dışa aktarımınız hazır. {count} gün saklanır.',
+    other: '{title} için dışa aktarımınız hazır. {count} gün saklanır.',
   },
-  'files.export.email.action': '{title} öğesini aç',
-  'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
+  'files.export.email.action': 'Dışa aktarıma git',
+  'files.export.email.text': '{body}\n\n{limit}\n\nDışa aktarıma git: {url}',
+  'files.export.limit': {
+    one: 'Bir seyahatin en yeni {count} dışa aktarımı saklanır.',
+    other: 'Bir seyahatin en yeni {count} dışa aktarımı saklanır.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Geziyi dışa aktar',

@@ -441,6 +441,8 @@ const messages = {
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': 'この日の観測値です。',
   'plan.weather.panel.temperatureTypical': '平年の最高 / 最低',
+  'plan.weather.panel.typicalHigh': '平年の最高',
+  'plan.weather.panel.typicalLow': '平年の最低',
   'plan.weather.panel.estimateNote':
     'この月の長期平均であり、予報ではありません。',
   'plan.weather.attribution.metNorway': '予報データ: MET Norway、CC BY 4.0',

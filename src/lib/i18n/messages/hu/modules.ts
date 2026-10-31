@@ -1068,13 +1068,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - létrehozva: {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} elkészült',
+  'files.export.email.subject': 'Az export elkészült: {title}',
   'files.export.email.body': {
-    one: 'Az utazás exportja elkészült. {count} napig őrizzük meg.',
-    other: 'Az utazás exportja elkészült. {count} napig őrizzük meg.',
+    one: 'A(z) {title} exportja elkészült. {count} napig őrizzük meg.',
+    other: 'A(z) {title} exportja elkészült. {count} napig őrizzük meg.',
   },
-  'files.export.email.action': '{title} megnyitása',
-  'files.export.email.text': 'Az utazás exportja elkészült: {url}',
+  'files.export.email.action': 'Ugrás az exporthoz',
+  'files.export.email.text': '{body}\n\n{limit}\n\nUgrás az exporthoz: {url}',
+  'files.export.limit': {
+    one: 'Egy utazás a legújabb {count} exportot őrzi meg.',
+    other: 'Egy utazás a legújabb {count} exportot őrzi meg.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Az utazás exportálása',

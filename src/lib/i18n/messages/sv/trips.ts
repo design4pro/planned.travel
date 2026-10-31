@@ -451,6 +451,8 @@ const messages = {
   'plan.weather.panel.low': 'Lägsta',
   'plan.weather.panel.recordedNote': 'Uppmätta värden för den här dagen.',
   'plan.weather.panel.temperatureTypical': 'Typiskt högsta / lägsta',
+  'plan.weather.panel.typicalHigh': 'Typiskt högsta',
+  'plan.weather.panel.typicalLow': 'Typiskt lägsta',
   'plan.weather.panel.estimateNote':
     'Ett långtidsmedelvärde för den här månaden, inte en prognos.',
   'plan.weather.attribution.metNorway': 'Prognosdata: MET Norway, CC BY 4.0',

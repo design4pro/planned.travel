@@ -310,7 +310,12 @@ export function SplitEditor({
   const departedIds = new Set(departed.map((person) => person.userId))
   const currentRows = draft.rows.filter((row) => !departedIds.has(row.userId))
   const listed = [
-    ...people.map((person) => ({ ...person, departed: false })),
+    ...people.map((person) => ({
+      ...person,
+      name:
+        person.leftWorkspace === true ? t('costs.person.removed') : person.name,
+      departed: false,
+    })),
     ...departed.map((person) => ({
       ...person,
       name: person.name ?? t('costs.person.removed'),

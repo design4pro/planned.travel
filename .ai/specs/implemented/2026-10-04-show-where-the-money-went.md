@@ -157,8 +157,10 @@ first in the order given, then planned-only rows in the order given. A planned-o
 plain `<li>` (it has no segment to highlight) and shows the name and `categories.planned` only — no
 percent and no zero amount — so its accessible text is, for example, `Insurance, €200.00 planned`.
 A spending row's content, in DOM and reading order: the category name, the percent, the amount, then
-the planned amount when there is one; laid out on two lines (dot, name, amount on the first; percent
-and planned on the second), the **name wraps and is never cut off**. Separators are visually hidden
+the planned amount when there is one; laid out on separate lines (dot, name, amount on the first; percent
+on the second and planned on its own third line). Planned-only rows place the planned amount
+below the name. The **name wraps between words and is never cut off**; long figures may wrap
+within their columns without taking space from a full word in the name. Separators are visually hidden
 punctuation, so the accessible name of a spending row reads, for example,
 `Food & drink, 32%, €412.00, €500.00 planned`, and for a share under 1% the spoken form,
 `Fees & charges, less than 1%, €3.00`; the component test asserts those exact strings (with the
@@ -603,3 +605,18 @@ What Phase 3 shipped differently from the text above (#1211):
 
 - **The per-member sums live in `components/costs/data.ts`** (`memberShares`, beside `totalsFor`); `stat-tiles.tsx` only attaches names. The segment geometry is `memberSegments` in `chart-geometry.ts`, and `MemberSegment` carries `weightMinor`.
 - **The footer's `dt` labels ("Your share", "You paid") wrap instead of truncating.** Now they are catalogue strings, a longer translation (pl "Zapłacone przez Ciebie") was cut to an ellipsis in the half-width column; they use `[overflow-wrap:anywhere]` like the member list. The `dd` figures still truncate.
+
+## Amendment - member bar copy (#1212, PR #1656)
+
+The `memberBar.notSplit` remainder label is now "Not split between anyone"
+in English, with split-editor wording in every locale. The historical
+"Not assigned to anyone" wording above describes the original implementation.
+A trip member marked `leftWorkspace` is named from `costs.person.removed` in the
+reader’s locale; each removed traveller keeps a separate row and share. The
+people payload and share calculations are unchanged. Carried members in expense
+and payment pickers, including split-editor visible and accessible labels, use
+the same localized fallback. Payer search matches the displayed localized
+removed-traveller label.
+
+The Arabic `memberBar.others.two` uses the dual without a repeated numeral;
+`balances.count.two` remains unchanged.
