@@ -1059,13 +1059,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - skapad {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} är klar',
+  'files.export.email.subject': 'Export klar: {title}',
   'files.export.email.body': {
-    one: 'Reseexporten är klar. Den sparas i {count} dag.',
-    other: 'Reseexporten är klar. Den sparas i {count} dagar.',
+    one: 'Din export av {title} är klar. Den sparas i {count} dag.',
+    other: 'Din export av {title} är klar. Den sparas i {count} dagar.',
   },
-  'files.export.email.action': 'Öppna {title}',
-  'files.export.email.text': 'Reseexporten är klar: {url}',
+  'files.export.email.action': 'Gå till exporten',
+  'files.export.email.text': '{body}\n\n{limit}\n\nGå till exporten: {url}',
+  'files.export.limit': {
+    one: 'En resa behåller sin {count} senaste export.',
+    other: 'En resa behåller sina {count} senaste exporter.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Exportera resan',

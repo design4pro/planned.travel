@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Perjalanan ini diarsipkan. Kolaborasi hanya dapat dibaca.',
+  'collab.readOnly.role':
+    'Hanya pemilik dan editor perjalanan yang dapat mengubah percakapan, catatan, dan jajak pendapat.',
   'notFound.title': 'Kami tidak dapat menemukan perjalanan ini',
   'notFound.body':
     'Perjalanan ini tidak termasuk yang dapat kamu buka di ruang kerja saat ini. Mungkin perjalanan ini telah dihapus, atau kamu tidak memiliki akses.',
@@ -447,6 +451,8 @@ const messages = {
   'plan.weather.panel.low': 'Terendah',
   'plan.weather.panel.recordedNote': 'Nilai terukur pada hari tersebut.',
   'plan.weather.panel.temperatureTypical': 'Tertinggi / terendah umumnya',
+  'plan.weather.panel.typicalHigh': 'Tertinggi umumnya',
+  'plan.weather.panel.typicalLow': 'Terendah umumnya',
   'plan.weather.panel.estimateNote':
     'Rata-rata jangka panjang untuk bulan ini, bukan prakiraan.',
   'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',

@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Цю подорож архівовано. Спільна робота доступна лише для читання.',
+  'collab.readOnly.role':
+    'Лише власники й редактори подорожі можуть змінювати розмову, нотатки та опитування.',
   'notFound.title': 'Не можемо знайти цю подорож',
   'notFound.body':
     'Її немає серед подорожей, які ви можете відкрити в поточному робочому просторі. Можливо, її видалено або ви не маєте до неї доступу.',
@@ -477,6 +481,8 @@ const messages = {
   'plan.weather.panel.low': 'Мінімум',
   'plan.weather.panel.recordedNote': 'Виміряні значення за цей день.',
   'plan.weather.panel.temperatureTypical': 'Типові макс. / мін.',
+  'plan.weather.panel.typicalHigh': 'Типовий максимум',
+  'plan.weather.panel.typicalLow': 'Типовий мінімум',
   'plan.weather.panel.estimateNote':
     'Багаторічне середнє за цей місяць, а не прогноз.',
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',

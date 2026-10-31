@@ -36,11 +36,13 @@ export function PollDialog({
   open,
   onOpenChange,
   turnedOff = false,
+  canWrite,
 }: {
   tripId: string
   open: boolean
   onOpenChange: (open: boolean) => void
   turnedOff?: boolean
+  canWrite: boolean
 }) {
   const formId = useId()
 
@@ -80,7 +82,10 @@ export function PollDialog({
   const questionError =
     question.trim().length === 0 ? 'Ask the group something.' : undefined
   const canSave =
-    optionsError === undefined && questionError === undefined && !create.pending
+    canWrite &&
+    optionsError === undefined &&
+    questionError === undefined &&
+    !create.pending
 
   function setOption(index: number, value: string): void {
     setOptions((current) =>
@@ -89,6 +94,7 @@ export function PollDialog({
   }
 
   async function submit(): Promise<void> {
+    if (!canWrite) return
     setTouched(true)
     if (!canSave) {
       return
@@ -109,7 +115,7 @@ export function PollDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && canWrite} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader>
           <DialogTitle>{t('modules.collab.poll.dialog.addTitle')}</DialogTitle>

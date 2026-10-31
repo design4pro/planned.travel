@@ -5,6 +5,7 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import ArCosts from '#/lib/i18n/messages/ar/costs'
 import Costs from '#/lib/i18n/messages/en/costs'
 import { MEMBER_TINTS, MemberBar } from '../member-bar'
 
@@ -49,6 +50,24 @@ function rows(): Array<string> {
 }
 
 describe('MemberBar', () => {
+  it('uses the Arabic dual without a repeated numeral for two other travellers', () => {
+    render(
+      <I18nProvider locale="ar" messages={namespaceCatalogue('costs', ArCosts)}>
+        <MemberBar
+          members={Array.from({ length: 5 }, (_, index) =>
+            member(`u${index}`, 200),
+          )}
+          spentMinor={1_000}
+        />
+      </I18nProvider>,
+    )
+
+    const list = screen.getByRole('list', { name: ArCosts['memberBar.label'] })
+    expect(
+      within(list).getByText('مسافران آخران', { exact: true }),
+    ).toBeTruthy()
+  })
+
   it('hides the bar from assistive technology', () => {
     const { container } = renderBar(
       [member('a', 600, 'Ana'), member('b', 400, 'Ben')],
@@ -104,13 +123,13 @@ describe('MemberBar', () => {
     ).toBeDefined()
   })
 
-  it('adds "Not assigned to anyone" last when the shares fall short', () => {
+  it('adds "Not split between anyone" last when the shares fall short', () => {
     renderBar([member('a', 600, 'Ana'), member('b', 300, 'Ben')], 1_000)
 
     expect(rows()).toEqual([
       'Ana, 60%',
       'Ben, 30%',
-      'Not assigned to anyone, 10%',
+      'Not split between anyone, 10%',
     ])
   })
 
@@ -131,7 +150,7 @@ describe('MemberBar', () => {
       'Ben, 25%',
       'Cy, 20%',
       '2 other travellers, 20%',
-      'Not assigned to anyone, 5%',
+      'Not split between anyone, 5%',
     ])
   })
 
@@ -206,7 +225,7 @@ describe('MemberBar', () => {
   it('shows a member and the remainder as two segments', () => {
     renderBar([member('a', 400, 'Ana')], 1_000)
 
-    expect(rows()).toEqual(['Ana, 40%', 'Not assigned to anyone, 60%'])
+    expect(rows()).toEqual(['Ana, 40%', 'Not split between anyone, 60%'])
   })
 
   it('uses only logical properties', () => {

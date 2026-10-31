@@ -1086,13 +1086,18 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - erstellt am {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} ist fertig',
+  'files.export.email.subject': 'Export fertig: {title}',
   'files.export.email.body': {
-    one: 'Der Reiseexport ist fertig. Er wird {count} Tag aufbewahrt.',
-    other: 'Der Reiseexport ist fertig. Er wird {count} Tage aufbewahrt.',
+    one: 'Dein Export von {title} ist fertig. Er wird {count} Tag aufbewahrt.',
+    other:
+      'Dein Export von {title} ist fertig. Er wird {count} Tage aufbewahrt.',
   },
-  'files.export.email.action': '{title} öffnen',
-  'files.export.email.text': 'Der Reiseexport ist fertig: {url}',
+  'files.export.email.action': 'Zum Export',
+  'files.export.email.text': '{body}\n\n{limit}\n\nZum Export: {url}',
+  'files.export.limit': {
+    one: 'Eine Reise behält ihren {count} neuesten Export.',
+    other: 'Eine Reise behält ihre {count} neuesten Exporte.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Reise exportieren',

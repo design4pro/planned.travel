@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Deze reis is gearchiveerd. Samenwerking is alleen-lezen.',
+  'collab.readOnly.role':
+    'Alleen reiseigenaren en bewerkers kunnen het gesprek, de notities en de peilingen wijzigen.',
   'notFound.title': 'We kunnen deze reis niet vinden',
   'notFound.body':
     'Deze staat niet tussen de reizen die je in de huidige werkruimte kunt openen. De reis is mogelijk verwijderd of je hebt er geen toegang toe.',
@@ -456,6 +460,8 @@ const messages = {
   'plan.weather.panel.low': 'Laagste',
   'plan.weather.panel.recordedNote': 'Gemeten waarden voor deze dag.',
   'plan.weather.panel.temperatureTypical': 'Typisch hoogste / laagste',
+  'plan.weather.panel.typicalHigh': 'Typisch hoogste',
+  'plan.weather.panel.typicalLow': 'Typisch laagste',
   'plan.weather.panel.estimateNote':
     'Een langjarig gemiddelde voor deze maand, geen voorspelling.',
   'plan.weather.attribution.metNorway':

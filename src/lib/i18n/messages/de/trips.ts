@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Diese Reise ist archiviert. Die Zusammenarbeit ist schreibgeschützt.',
+  'collab.readOnly.role':
+    'Nur Reiseinhaber und Bearbeiter können die Unterhaltung, Notizen und Umfragen ändern.',
   'notFound.title': 'Wir können diese Reise nicht finden',
   'notFound.body':
     'Sie gehört nicht zu den Reisen, die du im aktuellen Arbeitsbereich öffnen kannst. Sie wurde möglicherweise gelöscht oder du hast keinen Zugriff darauf.',
@@ -465,6 +469,8 @@ const messages = {
   'plan.weather.panel.low': 'Tiefstwert',
   'plan.weather.panel.recordedNote': 'Gemessene Werte für diesen Tag.',
   'plan.weather.panel.temperatureTypical': 'Typischer Höchst- / Tiefstwert',
+  'plan.weather.panel.typicalHigh': 'Typischer Höchstwert',
+  'plan.weather.panel.typicalLow': 'Typischer Tiefstwert',
   'plan.weather.panel.estimateNote':
     'Ein langjähriger Durchschnitt für diesen Monat, keine Vorhersage.',
   'plan.weather.attribution.metNorway':

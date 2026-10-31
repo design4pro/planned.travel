@@ -44,9 +44,37 @@ describe('ci.yml attestation gate', () => {
   })
 
   it.each(['attestation', 'scope', 'e2e-report'])(
-    '%s runs GitHub-hosted: seconds of work must not queue for a pool slot',
+    '%s prepares its tools before checkout and control commands',
     (job) => {
-      expect(block(job)).toMatch(/^ {4}runs-on: ubuntu-latest$/m)
+      const text = block(job)
+      const packages =
+        job === 'scope' ? 'git tar gzip xz-utils' : 'git gh tar gzip xz-utils'
+      expect(text).toContain(
+        'apt-get -o Dir::State::lists="$tools/lists" update',
+      )
+      expect(text).not.toContain('sudo')
+      expect(text).toContain('dpkg-deb --extract "$package" "$tools"')
+      expect(text).toContain('echo "$tools/usr/bin" >> "$GITHUB_PATH"')
+      expect(text).toContain(
+        `apt-get -o Dir::State::lists="$tools/lists" -o Dir::State::status=/dev/null download ${packages}`,
+      )
+      expect(text).toContain('uses: actions/setup-node@v7')
+      expect(text).toContain('node-version: 24.x')
+      expect(text.indexOf('dpkg-deb --extract')).toBeLessThan(
+        text.indexOf('uses: actions/setup-node@v7'),
+      )
+      expect(text.indexOf('uses: actions/setup-node@v7')).toBeLessThan(
+        text.indexOf('uses: actions/checkout@v7'),
+      )
+    },
+  )
+
+  it.each(['attestation', 'scope', 'e2e-report'])(
+    '%s uses the existing RUNNER_CI routing and recovery expression',
+    (job) => {
+      expect(block(job).match(/^ {4}runs-on: (.*)$/m)?.[1]).toBe(
+        '${{ fromJSON(vars.RUNNER_CI || \'["self-hosted","linux","X64","ci"]\') }}',
+      )
     },
   )
 })

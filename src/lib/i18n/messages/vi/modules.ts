@@ -1033,13 +1033,16 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - tạo lúc {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} đã sẵn sàng',
+  'files.export.email.subject': 'Bản xuất đã sẵn sàng: {title}',
   'files.export.email.body': {
     other:
-      'Bản xuất chuyến đi đã sẵn sàng. Bản này được lưu trong {count} ngày.',
+      'Bản xuất của {title} đã sẵn sàng. Bản xuất được lưu trong {count} ngày.',
   },
-  'files.export.email.action': 'Mở {title}',
-  'files.export.email.text': 'Bản xuất chuyến đi đã sẵn sàng: {url}',
+  'files.export.email.action': 'Đi đến bản xuất',
+  'files.export.email.text': '{body}\n\n{limit}\n\nĐi đến bản xuất: {url}',
+  'files.export.limit': {
+    other: 'Mỗi chuyến đi giữ lại {count} bản xuất mới nhất.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Xuất chuyến đi',

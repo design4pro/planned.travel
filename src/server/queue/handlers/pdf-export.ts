@@ -38,6 +38,7 @@ import {
   requireTrip,
 } from '#/server/repos'
 import {
+  EXPORT_KEEP_COUNT,
   EXPORT_TTL_SECONDS,
   exportObjectKey,
   exportPointerKey,
@@ -407,14 +408,16 @@ function readyEmail(
 ) {
   const body = t('modules.files.export.email.body', {
     count: EXPORT_TTL_SECONDS / SECONDS_PER_DAY,
+    title,
   })
-  const action = t('modules.files.export.email.action', { title })
+  const action = t('modules.files.export.email.action')
+  const limit = t('modules.files.export.limit', { count: EXPORT_KEEP_COUNT })
   return {
     to: [to],
     // A title may be 200 characters; the email payload's subject is capped at the same 200.
     subject: cutSubject(t('modules.files.export.email.subject', { title })),
-    html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
-    text: t('modules.files.export.email.text', { url }),
+    html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p>${escapeHtml(limit)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
+    text: t('modules.files.export.email.text', { body, limit, url }),
     tag: 'export-ready',
   }
 }

@@ -181,7 +181,7 @@ const messages = {
     many: '{others} altres viatgers',
     other: '{others} altres viatgers',
   },
-  'memberBar.notSplit': 'Sense assignar a ningú',
+  'memberBar.notSplit': 'Sense repartir entre ningú',
   'totalTile.label': 'Despesa total del viatge',
   'totalTile.captionPlanned': 'Previst {amount} entre tots els viatgers',
   'totalTile.captionBudget': '{amount} de pressupost per al viatge',

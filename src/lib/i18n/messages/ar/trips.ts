@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived': 'هذه الرحلة مؤرشفة. التعاون متاح للقراءة فقط.',
+  'collab.readOnly.role':
+    'يمكن لمالكي الرحلة ومحرريها فقط تغيير المحادثة والملاحظات والاستطلاعات.',
   'notFound.title': 'لا يمكننا العثور على هذه الرحلة',
   'notFound.body':
     'ليست ضمن الرحلات التي يمكنك فتحها في مساحة العمل الحالية. ربما حُذفت، أو قد لا تكون لديك صلاحية الوصول إليها.',
@@ -490,6 +493,8 @@ const messages = {
   'plan.weather.panel.low': 'الصغرى',
   'plan.weather.panel.recordedNote': 'قيم مقيسة لهذا اليوم.',
   'plan.weather.panel.temperatureTypical': 'العظمى / الصغرى المعتادة',
+  'plan.weather.panel.typicalHigh': 'العظمى المعتادة',
+  'plan.weather.panel.typicalLow': 'الصغرى المعتادة',
   'plan.weather.panel.estimateNote':
     'متوسط طويل الأمد لهذا الشهر، وليس توقعًا.',
   'plan.weather.attribution.metNorway': 'بيانات التنبؤ: MET Norway، CC BY 4.0',

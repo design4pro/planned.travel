@@ -342,7 +342,7 @@ describe('memberSegments', () => {
     expect(summary(segments)).toEqual(['d', 'a', 'b', 'c'])
   })
 
-  it('adds one "Not assigned to anyone" segment when the shares fall short', () => {
+  it('adds one "Not split between anyone" segment when the shares fall short', () => {
     const segments = memberSegments([member('a', 600), member('b', 300)], 1_000)
 
     expect(summary(segments)).toEqual(['a', 'b', 'unassigned'])

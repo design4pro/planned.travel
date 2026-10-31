@@ -1097,15 +1097,21 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - створено {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Готово: {title}',
+  'files.export.email.subject': 'Експорт готовий: {title}',
   'files.export.email.body': {
-    one: 'Експорт подорожі готовий. Він зберігається {count} день.',
-    few: 'Експорт подорожі готовий. Він зберігається {count} дні.',
-    many: 'Експорт подорожі готовий. Він зберігається {count} днів.',
-    other: 'Експорт подорожі готовий. Він зберігається {count} дня.',
+    one: 'Експорт подорожі {title} готовий. Він зберігається {count} день.',
+    few: 'Експорт подорожі {title} готовий. Він зберігається {count} дні.',
+    many: 'Експорт подорожі {title} готовий. Він зберігається {count} днів.',
+    other: 'Експорт подорожі {title} готовий. Він зберігається {count} дня.',
   },
-  'files.export.email.action': 'Відкрити: {title}',
-  'files.export.email.text': 'Експорт подорожі готовий: {url}',
+  'files.export.email.action': 'Перейти до експорту',
+  'files.export.email.text': '{body}\n\n{limit}\n\nПерейти до експорту: {url}',
+  'files.export.limit': {
+    one: 'Подорож зберігає {count} найновіший експорт.',
+    few: 'Подорож зберігає {count} найновіші експорти.',
+    many: 'Подорож зберігає {count} найновіших експортів.',
+    other: 'Подорож зберігає {count} найновішого експорту.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Експорт подорожі',

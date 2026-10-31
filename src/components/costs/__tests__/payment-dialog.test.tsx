@@ -448,7 +448,9 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
     open(undefined, undefined, null, WITH_LEAVER)
 
     for (const name of ['Paid by', 'Paid to']) {
-      expect((await optionsOf(user, name)).join('|')).not.toContain('Dee')
+      expect((await optionsOf(user, name)).join('|')).not.toContain(
+        Costs['person.removed'],
+      )
     }
   })
 
@@ -461,7 +463,9 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
       WITH_LEAVER,
     )
 
-    expect((await optionsOf(user, 'Paid by')).join('|')).toContain('Dee')
+    expect((await optionsOf(user, 'Paid by')).join('|')).toContain(
+      Costs['person.removed'],
+    )
   })
 
   it('still offers her on the receiving side of a payment that carries her', async () => {
@@ -473,7 +477,9 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
       WITH_LEAVER,
     )
 
-    expect((await optionsOf(user, 'Paid to')).join('|')).toContain('Dee')
+    expect((await optionsOf(user, 'Paid to')).join('|')).toContain(
+      Costs['person.removed'],
+    )
   })
 
   it('offers her on a blank payment while she still has a balance', async () => {
@@ -481,7 +487,9 @@ describe('the payment dialog once someone has left the workspace (#1034)', () =>
     open(undefined, undefined, null, WITH_LEAVER, ['u3'])
 
     for (const name of ['Paid by', 'Paid to']) {
-      expect((await optionsOf(user, name)).join('|')).toContain('Dee')
+      expect((await optionsOf(user, name)).join('|')).toContain(
+        Costs['person.removed'],
+      )
     }
   })
 })

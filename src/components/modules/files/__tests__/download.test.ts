@@ -46,10 +46,17 @@ async function download(storedType: string): Promise<Blob> {
 }
 
 describe('downloadTripFile', () => {
-  it.each(['text/html', 'image/svg+xml'])(
+  it.each([
+    'text/html',
+    'image/svg+xml',
+    'application/gpx+xml',
+    'application/gpx+xml; charset=utf-8',
+  ])(
     'hands the object URL a generic binary for a stored %s, so no same-origin URL carries markup',
     async (storedType) => {
-      expect((await download(storedType)).type).toBe('application/octet-stream')
+      const blob = await download(storedType)
+      expect(blob.type).toBe('application/octet-stream')
+      expect(await blob.text()).toBe('bytes')
     },
   )
 

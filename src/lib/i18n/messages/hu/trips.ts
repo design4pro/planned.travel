@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Ez az utazás archiválva van. Az együttműködés csak olvasható.',
+  'collab.readOnly.role':
+    'Csak az utazás tulajdonosai és szerkesztői módosíthatják a beszélgetést, a jegyzeteket és a szavazásokat.',
   'notFound.title': 'Nem találjuk ezt az utazást',
   'notFound.body':
     'Nem szerepel a jelenlegi munkaterületen megnyitható utazások között. Lehet, hogy törölték, vagy nincs hozzáférésed.',
@@ -458,6 +462,8 @@ const messages = {
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Mért értékek erre a napra.',
   'plan.weather.panel.temperatureTypical': 'Jellemző max. / min.',
+  'plan.weather.panel.typicalHigh': 'Jellemző maximum',
+  'plan.weather.panel.typicalLow': 'Jellemző minimum',
   'plan.weather.panel.estimateNote':
     'Az adott hónap hosszú távú átlaga, nem előrejelzés.',
   'plan.weather.attribution.metNorway':

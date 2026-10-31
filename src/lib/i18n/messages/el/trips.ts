@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Αυτό το ταξίδι έχει αρχειοθετηθεί. Η συνεργασία είναι μόνο για ανάγνωση.',
+  'collab.readOnly.role':
+    'Μόνο οι ιδιοκτήτες και οι συντάκτες του ταξιδιού μπορούν να αλλάζουν τη συζήτηση, τις σημειώσεις και τις δημοσκοπήσεις.',
   'notFound.title': 'Δεν μπορούμε να βρούμε αυτό το ταξίδι',
   'notFound.body':
     'Δεν είναι ανάμεσα στα ταξίδια που μπορείς να ανοίξεις στον τρέχοντα χώρο εργασίας. Ίσως έχει διαγραφεί ή δεν έχεις πρόσβαση σε αυτό.',
@@ -464,6 +468,8 @@ const messages = {
   'plan.weather.panel.low': 'Ελάχιστη',
   'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
   'plan.weather.panel.temperatureTypical': 'Τυπική μέγιστη / ελάχιστη',
+  'plan.weather.panel.typicalHigh': 'Τυπική μέγιστη',
+  'plan.weather.panel.typicalLow': 'Τυπική ελάχιστη',
   'plan.weather.panel.estimateNote':
     'Μακροπρόθεσμος μέσος όρος για αυτόν τον μήνα, όχι πρόγνωση.',
   'plan.weather.attribution.metNorway':

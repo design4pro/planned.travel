@@ -82,6 +82,7 @@ function mount(
     <I18nProvider locale={locale} messages={messages}>
       <TooltipProvider>
         <Thread
+          canWrite={true}
           tripId="trip-1"
           messages={thread}
           people={PEOPLE}
@@ -263,6 +264,7 @@ function composerTree(
     <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
       <TooltipProvider>
         <Thread
+          canWrite={true}
           tripId="trip-1"
           messages={messages}
           people={PEOPLE}
@@ -587,6 +589,7 @@ describe('the viewers own actions on held history', () => {
       <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
         <TooltipProvider>
           <Thread
+            canWrite={true}
             tripId="trip"
             messages={messages}
             people={PEOPLE}

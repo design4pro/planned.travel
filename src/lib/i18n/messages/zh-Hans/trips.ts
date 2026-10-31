@@ -14,6 +14,8 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived': '此旅行已归档。协作内容仅供阅读。',
+  'collab.readOnly.role': '只有旅行所有者和编辑者可以更改对话、笔记和投票。',
   'notFound.title': '找不到此行程',
   'notFound.body':
     '此行程不在你当前工作空间可打开的行程中。它可能已被删除，或者你没有访问权限。',
@@ -418,6 +420,8 @@ const messages = {
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': '这一天的实测数值。',
   'plan.weather.panel.temperatureTypical': '常年最高 / 最低',
+  'plan.weather.panel.typicalHigh': '常年最高',
+  'plan.weather.panel.typicalLow': '常年最低',
   'plan.weather.panel.estimateNote': '本月的长期平均值，并非预报。',
   'plan.weather.attribution.metNorway': '预报数据：MET Norway，CC BY 4.0',
   'plan.weather.attribution.nasaPower':
