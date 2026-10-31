@@ -780,10 +780,10 @@ gated the ticket (`risk-high`, approved, confidence high):
   ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
   renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
   alerts on that log, is for a person.
-- **Journey photo keys are swept as given (#1419).** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
-  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
-  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
-  it; until then the engine phase must not pass keys from any other source.
+- **Journey photo keys must belong to the workspace (#1419).** New `storageKey` and `thumbnailKey` values
+  must use the exact `journeys/<organizationId>/` namespace. `listWorkspaceJourneyPhotoKeys` remains a
+  tenant-scoped reference read; the sweep independently rejects foreign and legacy unscoped keys, retaining
+  those objects. The dev seed uses the same workspace namespace; future upload writers must do so too.
 
 ## Amendment - phase 5 (issue #1058)
 
