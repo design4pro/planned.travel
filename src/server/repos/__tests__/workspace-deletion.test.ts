@@ -15,12 +15,15 @@ import {
   setUsage,
   upsertSubscription,
 } from '../billing'
+import { sweepWorkspaceObjects } from '#/server/storage/workspace-objects'
+import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import { createScope } from '../base'
 import { NotFoundError, ForbiddenError } from '../context'
 import { recordFile } from '../files'
 import {
   addPhoto,
   createJourney,
+  journeyPhotosRepository,
   listWorkspaceJourneyPhotoKeys,
 } from '../journey'
 import {
@@ -415,6 +418,91 @@ describe('a change between the refusal check and the delete', () => {
       .from(subscriptions)
       .where(and(eq(subscriptions.organizationId, a.organizationId)))
     expect(row?.status).toBe('active')
+  })
+})
+
+describe('journey photo object ownership', () => {
+  it.each(['storageKey', 'thumbnailKey'] as const)(
+    'rejects foreign, overlapping and legacy %s independently',
+    async (field) => {
+      const a = await harness.seedTenant('a')
+      const b = await harness.seedTenant('b')
+      const journey = await createJourney(a.scope, { title: 'Owned' })
+      const prefix = `journeys/${a.organizationId}/`
+      for (const unsafe of [
+        `journeys/${b.organizationId}/photo.jpg`,
+        `journeys/${a.organizationId}b/photo.jpg`,
+        'demo/journeys/shared.jpg',
+        prefix.slice(0, -1),
+      ]) {
+        await expect(
+          addPhoto(a.scope, {
+            journeyId: journey.id,
+            storageKey: `${prefix}photo.jpg`,
+            thumbnailKey: `${prefix}thumb.jpg`,
+            contentType: 'image/jpeg',
+            [field]: unsafe,
+          }),
+        ).rejects.toThrow()
+      }
+      expect(await listWorkspaceJourneyPhotoKeys(a.scope)).toEqual([])
+      expect(await listWorkspaceJourneyPhotoKeys(b.scope)).toEqual([])
+    },
+  )
+
+  it('accepts owned originals with absent, null and owned thumbnails', async () => {
+    const a = await harness.seedTenant('a')
+    const journey = await createJourney(a.scope, { title: 'Owned' })
+    for (const [index, thumbnailKey] of [
+      undefined,
+      null,
+      `journeys/${a.organizationId}/thumb.jpg`,
+    ].entries()) {
+      const photo = await addPhoto(a.scope, {
+        journeyId: journey.id,
+        storageKey: `journeys/${a.organizationId}/${index}.jpg`,
+        thumbnailKey,
+        contentType: 'image/jpeg',
+      })
+      expect(photo.thumbnailKey).toBe(thumbnailKey ?? null)
+    }
+  })
+
+  it('preserves foreign originals, thumbnails and shared legacy objects named by A rows', async () => {
+    const a = await harness.seedTenant('a')
+    const b = await harness.seedTenant('b')
+    const journey = await createJourney(a.scope, { title: 'Legacy' })
+    const retained = [
+      `journeys/${b.organizationId}/photo.jpg`,
+      `journeys/${b.organizationId}/thumb.jpg`,
+      `journeys/${a.organizationId}b/photo.jpg`,
+      `journeys/${a.organizationId}b/thumb.jpg`,
+      'demo/journeys/shared.jpg',
+      'demo/journeys/shared-thumb.jpg',
+    ]
+    // Seed historical rows through the base repository, bypassing today's insertion guard.
+    for (let index = 0; index < retained.length; index += 2) {
+      await journeyPhotosRepository.insert(a.scope, {
+        journeyId: journey.id,
+        storageKey: retained[index],
+        thumbnailKey: retained[index + 1],
+        contentType: 'image/jpeg',
+        uploadedBy: a.ownerUserId,
+      })
+    }
+    const owned = `journeys/${a.organizationId}/owned.jpg`
+    await addPhoto(a.scope, {
+      journeyId: journey.id,
+      storageKey: owned,
+      contentType: 'image/jpeg',
+    })
+    const bucket = fakeBucket([owned, ...retained])
+    await sweepWorkspaceObjects(
+      bucket,
+      a.organizationId,
+      await listWorkspaceJourneyPhotoKeys(a.scope),
+    )
+    expect([...bucket.remaining].sort()).toEqual([...retained].sort())
   })
 })
 
