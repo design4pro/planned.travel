@@ -237,8 +237,11 @@ rules run in the picker, in the browser pre-flight and in the handler that trust
    `content-disposition: attachment` and `cache-control: private, no-store`
    (`src/server/fns/files.ts:300-306`), and `06-S4`'s preview renders an image only through an
    `<img>` element, in which scripts are inert, and refuses "open in a new tab" for
-   `image/svg+xml`. Those three together are the mitigation; any one of them going away brings the
-   decision back.
+   `image/svg+xml`. The shared download helper also re-types `text/html`, `image/svg+xml` and
+   `application/gpx+xml` to `application/octet-stream` before making a same-origin object URL,
+   including for extensionless files and previously stored objects. Claimed markup types are bound
+   to their matching filename extensions when one is present. These controls together are the
+   mitigation; any one of them going away brings the decision back.
 4. **`safePastedFilename(mediaType, now)`** — the name a pasted blob gets, because the clipboard
    supplies bytes and a media type and no name at all. `pasted-YYYYMMDD-HHmmss.<ext>`, derived from
    the accepted-format table so a pasted PNG cannot land as `.bin`, and passed through the existing

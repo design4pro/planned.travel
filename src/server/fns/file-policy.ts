@@ -62,7 +62,7 @@ const BLOCKED_CLAIMED_TYPES: ReadonlySet<string> = new Set([
 const XML_EXCEPTION_EXTENSION = 'gpx'
 
 /**
- * The two accepted markup types and the only extensions that may carry them.
+ * The three accepted markup types and the only extensions that may carry them.
  *
  * For any other extension the extension decides the type instead (a PDF that claims `text/html` is
  * stored as a PDF), and a file with no extension keeps its claimed type, because the booking import
@@ -87,7 +87,7 @@ const XML_EXCEPTION_EXTENSION = 'gpx'
  *   `contentDisposition: attachment`, so a public domain would serve it as a download. `trip-copy`
  *   copies the cover through `copyObject`, which carries the disposition over with the type;
  * - (d) **no client code gives the user a same-origin object URL typed `text/html` or
- *   `image/svg+xml`**: `download.ts` re-types a blob of those two types to
+ *   `image/svg+xml` or `application/gpx+xml`**: `download.ts` re-types a blob of those types to
  *   `application/octet-stream` before `URL.createObjectURL`, and `export-download.ts` does so for
  *   every trip export;
  * - (e) the file preview never shows an `image/svg+xml` file through a same-origin blob or object
@@ -105,6 +105,7 @@ const XML_EXCEPTION_EXTENSION = 'gpx'
 const BOUND_TYPES: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ['text/html', new Set(['html', 'htm'])],
   ['image/svg+xml', new Set(['svg'])],
+  ['application/gpx+xml', new Set(['gpx'])],
 ])
 
 /**
@@ -212,8 +213,8 @@ function extensionOf(filename: string): string {
  * The media type we will store. Browsers hand back `''` or
  * `application/octet-stream` often enough that trusting the header alone would
  * reject perfectly ordinary PDFs, so the extension is the fallback — never the
- * override. The two exceptions are {@link BOUND_TYPES}: `text/html` and `image/svg+xml` are
- * honoured only for their own extensions.
+ * override. The three exceptions are {@link BOUND_TYPES}: `text/html`, `image/svg+xml` and
+ * `application/gpx+xml` are honoured only for their own extensions.
  */
 export function resolveContentType(
   filename: string,
