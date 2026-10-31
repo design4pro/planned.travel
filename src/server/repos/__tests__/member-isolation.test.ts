@@ -14,7 +14,7 @@
  */
 
 import { and, eq } from 'drizzle-orm'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { member } from '#/server/db/auth-schema'
 import { assignmentParticipants } from '#/server/db/schema'
 import { ZodError } from 'zod'
@@ -58,6 +58,7 @@ import {
   getJourneyBySlug,
   getJourneyStory,
   journalCoverage,
+  journeyEntriesRepository,
   listEntriesByIds,
   listJourneyEntries,
   listJourneys,
@@ -268,6 +269,71 @@ describe('member isolation', () => {
         expect(await listJourneyEntries(stranger, journey.id)).toEqual([entry])
       },
     )
+
+    it('refuses overlapping partial source updates validated against a stale tuple', async () => {
+      const scope = alpha.scope
+      const otherTrip = await createTrip(scope, { title: 'Porto' })
+      const otherPlace = await createPlace(scope, {
+        tripId: otherTrip.id,
+        name: 'Porto square',
+      })
+      const checkIn = await createCheckIn(scope, {
+        tripId: fixture.tripId,
+        name: 'Lisbon visit',
+      })
+      const journey = await createJourney(scope, { title: 'Journal' })
+      const entry = await createEntry(scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        sourceTripId: fixture.tripId,
+        sourcePlaceId: fixture.placeId,
+      })
+      const findOne = journeyEntriesRepository.findOne.bind(
+        journeyEntriesRepository,
+      )
+      let release = () => {}
+      const barrier = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let reads = 0
+      const spy = vi
+        .spyOn(journeyEntriesRepository, 'findOne')
+        .mockImplementation(async (...args) => {
+          const row = await findOne(...args)
+          if (++reads === 2) release()
+          await barrier
+          return row
+        })
+      try {
+        const results = await Promise.allSettled([
+          updateEntry(scope, entry.id, {
+            sourceTripId: otherTrip.id,
+            sourcePlaceId: otherPlace.id,
+          }),
+          updateEntry(scope, entry.id, { checkInId: checkIn.id }),
+        ])
+        expect(
+          results.filter((result) => result.status === 'fulfilled'),
+        ).toHaveLength(1)
+        expect(
+          results.filter((result) => result.status === 'rejected'),
+        ).toHaveLength(1)
+        const refused = results.find((result) => result.status === 'rejected')
+        expect(refused?.status === 'rejected' && refused.reason).toMatchObject({
+          code: 'JOURNEY_ENTRY_SOURCES_CHANGED',
+        })
+        const stored = await journeyEntriesRepository.requireById(scope, entry.id)
+        if (stored.checkInId) {
+          expect(stored.sourceTripId).toBe(fixture.tripId)
+          expect(stored.sourcePlaceId).toBe(fixture.placeId)
+        } else {
+          expect(stored.sourceTripId).toBe(otherTrip.id)
+          expect(stored.sourcePlaceId).toBe(otherPlace.id)
+        }
+      } finally {
+        spy.mockRestore()
+      }
+    })
 
     it('validates the effective tuple while preserving standalone, multi-trip and nullable sources', async () => {
       const scope = alpha.scope

@@ -39,7 +39,7 @@ import {
   createTenantRepository,
   tenantFilter,
 } from './base'
-import { NotFoundError, assertCanAdminister } from './context'
+import { NotFoundError, RepositoryError, assertCanAdminister } from './context'
 import { checkInsRepository } from './collab'
 import { stillInWorkspace } from './members'
 import { placesRepository, requirePlaceOfTrip } from './places'
@@ -877,6 +877,24 @@ export async function updateEntry(
     values.checkInId !== undefined
   ) {
     await requireEntrySources(scope, { ...entry, ...values })
+    // Bind validation to its snapshot so overlapping partial writes cannot mix source tuples.
+    const [updated] = await journeyEntriesRepository.updateWhere(
+      scope,
+      allOf(
+        eq(journeyEntries.id, entryId),
+        sql`${journeyEntries.sourceTripId} is ${entry.sourceTripId}`,
+        sql`${journeyEntries.sourcePlaceId} is ${entry.sourcePlaceId}`,
+        sql`${journeyEntries.checkInId} is ${entry.checkInId}`,
+      ),
+      values,
+    )
+    if (!updated) {
+      throw new RepositoryError(
+        'Journey entry sources changed during update; retry.',
+        'JOURNEY_ENTRY_SOURCES_CHANGED',
+      )
+    }
+    return updated
   }
   return journeyEntriesRepository.requireUpdate(scope, entryId, values)
 }
