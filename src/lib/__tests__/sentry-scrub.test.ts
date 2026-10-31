@@ -350,6 +350,26 @@ describe('credential queries', () => {
     }
   })
 
+  it.each(["'", '"', '<', '>', ' '])(
+    'redacts credential suffixes after %s in direct and nested URLs',
+    (separator) => {
+      const direct = `/reset-password?password=prefix${separator}${secret}&tab=help`
+      const absolute = new URL(direct, 'https://planned.travel').href
+      for (const url of [direct, absolute]) {
+        for (const depth of [0, 1, 2, 3, 8]) {
+          let encoded = url
+          for (let i = 0; i < depth; i++) encoded = encodeURIComponent(encoded)
+          const nested = depth === 0 ? url : `/login?redirect=${encoded}`
+          let scrubbed = scrubTelemetry(nested)
+          for (let i = 0; i < depth; i++)
+            scrubbed = decodeURIComponent(scrubbed)
+          expect(scrubbed).not.toContain(secret)
+          expect(scrubbed).toContain('password=[redacted]&tab=help')
+        }
+      }
+    },
+  )
+
   it('preserves paths and ordinary query values', () => {
     const url = '/reset-password?tab=help&redirect=%2Ftrips%3Fview%3Dmap'
     expect(scrubTelemetry(url)).toBe(url)

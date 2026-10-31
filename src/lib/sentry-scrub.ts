@@ -78,10 +78,10 @@ function scrubCredentialQueries(value: string): string {
     if (match.index < end) continue
     const start = match.index + match[0].length
     const depth = match[1] === '=' ? 0 : (match[1].length - 1) / 2
-    // At depth zero all percent-encoded characters are part of the credential value.
+    // Only query/fragment boundaries end credentials; quotes and spaces can belong to the value.
     const encodedDelimiter =
-      depth === 0 ? '' : `|%(?:25){0,${depth - 1}}(?:26|23|22|27|3c|3e|20)`
-    const delimiters = new RegExp(`[\\s&#"'<>]${encodedDelimiter}`, 'gi')
+      depth === 0 ? '' : `|%(?:25){0,${depth - 1}}(?:26|23)`
+    const delimiters = new RegExp(`[&#]${encodedDelimiter}`, 'gi')
     delimiters.lastIndex = start
     const tail = delimiters.exec(value)
     result += value.slice(end, start) + '[redacted]'
