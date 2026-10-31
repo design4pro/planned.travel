@@ -279,8 +279,7 @@ export function ExpenseDialog({
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
   )
-  // Fixed when the dialog opens, like the draft it seeds: a person who leaves the trip while this is
-  // open keeps the row they had.
+  // Fixed when the dialog opens to seed the draft; SplitEditor also lists rows that lose membership.
   const [departed] = useState(() =>
     (departedPeople ?? []).filter((person) =>
       expense?.shares.some((share) => share.userId === person.userId),
@@ -687,7 +686,10 @@ export function ExpenseDialog({
             </Field>
 
             <SplitEditor
-              people={offered}
+              // Keep the opening draft and payer choices, but recognise departures on a reload.
+              people={offered.filter((person) =>
+                people.some((member) => member.userId === person.userId),
+              )}
               departedPeople={departed}
               viewerUserId={viewerUserId}
               draft={draft}
