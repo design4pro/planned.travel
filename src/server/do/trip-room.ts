@@ -180,9 +180,8 @@ export class TripRoom implements DurableObject {
   private meta: RoomMeta | null = null
   private tripId = 'unknown'
   /**
-   * Set by a reset. The close of each evicted socket is delivered after the reset's `fetch` has
-   * returned, and its handler would arm a fresh alarm on a room that has nothing left to look after.
-   * A new connection means the room is in use again.
+   * Set after reset erases content. A retained barrier already has its pruning alarm; a socket's
+   * later close must not arm an alarm on an otherwise empty room. A new connection resumes use.
    */
   private erased = false
 
@@ -277,9 +276,16 @@ export class TripRoom implements DurableObject {
       // app Worker. The socket is never joined, so it is no presence and gets no frame. The close
       // waits for the upgrade to finish (see TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS).
       setTimeout(
-        () => server.close(CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON),
+        () => {
+          try {
+            server.close(CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON)
+          } catch {
+            // A peer or another close may have finished before the upgrade delay elapsed.
+          }
+        },
         TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
       )
+      await this.ensureAlarm()
       this.logger.info('trip room connect refused: minted before a revocation', {
         tripId: identity.value.tripId,
         orgId: identity.value.orgId,
@@ -351,7 +357,7 @@ export class TripRoom implements DurableObject {
       return json({ error: 'Use POST to close a room' }, 405)
     }
     const text = await request.text()
-    const revokedAt = revokedAtOf(request.headers.get(TRIP_ROOM_REVOKED_AT_HEADER))
+    const revokedAt = revokedAtOf(request.headers.get(TRIP_ROOM_REVOKED_AT_HEADER), this.now())
     if (text.length === 0) {
       await this.recordRevocation(ROOM_REVOCATION_KEY, revokedAt)
       this.evict(this.state.getWebSockets())
@@ -368,16 +374,16 @@ export class TripRoom implements DurableObject {
 
   /**
    * A connect is stale when it was minted before the latest close that applies to it: the later of
-   * the room's watermark and the person's. Both numbers are the app Worker's clock, so the room
-   * compares and never reads its own. A connect with no `issuedAt` (an older app Worker) is stale
-   * only where a watermark exists. Expiry is housekeeping in {@link alarm}, not part of this decision.
+   * the room's watermark and the person's. Stamps come from the app Worker; the room clock bounds
+   * their lifetime and allowed skew. A connect with no `issuedAt` (an older app Worker) is stale
+   * only where an unexpired watermark exists; {@link alarm} prunes expired storage.
    */
   private async isRevoked(identity: TripRoomIdentity): Promise<boolean> {
     const [room, person] = await Promise.all([
       this.state.storage.get<number>(ROOM_REVOCATION_KEY),
       this.state.storage.get<number>(personRevocationKey(identity.user.id)),
     ])
-    const marks = [room, person].filter((mark): mark is number => typeof mark === 'number')
+    const marks = [room, person].filter((mark): mark is number => this.validWatermark(mark))
     if (marks.length === 0) return false
     const watermark = Math.max(...marks)
     return identity.issuedAt === undefined || identity.issuedAt < watermark + TRIP_ROOM_REVOCATION_SKEW_MS
@@ -395,7 +401,7 @@ export class TripRoom implements DurableObject {
       await this.withLock(async () => {
         const existing = await this.state.storage.get<number>(key)
         await this.state.storage.put({
-          [key]: typeof existing === 'number' ? Math.max(existing, revokedAt) : revokedAt,
+          [key]: this.validWatermark(existing) ? Math.max(existing, revokedAt) : revokedAt,
         })
       })
       await this.ensureAlarm()
@@ -405,23 +411,34 @@ export class TripRoom implements DurableObject {
   }
 
   /**
-   * Closes every socket and erases everything the room stored: entity fields and the commit log,
+   * Closes every socket and erases entity fields, person watermarks and the commit log,
    * each stamped with the id of whoever wrote it (`by`). D1 is the record, so nothing is lost that
    * a rebuild cannot restore; an active room never clears itself, which is why waiting for the idle
    * erase in {@link alarm} is not an answer to a deletion. Queued behind in-flight commits, so none
-   * of them writes into the room after it was emptied.
+   * of them writes into the room after it was emptied. Only the latest unexpired timestamp survives,
+   * promoted to a room-wide barrier so erasure retains no person identifiers.
    */
   private async handleReset(request: Request): Promise<Response> {
     if (request.method !== 'POST') {
       return json({ error: 'Use POST to reset a room' }, 405)
     }
     this.evict(this.state.getWebSockets())
-    this.erased = true
+    const revokedAt = revokedAtOf(request.headers.get(TRIP_ROOM_REVOKED_AT_HEADER), this.now())
     await this.withLock(async () => {
-      await this.state.storage.deleteAll()
-      // `deleteAll` leaves a scheduled alarm in place; a reset room has nothing left to look after.
-      await this.state.storage.deleteAlarm()
+      const marks = await this.state.storage.list<number>({ prefix: REVOCATION_PREFIX })
+      const retained = [...marks.values()].filter((mark) => this.validWatermark(mark))
+      if (revokedAt !== null) retained.push(revokedAt)
+      // Persist before erasing: a failed write must not discard a newer barrier, even on retry.
+      if (retained.length > 0) {
+        await this.state.storage.put({ [ROOM_REVOCATION_KEY]: Math.max(...retained) })
+        await this.ensureAlarm()
+      }
+      const keys = await this.state.storage.list()
+      const erased = [...keys.keys()].filter((key) => retained.length === 0 || key !== ROOM_REVOCATION_KEY)
+      await this.deleteKeys(erased)
       this.meta = null
+      this.erased = true
+      if (retained.length === 0) await this.state.storage.deleteAlarm()
     })
     return json({ reset: true })
   }
@@ -454,7 +471,10 @@ export class TripRoom implements DurableObject {
       ws.close(CLOSE_ROOM_CLOSED, 'No session')
       return
     }
-    if (session.evicted) return
+    if (session.evicted) {
+      this.evict([ws])
+      return
+    }
     this.tripId = session.identity.tripId
 
     const now = this.now()
@@ -537,10 +557,13 @@ export class TripRoom implements DurableObject {
     } catch {
       // Already closed by the peer.
     }
-    this.broadcast(
-      { t: 'presence', peers: this.presence(ws), left: session?.connectionId },
-      session?.connectionId,
-    )
+    if (session?.joined) {
+      ws.serializeAttachment({ ...session, joined: false } satisfies SessionAttachment)
+      this.broadcast(
+        { t: 'presence', peers: this.presence(ws), left: session.connectionId },
+        session.connectionId,
+      )
+    }
     if (!this.erased) await this.ensureAlarm()
   }
 
@@ -551,10 +574,13 @@ export class TripRoom implements DurableObject {
       connectionId: session?.connectionId,
       errorMessage: error instanceof Error ? error.message : String(error),
     })
-    this.broadcast(
-      { t: 'presence', peers: this.presence(ws), left: session?.connectionId },
-      session?.connectionId,
-    )
+    if (session?.joined) {
+      ws.serializeAttachment({ ...session, joined: false } satisfies SessionAttachment)
+      this.broadcast(
+        { t: 'presence', peers: this.presence(ws), left: session.connectionId },
+        session.connectionId,
+      )
+    }
   }
 
   /* ---------------------------------------------------------- housekeeping -- */
@@ -565,48 +591,53 @@ export class TripRoom implements DurableObject {
    * Reschedules itself only while there is something left to look after.
    */
   async alarm(): Promise<void> {
-    const meta = await this.loadMeta()
-    const now = this.now()
-    this.evict(
-      this.state.getWebSockets().filter((socket) => {
-        const session = readAttachment(socket)
-        return (
-          session !== null &&
-          !session.evicted &&
-          now - session.joinedAt > TRIP_ROOM_MAX_SOCKET_AGE_MS
-        )
-      }),
-    )
-    const sockets = this.state.getWebSockets().length
+    return this.withLock(async () => {
+      const meta = await this.loadMeta()
+      const now = this.now()
+      this.evict(
+        this.state.getWebSockets().filter((socket) => {
+          const session = readAttachment(socket)
+          return (
+            session !== null &&
+            ((session.evicted && now - session.joinedAt >= TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS) ||
+              now - session.joinedAt > TRIP_ROOM_MAX_SOCKET_AGE_MS)
+          )
+        }),
+      )
+      const sockets = this.state.getWebSockets().length
 
-    const removed = await this.pruneLog(meta)
-    const tombstones = await this.pruneTombstones(now)
-    const watermarks = await this.pruneWatermarks(now)
+      const removed = await this.pruneLog(meta)
+      const tombstones = await this.pruneTombstones(now)
+      const watermarks = await this.pruneWatermarks(now)
 
-    const idle = sockets === 0 && meta.updatedAt > 0 && now - meta.updatedAt > TRIP_ROOM_IDLE_TTL_MS
-    if (idle) {
-      await this.state.storage.deleteAll()
-      this.meta = null
-      this.logger.info('trip room state erased after idle ttl', {
-        tripId: this.tripId,
-        idleMs: now - meta.updatedAt,
-      })
-      return
-    }
+      const idle = sockets === 0 && meta.updatedAt > 0 && now - meta.updatedAt > TRIP_ROOM_IDLE_TTL_MS
+      if (idle) {
+        const keys = await this.state.storage.list()
+        const content = [...keys.keys()].filter((key) => !key.startsWith(REVOCATION_PREFIX))
+        await this.deleteKeys(content)
+        this.meta = null
+        if (watermarks.left > 0) await this.ensureAlarm()
+        this.logger.info('trip room state erased after idle ttl', {
+          tripId: this.tripId,
+          idleMs: now - meta.updatedAt,
+        })
+        return
+      }
 
-    if (removed > 0 || tombstones > 0 || watermarks.pruned > 0) {
-      this.logger.debug('trip room housekeeping', {
-        tripId: this.tripId,
-        prunedCommits: removed,
-        prunedTombstones: tombstones,
-        prunedWatermarks: watermarks.pruned,
-        sockets,
-      })
-    }
+      if (removed > 0 || tombstones > 0 || watermarks.pruned > 0) {
+        this.logger.debug('trip room housekeeping', {
+          tripId: this.tripId,
+          prunedCommits: removed,
+          prunedTombstones: tombstones,
+          prunedWatermarks: watermarks.pruned,
+          sockets,
+        })
+      }
 
-    if (sockets > 0 || meta.version > 0 || watermarks.left > 0) {
-      await this.state.storage.setAlarm(now + TRIP_ROOM_ALARM_INTERVAL_MS)
-    }
+      if (sockets > 0 || meta.version > 0 || watermarks.left > 0) {
+        await this.ensureAlarm()
+      }
+    })
   }
 
   private async pruneLog(meta: RoomMeta): Promise<number> {
@@ -639,9 +670,21 @@ export class TripRoom implements DurableObject {
 
   private async pruneWatermarks(now: number): Promise<{ pruned: number; left: number }> {
     const marks = await this.state.storage.list<number>({ prefix: REVOCATION_PREFIX })
-    const expired = [...marks].filter(([, mark]) => typeof mark !== 'number' || now - mark > TRIP_ROOM_REVOCATION_TTL_MS)
-    if (expired.length > 0) await this.state.storage.delete(expired.map(([key]) => key))
+    const expired = [...marks].filter(([, mark]) => !this.validWatermark(mark, now))
+    await this.deleteKeys(expired.map(([key]) => key))
     return { pruned: expired.length, left: marks.size - expired.length }
+  }
+
+  /** Durable Object KV deletes accept at most 128 keys per call. */
+  private async deleteKeys(keys: Array<string>): Promise<void> {
+    for (let offset = 0; offset < keys.length; offset += 128) {
+      await this.state.storage.delete(keys.slice(offset, offset + 128))
+    }
+  }
+
+  private validWatermark(mark: unknown, now = this.now()): mark is number {
+    return typeof mark === 'number' && Number.isSafeInteger(mark) && mark >= 0 &&
+      mark <= now + TRIP_ROOM_REVOCATION_SKEW_MS && now - mark <= TRIP_ROOM_REVOCATION_TTL_MS
   }
 
   private async ensureAlarm(): Promise<void> {
@@ -1022,9 +1065,11 @@ function json(body: unknown, status = 200): Response {
   })
 }
 
-/** The `revokedAt` a `close` request carries, or `null` when it is missing or not epoch milliseconds. */
-function revokedAtOf(raw: string | null): number | null {
-  return raw !== null && /^\d{1,15}$/.test(raw) ? Number(raw) : null
+/** Accept app Worker timestamps at most one skew margin ahead of the room's clock. */
+function revokedAtOf(raw: string | null, now: number): number | null {
+  if (raw === null || !/^\d{1,15}$/.test(raw)) return null
+  const stamp = Number(raw)
+  return stamp <= now + TRIP_ROOM_REVOCATION_SKEW_MS ? stamp : null
 }
 
 /** The person a `close` request names, or `null` when the body does not name one. */
