@@ -442,6 +442,58 @@ export function FileLibrary({
   const ratio = limitBytes <= 0 ? 0 : workspaceBytes / limitBytes
   const full = Number.isFinite(limitBytes) && ratio >= 1
 
+  const fileMenu = (file: FileData) => (
+    <RowMenu
+      label={t('modules.actionsFor', {
+        name: file.filename,
+      })}
+      size="sm"
+      items={[
+        {
+          label: t('modules.files.menu.download'),
+          icon: <Download aria-hidden />,
+          disabled: download.pending,
+          onSelect: () => {
+            void download.run({
+              tripId,
+              fileId: file.id,
+              filename: file.filename,
+            })
+          },
+        },
+        ...(canWrite
+          ? [
+              {
+                label: t('modules.files.menu.rename'),
+                icon: <Pencil aria-hidden />,
+                onSelect: () => setEditing(file),
+              },
+              {
+                label: t('modules.files.menu.remove'),
+                icon: <Trash2 aria-hidden />,
+                tone: 'danger' as const,
+                separated: true,
+                onSelect: () =>
+                  setConfirm({
+                    title: t('modules.remove.confirmTitle', {
+                      name: file.filename,
+                    }),
+                    description: t('modules.files.remove.body', {
+                      size: formatStorage(file.sizeBytes),
+                    }),
+                    confirmLabel: t('modules.files.menu.remove'),
+                    onConfirm: () =>
+                      remove.run({
+                        data: { tripId, fileId: file.id },
+                      }),
+                  }),
+              },
+            ]
+          : []),
+      ]}
+    />
+  )
+
   return (
     <div className="flex min-w-0 flex-col gap-5">
       {canWrite ? (
@@ -733,7 +785,47 @@ export function FileLibrary({
           flush
           bodyClassName="p-0"
         >
-          <Table label={t('modules.files.tableCaption')} fixed>
+          <ul
+            aria-label={t('modules.files.tableCaption')}
+            className="divide-y divide-edge-faint sm:hidden"
+          >
+            {visible.map((file) => {
+              const Icon = iconFor(file.kind)
+              return (
+                <li
+                  key={file.id}
+                  className="flex min-w-0 items-start gap-3 p-4"
+                >
+                  <Icon
+                    aria-hidden
+                    className="mt-1 size-4 shrink-0 text-ink-4"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-ink [overflow-wrap:anywhere]">
+                      {file.filename}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-caption text-ink-3">
+                      <Badge tone="neutral" size="sm">
+                        {t(kindLabel(file.kind))}
+                      </Badge>
+                      <span>{formatStorage(file.sizeBytes)}</span>
+                    </div>
+                    {file.description === null ? null : (
+                      <p className="mt-1 text-caption text-ink-3 [overflow-wrap:anywhere]">
+                        {file.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0">{fileMenu(file)}</div>
+                </li>
+              )
+            })}
+          </ul>
+          <Table
+            label={t('modules.files.tableCaption')}
+            fixed
+            containerClassName="hidden sm:block"
+          >
             <TableHeader>
               <TableRow>
                 <TableHead>{t('modules.files.column.file')}</TableHead>
@@ -793,62 +885,7 @@ export function FileLibrary({
                     <TableCell muted className="hidden sm:table-cell">
                       {formatRelative(file.createdAt, now, locale) ?? '—'}
                     </TableCell>
-                    <TableCell>
-                      <RowMenu
-                        label={t('modules.actionsFor', {
-                          name: file.filename,
-                        })}
-                        size="sm"
-                        items={[
-                          {
-                            label: t('modules.files.menu.download'),
-                            icon: <Download aria-hidden />,
-                            disabled: download.pending,
-                            onSelect: () => {
-                              void download.run({
-                                tripId,
-                                fileId: file.id,
-                                filename: file.filename,
-                              })
-                            },
-                          },
-                          ...(canWrite
-                            ? [
-                                {
-                                  label: t('modules.files.menu.rename'),
-                                  icon: <Pencil aria-hidden />,
-                                  onSelect: () => setEditing(file),
-                                },
-                                {
-                                  label: t('modules.files.menu.remove'),
-                                  icon: <Trash2 aria-hidden />,
-                                  tone: 'danger' as const,
-                                  separated: true,
-                                  onSelect: () =>
-                                    setConfirm({
-                                      title: t('modules.remove.confirmTitle', {
-                                        name: file.filename,
-                                      }),
-                                      description: t(
-                                        'modules.files.remove.body',
-                                        {
-                                          size: formatStorage(file.sizeBytes),
-                                        },
-                                      ),
-                                      confirmLabel: t(
-                                        'modules.files.menu.remove',
-                                      ),
-                                      onConfirm: () =>
-                                        remove.run({
-                                          data: { tripId, fileId: file.id },
-                                        }),
-                                    }),
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    </TableCell>
+                    <TableCell>{fileMenu(file)}</TableCell>
                   </TableRow>
                 )
               })}
