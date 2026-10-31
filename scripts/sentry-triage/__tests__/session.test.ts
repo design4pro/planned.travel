@@ -275,32 +275,20 @@ describe('restricted Sentry sweep subprocess boundary', () => {
     ).toHaveLength(0)
   })
 
-  it('does not file on a permission or report failure', () => {
-    const f = fixture()
-    writeFileSync(join(f.dir, 'failure'), '')
-    expect(f.run(['--file-issues']).status).not.toBe(0)
-    expect(
-      f
-        .events()
-        .filter((e) => e.kind === 'github' && e.args.includes('create')),
-    ).toHaveLength(0)
-    rmSync(join(f.dir, 'failure'))
-    writeFileSync(join(f.dir, 'denied'), '')
-    expect(f.run(['--file-issues']).status).not.toBe(0)
-    expect(
-      f
-        .events()
-        .filter((e) => e.kind === 'github' && e.args.includes('create')),
-    ).toHaveLength(0)
-    rmSync(join(f.dir, 'denied'))
-    f.report.status = 'invalid'
-    expect(f.run(['--file-issues']).status).not.toBe(0)
-    expect(
-      f
-        .events()
-        .filter((e) => e.kind === 'github' && e.args.includes('create')),
-    ).toHaveLength(0)
-  })
+  it.each(['failure', 'denied', 'invalid report'])(
+    'does not file on %s',
+    (failure) => {
+      const f = fixture()
+      if (failure === 'invalid report') f.report.status = 'invalid'
+      else writeFileSync(join(f.dir, failure), '')
+      expect(f.run(['--file-issues']).status).not.toBe(0)
+      expect(
+        f
+          .events()
+          .filter((e) => e.kind === 'github' && e.args.includes('create')),
+      ).toHaveLength(0)
+    },
+  )
 
   it('keeps deduplication and the filing cap effective', () => {
     const f = fixture()
