@@ -1015,12 +1015,15 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 생성: {when}',
   'files.export.madeAt': '{date} {time}',
-  'files.export.email.subject': '{title} 준비 완료',
+  'files.export.email.subject': '내보내기 준비 완료: {title}',
   'files.export.email.body': {
-    other: '여행 내보내기가 준비되었습니다. {count}일 동안 보관됩니다.',
+    other: '{title}의 내보내기가 준비되었습니다. {count}일 동안 보관됩니다.',
   },
-  'files.export.email.action': '{title} 열기',
-  'files.export.email.text': '여행 내보내기가 준비되었습니다: {url}',
+  'files.export.email.action': '내보내기로 이동',
+  'files.export.email.text': '{body}\n\n{limit}\n\n내보내기로 이동: {url}',
+  'files.export.limit': {
+    other: '여행마다 최근 내보내기 {count}개가 보관됩니다.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': '여행 내보내기',

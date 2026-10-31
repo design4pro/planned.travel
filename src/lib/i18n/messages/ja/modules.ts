@@ -1022,12 +1022,15 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 作成: {when}',
   'files.export.madeAt': '{date} {time}',
-  'files.export.email.subject': '{title} の準備ができました',
+  'files.export.email.subject': 'エクスポートの準備完了: {title}',
   'files.export.email.body': {
-    other: '旅行のエクスポートの準備ができました。{count}日間保存されます。',
+    other: '{title}のエクスポートができました。{count}日間保存されます。',
   },
-  'files.export.email.action': '{title} を開く',
-  'files.export.email.text': '旅行のエクスポートの準備ができました: {url}',
+  'files.export.email.action': 'エクスポートへ移動',
+  'files.export.email.text': '{body}\n\n{limit}\n\nエクスポートへ移動: {url}',
+  'files.export.limit': {
+    other: '各旅行では最新の{count}件のエクスポートが保存されます。',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': '旅行をエクスポート',

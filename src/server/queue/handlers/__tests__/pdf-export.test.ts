@@ -21,7 +21,10 @@ import {
   subscribeTenant,
 } from '#/server/repos/__tests__/harness'
 import { createLogger, createMemorySink } from '#/server/observability/logger'
-import { exportObjectKey } from '#/server/storage/export-artifacts'
+import {
+  EXPORT_KEEP_COUNT,
+  exportObjectKey,
+} from '#/server/storage/export-artifacts'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import { createPdfExportHandler, renderExportDocument } from '../pdf-export'
 import {
@@ -568,11 +571,11 @@ describe('the requester’s language', () => {
     await run({ notify: 'owner@example.com', locale: 'pl' }, rigged)
 
     const [email] = rigged.emails
-    expect(email?.subject).toBe('Gotowe: Lisbon')
+    expect(email?.subject).toBe('Eksport gotowy: Lisbon')
     expect(email?.html).toContain('Będzie dostępny przez 7 dni.')
-    expect(email?.html).toContain('Otwórz: Lisbon')
+    expect(email?.html).toContain('Przejdź do eksportu')
     expect(email?.text).toBe(
-      `Eksport podróży jest gotowy: ${APP_URL}/trips/${tripId}/files?export=task-under-test`,
+      `Eksport podróży Lisbon jest gotowy. Będzie dostępny przez 7 dni.\n\nPodróż zachowuje ${EXPORT_KEEP_COUNT} najnowszych eksportów.\n\nPrzejdź do eksportu: ${APP_URL}/trips/${tripId}/files?export=task-under-test`,
     )
     expect(email?.html).toContain('dir="ltr"')
   })
@@ -582,8 +585,14 @@ describe('the requester’s language', () => {
 
     await run({ notify: 'owner@example.com' }, rigged)
 
-    expect(rigged.emails[0]?.subject).toBe('Lisbon is ready')
-    expect(rigged.emails[0]?.html).toContain('It is kept for 7 days.')
+    expect(rigged.emails[0]?.subject).toBe('Export ready: Lisbon')
+    expect(rigged.emails[0]?.html).toContain(
+      'Your export of Lisbon is ready. It is kept for 7 days.',
+    )
+    expect(rigged.emails[0]?.html).toContain(
+      `A trip keeps its ${EXPORT_KEEP_COUNT} newest exports.`,
+    )
+    expect(rigged.emails[0]?.html).toContain('Go to the export</a>')
   })
 })
 
@@ -603,7 +612,7 @@ describe('the ready link', () => {
     )
 
     expect(rigged.emails[0]?.text).toBe(
-      `Your trip export is ready: ${APP_URL}/trips/${encodeURIComponent(tripId)}/files?export=task%2F1%20x%26y`,
+      `Your export of Lisbon is ready. It is kept for 7 days.\n\nA trip keeps its ${EXPORT_KEEP_COUNT} newest exports.\n\nGo to the export: ${APP_URL}/trips/${encodeURIComponent(tripId)}/files?export=task%2F1%20x%26y`,
     )
     expect(rigged.emails[0]?.html).not.toContain('/app/trips')
   })
@@ -622,7 +631,7 @@ describe('the ready link', () => {
     const email = rigged.emails[0]
     expect(email?.html).not.toContain('<script>')
     expect(email?.html).toContain(
-      'Open &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;',
+      'Your export of &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;',
     )
   })
 
@@ -642,8 +651,8 @@ describe('the ready link', () => {
 
   it('never cuts the subject through the middle of an emoji', async () => {
     const rigged = rig({ withPdf: false })
-    // 'Gotowe: ' is 8 units, so the emoji's two halves sit at units 199 and 200.
-    const title = `${'a'.repeat(191)}😀${'b'.repeat(20)}`
+    // The Polish prefix is 15 units; the emoji straddles the subject limit.
+    const title = `${'a'.repeat(184)}😀${'b'.repeat(20)}`
 
     await run(
       {

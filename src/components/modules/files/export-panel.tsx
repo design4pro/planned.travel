@@ -26,7 +26,10 @@ import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { listTripExportsFn, requestTripExportFn } from '#/server/fns/exports'
-import { EXPORT_TTL_SECONDS } from '#/server/storage/export-artifacts'
+import {
+  EXPORT_KEEP_COUNT,
+  EXPORT_TTL_SECONDS,
+} from '#/server/storage/export-artifacts'
 import { useAction } from '../shared/use-action'
 import { ModulePanel, ModuleRow } from '../shared/panel'
 import { downloadTripExport } from './export-download'
@@ -420,7 +423,8 @@ export function ExportPanel({
       >
         <p className="px-5 pt-4 text-caption text-ink-3">
           {t('modules.files.export.description')}{' '}
-          {t('modules.files.export.kept', { count: KEPT_DAYS })}
+          {t('modules.files.export.kept', { count: KEPT_DAYS })}{' '}
+          {t('modules.files.export.limit', { count: EXPORT_KEEP_COUNT })}
         </p>
         <div
           role="status"
