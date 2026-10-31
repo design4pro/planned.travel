@@ -234,6 +234,178 @@ describe('member isolation', () => {
     }
   })
 
+  describe('journey entry sources (#1407)', () => {
+    it.each(['sourceTripId', 'sourcePlaceId', 'checkInId'] as const)(
+      'refuses unreadable trips reached through %s in both writers',
+      async (field) => {
+        const checkIn = await createCheckIn(alpha.scope, {
+          tripId: fixture.tripId,
+          name: 'Private visit',
+        })
+        const journey = await createJourney(stranger, { title: 'My journal' })
+        const entry = await createEntry(stranger, {
+          journeyId: journey.id,
+          entryDate: '2026-04-10',
+        })
+        const references = {
+          sourceTripId: fixture.tripId,
+          sourcePlaceId: fixture.placeId,
+          checkInId: checkIn.id,
+        }
+        await expect(
+          createEntry(stranger, {
+            journeyId: journey.id,
+            entryDate: '2026-04-10',
+            [field]: references[field],
+          }),
+        ).rejects.toBeInstanceOf(NotFoundError)
+        await expect(
+          updateEntry(stranger, entry.id, {
+            [field]: references[field],
+            title: 'Must not persist',
+          }),
+        ).rejects.toBeInstanceOf(NotFoundError)
+        expect(await listJourneyEntries(stranger, journey.id)).toEqual([entry])
+      },
+    )
+
+    it('validates the effective tuple while preserving standalone, multi-trip and nullable sources', async () => {
+      const scope = alpha.scope
+      const journey = await createJourney(scope, {
+        tripId: fixture.tripId,
+        title: 'Journal',
+      })
+      const otherTrip = await createTrip(scope, { title: 'Porto' })
+      const otherPlace = await createPlace(scope, {
+        tripId: otherTrip.id,
+        name: 'Porto square',
+      })
+      const otherCheckIn = await createCheckIn(scope, {
+        tripId: otherTrip.id,
+        name: 'Porto visit',
+      })
+      const standalone = await createCheckIn(scope, { name: 'Unplanned visit' })
+      const sources = {
+        sourceTripId: otherTrip.id,
+        sourcePlaceId: otherPlace.id,
+        checkInId: otherCheckIn.id,
+      }
+      const entry = await createEntry(scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        ...sources,
+      })
+      const invalid = [
+        { ...sources, sourceTripId: fixture.tripId },
+        { ...sources, sourcePlaceId: fixture.placeId },
+        { ...sources, checkInId: standalone.id },
+        {
+          sourceTripId: null,
+          sourcePlaceId: fixture.placeId,
+          checkInId: otherCheckIn.id,
+        },
+      ]
+      for (const tuple of invalid) {
+        await expect(
+          createEntry(scope, {
+            journeyId: journey.id,
+            entryDate: '2026-04-10',
+            ...tuple,
+          }),
+        ).rejects.toBeInstanceOf(NotFoundError)
+      }
+      for (const patch of [
+        { sourceTripId: fixture.tripId },
+        { sourcePlaceId: fixture.placeId },
+        { checkInId: standalone.id },
+        { sourceTripId: null, sourcePlaceId: fixture.placeId },
+      ]) {
+        await expect(
+          updateEntry(scope, entry.id, patch),
+        ).rejects.toBeInstanceOf(NotFoundError)
+        expect(await listJourneyEntries(scope, journey.id)).toEqual([entry])
+      }
+      const withoutTrip = await updateEntry(scope, entry.id, {
+        sourceTripId: null,
+      })
+      expect(withoutTrip.sourceTripId).toBeNull()
+      expect(withoutTrip.sourcePlaceId).toBe(otherPlace.id)
+      expect(
+        (
+          await updateEntry(scope, entry.id, {
+            sourcePlaceId: null,
+            checkInId: null,
+          })
+        ).checkInId,
+      ).toBeNull()
+      const free = await createEntry(scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        checkInId: standalone.id,
+      })
+      expect(free.sourceTripId).toBeNull()
+      const implicit = await createEntry(scope, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        sourcePlaceId: otherPlace.id,
+        checkInId: otherCheckIn.id,
+      })
+      expect(implicit.sourceTripId).toBeNull()
+      expect((await updateEntry(scope, free.id, sources)).sourceTripId).toBe(
+        otherTrip.id,
+      )
+    })
+
+    it('allows unrelated edits and clearing references after access changes or deletion', async () => {
+      const journey = await createJourney(stranger, { title: 'My journal' })
+      await setTripVisibility(alpha.scope, fixture.tripId, 'organization')
+      const checkIn = await createCheckIn(alpha.scope, {
+        tripId: fixture.tripId,
+        name: 'Visit',
+      })
+      const entry = await createEntry(stranger, {
+        journeyId: journey.id,
+        entryDate: '2026-04-10',
+        sourceTripId: fixture.tripId,
+        sourcePlaceId: fixture.placeId,
+        checkInId: checkIn.id,
+      })
+      await setTripVisibility(alpha.scope, fixture.tripId, 'private')
+      expect(
+        (
+          await updateEntry(stranger, entry.id, {
+            title: 'Still mine',
+            body: 'Remembered',
+            moodId: null,
+          })
+        ).title,
+      ).toBe('Still mine')
+      expect(
+        (
+          await updateEntry(stranger, entry.id, {
+            sourceTripId: null,
+            sourcePlaceId: null,
+            checkInId: null,
+          })
+        ).sourceTripId,
+      ).toBeNull()
+      await setTripVisibility(alpha.scope, fixture.tripId, 'organization')
+      await updateEntry(stranger, entry.id, {
+        sourceTripId: fixture.tripId,
+        sourcePlaceId: fixture.placeId,
+        checkInId: checkIn.id,
+      })
+      await deleteTrip(alpha.scope, fixture.tripId)
+      const detached = await updateEntry(stranger, entry.id, {
+        body: 'After deletion',
+      })
+      expect(detached.body).toBe('After deletion')
+      expect(detached.sourceTripId).toBeNull()
+      expect(detached.sourcePlaceId).toBeNull()
+      expect(detached.checkInId).toBeNull()
+    })
+  })
+
   describe('a private trip', () => {
     it('is not found by any reader that addresses it directly', async () => {
       expect(await canReadTrip(stranger, fixture.tripId)).toBe(false)

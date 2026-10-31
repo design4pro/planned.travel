@@ -1251,6 +1251,39 @@ describe('tenant isolation', () => {
     beta = await seedWorld(await harness.seedTenant('beta'))
   })
 
+  describe('journey entry sources (#1407)', () => {
+    it.each(['sourceTripId', 'sourcePlaceId', 'checkInId'] as const)(
+      'refuses foreign and missing %s in both writers without writing',
+      async (field) => {
+        const scope = alpha.tenant.scope
+        const before = await listJourneyEntries(scope, alpha.journeyId)
+        const foreign = {
+          sourceTripId: beta.tripId,
+          sourcePlaceId: beta.placeId,
+          checkInId: beta.checkInId,
+        }
+        for (const id of [foreign[field], 'missing-source']) {
+          await expect(
+            createEntry(scope, {
+              journeyId: alpha.journeyId,
+              entryDate: '2026-04-10',
+              [field]: id,
+            }),
+          ).rejects.toBeInstanceOf(NotFoundError)
+          await expect(
+            updateEntry(scope, alpha.journeyEntryId, {
+              [field]: id,
+              title: 'Must not persist',
+            }),
+          ).rejects.toBeInstanceOf(NotFoundError)
+          expect(await listJourneyEntries(scope, alpha.journeyId)).toEqual(
+            before,
+          )
+        }
+      },
+    )
+  })
+
   describe('08-S4a collection management', () => {
     it('refuses foreign ids before roles or counts and leaves both tenant worlds intact', async () => {
       const snapshot = () => ({

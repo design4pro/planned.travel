@@ -42,7 +42,7 @@ import {
 import { NotFoundError, assertCanAdminister } from './context'
 import { checkInsRepository } from './collab'
 import { stillInWorkspace } from './members'
-import { placesRepository } from './places'
+import { placesRepository, requirePlaceOfTrip } from './places'
 import { readableTripFilter, readableTrips, requireTrip } from './trips'
 import {
   colourSchema,
@@ -809,6 +809,42 @@ export async function deleteJourney(
   await journeysRepository.requireRemove(scope, journeyId)
 }
 
+/** Validate source links together without binding them to the journal's parent trip. */
+async function requireEntrySources(
+  scope: TenantScope,
+  sources: Pick<
+    CreateEntryInput,
+    'sourceTripId' | 'sourcePlaceId' | 'checkInId'
+  >,
+): Promise<void> {
+  const { sourceTripId, sourcePlaceId, checkInId } = sources
+  if (sourceTripId) {
+    await requireTrip(scope, sourceTripId)
+  }
+  let placeTripId: string | null = null
+  if (sourcePlaceId) {
+    const place = sourceTripId
+      ? await requirePlaceOfTrip(scope, sourceTripId, sourcePlaceId)
+      : await placesRepository.requireById(scope, sourcePlaceId)
+    placeTripId = place.tripId
+    if (placeTripId) {
+      await requireTrip(scope, placeTripId)
+    }
+  }
+  if (checkInId) {
+    const checkIn = await checkInsRepository.requireById(scope, checkInId)
+    if (checkIn.tripId) {
+      await requireTrip(scope, checkIn.tripId)
+    }
+    if (
+      (sourceTripId && checkIn.tripId !== sourceTripId) ||
+      (placeTripId && checkIn.tripId && placeTripId !== checkIn.tripId)
+    ) {
+      throw new NotFoundError('check-in', checkInId)
+    }
+  }
+}
+
 export async function createEntry(
   scope: TenantScope,
   input: CreateEntryInput,
@@ -818,15 +854,7 @@ export async function createEntry(
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
   }
-  if (values.checkInId) {
-    await checkInsRepository.requireById(scope, values.checkInId)
-  }
-  if (values.sourceTripId) {
-    await requireTrip(scope, values.sourceTripId)
-  }
-  if (values.sourcePlaceId) {
-    await placesRepository.requireById(scope, values.sourcePlaceId)
-  }
+  await requireEntrySources(scope, values)
   return journeyEntriesRepository.insert(scope, {
     ...values,
     authorUserId: scope.ctx.userId,
@@ -839,9 +867,16 @@ export async function updateEntry(
   input: UpdateEntryInput,
 ): Promise<JourneyEntry> {
   const values = definedOnly(updateEntryInput.parse(input))
-  await requireEntry(scope, entryId)
+  const entry = await requireEntry(scope, entryId)
   if (values.moodId) {
     await journeyMoodsRepository.requireById(scope, values.moodId)
+  }
+  if (
+    values.sourceTripId !== undefined ||
+    values.sourcePlaceId !== undefined ||
+    values.checkInId !== undefined
+  ) {
+    await requireEntrySources(scope, { ...entry, ...values })
   }
   return journeyEntriesRepository.requireUpdate(scope, entryId, values)
 }
