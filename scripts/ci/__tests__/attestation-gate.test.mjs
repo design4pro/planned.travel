@@ -56,7 +56,7 @@ describe('ci.yml attestation gate', () => {
       expect(text).toContain('dpkg-deb --extract "$package" "$tools"')
       expect(text).toContain('echo "$tools/usr/bin" >> "$GITHUB_PATH"')
       expect(text).toContain(
-        `apt-get -o Dir::State::lists="$tools/lists" download ${packages}`,
+        `apt-get -o Dir::State::lists="$tools/lists" -o Dir::State::status=/dev/null download ${packages}`,
       )
       expect(text).toContain('uses: actions/setup-node@v7')
       expect(text).toContain('node-version: 24.x')

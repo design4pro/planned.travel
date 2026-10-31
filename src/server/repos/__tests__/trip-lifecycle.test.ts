@@ -65,7 +65,14 @@ import {
 import { createDayNote, daysRepository, listTripDays, updateDay } from '../days'
 import { createExpense } from '../expenses'
 import { recordFile } from '../files'
-import { createAssignment } from '../itinerary'
+import {
+  createAssignment,
+  updateAssignment,
+  reorderAssignments,
+  reorderDayTimelines,
+  setAssignmentParticipants,
+} from '../itinerary'
+import { createTransport } from '../transports'
 import {
   createPlace,
   listUnscheduledPlaces,
@@ -263,6 +270,220 @@ describe('trip lifecycle', () => {
       ]) {
         expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
       }
+    })
+  })
+
+  describe('stop writers enforce the archive boundary', () => {
+    async function seedStops() {
+      const trip = await createTrip(tenant.scope, {
+        title: 'Lisbon',
+        dayCount: 2,
+      })
+      const [firstDay, secondDay] = await listTripDays(tenant.scope, trip.id)
+      const place = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Tram',
+      })
+      const spare = await createPlace(tenant.scope, {
+        tripId: trip.id,
+        name: 'Castle',
+      })
+      const stop = await createAssignment(tenant.scope, {
+        tripId: trip.id,
+        dayId: firstDay.id,
+        placeId: place.id,
+        startTime: '09:00',
+        orderIndex: 4,
+      })
+      await setAssignmentParticipants(tenant.scope, stop.id, [
+        tenant.ownerUserId,
+      ])
+      const note = await createDayNote(tenant.scope, {
+        tripId: trip.id,
+        dayId: firstDay.id,
+        body: 'Keep this',
+        sortOrder: 2,
+      })
+      await createTransport(tenant.scope, {
+        tripId: trip.id,
+        dayId: firstDay.id,
+        title: 'Train',
+        mode: 'train',
+      })
+      return { trip, firstDay, secondDay, stop, spare, note }
+    }
+
+    function snapshot() {
+      return [
+        'day_assignments',
+        'assignment_participants',
+        'day_notes',
+        'transports',
+        'transport_legs',
+      ].map((table) =>
+        harness.sqlite.prepare(`select * from ${table} order by rowid`).all(),
+      )
+    }
+
+    function writers(
+      scope: TenantScope,
+      fixture: Awaited<ReturnType<typeof seedStops>>,
+    ) {
+      const { trip, firstDay, secondDay, stop, spare, note } = fixture
+      return {
+        createAssignment: () =>
+          createAssignment(scope, {
+            tripId: trip.id,
+            dayId: firstDay.id,
+            placeId: spare.id,
+          }),
+        updateAssignment: () =>
+          updateAssignment(scope, stop.id, { notes: 'Changed' }),
+        reorderAssignments: () =>
+          reorderAssignments(scope, [{ assignmentId: stop.id, orderIndex: 9 }]),
+        setAssignmentParticipants: () =>
+          setAssignmentParticipants(scope, stop.id, []),
+        reorderDayTimelines: () =>
+          reorderDayTimelines(scope, {
+            tripId: trip.id,
+            days: [
+              { dayId: firstDay.id, items: [] },
+              {
+                dayId: secondDay.id,
+                items: [
+                  { kind: 'note', id: note.id },
+                  { kind: 'stop', id: stop.id },
+                ],
+                clearTime: [{ kind: 'stop', id: stop.id }],
+              },
+            ],
+          }),
+      }
+    }
+
+    const names = [
+      'createAssignment',
+      'updateAssignment',
+      'reorderAssignments',
+      'setAssignmentParticipants',
+      'reorderDayTimelines',
+    ] as const
+
+    it.each(names)(
+      '%s refuses an archived trip before writes or role errors',
+      async (name) => {
+        const fixture = await seedStops()
+        await addTripMember(tenant.scope, {
+          tripId: fixture.trip.id,
+          userId: outsiderId,
+          role: 'viewer',
+        })
+        await archiveTrip(tenant.scope, fixture.trip.id)
+        const before = snapshot()
+        for (const scope of [tenant.scope, outsider]) {
+          await expect(writers(scope, fixture)[name]()).rejects.toBeInstanceOf(
+            TripArchivedError,
+          )
+          expect(snapshot()).toEqual(before)
+        }
+      },
+    )
+
+    it.each(names)(
+      '%s preserves tenant and private-trip isolation on archived trips',
+      async (name) => {
+        const fixture = await seedStops()
+        const foreign = await harness.seedTenant('foreign')
+        await archiveTrip(tenant.scope, fixture.trip.id)
+        const before = snapshot()
+        for (const scope of [outsider, foreign.scope]) {
+          if (name === 'reorderAssignments') {
+            await expect(writers(scope, fixture)[name]()).resolves.toEqual([])
+          } else {
+            await expect(
+              writers(scope, fixture)[name](),
+            ).rejects.toBeInstanceOf(NotFoundError)
+          }
+          expect(snapshot()).toEqual(before)
+        }
+      },
+    )
+
+    it.each(names)(
+      '%s still permits active writes and refuses viewers',
+      async (name) => {
+        const fixture = await seedStops()
+        await addTripMember(tenant.scope, {
+          tripId: fixture.trip.id,
+          userId: outsiderId,
+          role: 'viewer',
+        })
+        const before = snapshot()
+        await expect(writers(outsider, fixture)[name]()).rejects.toBeInstanceOf(
+          TripRoleError,
+        )
+        expect(snapshot()).toEqual(before)
+        await writers(tenant.scope, fixture)[name]()
+        expect(snapshot()).not.toEqual(before)
+      },
+    )
+
+    it('refuses the whole reorder batch in either order when a visible trip is archived', async () => {
+      const active = await seedStops()
+      const archived = await seedStops()
+      await archiveTrip(tenant.scope, archived.trip.id)
+      const before = snapshot()
+      const moves = [active, archived].map(({ stop }) => ({
+        assignmentId: stop.id,
+        orderIndex: 9,
+      }))
+      for (const batch of [moves, [...moves].reverse()]) {
+        await expect(
+          reorderAssignments(tenant.scope, batch),
+        ).rejects.toBeInstanceOf(TripArchivedError)
+        expect(snapshot()).toEqual(before)
+      }
+    })
+
+    it('filters hidden archived, foreign and unknown stops while writing visible active stops', async () => {
+      const hidden = await seedStops()
+      await archiveTrip(tenant.scope, hidden.trip.id)
+      const active = await seedStops()
+      await addTripMember(tenant.scope, {
+        tripId: active.trip.id,
+        userId: outsiderId,
+        role: 'editor',
+      })
+      const foreign = await harness.seedTenant('foreign')
+      const foreignTrip = await createTrip(foreign.scope, {
+        title: 'Foreign',
+        dayCount: 1,
+      })
+      const [day] = await listTripDays(foreign.scope, foreignTrip.id)
+      const place = await createPlace(foreign.scope, {
+        tripId: foreignTrip.id,
+        name: 'Foreign',
+      })
+      const foreignStop = await createAssignment(foreign.scope, {
+        tripId: foreignTrip.id,
+        dayId: day.id,
+        placeId: place.id,
+      })
+      await archiveTrip(foreign.scope, foreignTrip.id)
+      const before = snapshot()
+      const result = await reorderAssignments(
+        outsider,
+        [hidden.stop.id, foreignStop.id, 'unknown-stop', active.stop.id].map(
+          (assignmentId) => ({ assignmentId, orderIndex: 9 }),
+        ),
+      )
+      expect(result.map((row) => row.id)).toEqual([active.stop.id])
+      expect(result[0].orderIndex).toBe(9)
+      const after = snapshot()
+      expect(after.slice(1)).toEqual(before.slice(1))
+      expect(after[0].filter((row) => row.id !== active.stop.id)).toEqual(
+        before[0].filter((row) => row.id !== active.stop.id),
+      )
     })
   })
 

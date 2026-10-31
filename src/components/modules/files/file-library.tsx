@@ -56,6 +56,10 @@ import {
   useHasMounted,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import {
+  carriesFiles,
+  usePreventFileNavigation,
+} from '#/lib/use-prevent-file-navigation'
 import { resolve } from '../shared/deferred-message'
 import { formatRelative } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -132,11 +136,6 @@ function nameFor(
 
 let taskSequence = 0
 
-/** True for a drag that carries files; selected text and links dragged over the page do not. */
-function carriesFiles(data: DataTransfer): boolean {
-  return Array.from(data.types).includes('Files')
-}
-
 /* ------------------------------------------------------------------ screen */
 
 export interface FileLibraryProps {
@@ -163,6 +162,7 @@ export function FileLibrary({
   limitBytes,
   pickRequestedAt,
 }: FileLibraryProps) {
+  usePreventFileNavigation()
   const [queue, dispatch] = useReducer(uploadQueueReducer, emptyUploadQueue)
   const [dragging, setDragging] = useState(false)
   /**
@@ -559,16 +559,18 @@ export function FileLibrary({
               event.preventDefault()
               setDragging(true)
             }}
-            onDragLeave={(event) => {
+            onDragLeave={() => {
               // No files check: the count only rises under a files drag, and some browsers report
               // other types on a leave, which would otherwise strand the zone active.
-              event.preventDefault()
               dragDepth.current = Math.max(0, dragDepth.current - 1)
               if (dragDepth.current === 0) {
                 setDragging(false)
               }
             }}
             onDrop={(event) => {
+              if (!carriesFiles(event.dataTransfer)) {
+                return
+              }
               event.preventDefault()
               dragDepth.current = 0
               setDragging(false)

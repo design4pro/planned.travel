@@ -343,3 +343,60 @@ it.each(['list', 'table'] as const)(
     errorToast.mockRestore()
   },
 )
+it.each([
+  [true, false],
+  [false, false],
+  [false, true],
+])(
+  'protects outside drops with canWrite=%s archived=%s and cleans up',
+  (canWrite, archived) => {
+    renderLibrary(canWrite, [], archived)
+    for (const type of ['dragover', 'drop']) {
+      for (const types of [['Files'], ['text/plain'], ['text/uri-list']]) {
+        const event = new Event(type, { bubbles: true, cancelable: true })
+        Object.defineProperty(event, 'dataTransfer', {
+          value: { types, files: [] },
+        })
+        fireEvent(document.body, event)
+        expect(event.defaultPrevented).toBe(types.includes('Files'))
+      }
+    }
+    cleanup()
+    expect(fireEvent.drop(document.body, FILES_DRAG)).toBe(true)
+  },
+)
+
+it.each(['text/plain', 'text/uri-list'])(
+  'leaves %s drags alone in the zone',
+  (type) => {
+    const zone = open()
+    for (const eventType of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+      const event = new Event(eventType, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', {
+        value: { types: [type], files: [] },
+      })
+      fireEvent(zone, event)
+      expect(event.defaultPrevented).toBe(false)
+    }
+  },
+)
+
+it('uploads an in-zone file exactly once without stopping propagation', async () => {
+  stubs.upload.mockClear()
+  stubs.upload.mockImplementation(() => new Promise(() => {}))
+  const zone = open()
+  const bubbled = vi.fn()
+  window.addEventListener('drop', bubbled)
+  try {
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        types: ['Files'],
+        files: [new File(['bytes'], 'ticket.pdf', { type: 'application/pdf' })],
+      },
+    })
+    await waitFor(() => expect(stubs.upload).toHaveBeenCalledTimes(1))
+    expect(bubbled).toHaveBeenCalledTimes(1)
+  } finally {
+    window.removeEventListener('drop', bubbled)
+  }
+})

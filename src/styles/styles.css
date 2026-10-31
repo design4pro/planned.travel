@@ -66,6 +66,15 @@
   --color-info-soft: var(--color-info-soft);
   --color-info-on: var(--color-info-on);
 
+  --color-data-1: var(--color-data-1);
+  --color-data-2: var(--color-data-2);
+  --color-data-3: var(--color-data-3);
+  --color-data-4: var(--color-data-4);
+  --color-data-5: var(--color-data-5);
+  --color-data-6: var(--color-data-6);
+  --color-data-7: var(--color-data-7);
+  --color-data-8: var(--color-data-8);
+
   --color-inverse: var(--color-inverse);
   --color-inverse-on: var(--color-inverse-on);
   --color-inverse-muted: var(--color-inverse-muted);

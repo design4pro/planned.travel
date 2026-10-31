@@ -418,6 +418,7 @@ export interface SeedJourneyEntry {
   readonly tags: ReadonlyArray<string>
   readonly sortOrder: number
   readonly photos?: ReadonlyArray<{
+    /** Paths relative to `journeys/<organizationId>/`, scoped when the seed is applied. */
     readonly storageKey: string
     readonly thumbnailKey: string
     readonly caption: string

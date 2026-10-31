@@ -180,6 +180,8 @@ describe('FeedbackWidget', () => {
   })
 
   it.each([
+    '/reset-password?token=the-secret',
+    '/login?callbackURL=%252Freset-password%253Ftoken%253Dthe-secret',
     '/join/the-secret',
     '/login?redirect=%2Fjoin%2Fthe-secret',
     '/login?callbackURL=%252Fjoin%252Fthe-secret',
@@ -197,19 +199,45 @@ describe('FeedbackWidget', () => {
     },
   )
 
-  it('builds the button again once the visitor leaves the join location', async () => {
-    route.href = '/join/the-secret'
+  it('cancels pending creation when navigation reaches a credential query', async () => {
+    let resolve: (value: unknown) => void = () => {}
+    startFeedback.mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
     const { speak } = await mount()
+    route.href = '/reset-password?token=the-secret'
+    await speak('pl')
+    resolve({ createWidget, setTheme })
     await waitFor(() => {
       expect(setTheme).toHaveBeenCalled()
     })
     expect(createWidget).not.toHaveBeenCalled()
-
     route.href = '/trips'
     await speak('pl')
-
-    await waitFor(() => {
-      expect(createWidget).toHaveBeenCalledTimes(1)
-    })
+    await widgetOptions()
+    route.href = '/reset-password?token=the-secret'
+    await speak('pl')
+    expect(removeFromDom).toHaveBeenCalledOnce()
   })
+
+  it.each(['/join/the-secret', '/reset-password?token=the-secret'])(
+    'builds the button again after leaving %s',
+    async (href) => {
+      route.href = href
+      const { speak } = await mount()
+      await waitFor(() => {
+        expect(setTheme).toHaveBeenCalled()
+      })
+      expect(createWidget).not.toHaveBeenCalled()
+
+      route.href = '/trips'
+      await speak('pl')
+
+      await waitFor(() => {
+        expect(createWidget).toHaveBeenCalledTimes(1)
+      })
+    },
+  )
 })

@@ -49,7 +49,7 @@ Measured at HEAD (`4cf1faed`) by reading the code.
   trips (other members' private trips included), file rows, expenses, journeys, share links, calendar feeds, notifications,
   the tenant `audit_log`, `subscriptions`, `member` and `invitation` rows.
 - **Not cascaded:** the R2 objects (`trips/<org>/`, `exports/<org>/`, `avatars/<org>/`; journey photo keys are
-  caller-chosen with no org segment but have no production writer), the Polar subscription (the workspace is the Polar
+  required to use `journeys/<org>/` on insertion; historical rows may still name foreign or unscoped objects), the Polar subscription (the workspace is the Polar
   customer, `external_id` = the organization id), the KV plan-state entry `billing:plan:v5:<org>` (60 s), the `TripRoom`
   Durable Objects, queue messages in flight.
 - **A Polar webhook for a deleted organization fails.** `organizationForSubscription` in `src/server/billing/webhook.ts`
@@ -392,7 +392,10 @@ Each is a D1 row that cascades or a consumer that must tolerate the missing work
 R2 key families must keep the organization in the second path segment (`trip-purge`'s existing rule). `WORKSPACE_R2_PREFIXES`
 (`trips/`, `exports/`, `avatars/`) is the single list; a drift test builds a key from every key-minting function in the repo
 and fails when one does not start with a listed prefix followed by the organization id. The journey photo writer, when it
-ships, mints `journeys/<org>/…` and adds the prefix; today there is nothing to capture.
+ships, mints `journeys/<org>/…` and adds the prefix. The existing `addPhoto` interface already enforces that namespace
+for originals and thumbnails, including the demo seed. Until prefix sweeping replaces key collection,
+`sweepWorkspaceObjects` verifies supplied keys against the exact workspace namespaces. Unsafe foreign and legacy
+keys are skipped, retaining those objects without relocation or deletion; row tenancy alone is not ownership proof.
 
 ### Private trips of other members, export, #999
 

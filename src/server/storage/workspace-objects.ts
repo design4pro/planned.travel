@@ -6,9 +6,9 @@
  * covers, `tripStoragePrefix`), `exports/<org>/<trip>/...` (`exportPrefix`) and `avatars/<org>/...`
  * (the portrait key plan 09 fixes). Plan 09's own sweep prefix, `<org>/`, matches none of them.
  *
- * The journey photo keys are not under a prefix of the workspace, so the caller collects them from
- * their rows **before** the rows go and passes them in. The generic work - listing, chunking at R2's
- * 1 000-key ceiling, an absent key being a success - is `./objects`.
+ * Journey photo keys are collected from their rows **before** the rows go and passed in. New photo
+ * keys live under `journeys/<org>/`; unsafe foreign and legacy keys are skipped and their objects
+ * retained. The generic work - listing, chunking, an absent key being a success - is `./objects`.
  */
 
 import { deleteObjects, deletePrefix } from './objects'
@@ -36,8 +36,8 @@ export function workspaceObjectPrefixes(organizationId: string): Array<string> {
  * Deletes everything the workspace has in the bucket plus `extraKeys`, and returns how many objects
  * it asked R2 to delete. Repeating it after a run that stopped part-way finishes the job.
  *
- * `extraKeys` are deleted as given: they must come from a tenant-scoped read of **this** workspace
- * (`listWorkspaceJourneyPhotoKeys`), never from a request or a message.
+ * `extraKeys` come from `listWorkspaceJourneyPhotoKeys`. A tenant-scoped row is not proof of object
+ * ownership: only keys within this workspace's exact namespaces may be deleted.
  */
 export async function sweepWorkspaceObjects(
   store: PrefixStore,
@@ -49,5 +49,9 @@ export async function sweepWorkspaceObjects(
   for (const prefix of prefixes) {
     deleted += await deletePrefix(store, prefix)
   }
-  return deleted + (await deleteObjects(store, extraKeys))
+  const ownedPrefixes = [...prefixes, `journeys/${organizationId}/`]
+  const ownedKeys = extraKeys.filter((key) =>
+    ownedPrefixes.some((prefix) => key.startsWith(prefix)),
+  )
+  return deleted + (await deleteObjects(store, ownedKeys))
 }

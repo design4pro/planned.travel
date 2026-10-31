@@ -780,10 +780,10 @@ gated the ticket (`risk-high`, approved, confidence high):
   ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
   renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
   alerts on that log, is for a person.
-- **Journey photo keys are swept as given (#1419).** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
-  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
-  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
-  it; until then the engine phase must not pass keys from any other source.
+- **Journey photo keys must belong to the workspace (#1419).** New `storageKey` and `thumbnailKey` values
+  must use the exact `journeys/<organizationId>/` namespace. `listWorkspaceJourneyPhotoKeys` remains a
+  tenant-scoped reference read; the sweep independently rejects foreign and legacy unscoped keys, retaining
+  those objects. The dev seed uses the same workspace namespace; future upload writers must do so too.
 
 ## Amendment - phase 5 (issue #1058)
 
@@ -903,3 +903,13 @@ at most 200 ids and one 250-batch cap covers the whole run. Structured logs reco
 `batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
 The trip history panel, overview activity list and action-count chart stop showing activity older
 than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.
+
+## Amendment - revocation-preserving room reset (#1608, PR #1671)
+
+This supersedes the room-reset descriptions above. Reset closes sockets and erases entity
+content, commit history and person identifiers. It first persists the latest applicable revocation
+timestamp as a non-personal room barrier, so a failed write does not destroy a newer barrier on retry.
+Selective deletion uses batches of at most 128 keys instead of `deleteAll()`. Reset and idle erasure
+retain unexpired barriers through the existing 15-minute TTL; their pruning alarm never postpones an
+earlier alarm. Reset persistence failures propagate to the caller. The adapter stamps reset after the
+revoking write; older Workers without that stamp still reset without weakening an existing barrier.

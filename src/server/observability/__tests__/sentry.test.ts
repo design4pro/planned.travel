@@ -123,45 +123,53 @@ it('redacts calendar credentials in each independently wired Sentry channel', as
   }
 })
 
-it('redacts a join-link secret in every channel the Worker sends', async () => {
-  const options = sentryOptions({})
-  const secret = 'Zk3-Join_Secret42'
-  const url = `https://planned.travel/join/${secret}`
-  const event = await options.beforeSend?.(
-    {
-      type: undefined,
-      request: { url, headers: { referer: url, 'user-agent': 'Firefox' } },
-    },
-    {},
-  )
-  const transaction = await options.beforeSendTransaction?.(
-    {
-      type: 'transaction',
-      transaction: `GET /join/${secret}`,
-      request: { headers: { Referer: url } },
-    },
-    {},
-  )
-  const span = options.beforeSendSpan?.({
-    trace_id: '1'.repeat(32),
-    span_id: '2'.repeat(16),
-    start_timestamp: 0,
-    timestamp: 1,
-    description: `GET ${url}`,
-    data: { 'url.path.params.token': secret },
-  })
-  const breadcrumb = options.beforeBreadcrumb?.(
-    { category: 'fetch', data: { url } },
-    undefined,
-  )
-  for (const result of [event, transaction, span, breadcrumb]) {
-    expect(result).toBeDefined()
-    expect(JSON.stringify(result)).not.toContain(secret)
-    expect(JSON.stringify(result)).toContain('[redacted]')
-  }
-  expect(JSON.stringify(event)).not.toContain('eferer')
-  expect(JSON.stringify(transaction)).not.toContain('eferer')
-})
+it.each(['join', 'query'])(
+  'redacts a %s secret in every channel the Worker sends',
+  async (kind) => {
+    const options = sentryOptions({})
+    const secret = 'Zk3-Join_Secret42'
+    const url =
+      kind === 'join'
+        ? `https://planned.travel/join/${secret}`
+        : `https://planned.travel/reset-password?token=${secret}`
+    const event = await options.beforeSend?.(
+      {
+        type: undefined,
+        request: { url, headers: { referer: url, 'user-agent': 'Firefox' } },
+      },
+      {},
+    )
+    const transaction = await options.beforeSendTransaction?.(
+      {
+        type: 'transaction',
+        transaction: `GET ${url}`,
+        request: { headers: { Referer: url } },
+      },
+      {},
+    )
+    const span = options.beforeSendSpan?.({
+      trace_id: '1'.repeat(32),
+      span_id: '2'.repeat(16),
+      start_timestamp: 0,
+      timestamp: 1,
+      description: `GET ${url}`,
+      data: { 'url.path.params.token': secret },
+    })
+    const breadcrumb = options.beforeBreadcrumb?.(
+      { category: 'fetch', data: { url } },
+      undefined,
+    )
+    for (const result of [event, transaction, span, breadcrumb]) {
+      expect(result).toBeDefined()
+      expect(JSON.stringify(result)).not.toContain(secret)
+      if (result !== event || kind === 'join') {
+        expect(JSON.stringify(result)).toContain('[redacted]')
+      }
+    }
+    expect(JSON.stringify(event)).not.toContain('eferer')
+    expect(JSON.stringify(transaction)).not.toContain('eferer')
+  },
+)
 
 describe('sentrySink', () => {
   it('mirrors a record into Sentry at its own level', () => {
