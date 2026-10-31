@@ -48,3 +48,5 @@ Bash with no allowlist and push rights, so the body is still a path for an instr
   the impact of hostile Sentry text; it does not make that text trusted.
 - Up to three tickets a day can each start a triage run, bounded by `BACKLOG_PRESSURE_LIMIT`, the
   per-run cap and the Reconciler's per-project limit.
+
+The trusted host inspects the survey’s verbose stream transcript and refuses filing on any failed tool result (`is_error` or MCP `isError`), even when the final report and session claim success. A successful connection preflight does not override a later survey failure.

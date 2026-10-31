@@ -238,8 +238,9 @@ function survey(prompt: string): Report {
       ]
         .map((name) => `mcp__sentry__${name}`)
         .join(','),
+      '--verbose',
       '--output-format',
-      'json',
+      'stream-json',
     ],
     {
       env: {
@@ -258,6 +259,38 @@ function survey(prompt: string): Report {
   if (run.error) throw run.error
   if (run.status !== 0)
     throw new Error(`claude exited with code ${String(run.status)}`)
+  const messages = run.stdout
+    .trim()
+    .split('\n')
+    .map((line) =>
+      z.object({ type: z.string() }).passthrough().parse(JSON.parse(line)),
+    )
+  for (const message of messages) {
+    if (message.type !== 'user') continue
+    const toolResults = z
+      .object({
+        message: z.object({
+          content: z.array(
+            z
+              .object({
+                type: z.string(),
+                is_error: z.boolean().optional(),
+              })
+              .passthrough(),
+          ),
+        }),
+        tool_use_result: z.unknown().optional(),
+      })
+      .parse(message)
+    if (
+      toolResults.message.content.some((block) => block.is_error === true) ||
+      (typeof toolResults.tool_use_result === 'object' &&
+        toolResults.tool_use_result !== null &&
+        'isError' in toolResults.tool_use_result &&
+        toolResults.tool_use_result.isError === true)
+    )
+      throw new Error('Sentry survey tool failed; nothing was looked at')
+  }
   const session = z
     .object({
       type: z.literal('result'),
@@ -266,7 +299,7 @@ function survey(prompt: string): Report {
       permission_denials: z.array(z.unknown()).max(0),
       result: z.string(),
     })
-    .parse(JSON.parse(run.stdout))
+    .parse(messages.at(-1))
   const block = /<sentry-triage>([\s\S]*?)<\/sentry-triage>/.exec(
     session.result,
   )
