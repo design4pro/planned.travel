@@ -55,6 +55,7 @@ export const TRIP_ROOM_MAX_SOCKET_AGE_MS = 15 * 60 * 1000
  * Margin added to a revocation watermark before a connect's `issuedAt` is compared with it. Both
  * stamps come from the app Worker, but Workers on different machines can disagree by a moment, and a
  * connect refused by mistake costs one reconnect while one accepted by mistake keeps a revoked role.
+ * Revocation stamps more than this far ahead of the room clock are rejected.
  */
 export const TRIP_ROOM_REVOCATION_SKEW_MS = 1_000
 

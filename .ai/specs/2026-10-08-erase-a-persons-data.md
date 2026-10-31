@@ -903,3 +903,13 @@ at most 200 ids and one 250-batch cap covers the whole run. Structured logs reco
 `batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
 The trip history panel, overview activity list and action-count chart stop showing activity older
 than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.
+
+## Amendment - revocation-preserving room reset (#1608)
+
+This supersedes the room-reset descriptions above. Reset closes sockets and erases entity
+content, commit history and person identifiers. It first persists the latest applicable revocation
+timestamp as a non-personal room barrier, so a failed write does not destroy a newer barrier on retry.
+Selective deletion uses batches of at most 128 keys instead of `deleteAll()`. Reset and idle erasure
+retain unexpired barriers through the existing 15-minute TTL; their pruning alarm never postpones an
+earlier alarm. Reset persistence failures propagate to the caller. The adapter stamps reset after the
+revoking write; older Workers without that stamp still reset without weakening an existing barrier.
