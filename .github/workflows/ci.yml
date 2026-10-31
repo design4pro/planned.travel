@@ -67,7 +67,7 @@ jobs:
           tools="$RUNNER_TEMP/control-tools"
           mkdir -p "$tools/lists/partial" "$tools/packages"
           apt-get -o Dir::State::lists="$tools/lists" update
-          # Ignore preinstalled versions that may be absent from the signed package indexes.
+          # Ignore preinstalled versions that may be absent from the signed indexes.
           (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" -o Dir::State::status=/dev/null download git gh tar gzip xz-utils)
           for package in "$tools"/packages/*.deb; do
             dpkg-deb --extract "$package" "$tools"
@@ -199,7 +199,7 @@ jobs:
           tools="$RUNNER_TEMP/control-tools"
           mkdir -p "$tools/lists/partial" "$tools/packages"
           apt-get -o Dir::State::lists="$tools/lists" update
-          # Ignore preinstalled versions that may be absent from the signed package indexes.
+          # Ignore preinstalled versions that may be absent from the signed indexes.
           (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" -o Dir::State::status=/dev/null download git tar gzip xz-utils)
           for package in "$tools"/packages/*.deb; do
             dpkg-deb --extract "$package" "$tools"
@@ -419,7 +419,7 @@ jobs:
           tools="$RUNNER_TEMP/control-tools"
           mkdir -p "$tools/lists/partial" "$tools/packages"
           apt-get -o Dir::State::lists="$tools/lists" update
-          # Ignore preinstalled versions that may be absent from the signed package indexes.
+          # Ignore preinstalled versions that may be absent from the signed indexes.
           (cd "$tools/packages" && apt-get -o Dir::State::lists="$tools/lists" -o Dir::State::status=/dev/null download git gh tar gzip xz-utils)
           for package in "$tools"/packages/*.deb; do
             dpkg-deb --extract "$package" "$tools"

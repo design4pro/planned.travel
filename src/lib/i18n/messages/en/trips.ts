@@ -17,6 +17,10 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'collab.readOnly.archived':
+    'This trip is archived. Collaboration is read-only.',
+  'collab.readOnly.role':
+    'Only trip owners and editors can change the conversation, notes and polls.',
   'notFound.title': "We can't find this trip",
   'notFound.body':
     "It isn't among the trips you can open in the workspace you're in now. It may have been deleted, or you may not have access to it.",

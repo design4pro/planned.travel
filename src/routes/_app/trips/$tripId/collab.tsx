@@ -63,7 +63,7 @@ function CollabPage() {
           title={t('trips.collab.title')}
           description={collabSummary(data, t, locale)}
           actions={
-            data.canConfigure ? (
+            data.canWrite === true && data.canConfigure ? (
               <CollabSectionsMenu
                 sections={data.sections}
                 write={(section, on) =>

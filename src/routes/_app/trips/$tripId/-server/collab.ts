@@ -39,6 +39,8 @@ import type { PersonChip } from '../../../-server/trip'
 export interface CollabPayload {
   readonly sections: CollabSections
   readonly canConfigure: boolean
+  readonly canWrite?: boolean
+  readonly isArchived?: boolean
   readonly messages: ReadonlyArray<MessageRow>
   /**
    * Every message of the conversation, not only the window in `messages`; null while the
@@ -84,6 +86,8 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
       found: true,
       sections,
       canConfigure: canWritePlan(trip, role),
+      canWrite: canWritePlan(trip, role),
+      isArchived: trip.isArchived,
       people,
       viewerUserId: scope.ctx.userId,
       timeZone: resolveTimeZone(trip.timezone),

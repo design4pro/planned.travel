@@ -52,6 +52,7 @@ export function NotesBoard({
   onNewNoteOpenChange,
   onDirtyChange,
   turnedOff = false,
+  canWrite,
 }: {
   tripId: string
   notes: ReadonlyArray<NoteData>
@@ -60,6 +61,7 @@ export function NotesBoard({
   onNewNoteOpenChange: (open: boolean) => void
   onDirtyChange?: (dirty: boolean) => void
   turnedOff?: boolean
+  canWrite: boolean
 }) {
   const t = useTranslate()
   const [editing, setEditing] = useState<NoteData | null>(null)
@@ -112,6 +114,7 @@ export function NotesBoard({
     })
 
   function togglePin(note: NoteData): void {
+    if (!canWrite) return
     const next = !note.isPinned
     void pins.claim([[note.id, next]], () =>
       save.run({
@@ -137,6 +140,7 @@ export function NotesBoard({
           variant="primary"
           size="sm"
           shape="pill"
+          disabled={!canWrite}
           onClick={() => onNewNoteOpenChange(true)}
         >
           <Plus aria-hidden strokeWidth={2.5} />
@@ -178,6 +182,7 @@ export function NotesBoard({
               variant="secondary"
               size="sm"
               shape="pill"
+              disabled={!canWrite}
               onClick={() => onNewNoteOpenChange(true)}
             >
               {t('modules.collab.notes.empty.action')}
@@ -223,11 +228,13 @@ export function NotesBoard({
                     size="sm"
                     items={[
                       {
+                        disabled: !canWrite,
                         label: t('modules.collab.note.menu.edit'),
                         icon: <Pencil aria-hidden />,
                         onSelect: () => setEditing(note),
                       },
                       {
+                        disabled: !canWrite,
                         label: t(
                           note.isPinned
                             ? 'modules.collab.note.menu.unpin'
@@ -241,6 +248,7 @@ export function NotesBoard({
                         onSelect: () => togglePin(note),
                       },
                       {
+                        disabled: !canWrite,
                         label: t('modules.collab.note.remove'),
                         icon: <Trash2 aria-hidden />,
                         tone: 'danger',
@@ -283,6 +291,7 @@ export function NotesBoard({
       )}
 
       <NoteDialog
+        canWrite={canWrite}
         turnedOff={turnedOff}
         tripId={tripId}
         note={editing ?? undefined}
@@ -297,7 +306,7 @@ export function NotesBoard({
       />
 
       <ConfirmDialog
-        request={confirm}
+        request={canWrite ? confirm : null}
         pending={remove.pending}
         onOpenChange={(next) => {
           if (!next) {
