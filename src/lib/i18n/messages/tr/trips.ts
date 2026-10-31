@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived': 'Bu gezi arşivlendi. İş birliği salt okunurdur.',
+  'collab.readOnly.role':
+    'Yalnızca gezi sahipleri ve düzenleyicileri konuşmayı, notları ve anketleri değiştirebilir.',
   'notFound.title': 'Bu seyahati bulamıyoruz',
   'notFound.body':
     'Mevcut çalışma alanında açabileceğin seyahatler arasında değil. Silinmiş olabilir veya erişim iznin olmayabilir.',

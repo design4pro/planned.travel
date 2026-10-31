@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Den här resan är arkiverad. Samarbetet är skrivskyddat.',
+  'collab.readOnly.role':
+    'Endast resans ägare och redigerare kan ändra konversationen, anteckningarna och omröstningarna.',
   'notFound.title': 'Vi kan inte hitta den här resan',
   'notFound.body':
     'Den finns inte bland resorna du kan öppna i din nuvarande arbetsyta. Den kan ha tagits bort, eller så saknar du åtkomst till den.',

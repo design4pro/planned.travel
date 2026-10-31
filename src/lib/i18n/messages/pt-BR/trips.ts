@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Esta viagem está arquivada. A colaboração está disponível apenas para leitura.',
+  'collab.readOnly.role':
+    'Somente os proprietários e editores da viagem podem alterar a conversa, as notas e as enquetes.',
   'notFound.title': 'Não encontramos esta viagem',
   'notFound.body':
     'Ela não está entre as viagens que você pode abrir no espaço de trabalho atual. Pode ter sido excluída ou você pode não ter acesso a ela.',
