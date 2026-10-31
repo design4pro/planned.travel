@@ -16,7 +16,7 @@ function declared(token: string): boolean {
   return new RegExp(`${token}\\s*:`).test(TOKENS)
 }
 
-/** The hue the ledger chip draws a category's glyph in: `text-info` -> `info`. */
+/** The hue the ledger chip draws a category's glyph in: `text-data-1` -> `data-1`. */
 function chipHue(category: string): string {
   const hue = expenseTint(category).match(/text-([a-z0-9-]+)/)?.[1]
   if (hue === undefined) {
@@ -40,7 +40,20 @@ describe('categoryColour', () => {
     expect(EXPENSE_CATEGORY_ORDER).toHaveLength(8)
     for (const category of EXPENSE_CATEGORY_ORDER) {
       expect(categoryColour(category)).toBe(`var(--color-${chipHue(category)})`)
+      expect(expenseTint(category).split(/\s+/)).toContain('bg-surface-inset')
     }
+  })
+
+  it('maps the eight built-in categories one-to-one to the data tokens', () => {
+    expect(new Set(EXPENSE_CATEGORY_ORDER.map(categoryColour))).toEqual(
+      new Set(
+        Array.from(
+          { length: 8 },
+          (_, index) => `var(--color-data-${index + 1})`,
+        ),
+      ),
+    )
+    expect(expenseTint('retired-category')).toBe(expenseTint('other'))
   })
 
   it('does not depend on position: the same category is the same colour', () => {
@@ -50,6 +63,9 @@ describe('categoryColour', () => {
 
   it('resolves an unknown category like other', () => {
     expect(categoryColour('retired-category')).toBe(categoryColour('other'))
-    expect(categoryColour('')).toBe(categoryColour('other'))
+    for (const category of ['', '__proto__', 'constructor']) {
+      expect(categoryColour(category)).toBe(categoryColour('other'))
+      expect(expenseTint(category)).toBe(expenseTint('other'))
+    }
   })
 })

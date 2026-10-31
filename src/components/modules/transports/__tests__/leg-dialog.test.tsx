@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
@@ -260,7 +260,9 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     fireEvent.change(screen.getByLabelText(/^Name/u), {
       target: { value: 'Typed after it was deleted' },
     })
-    submitTheForm()
+    await act(async () => {
+      submitTheForm()
+    })
     await vi.waitFor(() =>
       expect(document.querySelector('[data-part="transport-gone"]')).not.toBe(
         null,
