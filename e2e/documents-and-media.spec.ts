@@ -257,8 +257,33 @@ test.describe('06-S1 — Every way a file gets in', () => {
       width: page.viewportSize()?.width ?? 1440,
       height: 400,
     })
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+    await settleMutations(page)
+    // CSS makes the default scroll smooth; establish the destination against the current extent.
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const root = document.scrollingElement
+          if (root === null) return false
+          window.scrollTo({ top: root.scrollHeight, behavior: 'instant' })
+          return (
+            root.scrollTop > 0 &&
+            Math.abs(root.scrollHeight - root.clientHeight - root.scrollTop) <=
+              1
+          )
+        }),
+      )
+      .toBe(true)
+    const queue = page.locator('[data-part="file-queue"]')
+    await expect(queue).toHaveCount(0)
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-part="file-drop"]')
+          .evaluate(
+            (node) => node.parentElement?.getBoundingClientRect().bottom,
+          ),
+      )
+      .toBeLessThanOrEqual(0)
 
     const taken = await dispatchPaste(page, 'body', {
       files: [{ name: 'image.png', type: 'image/png' }],
@@ -267,7 +292,6 @@ test.describe('06-S1 — Every way a file gets in', () => {
 
     await expect.poll(() => bodies.length).toBe(1)
     expect(bodies[0]).toMatch(PASTED_PNG)
-    const queue = page.locator('[data-part="file-queue"]')
     await expect(queue).toBeInViewport()
     // Viewport intersection alone also accepts a queue hidden behind the sticky trip header.
     await expect
