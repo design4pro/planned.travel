@@ -904,7 +904,7 @@ at most 200 ids and one 250-batch cap covers the whole run. Structured logs reco
 The trip history panel, overview activity list and action-count chart stop showing activity older
 than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.
 
-## Amendment - revocation-preserving room reset (#1608)
+## Amendment - revocation-preserving room reset (#1608, PR #1671)
 
 This supersedes the room-reset descriptions above. Reset closes sockets and erases entity
 content, commit history and person identifiers. It first persists the latest applicable revocation
