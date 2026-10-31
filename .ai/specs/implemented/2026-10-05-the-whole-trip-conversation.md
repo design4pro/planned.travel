@@ -152,8 +152,11 @@ The first slice a traveller can see, and the pure module every later phase exten
   stored text and is a render decision only.
 
 `thread.tsx` replaces its inline `previous`/`newDay`/`runs` arithmetic with `groupThread`, and renders a
-jumbo message at `text-title` size with no bubble (the reply quote, the edited mark and the reactions are
-unchanged). `startsRun === false` rows carry the body alone, indented to the same measure, so the column
+jumbo message at `text-title` size with no bubble **after client mount**. Server rendering and the first
+client render always use ordinary bubble styling, regardless of segmentation or Unicode support. The
+brief ordinary-to-jumbo transition is accepted; subsequent body edits use the client classifier. A client
+without `Intl.Segmenter` keeps ordinary bubbles (issue #1294). The reply quote, the edited mark and
+the reactions are unchanged. `startsRun === false` rows carry the body alone, indented to the same measure, so the column
 edge stays straight, exactly as the run rows do today.
 
 **The day divider is localised here.** It keeps today's look (rule, label, rule); its label is built from
@@ -482,7 +485,9 @@ Phase in brackets.
 2. [1] `isJumboGlyphs` is true for 1, 2 and 3 emoji, for a skin-tone hand, a ZWJ family, a flag and a keycap, and
    for emoji separated by spaces; false for four emoji, an emoji plus a word, a bare digit, `©`, and an empty
    body; false for everything when `Intl.Segmenter` is stubbed away. The stored `body` is never altered.
-3. [1] A jumbo message renders at `text-title` with no bubble; a run's continuation rows have no avatar or name
+3. [1] A jumbo message renders at `text-title` with no bubble after client mount; SSR and the initial
+   client render use ordinary bubbles, with no hydration warnings when segmenters differ or are absent;
+   a run's continuation rows have no avatar or name
    and share the run's left edge; the day divider's text comes from `formatWeekday`/`formatDayMonth` for the
    active locale (a test renders `pl` and asserts it is not the `en-GB` string).
 4. [2] No English literal remains in `thread.tsx` for the empty description, `Reply` or the placeholder; the six
@@ -708,3 +713,7 @@ The scroller also carries a `data-scroll-restoration-id` that names its first an
 - **A page the window dropped is announced as not loaded.** `loadOlder` resolves with the number of rows the page brought, and with `null` when the page arrived but a peer's message had moved the window, so the discard (Phase 4) is no longer silent to a screen reader: the reader hears "Earlier messages did not load" and the control is at rest to press again.
 - **Under reduced motion the entrance is collapsed by the global rule.** `styles.css` sets `transition-duration: 0.01ms` under `prefers-reduced-motion: reduce`, so the row appears at once; `motion-reduce:starting:translate-y-0` is the backstop that leaves no rise if that rule is ever narrowed.
 - **Announcements are made only while the conversation panel is shown.** Below `xl` the thread stays mounted inside a hidden panel while Notes or Polls is open; its region is out of the accessibility tree there, and nothing is announced on returning to it.
+
+Issue #1294 amends Phase 1: jumbo classification runs only after client mount. SSR and the first client
+render use ordinary bubbles, then the client applies its own segmentation and Unicode recognition.
+The brief presentation transition is accepted; missing `Intl.Segmenter` keeps ordinary bubbles.
