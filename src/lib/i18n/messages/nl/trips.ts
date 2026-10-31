@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Deze reis is gearchiveerd. Samenwerking is alleen-lezen.',
+  'collab.readOnly.role':
+    'Alleen reiseigenaren en bewerkers kunnen het gesprek, de notities en de peilingen wijzigen.',
   'notFound.title': 'We kunnen deze reis niet vinden',
   'notFound.body':
     'Deze staat niet tussen de reizen die je in de huidige werkruimte kunt openen. De reis is mogelijk verwijderd of je hebt er geen toegang toe.',

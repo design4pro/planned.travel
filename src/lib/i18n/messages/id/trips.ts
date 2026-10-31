@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Perjalanan ini diarsipkan. Kolaborasi hanya dapat dibaca.',
+  'collab.readOnly.role':
+    'Hanya pemilik dan editor perjalanan yang dapat mengubah percakapan, catatan, dan jajak pendapat.',
   'notFound.title': 'Kami tidak dapat menemukan perjalanan ini',
   'notFound.body':
     'Perjalanan ini tidak termasuk yang dapat kamu buka di ruang kerja saat ini. Mungkin perjalanan ini telah dihapus, atau kamu tidak memiliki akses.',
