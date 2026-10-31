@@ -288,6 +288,76 @@ test.describe('06-S1 — Every way a file gets in', () => {
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 
+  test('outside file drops preserve the active upload and queue', async ({
+    context,
+    page,
+  }) => {
+    await openLibraryWithFiles(context, page)
+    let releaseUpload = (): void => {}
+    const heldUpload = new Promise<void>((resolve) => {
+      releaseUpload = resolve
+    })
+    let uploads = 0
+    await page.route(
+      (url) => callsServerFn(url, 'uploadTripFileFn'),
+      async (route) => {
+        uploads += 1
+        await heldUpload
+        await route.fulfill({ json: { ok: true, file: {} } })
+      },
+    )
+    try {
+      const uploading = page.waitForRequest((request) =>
+        callsServerFn(new URL(request.url()), 'uploadTripFileFn'),
+      )
+      await page.locator('input[type="file"]').setInputFiles({
+        name: 'held.pdf',
+        mimeType: 'application/pdf',
+        buffer: Buffer.from('held upload'),
+      })
+      await uploading
+      const queue = page.locator('[data-part="file-queue"]')
+      await expect(queue).toContainText('held.pdf')
+      const before = await queue.textContent()
+      const url = page.url()
+      for (const selector of ['body', '[data-part="file-queue"]']) {
+        for (const type of ['dragover', 'drop']) {
+          const cancelled = await page
+            .locator(selector)
+            .evaluate((target, eventType) => {
+              const data = new DataTransfer()
+              data.items.add(
+                new File(['outside'], 'outside.pdf', {
+                  type: 'application/pdf',
+                }),
+              )
+              const event = new DragEvent(eventType, {
+                dataTransfer: data,
+                bubbles: true,
+                cancelable: true,
+              })
+              target.dispatchEvent(event)
+              return event.defaultPrevented
+            }, type)
+          expect(cancelled).toBe(true)
+        }
+      }
+      expect(page.url()).toBe(url)
+      expect(await queue.textContent()).toBe(before)
+      await expect(
+        queue.getByRole('button', { name: /^Dismiss / }),
+      ).toHaveCount(0)
+      expect(uploads).toBe(1)
+      releaseUpload()
+      await expect(
+        queue.getByRole('button', { name: /^Dismiss / }),
+      ).toBeVisible()
+      expect(uploads).toBe(1)
+    } finally {
+      releaseUpload()
+    }
+  })
+
   test('a pasted queue stays below the sticky chrome through upload completion and refresh', async ({
     context,
     page,

@@ -106,7 +106,7 @@ describe('resetting trip rooms from the app Worker', () => {
   it('posts to the reset route of the trip’s own object', async () => {
     const { namespace, requests } = stubNamespace()
 
-    await resetTripRoom(namespace, 'trip-1')
+    await resetTripRoom(namespace, 'trip-1', () => NOW)
 
     expect(requests).toEqual([
       {
@@ -114,6 +114,7 @@ describe('resetting trip rooms from the app Worker', () => {
         url: 'https://trip-room.internal/trip-1/reset',
         method: 'POST',
         body: '',
+        revokedAt: String(NOW),
       },
     ])
   })

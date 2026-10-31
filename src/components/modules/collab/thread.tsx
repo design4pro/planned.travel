@@ -166,6 +166,7 @@ export interface ThreadProps {
   readonly viewerUserId: string
   /** `true` when the viewer may delete other people's messages. */
   readonly canModerate: boolean
+  readonly canWrite: boolean
   /** IANA zone every timestamp in the transcript is read in. */
   readonly timeZone: string
   readonly onDirtyChange?: (dirty: boolean) => void
@@ -178,6 +179,7 @@ export function Thread({
   people,
   viewerUserId,
   canModerate,
+  canWrite,
   timeZone,
   onDirtyChange,
   turnedOff = false,
@@ -372,6 +374,7 @@ export function Thread({
   )
 
   function react(message: MessageData, emoji: string): void {
+    if (!canWrite) return
     const current = message.reactions
       .filter((entry) => entry.userIds.includes(viewerUserId))
       .map((entry) => entry.emoji)
@@ -513,7 +516,8 @@ export function Thread({
                         .map((entry) => entry.emoji)
                     }
                     optimistic={claimed !== undefined}
-                    canDelete={mine || canModerate}
+                    canWrite={canWrite}
+                    canDelete={canWrite && (mine || canModerate)}
                     onReact={(emoji) => react(message, emoji)}
                     onReply={() => setReplyTo(message)}
                     onEdit={() => setEditing(message)}
@@ -540,6 +544,7 @@ export function Thread({
       </div>
 
       <Composer
+        canWrite={canWrite}
         tripId={tripId}
         messages={messages}
         onEdited={(id, body) =>
@@ -558,7 +563,7 @@ export function Thread({
       />
 
       <ConfirmDialog
-        request={confirm}
+        request={canWrite ? confirm : null}
         pending={remove.pending}
         onOpenChange={(next) => {
           if (!next) {
@@ -583,6 +588,7 @@ function MessageRow({
   myReactions,
   optimistic,
   canDelete,
+  canWrite,
   onReact,
   onReply,
   onEdit,
@@ -598,6 +604,7 @@ function MessageRow({
   myReactions: ReadonlyArray<string>
   optimistic: boolean
   canDelete: boolean
+  canWrite: boolean
   onReact: (emoji: string) => void
   onReply: () => void
   onEdit: () => void
@@ -605,7 +612,10 @@ function MessageRow({
 }) {
   const t = useTranslate()
   const name = nameFor(people, message.userId, t)
-  const jumbo = isJumboGlyphs(message.body)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  // Segmentation and Unicode support can differ between SSR and the browser.
+  const jumbo = mounted && isJumboGlyphs(message.body)
 
   /**
    * The tallies, with the viewer's own claim folded in — so a tap changes the
@@ -703,12 +713,15 @@ function MessageRow({
               'group-hover/message:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100',
             )}
           >
-            <ReactionPicker onPick={onReact} mine={myReactions} />
+            {canWrite ? (
+              <ReactionPicker onPick={onReact} mine={myReactions} />
+            ) : null}
             <RowMenu
               label={t('modules.collab.message.actionsFor', { name })}
               size="sm"
               items={[
                 {
+                  disabled: !canWrite,
                   label: t('modules.collab.message.reply'),
                   icon: <SendHorizontal aria-hidden />,
                   onSelect: onReply,
@@ -716,6 +729,7 @@ function MessageRow({
                 ...(mine
                   ? [
                       {
+                        disabled: !canWrite,
                         label: t('modules.collab.message.menuEdit'),
                         icon: <Pencil aria-hidden />,
                         onSelect: onEdit,
@@ -763,6 +777,7 @@ function MessageRow({
                   : 'modules.collab.reaction.tally',
                 { emoji: row.emoji, count: row.count },
               )}
+              disabled={!canWrite}
               onClick={() => onReact(row.emoji)}
               className={cn(
                 'inline-flex items-center gap-0.5 rounded-full border px-1.5 text-caption focus-ring',
@@ -846,6 +861,7 @@ function Composer({
   onClearEditing,
   onDirtyChange,
   turnedOff,
+  canWrite,
 }: {
   tripId: string
   messages: ReadonlyArray<MessageData>
@@ -858,6 +874,7 @@ function Composer({
   onClearEditing: () => void
   onDirtyChange?: (dirty: boolean) => void
   turnedOff: boolean
+  canWrite: boolean
 }) {
   const t = useTranslate()
   const [body, setBody] = useState('')
@@ -948,7 +965,10 @@ function Composer({
 
   const trimmed = body.trim()
   const canSend =
-    trimmed.length > 0 && trimmed.length <= MAX_LENGTH && !action.pending
+    canWrite &&
+    trimmed.length > 0 &&
+    trimmed.length <= MAX_LENGTH &&
+    !action.pending
 
   async function send(retry = false): Promise<void> {
     if (!canSend || sending.current) return
@@ -1016,7 +1036,7 @@ function Composer({
             <Button
               size="sm"
               loading={action.pending}
-              disabled={!trimmed}
+              disabled={!canWrite || !trimmed}
               onClick={() => void send(true)}
             >
               {t('modules.collab.compose.retry')}
@@ -1066,6 +1086,7 @@ function Composer({
       >
         <div className="flex items-end gap-2">
           <Textarea
+            disabled={!canWrite}
             ref={fieldRef}
             value={body}
             onChange={(event) => {

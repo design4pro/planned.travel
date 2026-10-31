@@ -1,5 +1,7 @@
 import '#/components/ui/__tests__/test-env'
 import { useState } from 'react'
+import { hydrateRoot } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
 import * as History from '../use-thread-history'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -49,6 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 const PEOPLE: ReadonlyArray<CollabPerson> = [
@@ -82,6 +85,7 @@ function mount(
     <I18nProvider locale={locale} messages={messages}>
       <TooltipProvider>
         <Thread
+          canWrite={true}
           tripId="trip-1"
           messages={thread}
           people={PEOPLE}
@@ -114,6 +118,80 @@ describe('the new-message composer', () => {
     expect(field.getAttribute('placeholder')).not.toBe(
       'Say something to the group…',
     )
+  })
+})
+
+describe('jumbo glyph hydration', () => {
+  it.each(['missing', 'divergent', 'native'] as const)(
+    'uses ordinary initial markup and the %s client classifier after mount',
+    async (client) => {
+      const warnings = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const recoverable = vi.fn()
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const rows = [message('m1', 'user-2', '2026-06-23T09:00:00Z', '🎉')]
+      const segment = Intl.Segmenter.prototype.segment
+      const divergent = () =>
+        vi
+          .spyOn(Intl.Segmenter.prototype, 'segment')
+          .mockImplementation(function (this: Intl.Segmenter) {
+            return segment.call(this, '🎉🎉🎉🎉')
+          })
+      // The native client also exercises a server with different Unicode tables.
+      const serverSegmentation = client === 'native' ? divergent() : undefined
+      host.innerHTML = renderToString(composerTree(rows))
+      serverSegmentation?.mockRestore()
+      const serverBubble = host.querySelector(
+        'li[data-message-id="m1"] div.bg-surface-2',
+      )
+      if (client === 'missing') {
+        vi.stubGlobal(
+          'Intl',
+          Object.create(Intl, { Segmenter: { value: undefined } }),
+        )
+      } else if (client === 'divergent') {
+        divergent()
+      }
+      let root: ReturnType<typeof hydrateRoot> | undefined
+      try {
+        expect(serverBubble).not.toBeNull()
+        await act(async () => {
+          root = hydrateRoot(host, composerTree(rows), {
+            onRecoverableError: recoverable,
+          })
+        })
+        const bubble = host.querySelector(
+          'li[data-message-id="m1"] .break-words',
+        )
+        expect(bubble?.className.includes('text-title')).toBe(
+          client === 'native',
+        )
+        expect(bubble?.textContent).toBe('🎉')
+        expect(warnings).not.toHaveBeenCalled()
+        expect(recoverable).not.toHaveBeenCalled()
+      } finally {
+        await act(async () => root?.unmount())
+        host.remove()
+      }
+    },
+  )
+
+  it('reclassifies edited bodies and keeps nonqualifying bodies ordinary', () => {
+    const row = message('m1', 'user-2', '2026-06-23T09:00:00Z', 'hello')
+    const view = render(composerTree([row]))
+    for (const body of ['🎉', '👍👍👍', '👍👍👍👍', 'a word 🎉', '©', '👍🏽']) {
+      view.rerender(
+        composerTree([{ ...row, body, editedAt: '2026-06-23T09:01:00Z' }]),
+      )
+      const bubble = view.container.querySelector(
+        'li[data-message-id="m1"] .break-words',
+      )
+      expect(bubble?.textContent).toBe(body)
+      expect(bubble?.className.includes('text-title')).toBe(
+        ['🎉', '👍👍👍', '👍🏽'].includes(body),
+      )
+      expect(screen.getByText(En['collab.message.edited'])).toBeTruthy()
+    }
   })
 })
 
@@ -263,6 +341,7 @@ function composerTree(
     <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
       <TooltipProvider>
         <Thread
+          canWrite={true}
           tripId="trip-1"
           messages={messages}
           people={PEOPLE}
@@ -587,6 +666,7 @@ describe('the viewers own actions on held history', () => {
       <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
         <TooltipProvider>
           <Thread
+            canWrite={true}
             tripId="trip"
             messages={messages}
             people={PEOPLE}

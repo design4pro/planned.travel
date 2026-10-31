@@ -479,8 +479,8 @@ async function writeSeed(
         await addPhoto(owner, {
           journeyId: created.id,
           entryId: entryRow.id,
-          storageKey: photo.storageKey,
-          thumbnailKey: photo.thumbnailKey,
+          storageKey: `journeys/${resolved.organizationId}/${photo.storageKey}`,
+          thumbnailKey: `journeys/${resolved.organizationId}/${photo.thumbnailKey}`,
           caption: photo.caption,
           contentType: photo.contentType,
           sizeBytes: photo.sizeBytes,

@@ -196,3 +196,22 @@ describe('TripCoverField', () => {
     ).toBe(true)
   })
 })
+
+it('protects file drops outside the cover until it unmounts', () => {
+  const { view, onChoose } = mount()
+  for (const type of ['dragover', 'drop']) {
+    for (const types of [['Files'], ['text/plain'], ['text/uri-list']]) {
+      const event = new Event(type, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', {
+        value: { types, files: [] },
+      })
+      fireEvent(document.body, event)
+      expect(event.defaultPrevented).toBe(types.includes('Files'))
+    }
+  }
+  expect(onChoose).not.toHaveBeenCalled()
+  view.unmount()
+  expect(
+    fireEvent.drop(document.body, { dataTransfer: { types: ['Files'] } }),
+  ).toBe(true)
+})
