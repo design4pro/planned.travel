@@ -91,3 +91,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Session password lock** - after five wrong passwords across password-confirming actions, that session cannot confirm a password again. Other sessions remain usable; sign out and sign in again to recover.
 
 - **Visitor language** - the language remembered on a browser for signed-out pages, held for a year in a first-party cookie containing only a language code. A personal or workspace language takes precedence when signed in. Registering seeds the new account's own language from it once; signing in never does. _Avoid_: "anonymous account", "guest profile".
+
+- **Saved day route** - one day’s shared driving or walking intent: its selected mode and traveller-authored intermediate points. The calculated road line is a provider result, recomputed for the reader and never implied to be permanently saved. Distinct from a Map hand-off.
+- **Intermediate point** - a traveller-authored coordinate between two consecutive geolocated day stops that guides a calculated route without moving a place or becoming an itinerary stop. _Avoid_: "stop" for a shaping constraint.
