@@ -13,7 +13,7 @@ Travellers will calculate, adjust and explicitly save one driving or walking rou
 The saved mode and intermediate points are shared under trip permissions; reopening recomputes
 vendor results for the reader. Random selection uses only verified, activated, capable providers
 with an available allowance. This is a design-only deliverable: a person merges the spec PR,
-which references #1319 without closing it; `afk-to-tickets` then slices implementation.
+which uses `Fixes #1319` to close the design task; `afk-to-tickets` then slices implementation.
 
 ## Problem and scope
 
