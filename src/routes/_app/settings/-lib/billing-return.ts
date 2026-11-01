@@ -125,6 +125,7 @@ export function useBillingReturn(
   } | null>(null)
   const state = readState?.source === initial ? readState.state : initial
   const [delayed, setDelayed] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const displayHint = hydrated ? readHint(initial, viewerId, marker) : null
   const derived = outcomeOf(state, displayHint)
   let outcome: Outcome = derived
@@ -147,6 +148,7 @@ export function useBillingReturn(
     const hint = readHint(initial, viewerId, marker)
     if (hint === null) clearBillingSelection()
     setReadState(null)
+    setRefreshing(false)
     setDelayed(disabled)
     let resolved = ['confirmed', 'scheduled'].includes(outcomeOf(initial, hint))
     const deadline = setTimeout(() => {
@@ -155,6 +157,7 @@ export function useBillingReturn(
       controller?.abort()
       clearTimeout(requestTimeout)
       running = false
+      if (active) setRefreshing(false)
       if (active && !resolved && marker) setDelayed(true)
     }, 60000)
 
@@ -183,6 +186,7 @@ export function useBillingReturn(
       clearTimeout(timer)
       if (!isManual) attempt += 1
       running = true
+      setRefreshing(true)
       const request = new AbortController()
       controller = request
       const requestTimer = setTimeout(() => {
@@ -190,6 +194,7 @@ export function useBillingReturn(
         request.abort()
         exhausted = true
         running = false
+        setRefreshing(false)
         if (active) setDelayed(true)
       }, 10000)
       requestTimeout = requestTimer
@@ -197,6 +202,8 @@ export function useBillingReturn(
         const next = await loadLocalBilling({
           data: {},
           signal: request.signal,
+          fetch: (input, init) =>
+            fetch(input, { ...init, referrerPolicy: 'no-referrer' }),
         })
         if (
           !active ||
@@ -229,6 +236,7 @@ export function useBillingReturn(
         clearTimeout(requestTimer)
         if (controller === request) {
           running = false
+          if (active) setRefreshing(false)
         }
         if (!request.signal.aborted) schedule()
       }
@@ -250,5 +258,5 @@ export function useBillingReturn(
     }
   }, [initial, viewerId, marker, claim])
 
-  return { state, outcome, refresh: () => manual.current() }
+  return { state, outcome, refreshing, refresh: () => manual.current() }
 }

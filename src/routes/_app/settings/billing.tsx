@@ -452,6 +452,7 @@ function BillingPage() {
           title={t(RETURN_TITLES[billingReturn.outcome])}
           actions={
             <RefreshButton
+              loading={billingReturn.refreshing}
               onClick={() => {
                 void billingReturn.refresh()
               }}
@@ -466,7 +467,9 @@ function BillingPage() {
                     locale,
                   ) ?? '',
               })
-            : t('settings.billing.return.body')}
+            : billingReturn.outcome === 'confirmed'
+              ? null
+              : t('settings.billing.return.body')}
           {search.discount === 'applied'
             ? ` ${t('settings.billing.discount.nextRenewal')}`
             : null}
@@ -580,10 +583,22 @@ function BillingPage() {
   )
 }
 
-function RefreshButton({ onClick }: { onClick: () => void }) {
+function RefreshButton({
+  onClick,
+  loading = false,
+}: {
+  onClick: () => void
+  loading?: boolean
+}) {
   const t = useTranslate()
   return (
-    <Button variant="ghost" size="sm" shape="pill" onClick={onClick}>
+    <Button
+      variant="ghost"
+      size="sm"
+      shape="pill"
+      onClick={onClick}
+      loading={loading}
+    >
       {t('settings.billing.refresh')}
     </Button>
   )

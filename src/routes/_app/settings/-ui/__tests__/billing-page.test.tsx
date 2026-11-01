@@ -7,7 +7,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -18,6 +18,8 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import { setWorkspaceClaim } from '#/lib/workspace-claim-store'
 import { PLANS } from '#/lib/plans'
 import { Route } from '../../billing'
+import { rememberBillingSelection } from '../../-lib/billing-return'
+import { loadLocalBilling } from '../../../-server/local-billing'
 
 import type { PublicFailure } from '#/lib/errors'
 import type { Catalogue } from '#/lib/i18n'
@@ -485,4 +487,33 @@ describe('billing return handoff', () => {
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
     expect(document.body.textContent).not.toContain('foreign-checkout')
   })
+})
+
+it('omits recovery guidance after confirmation and shows manual refresh activity', async () => {
+  const data = payload()
+  rememberBillingSelection('org_test', 'viewer', 'checkout', {
+    planId: data.entitlements.planId,
+    interval: data.entitlements.interval!,
+    seats: data.entitlements.seats,
+  })
+  renderPage(data, { checkout: 'complete' })
+  expect(screen.getByText('Plan confirmed')).toBeTruthy()
+  expect(screen.queryByText(/If the change remains unconfirmed/)).toBeNull()
+  let reject!: (reason: Error) => void
+  vi.mocked(loadLocalBilling).mockImplementationOnce(
+    () =>
+      new Promise((_, fail) => {
+        reject = fail
+      }),
+  )
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Refresh' }))
+  const busy = screen.getByRole('button', { name: /Working/ })
+  expect(busy.getAttribute('aria-busy')).toBe('true')
+  await act(async () => {
+    reject(new Error('offline'))
+  })
+  expect(
+    screen.getByRole('button', { name: 'Refresh' }).hasAttribute('disabled'),
+  ).toBe(false)
 })

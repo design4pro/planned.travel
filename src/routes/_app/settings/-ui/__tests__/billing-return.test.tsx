@@ -367,3 +367,50 @@ it('stops when the shell clears its workspace on session exit', async () => {
   await advance(60000)
   expect(read).not.toHaveBeenCalled()
 })
+
+it('keeps manual refresh busy until failure and permits recovery', async () => {
+  let reject!: (reason: Error) => void
+  read.mockImplementationOnce(
+    () =>
+      new Promise((_, fail) => {
+        reject = fail
+      }),
+  )
+  const { result } = renderHook(() =>
+    useBillingReturn(initial, 'viewer', 'checkout'),
+  )
+  let pending!: Promise<void>
+  act(() => {
+    pending = result.current.refresh()
+  })
+  expect(result.current.refreshing).toBe(true)
+  await act(async () => {
+    reject(new Error('offline'))
+    await pending
+  })
+  expect(result.current.refreshing).toBe(false)
+  expect(result.current.outcome).toBe('delayed')
+  await act(() => result.current.refresh())
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(result.current.refreshing).toBe(false)
+})
+
+it('suppresses referrers for automatic and manual local reads', async () => {
+  const transport = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(new Response('{}'))
+  read.mockImplementation(async (options) => {
+    await options.fetch('/local-billing', { signal: options.signal })
+    return { entitlements: initial, viewerId: 'viewer' }
+  })
+  const { result } = renderHook(() =>
+    useBillingReturn(initial, 'viewer', 'checkout'),
+  )
+  await advance(2000)
+  await act(() => result.current.refresh())
+  expect(transport).toHaveBeenCalledTimes(2)
+  for (const [, init] of transport.mock.calls) {
+    expect(init?.referrerPolicy).toBe('no-referrer')
+  }
+  transport.mockRestore()
+})
