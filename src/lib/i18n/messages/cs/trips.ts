@@ -175,7 +175,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
   'plan.addPlace.quota':
     'Dosáhli jste limitu míst ve svém tarifu. Přejděte na vyšší tarif a přidejte další.',
-  'plan.addPlace.quotaAction': 'Zobrazit tarify',
+  'plan.addPlace.quotaAction': 'Zobrazit tarify (otevře se na nové kartě)',
   'plan.stay.checkIn': 'Příjezd',
   'plan.stay.checkOut': 'Odjezd',
   'plan.day.addStay': 'Přidat ubytování: {day}',

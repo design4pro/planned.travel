@@ -281,8 +281,35 @@ describe('reportLateWriteFailure', () => {
 
     expect(openTab).not.toHaveBeenCalled()
     options.action.onClick()
+    options.action.onClick()
     expect(openTab).toHaveBeenCalledExactlyOnceWith(PLANS_HREF)
     expect(PLANS_HREF).toBe(report.action?.href)
+  })
+
+  it('coalesces quota notices while giving a later action a fresh activation', () => {
+    const error = vi.fn()
+    const openTab = vi.fn()
+    const report = {
+      message: copy.quota,
+      action: { label: copy.seePlans, href: PLANS_HREF },
+    }
+    reportLateWriteFailure(report, { error }, openTab)
+    const first = error.mock.calls[0][1]
+    first.action.onClick()
+    reportLateWriteFailure(
+      { message: 'Other failure', action: null },
+      { error },
+      openTab,
+    )
+    reportLateWriteFailure(report, { error }, openTab)
+    const next = error.mock.calls[2][1]
+    expect(first.id).toBeTruthy()
+    expect(next.id).toBe(first.id)
+    expect(error.mock.calls[1]).toEqual(['Other failure'])
+    first.action.onClick()
+    next.action.onClick()
+    next.action.onClick()
+    expect(openTab).toHaveBeenCalledTimes(2)
   })
 
   it('keeps a toast without an action for every other failure', () => {

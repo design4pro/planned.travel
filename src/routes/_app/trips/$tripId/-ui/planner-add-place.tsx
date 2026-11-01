@@ -187,6 +187,7 @@ export interface LateFailureToast {
   readonly error: (
     message: string,
     options?: {
+      readonly id: string
       readonly duration: number
       readonly action: { readonly label: string; readonly onClick: () => void }
     },
@@ -219,8 +220,17 @@ export function reportLateWriteFailure(
   }
 
   const { label, href } = report.action
+  let opened = false
   toast.error(report.message, {
+    id: 'planner-places-quota',
     duration: ACTION_TOAST_DURATION_MS,
-    action: { label, onClick: () => openTab(href) },
+    action: {
+      label,
+      onClick: () => {
+        if (opened) return
+        opened = true
+        openTab(href)
+      },
+    },
   })
 }

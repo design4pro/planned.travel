@@ -174,7 +174,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Ort hinzufügen: {day}',
   'plan.addPlace.quota':
     'Du hast das Limit für Orte in deinem Tarif erreicht. Wechsle auf einen größeren Tarif, um weitere hinzuzufügen.',
-  'plan.addPlace.quotaAction': 'Tarife ansehen',
+  'plan.addPlace.quotaAction': 'Tarife ansehen (öffnet in einem neuen Tab)',
   'plan.stay.checkIn': 'Anreise',
   'plan.stay.checkOut': 'Abreise',
   'plan.day.addStay': 'Unterkunft hinzufügen: {day}',

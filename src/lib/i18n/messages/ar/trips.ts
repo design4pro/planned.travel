@@ -178,7 +178,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'إضافة مكان، {day}',
   'plan.addPlace.quota':
     'وصلت إلى الحد الأقصى للأماكن في خطتك. قم بالترقية لإضافة المزيد.',
-  'plan.addPlace.quotaAction': 'عرض الخطط',
+  'plan.addPlace.quotaAction': 'عرض الخطط (يفتح في علامة تبويب جديدة)',
   'plan.stay.checkIn': 'تسجيل الوصول',
   'plan.stay.checkOut': 'تسجيل المغادرة',
   'plan.day.addStay': 'إضافة إقامة، {day}',

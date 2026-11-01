@@ -167,7 +167,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
   'plan.addPlace.quota':
     'Bạn đã đạt giới hạn số địa điểm của gói hiện tại. Hãy nâng cấp để thêm nữa.',
-  'plan.addPlace.quotaAction': 'Xem các gói',
+  'plan.addPlace.quotaAction': 'Xem các gói (mở trong tab mới)',
   'plan.stay.checkIn': 'Nhận phòng',
   'plan.stay.checkOut': 'Trả phòng',
   'plan.day.addStay': 'Thêm chỗ ở, {day}',
