@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { z } from 'zod'
 
+import { sentryChildEnv } from './child-env'
+
 export interface McpCommand {
   command: string
   args: Array<string>
@@ -47,7 +49,7 @@ function attempt(
       config.command,
       prewarm ? [...config.args, '--help'] : config.args,
       {
-        env: { ...process.env, ...config.env },
+        env: sentryChildEnv({ ...process.env, ...config.env }),
         stdio: ['pipe', 'pipe', 'ignore'],
         detached: process.platform !== 'win32',
       },

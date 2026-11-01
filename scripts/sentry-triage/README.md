@@ -104,8 +104,37 @@ stranger can send to Sentry, so `renderIssueBody` and `renderTitle` run each of 
 
 The prompt is not the whole routine: the dedup, the caps and the body live in `policy.ts`. Driving a
 second copy of that policy through `claude_args` would give it two owners, which is what
-`docs/SPEC.md` §8 forbids. The script runs one `claude -p` session with Bash, Edit and Write removed
-from its tools, parses the `<sentry-triage>` block against `reportSchema`, and files from the result.
+`docs/SPEC.md` §8 forbids. The script runs one `claude -p` session with `--tools ""` (no
+built-in tools), `--permission-mode dontAsk` and an explicit permission allowlist of the six
+`mcp__sentry__` read tools named in the prompt. It ignores user/project/local settings, disables
+hooks and skills, disables tool-search expansion (`ENABLE_TOOL_SEARCH=false`), and does not persist
+the session. No Read, WebFetch, WebSearch, shell, file
+mutation or other MCP server is available. A permission, transport or invalid-report failure
+cannot reach filing: the host requires a successful JSON session result with no permission denials
+before accepting a report. The host parses the `<sentry-triage>` block against `reportSchema` and alone
+indexes and files GitHub issues.
+
+Both the survey and preflight use an environment allowlist: execution paths, home/temp/cache and
+certificate locations, and Sentry token/organization. Only the survey additionally receives
+`CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY`; preflight does not. GitHub tokens (including
+alternative token variables), git credential overrides and other inherited settings never enter
+those children or their descendants. The trusted host retains its own environment for `gh`.
+The scheduled checkout sets `persist-credentials: false`, so GitHub authentication is not left in
+git configuration either. This is a tool and credential boundary, not an OS sandbox: the pinned
+MCP server and Claude executable remain trusted.
+
+Discovery and generic execution remain bounded by the pinned server's `inspect` catalogue. In
+[`@sentry/mcp-server@0.39.0`](https://registry.npmjs.org/@sentry/mcp-server/-/mcp-server-0.39.0.tgz),
+`getAvailableTools` filters by `grantedSkills`; both `search_sentry_tools` and
+`execute_sentry_tool` use that filtered catalogue. `update_issue` requires `triage`, project
+mutations require `project-management`, and `analyze_issue_with_seer` requires `seer`. Generic
+execution cannot grant these skills. Recheck this boundary before changing the pin.
+
+The survey reports frames from Sentry without reading the checkout. The host accepts only
+repo-relative `src/` paths with no traversal or backslashes, resolved inside the real source
+root. Missing files, symlink escapes, non-regular files, files above 2 MiB and out-of-range lines
+are rejected. This verifies existence and line bounds, not causality; downstream triage verifies
+the hypothesis against current code.
 
 ## Connection preflight and failure evidence
 
@@ -131,3 +160,5 @@ report uploads are best effort and expire after two days.
 
 Protocol reference: [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle)
 and [tools discovery](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
+
+The trusted host inspects the survey’s verbose stream transcript and refuses filing on any failed tool result (`is_error` or MCP `isError`), even when the final report and session claim success. A successful connection preflight does not override a later survey failure.
