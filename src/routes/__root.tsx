@@ -13,7 +13,12 @@ import { TooltipProvider } from '#/components/ui'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { RootNotFound } from '#/components/layout/not-found'
 import { FONT_PRECONNECT_ORIGINS, FONT_STYLESHEET_HREF } from '#/lib/fonts'
-import { DEFAULT_LOCALE, I18nProvider, loadCatalogue } from '#/lib/i18n'
+import {
+  DEFAULT_LOCALE,
+  I18nProvider,
+  loadCatalogue,
+  RECOVERY_CATALOGUES,
+} from '#/lib/i18n'
 import { themeBootstrapScript } from '#/lib/theme'
 import { negotiateRequestLocale } from '#/server/fns/locale'
 
@@ -81,14 +86,17 @@ export const Route = createRootRouteWithContext<RouterContext>()({
    * boundary but *outside* every match, so a root loader that rejects leaves it
    * with no data at all and takes the whole document with it. English is a
    * worse answer than the reader's language; it is a far better one than a
-   * blank page.
+   * blank page. A catalogue failure keeps a locale already negotiated; empty
+   * messages still signal an unsuccessful refresh to the language picker.
    */
   loader: async (): Promise<ShellData> => {
+    let recovery = SOURCE_LANGUAGE
     try {
       const { locale, dir, signedIn } = await negotiateRequestLocale()
+      recovery = { locale, dir, signedIn: false, messages: {} }
       return { locale, dir, signedIn, messages: await loadCatalogue(locale) }
     } catch {
-      return SOURCE_LANGUAGE
+      return recovery
     }
   },
   /**
@@ -166,7 +174,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   shellComponent: RootDocument,
 })
 
-function RootDocument({ children }: { children: ReactNode }) {
+export function RootDocument({ children }: { children: ReactNode }) {
   // The shell renders outside `matchContext`, so the route-relative
   // `useLoaderData()` has no match to read and throws here. `Route.useLoaderData`
   // names the root route explicitly and works.
@@ -187,9 +195,16 @@ function RootDocument({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {/* The catalogue is already resolved, so `t()` is synchronous and the
-            first render is in the reader's language. */}
-        <I18nProvider locale={locale} messages={messages}>
+        {/* Recovery copy is bundled separately so even failed lazy imports leave
+            a readable error document. Loader data stays empty to signal failure. */}
+        <I18nProvider
+          locale={locale}
+          messages={
+            Object.keys(messages).length === 0
+              ? RECOVERY_CATALOGUES[locale]
+              : messages
+          }
+        >
           {/* Radix reads direction from here rather than from the DOM: without
               it, roving focus, arrow-key axes and popover side/align stay
               left-to-right under mirrored CSS, so in `ar` the arrow keys walk

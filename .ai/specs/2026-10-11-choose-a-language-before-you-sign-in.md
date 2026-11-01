@@ -102,7 +102,7 @@ and the legal pages' existing English-only notice is unchanged).
   `LocaleRequestSource` gain the member, and the stubbed `negotiated` literals in `src/server/fns/__tests__/locale.test.ts` gain `signedIn`.
 - `NegotiatedLocale` gains `signedIn: boolean`, taken from the `source.session()` call the function already makes. The root
   loader (`src/routes/__root.tsx`) puts it into `ShellData` (`false` in `SOURCE_LANGUAGE` and in the loader's catch path, the same
-  safe fallback as the language). `__root.tsx` is therefore **owned by 09-S5a for this one field**; nothing else in it changes, and
+  safe visibility fallback; catalogue failure preserves an already negotiated language). `__root.tsx` is therefore **owned by 09-S5a for this one field**; nothing else in it changes, and
   the `vary: 'accept-language, cookie'` header it already sends stays and is pinned by a test.
 - Because a signed-in caller always resolves at step one or two, the cookie matters to anonymous requests only. It is consulted for
   everyone because the function is one chain, not two.
@@ -574,7 +574,8 @@ outcomes. The switcher ticket #1173 owns `applied` / `unapplied` with their call
   theme toggle. `/join/$token` declares a `pendingComponent` with `staleTime: 0`, so a foreground refresh there can replace the
   frame, header included, and lose the pending state, the announcement and focus.
 - **A refresh that did not happen is `stale`, and the trigger shows work in flight.** The root loader never rejects: on a failed
-  negotiation or catalogue load it answers English with no messages. The switcher treats that as `stale`, not as `unapplied`, so
+  negotiation it answers English with no messages; a failed catalogue load retains the negotiated locale with no messages.
+  RootDocument supplies bundled recovery copy without populating loader messages. The switcher treats that as `stale`, not as `unapplied`, so
   it does not tell a person to allow cookies. While a save runs the trigger carries `aria-busy` and a spinner, because Escape
   or an outside click closes the popover and its chip is the only other signal. Focus returns to the trigger after a switch only
   if it is still inside the popover, on the trigger or nowhere; someone who has moved on keeps their place.
