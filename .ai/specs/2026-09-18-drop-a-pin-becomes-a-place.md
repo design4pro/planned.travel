@@ -320,7 +320,7 @@ allowance, including repeated attempts. A vendor outage or an empty answer after
 still spends one unit; an empty answer is still not cached. The plan boundary, cache, credential
 and retention refusals keep their earlier positions before the spend.
 
-## Amendment - quota action recovery (#1353)
+## Amendment - quota action recovery (#1353, PR #1691)
 
 The `trips.plan.addPlace.quotaAction` label now includes localized new-tab information, for example
 `See plans (opens in a new tab)`, in both the form alert and the late-failure toast. Late quota
