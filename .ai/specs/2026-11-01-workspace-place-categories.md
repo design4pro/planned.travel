@@ -113,15 +113,20 @@ A repository initializer performs one transactional D1 batch:
    already defined in categories.ts, preserving its slugs/icons/colours/order/isSystem values.
    One INSERT SELECT over the eight candidate rows gates the whole set; do not check emptiness once
    per row after an earlier row has been inserted.
-2. Insert the tenant marker if absent. A preexisting nonempty taxonomy gets only the marker.
+2. Insert the tenant marker if absent only after all eight starter rows were inserted, or when
+   categories already existed. A skipped, partial or failed starter insert must fail the batch and
+   leave no marker; it must not be mistaken for a completed initialization.
 3. Commit both or neither. A second batch sees the marker and changes nothing. Retry after an
    aborted batch starts from unchanged state; retry after a lost response sees completed state.
 
 Initialization precedes every normal category/tag creation, so a racing create cannot steal a
-starter slot. Existing empty-category workspaces whose tags already fill the ceiling get one bounded
-bootstrap exception of exactly eight starter rows. Those rows count normally thereafter; further
-creation is refused until usage permits it. Existing nonempty taxonomies are never filled out,
-renamed or pruned, even above the ceiling. The marker remains after the last category is deleted.
+starter slot. For every uninitialized workspace with no categories, insert all eight starters once,
+even if tags leave fewer than eight slots or the resolved finite limit is zero or less than eight.
+This bounded bootstrap exception adds exactly eight rows, never a partial set; it also applies when
+usage already meets or exceeds the limit. The starters count normally thereafter, and normal
+creation is refused until usage permits it. Unlimited remains unlimited. Existing workspaces with
+any categories get only the marker and are never filled out, renamed or pruned, even above the
+ceiling. The marker remains after the last category is deleted.
 
 Invoke this preparation after a verified TenantScope is available and before planner/settings
 category data is served, including the first activation of a newly created workspace. Use the category repository initializer itself as the shared preparation operation; do not assume
@@ -274,8 +279,12 @@ through its public seam, observes failure, then implements. No test mirrors priv
   calls, concurrent initializers, seed-vs-create and marker-write failure rollback; delete one default
   and all defaults then refresh/retry never restores them; marker deleted only with its workspace.
 - Quota: resolver tiers/status/overrides/carry; exactly-at-limit refusal; two creates racing for one
-  slot, category-vs-tag race, resolveTags all-or-none and existing-slug reuse; bootstrap exception
-  exactly eight once then no further growth above ceiling. Assert <=100 bindings per statement.
+  slot, category-vs-tag race, resolveTags all-or-none and existing-slug reuse. For empty-category
+  workspaces test tags leaving seven, one and zero slots, tags already above the limit, and finite
+  overrides of zero and less than eight: each gets exactly eight starters and one marker once,
+  then refuses growth until usage permits it. Test unlimited and sufficient capacity too. Inject a
+  skipped, partial or failed seed and marker-write failure: neither seed nor marker persists, and
+  retry completes both. Assert <=100 bindings per statement.
 - Binding-free handlers: owner/admin success; member, trip-role-only and platform-role-only refusal;
   malformed fields, forged organization scope, stale IDs, Zod strictness and current session role.
 - UI: deferred responses across edits/workspace changes; draft retention, refusal recovery, unknown
