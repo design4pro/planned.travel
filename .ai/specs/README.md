@@ -6,18 +6,18 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (2)
+## Draft — being written (1)
 
-| Spec                                                                                                                                     | Date       | Issue                                                             | Spec PR                                                           | Implementation |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
-| [Editable planner place photos](2026-10-31-editable-planner-place-photos.md)                                                             | 2026-10-31 | [#1318](https://github.com/design4pro/planned.travel/issues/1318) | [#1685](https://github.com/design4pro/planned.travel/issues/1685) | —              |
-| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203)   | [#627](https://github.com/design4pro/planned.travel/issues/627)   | —              |
+| Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 
-## Ready — merged, waiting for a build (22)
+## Ready — merged, waiting for a build (23)
 
 | Spec                                                                                                                                                     | Date       | Issue                                                             | Spec PR                                                           | Implementation |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
 | [Nomi surfaces the next useful action on the dashboard](2026-10-31-nomi-prompts-and-chat-launcher.md)                                                    | 2026-10-31 | [#1316](https://github.com/design4pro/planned.travel/issues/1316) | [#1680](https://github.com/design4pro/planned.travel/issues/1680) | —              |
+| [Editable planner place photos](2026-10-31-editable-planner-place-photos.md)                                                                             | 2026-10-31 | [#1318](https://github.com/design4pro/planned.travel/issues/1318) | [#1685](https://github.com/design4pro/planned.travel/issues/1685) | —              |
 | [Dashboard currency converter with metered public rates](2026-10-31-dashboard-currency-converter.md)                                                     | 2026-10-31 | [#1317](https://github.com/design4pro/planned.travel/issues/1317) | —                                                                 | —              |
 | [A role change reaches the trip screens a person has open](2026-10-25-a-role-change-reaches-open-screens.md)                                             | 2026-10-25 | [#1092](https://github.com/design4pro/planned.travel/issues/1092) | [#1615](https://github.com/design4pro/planned.travel/issues/1615) | —              |
 | [A paid plan's unlimited trips follow the owner into the workspaces they create](2026-10-24-carry-a-paid-plan-across-workspaces.md)                      | 2026-10-24 | [#998](https://github.com/design4pro/planned.travel/issues/998)   | [#1584](https://github.com/design4pro/planned.travel/issues/1584) | —              |
