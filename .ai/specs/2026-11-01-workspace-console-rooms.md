@@ -89,7 +89,7 @@ Implementation follows `i18n-messages` and updates every locale together. Existi
 | `shell.admin.nav.audit`     | Audit                                    |
 | `shell.admin.members.error` | Members did not load                     |
 | `shell.admin.audit.error`   | Recent activity did not load             |
-| `settings.nav.admin`        | Workspace admin                          |
+| `settings.nav.admin`        | Workspace console                        |
 | `settings.nav.admin.hint`   | Members, invitations and recent activity |
 
 Change `shell.admin.stat.audit` to **Recent audit entries** and `shell.admin.stat.auditCaption` to **Up to 25 latest entries in Audit** in every locale. Reuse existing `shell.admin.error` for the aggregate error/Overview boundary and the new room-label keys as heading text. Do not promise Permissions before 10-S4 exists. Keep all interpolation and plural contracts intact. Search the previous caption **Most recent activity shown below** and the changed keys across tests, source and waiting specs.

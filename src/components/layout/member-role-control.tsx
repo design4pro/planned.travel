@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   SimpleSelect,
+  Spinner,
 } from '#/components/ui'
 import { useTranslate } from '#/lib/i18n'
 
@@ -39,6 +40,12 @@ const REFUSAL_COPY: Record<MemberRoleRefusal, MessageKey> = {
 /** How long a refusal stays up: it names the next step, so it outlives the default. */
 const REFUSAL_TOAST_MS = 10_000
 
+const CONFIRM_BODY: Record<MemberRole, MessageKey> = {
+  owner: 'shell.admin.members.role.promote.body',
+  admin: 'shell.admin.members.role.demote.admin',
+  member: 'shell.admin.members.role.demote.member',
+}
+
 const ROLE_ORDER: ReadonlyArray<MemberRole> = ['owner', 'admin', 'member']
 
 const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
@@ -56,18 +63,19 @@ const ROLE_TONE: Record<string, 'accent' | 'brand' | 'neutral'> = {
  * `onChange`, which the route wires to the server function and which reports an outcome instead of
  * throwing.
  *
- * Making someone an owner is the one change that cannot be walked back by the person who made it -
- * the new owner can demote them - so it asks first, and Cancel holds the focus. The result of every
- * change is announced through the toast region, and a refusal says why in plain words.
+ * Promotions to owner and reductions of your own authority ask first, with Cancel focused.
+ * Every result is announced through the toast region; refusals explain why in plain words.
  */
 export function MemberRoleControl({
   memberName,
+  isSelf,
   role,
   assignable,
   roleLabel,
   onChange,
 }: {
   memberName: string
+  isSelf: boolean
   /** The role the row holds now. */
   role: string
   /** Roles the caller may set on this row; empty for a row they may not change. */
@@ -78,7 +86,8 @@ export function MemberRoleControl({
 }) {
   const t = useTranslate()
   const [pending, setPending] = useState(false)
-  const [confirming, setConfirming] = useState(false)
+  const [confirming, setConfirming] = useState<MemberRole | null>(null)
+  const inFlight = useRef(false)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const restoreFocus = useRef(false)
@@ -101,6 +110,8 @@ export function MemberRoleControl({
   }
 
   async function commit(next: MemberRole): Promise<void> {
+    if (inFlight.current) return
+    inFlight.current = true
     restoreFocus.current = true
     setPending(true)
     try {
@@ -118,14 +129,20 @@ export function MemberRoleControl({
         })
       }
     } finally {
+      inFlight.current = false
       setPending(false)
     }
   }
 
   function choose(next: string): void {
-    if (next === role) return
-    if (next === 'owner') {
-      setConfirming(true)
+    if (inFlight.current || next === role) return
+    if (
+      next === 'owner' ||
+      (isSelf &&
+        ROLE_ORDER.indexOf(next as MemberRole) >
+          ROLE_ORDER.indexOf(role as MemberRole))
+    ) {
+      setConfirming(next as MemberRole)
       return
     }
     void commit(next as MemberRole)
@@ -133,19 +150,30 @@ export function MemberRoleControl({
 
   return (
     <>
-      <SimpleSelect
-        ref={triggerRef}
-        size="sm"
-        value={role}
-        onValueChange={choose}
-        disabled={pending}
-        ariaLabel={t('shell.admin.members.role.label', { name: memberName })}
-        options={ROLE_ORDER.filter((option) => assignable.includes(option)).map(
-          (option) => ({ value: option, label: roleLabel(option) }),
-        )}
-      />
+      <div className="flex items-center gap-2">
+        <SimpleSelect
+          ref={triggerRef}
+          size="sm"
+          value={role}
+          onValueChange={choose}
+          disabled={pending}
+          ariaLabel={t('shell.admin.members.role.label', { name: memberName })}
+          options={ROLE_ORDER.filter((option) =>
+            assignable.includes(option),
+          ).map((option) => ({ value: option, label: roleLabel(option) }))}
+        />
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
+        {pending ? (
+          <Spinner size="sm" label={t('shell.admin.members.role.pending')} />
+        ) : null}
+      </div>
+
+      <Dialog
+        open={confirming !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirming(null)
+        }}
+      >
         <DialogContent
           size="sm"
           onOpenAutoFocus={(event) => {
@@ -163,14 +191,17 @@ export function MemberRoleControl({
         >
           <DialogHeader>
             <DialogTitle>
-              {t('shell.admin.members.role.promote.title', {
-                name: memberName,
-              })}
+              {t(
+                confirming === 'owner'
+                  ? 'shell.admin.members.role.promote.title'
+                  : 'shell.admin.members.role.demote.title',
+                {
+                  name: memberName,
+                },
+              )}
             </DialogTitle>
             <DialogDescription>
-              {t('shell.admin.members.role.promote.body', {
-                name: memberName,
-              })}
+              {t(CONFIRM_BODY[confirming ?? 'member'], { name: memberName })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -178,7 +209,7 @@ export function MemberRoleControl({
               ref={cancelRef}
               variant="secondary"
               shape="pill"
-              onClick={() => setConfirming(false)}
+              onClick={() => setConfirming(null)}
             >
               {t('shell.admin.members.role.promote.cancel')}
             </Button>
@@ -186,11 +217,16 @@ export function MemberRoleControl({
               variant="primary"
               shape="pill"
               onClick={() => {
-                setConfirming(false)
-                void commit('owner')
+                if (confirming === null) return
+                void commit(confirming)
+                setConfirming(null)
               }}
             >
-              {t('shell.admin.members.role.promote.confirm')}
+              {t(
+                confirming === 'owner'
+                  ? 'shell.admin.members.role.promote.confirm'
+                  : 'shell.admin.members.role.demote.confirm',
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

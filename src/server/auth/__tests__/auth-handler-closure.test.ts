@@ -1029,18 +1029,24 @@ describe('organization/update-member-role', () => {
     cookie = sessionCookie(await signIn('role-owner@planned.travel'))
   })
 
-  it('answers a real owner session with 404 and changes nothing', async () => {
-    for (const role of ['admin', 'owner', 'admin,owner']) {
-      const response = await post(
-        '/organization/update-member-role',
-        { memberId, role, organizationId },
-        cookie,
-      )
+  it.each([
+    '/organization/update-member-role',
+    '/organization/update-member-role/',
+  ])(
+    'answers a real owner session at %s with 404 and changes nothing',
+    async (path) => {
+      for (const role of ['admin', 'owner', 'admin,owner']) {
+        const response = await post(
+          path,
+          { memberId, role, organizationId },
+          cookie,
+        )
 
-      expect(response.status).toBe(404)
-      expect(roleOf(memberId)).toBe('member')
-    }
-  })
+        expect(response.status).toBe(404)
+        expect(roleOf(memberId)).toBe('member')
+      }
+    },
+  )
 
   it('closes invitation creation, resend and cancellation over HTTP', async () => {
     for (const [path, body] of [

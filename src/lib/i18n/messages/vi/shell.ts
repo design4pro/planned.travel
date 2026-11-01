@@ -316,7 +316,7 @@ const messages = {
   'admin.denied.body':
     'Nhờ chủ sở hữu hoặc quản trị viên đổi vai trò của bạn nếu bạn thật sự cần.',
   'admin.denied.action': 'Về bảng điều khiển',
-  'admin.eyebrow': 'Quản trị không gian',
+  'admin.eyebrow': 'Bảng quản trị không gian làm việc',
   'admin.description': 'Gói {plan} · tạo ngày {date}',
   'admin.createdUnknown': 'gần đây',
   'admin.workspaceSettings': 'Cài đặt không gian',
@@ -351,14 +351,21 @@ const messages = {
   'admin.members.role.label': 'Vai trò của {name}',
   'admin.members.role.saved': '{name} hiện là {role}.',
   'admin.members.role.impersonated':
-    'Không thể đổi vai trò khi bạn đang thao tác với tư cách một tài khoản khác.',
+    'Không thể đổi vai trò trong phiên này. Hãy đăng nhập lại hoặc ngừng thao tác dưới danh nghĩa tài khoản khác trước khi đổi vai trò.',
   'admin.members.role.notPermitted':
-    'Bạn không thể thực hiện thay đổi này. Chỉ chủ sở hữu mới có thể cấp vai trò chủ sở hữu hoặc thay đổi một chủ sở hữu.',
+    'Bạn không thể thực hiện thay đổi này. Hãy nhờ chủ sở hữu không gian làm việc cấp vai trò chủ sở hữu hoặc thay đổi chủ sở hữu.',
   'admin.members.role.lastOwner':
-    'Đây là chủ sở hữu duy nhất của không gian làm việc. Hãy chỉ định người khác làm chủ sở hữu trước.',
+    'Không gian làm việc phải có chủ sở hữu. Hãy chỉ định một thành viên khác làm chủ sở hữu trước.',
   'admin.members.role.notFound':
     'Người này không còn trong không gian làm việc. Danh sách đã được làm mới.',
   'admin.members.role.failed': 'Không thể đổi vai trò. Hãy thử lại.',
+  'admin.members.role.demote.title': 'Đổi vai trò của bạn?',
+  'admin.members.role.demote.admin':
+    'Bạn sẽ không còn quản lý chủ sở hữu không gian làm việc được nữa. Chỉ chủ sở hữu khác mới có thể khôi phục vai trò của bạn.',
+  'admin.members.role.demote.member':
+    'Bạn sẽ mất quyền truy cập bảng quản trị không gian làm việc và các mục thanh toán, thành viên, cài đặt. Hãy nhờ chủ sở hữu khôi phục vai trò của bạn.',
+  'admin.members.role.demote.confirm': 'Đổi vai trò của tôi',
+  'admin.members.role.pending': 'Đang đổi vai trò…',
   'admin.members.role.promote.title': 'Đặt {name} làm chủ sở hữu?',
   'admin.members.role.promote.body':
     '{name} sẽ có quyền lực ngang bạn: thanh toán, thành viên và cài đặt. Một chủ sở hữu có thể hạ vai trò hoặc xoá bất kỳ chủ sở hữu nào khác, kể cả bạn.',

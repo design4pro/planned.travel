@@ -343,7 +343,7 @@ const messages = {
   'admin.denied.body':
     'Vraag een eigenaar of beheerder van deze werkruimte om je rol aan te passen als je dit nodig hebt.',
   'admin.denied.action': 'Terug naar het overzicht',
-  'admin.eyebrow': 'Beheer van de werkruimte',
+  'admin.eyebrow': 'Werkruimteconsole',
   'admin.description': 'Abonnement {plan} · aangemaakt {date}',
   'admin.createdUnknown': 'kortgeleden',
   'admin.workspaceSettings': 'Instellingen van de werkruimte',
@@ -388,14 +388,21 @@ const messages = {
   'admin.members.role.label': 'Rol van {name}',
   'admin.members.role.saved': '{name} is nu {role}.',
   'admin.members.role.impersonated':
-    'Een rol kan niet worden gewijzigd terwijl je als een ander account handelt.',
+    'Rollen kunnen in deze sessie niet worden gewijzigd. Meld je opnieuw aan of stop met handelen als dit account voordat je rollen wijzigt.',
   'admin.members.role.notPermitted':
-    'Je kunt deze wijziging niet doorvoeren. Alleen een eigenaar kan de rol van eigenaar geven of een eigenaar wijzigen.',
+    'Je kunt die wijziging niet uitvoeren. Vraag een werkruimte-eigenaar de eigenaarsrol toe te kennen of een eigenaar te wijzigen.',
   'admin.members.role.lastOwner':
-    'Dit is de enige eigenaar van de werkruimte. Maak eerst iemand anders eigenaar.',
+    'De werkruimte moet een eigenaar houden. Maak eerst een ander lid eigenaar.',
   'admin.members.role.notFound':
     'Deze persoon zit niet meer in de werkruimte. De lijst is vernieuwd.',
   'admin.members.role.failed': 'De rol kon niet worden gewijzigd. Probeer het opnieuw.',
+  'admin.members.role.demote.title': 'Je rol wijzigen?',
+  'admin.members.role.demote.admin':
+    'Je kunt geen werkruimte-eigenaars meer beheren. Alleen een andere eigenaar kan je rol herstellen.',
+  'admin.members.role.demote.member':
+    'Je verliest toegang tot de werkruimteconsole en het beheer van facturering, leden en instellingen. Vraag een werkruimte-eigenaar je rol te herstellen.',
+  'admin.members.role.demote.confirm': 'Mijn rol wijzigen',
+  'admin.members.role.pending': 'Rol wijzigen…',
   'admin.members.role.promote.title': '{name} eigenaar maken?',
   'admin.members.role.promote.body':
     '{name} krijgt dezelfde macht als jij: facturering, leden en instellingen. Een eigenaar kan elke andere eigenaar degraderen of verwijderen, ook jou.',
