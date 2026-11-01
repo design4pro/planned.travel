@@ -439,6 +439,17 @@ function BillingPage() {
     void router.invalidate()
   }
 
+  let returnBody =
+    billingReturn.outcome === 'confirmed'
+      ? null
+      : t('settings.billing.return.body')
+  if (billingReturn.outcome === 'scheduled' && state.pendingChange) {
+    returnBody = t('settings.billing.return.scheduledBody', {
+      date:
+        formatDate(state.pendingChange.effectiveAt.toISOString(), locale) ?? '',
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {marker ? (
@@ -459,17 +470,7 @@ function BillingPage() {
             />
           }
         >
-          {billingReturn.outcome === 'scheduled' && state.pendingChange
-            ? t('settings.billing.return.scheduledBody', {
-                date:
-                  formatDate(
-                    state.pendingChange.effectiveAt.toISOString(),
-                    locale,
-                  ) ?? '',
-              })
-            : billingReturn.outcome === 'confirmed'
-              ? null
-              : t('settings.billing.return.body')}
+          {returnBody}
           {search.discount === 'applied'
             ? ` ${t('settings.billing.discount.nextRenewal')}`
             : null}

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { useSession } from './helpers/session'
+import { settle } from './helpers/settle'
 
 test('checkout automatic and manual local reads never send a Referer', async ({
   page,
@@ -16,6 +17,11 @@ test('checkout automatic and manual local reads never send a Referer', async ({
   await page.goto(
     '/settings/billing?checkout=complete&checkout_id=foreign-checkout',
   )
+  await settle(page, {
+    name: 'billing',
+    path: '/settings/billing',
+    ready: 'main',
+  })
   await expect(page.getByText('Checking billing status')).toBeVisible()
   // Automatic reads use the same RPC as Refresh; compare both actual browser requests.
   await expect
