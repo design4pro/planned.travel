@@ -94,3 +94,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Saved day route** - one day’s shared driving or walking intent: its selected mode and traveller-authored intermediate points. The calculated road line is a provider result, recomputed for the reader and never implied to be permanently saved. Distinct from a Map hand-off.
 - **Intermediate point** - a traveller-authored coordinate between two consecutive geolocated day stops that guides a calculated route without moving a place or becoming an itinerary stop. _Avoid_: "stop" for a shaping constraint.
+- **Dashboard prompt** - one passive suggestion on the dashboard based on information the current traveller may read. Dismissing it hides that suggestion locally; it neither marks a notification read nor delivers a Reminder.
+- **Nearby suggestion** - a dashboard prompt based on an explicitly requested approximate-location lookup. It is not a saved Place, a location history or a delivered Reminder.
