@@ -751,3 +751,17 @@ that lists and removes the memberless workspaces of #1062 through the same `dele
 
 Two rounds ran (the limit of `afk-plan-to-spec` §5); the round 2 changes were applied by the author and not re-reviewed by the
 same specialists, which the spec PR says plainly.
+
+
+## Amendment - authenticated departure recovery (#1431)
+
+The implementation for issue #1431 supersedes the stale-session behavior described above:
+`requireOrg` and `loadShell` now share `resolveSessionWorkspace`. An authenticated, unclaimed,
+unpinned reload reads current membership and uses a surviving workspace or provisions a personal
+workspace after confirmed absence. Read failures propagate; banned and impersonated sessions,
+claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
+recovered membership without repeating departure or updating the session.
+
+The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
+requests, rather than introducing another shared resolver. The implementation PR reference will
+be recorded when this change is published.

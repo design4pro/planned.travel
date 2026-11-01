@@ -57,11 +57,12 @@ test('workspace membership confirmation cancels and explains the last-owner refu
   await expect(removal).toBeVisible()
 })
 
-for (const provision of [false, true])
-  test(`a member leaves and reaches their ${provision ? 'new personal' : 'remaining'} workspace dashboard`, async ({
+for (const mode of ['remaining', 'personal', 'unknown'] as const)
+  test(`a member leaves and reaches their ${mode} recovery workspace dashboard`, async ({
     browser,
     baseURL,
   }) => {
+    const provision = mode !== 'remaining'
     const owner = await browser.newContext({
       baseURL,
       storageState: { cookies: [], origins: [] },
@@ -175,11 +176,37 @@ for (const provision of [false, true])
       await page
         .getByRole('button', { name: 'Leave workspace', exact: true })
         .click()
+      let lostResponse = false
+      if (mode === 'unknown') {
+        await page.route('**/_serverFn/**', async (route) => {
+          if (route.request().method() !== 'POST' || lostResponse)
+            return route.continue()
+          await route.fetch()
+          lostResponse = true
+          await route.abort('failed')
+        })
+      }
       await page
         .getByRole('dialog')
         .getByRole('button', { name: 'Leave workspace', exact: true })
         .click()
-      if (provision) {
+      if (mode === 'unknown') {
+        await expect.poll(() => lostResponse).toBe(true)
+        const db = localFixtureDb()
+        expect(
+          db
+            .prepare('select id from member where user_id = ?')
+            .all(personalSession.user.id),
+        ).toHaveLength(0)
+        db.exec(`drop trigger ${recoveryTrigger}`)
+        db.close()
+        await page.unroute('**/_serverFn/**')
+        await page.goto('/dashboard', { waitUntil: 'networkidle' })
+        await expect(
+          page.getByRole('heading', { name: 'Something went wrong' }),
+        ).toHaveCount(0)
+        await page.reload({ waitUntil: 'networkidle' })
+      } else if (provision) {
         const dialog = page.getByRole('dialog')
         await expect(dialog).toContainText('You left this workspace', {
           timeout: 20_000,
@@ -199,7 +226,24 @@ for (const provision of [false, true])
       const active = await (
         await leaver.request.get('/api/auth/get-session')
       ).json()
-      if (provision)
+      if (mode === 'unknown') {
+        // The response was lost after auth cleared the active workspace; reload resolves membership.
+        expect(active.session.activeOrganizationId).toBeNull()
+        const db = localFixtureDb()
+        expect(
+          db
+            .prepare('select id from member where user_id = ?')
+            .all(personalSession.user.id),
+        ).toHaveLength(1)
+        expect(
+          db
+            .prepare(
+              "select id from audit_log where organization_id = ? and action = 'member.left' and actor_user_id = ?",
+            )
+            .all(workspaceId, personalSession.user.id),
+        ).toHaveLength(1)
+        db.close()
+      } else if (provision)
         expect(active.session.activeOrganizationId).not.toBe(personalId)
       else expect(active.session.activeOrganizationId).toBe(personalId)
       await page.goto('/settings/organization', { waitUntil: 'networkidle' })

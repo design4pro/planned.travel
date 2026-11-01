@@ -559,3 +559,17 @@ Issue #988 follows Amendment 17 up. It changes the copy and the order of the cre
 19. **The description says the plan does not carry over.** `workspace.createDescription` now reads `A separate space for its own trips, places and people. It starts on the Free plan and does not share the plan of the workspace you are in.` It carries no placeholder, so it is true before the reader submits.
 20. **The limit runs before the plan.** `createWorkspace` now checks the role, the impersonation, the limit of twenty, the plan, then the race-safe write, whose second limit check stays. This replaces steps 3 and 4 of the order of operations above, which put the plan first: an admin on Free who already belonged to twenty workspaces was sent to pay and, after paying, still got `limit-reached`. The count covers only the caller's own memberships, which the switcher already lists, so moving it ahead of the plan discloses nothing new; role and impersonation stay first, so a `member` still learns nothing. `docs/ACCESS.md` §2.7 states the new order and its test (`workspace-access.test.ts`) pins the order of the checks and the limit of twenty.
 21. **The plan carry-over moved to #998.** Carrying the owner's plan across their workspaces, and the shared seats-and-storage pool, is #998. "Carrying the owner's plan across their workspaces" under Out of scope above is the named follow-up, and this amendment closes the copy work that waited on it.
+
+
+## Amendment - authenticated departure recovery (#1431)
+
+The implementation for issue #1431 supersedes the stale-session behavior described above:
+`requireOrg` and `loadShell` now share `resolveSessionWorkspace`. An authenticated, unclaimed,
+unpinned reload reads current membership and uses a surviving workspace or provisions a personal
+workspace after confirmed absence. Read failures propagate; banned and impersonated sessions,
+claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
+recovered membership without repeating departure or updating the session.
+
+The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
+requests, rather than introducing another shared resolver. The implementation PR reference will
+be recorded when this change is published.

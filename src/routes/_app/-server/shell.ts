@@ -9,6 +9,7 @@
  * last membership revoked while the tab was open — are thrown as message *keys*,
  * not as sentences. See {@link shellFailure}.
  */
+import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { z } from 'zod'
@@ -17,7 +18,7 @@ import { platformCapabilities } from '#/components/layout/session'
 import { getAuth } from '#/server/auth'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { authDb } from '#/server/auth/db'
-import { resolveActiveWorkspace } from '#/server/auth/active-workspace'
+import { resolveSessionWorkspace } from '#/server/auth/active-workspace'
 import { getSession } from '#/server/auth/session'
 import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
@@ -249,11 +250,9 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
     }
 
     const auth = authDb()
-    const resolved = await resolveActiveWorkspace(
-      auth,
-      session.user.id,
-      session.session.activeOrganizationId,
-    )
+    const resolved = await resolveSessionWorkspace(auth, session, {
+      claim: getRequest().headers.get(WORKSPACE_CLAIM_HEADER),
+    })
     if (!resolved) {
       if (session.session.activeOrganizationId) {
         throw shellFailure('shell.session.membershipRemoved')
