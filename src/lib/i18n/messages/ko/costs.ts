@@ -62,7 +62,10 @@ const messages = {
   'split.nobody': '없음',
   'split.departed': '여행에서 나감',
   'split.departedHint':
-    '여행에서 나간 사람의 선택을 해제하면 해당 몫이 영구적으로 삭제됩니다.',
+    '저장하면 여행에서 나간 사람 중 선택을 해제한 사람의 몫이 영구적으로 삭제됩니다.',
+  'split.removedNumbered': '삭제된 여행자 {number}',
+  'split.includeRemoved': '삭제된 여행자를 이 분담에 포함',
+  'split.includeRemovedNumbered': '삭제된 여행자 {number}을(를) 이 분담에 포함',
   'split.includeFor': '{name}을(를) 이 분할에 포함',
   'split.how': '이 지출을 나누는 방식',
   'split.method.equal': '균등',

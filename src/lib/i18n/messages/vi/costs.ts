@@ -61,7 +61,11 @@ const messages = {
   'split.nobody': 'Không ai',
   'split.departed': 'Đã rời chuyến đi',
   'split.departedHint':
-    'Bỏ chọn người đã rời chuyến đi sẽ xóa vĩnh viễn phần của họ.',
+    'Khi lưu, phần của người đã rời chuyến đi mà bạn bỏ chọn sẽ bị xóa vĩnh viễn.',
+  'split.removedNumbered': 'Người đi đã bị xoá {number}',
+  'split.includeRemoved': 'Bao gồm người đi đã bị xoá trong lần chia này',
+  'split.includeRemovedNumbered':
+    'Bao gồm người đi đã bị xoá {number} trong lần chia này',
   'split.includeFor': 'Bao gồm {name} trong phần chia này',
   'split.how': 'Khoản chi này chia thế nào',
   'split.method.equal': 'Chia đều',
