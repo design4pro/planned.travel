@@ -472,7 +472,13 @@ Closing a definite refusal resets its confirmation for a new intent; an uncertai
 requires reconciliation, and a confirmed departure keeps its recovery-only state.
 After self-departure the existing resolver chooses a remaining workspace or provisions a personal
 one and activates it. An uncertain departure response stays an error and never activates a workspace
-as a success; the reader can reload to reconcile it. If activation fails after confirmed deletion,
+as a success; the reader can reload to reconcile it. On an authenticated reload without a workspace
+claim or explicit organization pin, `requireOrg` and `loadShell` re-read authoritative membership,
+use the oldest surviving workspace and its stored role, or provision a personal workspace after
+confirming no membership remains. Failed membership reads propagate as errors without provisioning;
+claimed or pinned requests, banned users and impersonated sessions never provision through this
+fallback. Recovery does not repeat deletion or its audit, and sequential reloads reuse the recovered
+membership even while the session still names the departed workspace. If activation fails after confirmed deletion,
 the confirmation offers a recovery-only
 server function, deriving the signed-in user without requiring the departed tenant; it never repeats
 the deletion. Client caches are cleared, and dashboard navigation waits for successful activation.
