@@ -546,38 +546,43 @@ async function notifyTripRoom(
   count: number,
   context: TaskContext,
 ): Promise<void> {
-  const namespace = context.env.TRIP_ROOM
-  if (!namespace) return
-  const stub = namespace.get(namespace.idFromName(tripId))
-  const response = await stub.fetch(
-    new Request(
-      `https://trip-room.internal/${encodeURIComponent(tripId)}/commit`,
-      {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          tripId,
-          authorId: requestedBy,
-          patches: [
-            {
-              entity: { kind: 'trip', id: tripId },
-              op: 'upsert',
-              fields: {
-                importJobId: jobId,
-                importCount: count,
-                importStagedAt: context.now(),
+  try {
+    const namespace = context.env.TRIP_ROOM
+    if (!namespace) return
+    const stub = namespace.get(namespace.idFromName(tripId))
+    const response = await stub.fetch(
+      new Request(
+        `https://trip-room.internal/${encodeURIComponent(tripId)}/commit`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            tripId,
+            authorId: requestedBy,
+            patches: [
+              {
+                entity: { kind: 'trip', id: tripId },
+                op: 'upsert',
+                fields: {
+                  importJobId: jobId,
+                  importCount: count,
+                  importStagedAt: context.now(),
+                },
               },
-            },
-          ],
-        }),
-      },
-    ),
-  )
-  if (!response.ok) {
-    // A closed room is not a failed import; the banner appears on next load.
-    context.logger.warn('trip room import notification rejected', {
-      tripId,
-      status: response.status,
-    })
+            ],
+          }),
+        },
+      ),
+    )
+    if (!response.ok) {
+      // A closed room is not a failed import; the banner appears on next load.
+      context.logger.warn('trip room import notification rejected', {
+        tripId,
+        status: response.status,
+      })
+    }
+  } catch {
+    // Notification availability must not turn staged review rows into a retried import.
+    context.logger.warn('trip room import notification failed', { tripId })
   }
 }
