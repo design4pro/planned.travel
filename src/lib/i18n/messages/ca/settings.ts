@@ -369,9 +369,16 @@ const messages = {
   'billing.status.incomplete': 'Incompleta',
   'billing.status.incomplete_expired': 'Caducada',
 
-  'billing.checkout.completeTitle': 'Pagament rebut',
-  'billing.checkout.completeBody':
-    'El teu pla nou s’està aplicant. Apareix aquí així que Polar el confirma, normalment en pocs segons.',
+  'billing.return.pending': 'Comprovant el canvi de pla',
+  'billing.return.checking': 'Comprovant la facturació',
+  'billing.return.confirmed': 'Pla confirmat',
+  'billing.return.scheduled': 'Canvi de pla programat',
+  'billing.return.delayed': 'La confirmació triga més',
+  'billing.return.body':
+    'Actualitza per tornar-ho a comprovar. Si el canvi continua sense confirmar, contacta amb el suport.',
+  'billing.return.scheduledBody':
+    'El canvi entrarà en vigor el {date}. El pla actual continuarà vigent fins aleshores. Això no confirma els canvis en el nombre de places.',
+
   'billing.checkout.cancelledTitle': 'Pagament cancel·lat',
   'billing.checkout.cancelledBody':
     'No s’ha cobrat res i el teu pla no ha canviat.',
@@ -530,9 +537,6 @@ const messages = {
     'La facturació encara no està connectada en aquest desplegament, així que no s’ha canviat res. Contacta amb el suport.',
   'billing.failure.orderNotInvoiceable':
     'Polar no pot emetre una factura per a aquesta comanda. Si no té nom o adreça de facturació, afegeix-los al portal de facturació i torna-ho a provar; si no, contacta amb el suport.',
-  'billing.planChanged.title': 'Pla actualitzat',
-  'billing.planChanged.body':
-    'El canvi ja és vigent a Polar, que facturarà la diferència. El resum de sota s’hi posa al dia en un minut.',
   'billing.discount.toggle': 'Tens un codi promocional?',
   'billing.discount.label': 'Codi promocional',
   'billing.discount.hint': 'S’aplicarà al pla que triïs a continuació.',

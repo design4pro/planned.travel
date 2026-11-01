@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui'
+import { workspaceClaimState } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import {
@@ -62,6 +63,11 @@ import {
 } from '../-server/billing'
 import { SettingsSection } from '../-ui/settings-nav'
 import { PromotionCodeField, usePromotionCode } from './-ui/promotion-code'
+import {
+  clearBillingSelection,
+  rememberBillingSelection,
+  useBillingReturn,
+} from './-lib/billing-return'
 import { readBillingFailure } from './-lib/billing-failure'
 
 import type { BadgeTone } from '#/components/ui'
@@ -300,13 +306,30 @@ const PORTAL_KEY = 'portal'
 /** The pending key of **Apply to current plan**. */
 const DISCOUNT_KEY = 'discount'
 
+const RETURN_TITLES = {
+  pending: 'settings.billing.return.pending',
+  checking: 'settings.billing.return.checking',
+  confirmed: 'settings.billing.return.confirmed',
+  scheduled: 'settings.billing.return.scheduled',
+  delayed: 'settings.billing.return.delayed',
+} as const
+
 function BillingPage() {
   const t = useTranslate()
+  const locale = useLocale()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
 
-  const state = data.entitlements
+  let marker: 'checkout' | 'plan' | undefined
+  if (search.checkout === 'complete') marker = 'checkout'
+  else if (search.plan === 'changed') marker = 'plan'
+  const billingReturn = useBillingReturn(
+    data.entitlements,
+    data.viewerId,
+    marker,
+  )
+  const state = billingReturn.state
   const plan = planById(state.planId)
 
   const [interval, setInterval] = useState<BillingInterval>(
@@ -320,6 +343,13 @@ function BillingPage() {
   const [pending, setPending] = useState<string | null>(null)
   const [failure, setFailure] = useState<Failure | null>(null)
   const promotionCode = usePromotionCode()
+  const active = useRef(true)
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+    }
+  }, [])
   const hasLiveSubscription =
     plan.id !== FREE_PLAN.id && isEntitlingStatus(state.status)
 
@@ -334,12 +364,31 @@ function BillingPage() {
     key: string,
     scope: FailureScope,
     run: () => Promise<PlanChangeResult | { url: string }>,
+    selection?: Plan,
   ): Promise<void> {
+    const claim = workspaceClaimState()
     setPending(key)
     setFailure(null)
     try {
       const result = await run()
+      if (!active.current || workspaceClaimState() !== claim) return
       if ('url' in result) {
+        if (
+          selection &&
+          'surface' in result &&
+          (result.surface === 'checkout' || result.surface === 'applied')
+        ) {
+          rememberBillingSelection(
+            state.organizationId,
+            data.viewerId,
+            result.surface === 'checkout' ? 'checkout' : 'plan',
+            {
+              planId: selection.id,
+              interval,
+              seats: selection.seatBased ? seats : undefined,
+            },
+          )
+        }
         window.location.assign(result.url)
         return
       }
@@ -347,6 +396,7 @@ function BillingPage() {
       setPending(null)
       promotionCode.reject(result.reason)
     } catch (cause) {
+      if (!active.current || workspaceClaimState() !== claim) return
       setPending(null)
       setFailure({ scope, ...readBillingFailure(t, cause) })
     }
@@ -355,15 +405,20 @@ function BillingPage() {
   function choosePlan(target: Plan): void {
     const discountCode = promotionCode.read()
     if (discountCode === null) return
-    void handOff(`plan:${target.id}`, 'plan', () =>
-      startPlanChange({
-        data: {
-          planId: target.id,
-          interval,
-          seats: target.seatBased ? seats : undefined,
-          discountCode,
-        },
-      }),
+    clearBillingSelection()
+    void handOff(
+      `plan:${target.id}`,
+      'plan',
+      () =>
+        startPlanChange({
+          data: {
+            planId: target.id,
+            interval,
+            seats: target.seatBased ? seats : undefined,
+            discountCode,
+          },
+        }),
+      target,
     )
   }
 
@@ -386,13 +441,35 @@ function BillingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {search.checkout === 'complete' ? (
+      {marker ? (
         <Alert
-          tone="success"
-          title={t('settings.billing.checkout.completeTitle')}
-          actions={<RefreshButton onClick={refresh} />}
+          tone={
+            billingReturn.outcome === 'confirmed' ||
+            billingReturn.outcome === 'scheduled'
+              ? 'success'
+              : 'info'
+          }
+          title={t(RETURN_TITLES[billingReturn.outcome])}
+          actions={
+            <RefreshButton
+              onClick={() => {
+                void billingReturn.refresh()
+              }}
+            />
+          }
         >
-          {t('settings.billing.checkout.completeBody')}
+          {billingReturn.outcome === 'scheduled' && state.pendingChange
+            ? t('settings.billing.return.scheduledBody', {
+                date:
+                  formatDate(
+                    state.pendingChange.effectiveAt.toISOString(),
+                    locale,
+                  ) ?? '',
+              })
+            : t('settings.billing.return.body')}
+          {search.discount === 'applied'
+            ? ` ${t('settings.billing.discount.nextRenewal')}`
+            : null}
         </Alert>
       ) : null}
 
@@ -402,19 +479,6 @@ function BillingPage() {
           title={t('settings.billing.checkout.cancelledTitle')}
         >
           {t('settings.billing.checkout.cancelledBody')}
-        </Alert>
-      ) : null}
-
-      {search.plan === 'changed' ? (
-        <Alert
-          tone="success"
-          title={t('settings.billing.planChanged.title')}
-          actions={<RefreshButton onClick={refresh} />}
-        >
-          {t('settings.billing.planChanged.body')}
-          {search.discount === 'applied'
-            ? ` ${t('settings.billing.discount.nextRenewal')}`
-            : null}
         </Alert>
       ) : null}
 

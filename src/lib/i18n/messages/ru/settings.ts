@@ -370,9 +370,16 @@ const messages = {
   'billing.status.incomplete': 'Не завершена',
   'billing.status.incomplete_expired': 'Истекла',
 
-  'billing.checkout.completeTitle': 'Платёж получен',
-  'billing.checkout.completeBody':
-    'Новый тариф уже применяется. Он появится здесь в тот момент, когда Polar его подтвердит, — обычно за несколько секунд.',
+  'billing.return.pending': 'Проверяем смену тарифа',
+  'billing.return.checking': 'Проверяем состояние оплаты',
+  'billing.return.confirmed': 'Тариф подтверждён',
+  'billing.return.scheduled': 'Смена тарифа запланирована',
+  'billing.return.delayed': 'Подтверждение занимает больше времени',
+  'billing.return.body':
+    'Обновите страницу для повторной проверки. Если изменение не подтверждено, обратитесь в поддержку.',
+  'billing.return.scheduledBody':
+    'Изменение вступит в силу {date}. До этого действует текущий тариф. Это не подтверждает изменение числа мест.',
+
   'billing.checkout.cancelledTitle': 'Оплата прервана',
   'billing.checkout.cancelledBody': 'Ничего не списано, и тариф не изменился.',
   'billing.portal.backTitle': 'Возвращение из Polar',
@@ -544,9 +551,6 @@ const messages = {
     'Биллинг в этой установке ещё не подключён, поэтому ничего не изменилось. Обратитесь в поддержку.',
   'billing.failure.orderNotInvoiceable':
     'Polar не может выставить счёт по этому заказу. Если не указаны имя или адрес плательщика, добавьте их на портале биллинга и повторите попытку; иначе обратитесь в поддержку.',
-  'billing.planChanged.title': 'Тариф обновлён',
-  'billing.planChanged.body':
-    'Изменение уже действует в Polar, который выставит счёт на разницу. Сводка ниже догонит в течение минуты.',
   'billing.discount.toggle': 'Есть промокод?',
   'billing.discount.label': 'Промокод',
   'billing.discount.hint': 'Применится к тарифу, который вы выберете.',

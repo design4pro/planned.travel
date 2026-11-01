@@ -324,9 +324,16 @@ const messages = {
   'billing.status.canceled': '해지됨',
   'billing.status.incomplete': '미완료',
   'billing.status.incomplete_expired': '만료됨',
-  'billing.checkout.completeTitle': '결제를 받았어요',
-  'billing.checkout.completeBody':
-    '새 플랜을 적용하고 있어요. Polar가 확인하는 순간 여기에 나타나요. 보통 몇 초면 끝나요.',
+  'billing.return.pending': '요금제 변경 확인 중',
+  'billing.return.checking': '결제 상태 확인 중',
+  'billing.return.confirmed': '요금제 확인 완료',
+  'billing.return.scheduled': '요금제 변경 예약됨',
+  'billing.return.delayed': '확인이 지연되고 있습니다',
+  'billing.return.body':
+    '새로고침하여 다시 확인하세요. 변경이 확인되지 않으면 지원팀에 문의하세요.',
+  'billing.return.scheduledBody':
+    '변경 사항은 {date}에 적용됩니다. 그때까지 현재 요금제가 유지됩니다. 좌석 수 변경을 확인하는 것은 아닙니다.',
+
   'billing.checkout.cancelledTitle': '결제를 취소했어요',
   'billing.checkout.cancelledBody': '청구된 것은 없고 플랜도 그대로예요.',
   'billing.portal.backTitle': 'Polar에서 돌아왔어요',
@@ -458,9 +465,6 @@ const messages = {
     '이 배포에는 아직 결제가 연결되어 있지 않아 변경된 내용이 없습니다. 지원팀에 문의하세요.',
   'billing.failure.orderNotInvoiceable':
     'Polar가 이 주문의 청구서를 발급할 수 없습니다. 청구 이름이나 주소가 없다면 결제 포털에서 추가한 뒤 다시 시도하고, 그렇지 않으면 지원팀에 문의하세요.',
-  'billing.planChanged.title': '플랜이 업데이트되었습니다',
-  'billing.planChanged.body':
-    '변경은 이미 Polar에서 적용되었고 차액은 Polar가 청구합니다. 아래 요약은 1분 안에 따라잡습니다.',
   'billing.discount.toggle': '프로모션 코드가 있으신가요?',
   'billing.discount.label': '프로모션 코드',
   'billing.discount.hint': '다음에 선택하는 요금제에 적용됩니다.',

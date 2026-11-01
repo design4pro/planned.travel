@@ -358,9 +358,16 @@ const messages = {
   'billing.status.incomplete': 'Ofullständigt',
   'billing.status.incomplete_expired': 'Utgånget',
 
-  'billing.checkout.completeTitle': 'Betalningen har kommit fram',
-  'billing.checkout.completeBody':
-    'Ditt nya abonnemang håller på att tas i bruk. Det syns här så fort Polar bekräftar det — oftast inom några sekunder.',
+  'billing.return.pending': 'Kontrollerar planändringen',
+  'billing.return.checking': 'Kontrollerar faktureringsstatus',
+  'billing.return.confirmed': 'Planen är bekräftad',
+  'billing.return.scheduled': 'Planändringen är schemalagd',
+  'billing.return.delayed': 'Bekräftelsen tar längre tid',
+  'billing.return.body':
+    'Uppdatera för att kontrollera igen. Kontakta supporten om ändringen förblir obekräftad.',
+  'billing.return.scheduledBody':
+    'Ändringen träder i kraft {date}. Din nuvarande plan gäller tills dess. Detta bekräftar inte ändringar av antalet platser.',
+
   'billing.checkout.cancelledTitle': 'Betalningen avbröts',
   'billing.checkout.cancelledBody':
     'Ingenting drogs och ditt abonnemang är oförändrat.',
@@ -517,9 +524,6 @@ const messages = {
     'Faktureringen är inte ansluten i den här driftsättningen ännu, så inget ändrades. Kontakta supporten.',
   'billing.failure.orderNotInvoiceable':
     'Polar kan inte utfärda en faktura för den här beställningen. Saknas faktureringsnamn eller adress, lägg till dem i faktureringsportalen och försök igen; kontakta annars supporten.',
-  'billing.planChanged.title': 'Planen uppdaterad',
-  'billing.planChanged.body':
-    'Ändringen gäller redan hos Polar, som fakturerar mellanskillnaden. Sammanställningen nedan hinner upp inom en minut.',
   'billing.discount.toggle': 'Har du en kampanjkod?',
   'billing.discount.label': 'Kampanjkod',
   'billing.discount.hint': 'Används för den plan du väljer härnäst.',

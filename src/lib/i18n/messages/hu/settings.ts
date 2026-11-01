@@ -363,9 +363,16 @@ const messages = {
   'billing.status.incomplete': 'Befejezetlen',
   'billing.status.incomplete_expired': 'Lejárt',
 
-  'billing.checkout.completeTitle': 'A fizetés megérkezett',
-  'billing.checkout.completeBody':
-    'Az új csomagja életbe lép. Abban a pillanatban megjelenik itt, amikor a Polar visszaigazolja — általában néhány másodperc alatt.',
+  'billing.return.pending': 'A csomagváltás ellenőrzése',
+  'billing.return.checking': 'A számlázási állapot ellenőrzése',
+  'billing.return.confirmed': 'Csomag megerősítve',
+  'billing.return.scheduled': 'Csomagváltás ütemezve',
+  'billing.return.delayed': 'A megerősítés tovább tart',
+  'billing.return.body':
+    'Frissíts az újabb ellenőrzéshez. Ha a változás továbbra sincs megerősítve, fordulj az ügyfélszolgálathoz.',
+  'billing.return.scheduledBody':
+    'A változás ekkor lép életbe: {date}. Addig a jelenlegi csomagod marad érvényben. Ez nem erősíti meg a helyek számának változását.',
+
   'billing.checkout.cancelledTitle': 'A fizetés megszakadt',
   'billing.checkout.cancelledBody':
     'Semmit nem vontunk le, és a csomagja sem változott.',
@@ -521,9 +528,6 @@ const messages = {
     'A számlázás ezen a telepítésen még nincs összekötve, ezért semmi sem változott. Fordulj az ügyfélszolgálathoz.',
   'billing.failure.orderNotInvoiceable':
     'A Polar nem tud számlát kiállítani erre a rendelésre. Ha hiányzik a számlázási név vagy cím, add meg a számlázási portálon, és próbáld újra; egyébként fordulj az ügyfélszolgálathoz.',
-  'billing.planChanged.title': 'Csomag frissítve',
-  'billing.planChanged.body':
-    'A változás a Polarnál már érvényes, a különbséget ő számlázza. Az alábbi összegzés egy percen belül utolér.',
   'billing.discount.toggle': 'Van promóciós kódod?',
   'billing.discount.label': 'Promóciós kód',
   'billing.discount.hint': 'A következőként választott csomagra érvényes.',
