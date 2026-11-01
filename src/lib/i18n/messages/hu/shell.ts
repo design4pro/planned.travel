@@ -27,6 +27,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': 'Értesítések',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Fő szakaszok',
   'nav.mobile': 'Szakaszok',

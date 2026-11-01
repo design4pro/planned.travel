@@ -50,6 +50,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': 'Thông báo',
   'nav.primary': 'Các mục chính',
   'nav.mobile': 'Các mục',
   'nav.dashboardLink': 'Bảng điều khiển planned.travel',

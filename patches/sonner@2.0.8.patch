@@ -1,0 +1,104 @@
+diff --git a/dist/index.js b/dist/index.js
+index 394dbc2272f43b84642b0f9d5cc7eb1eacb0ffb3..0d650c4512462702dd3c0b01bbe09c821e644f09 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1008,6 +1008,8 @@ const Toaster = /*#__PURE__*/ React__default.default.forwardRef(function Toaster
+     ]);
+     const [heights, setHeights] = React__default.default.useState([]);
+     const [expanded, setExpanded] = React__default.default.useState(false);
++    const [focusWithin, setFocusWithin] = React__default.default.useState(false);
++    const focusedElementRef = React__default.default.useRef(null);
+     const [interacting, setInteracting] = React__default.default.useState(false);
+     const [actualTheme, setActualTheme] = React__default.default.useState(theme !== 'system' ? theme : typeof window !== 'undefined' ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : 'light');
+     const listRef = React__default.default.useRef(null);
+@@ -1105,6 +1107,9 @@ const Toaster = /*#__PURE__*/ React__default.default.forwardRef(function Toaster
+     ]);
+     React__default.default.useEffect(()=>{
+         // Ensure expanded is always false when no toasts are present / only one left
++        if (!focusedElementRef.current?.isConnected) {
++            setFocusWithin(false);
++        }
+         if (toasts.length <= 1) {
+             setExpanded(false);
+         }
+@@ -1176,6 +1181,10 @@ const Toaster = /*#__PURE__*/ React__default.default.forwardRef(function Toaster
+                 ...assignOffset(offset, mobileOffset)
+             },
+             onBlur: (event)=>{
++                if (!event.currentTarget.contains(event.relatedTarget)) {
++                    focusedElementRef.current = null;
++                    setFocusWithin(false);
++                }
+                 if (isFocusWithinRef.current && !event.currentTarget.contains(event.relatedTarget)) {
+                     isFocusWithinRef.current = false;
+                     if (lastFocusedElementRef.current) {
+@@ -1187,6 +1196,8 @@ const Toaster = /*#__PURE__*/ React__default.default.forwardRef(function Toaster
+                 }
+             },
+             onFocus: (event)=>{
++                focusedElementRef.current = event.target;
++                setFocusWithin(true);
+                 const isNotDismissible = event.target instanceof HTMLElement && event.target.dataset.dismissible === 'false';
+                 if (isNotDismissible) return;
+                 if (!isFocusWithinRef.current) {
+@@ -1237,7 +1248,7 @@ const Toaster = /*#__PURE__*/ React__default.default.forwardRef(function Toaster
+                 setHeights: setHeights,
+                 expandByDefault: expand,
+                 gap: gap,
+-                expanded: expanded,
++                expanded: expanded || focusWithin,
+                 swipeDirections: props.swipeDirections
+             });
+         }));
+diff --git a/dist/index.mjs b/dist/index.mjs
+index c124f821a68f7070647a5a04441d0caa53689662..7e5524d928ff986034778543a25c1ff5f2fe53b1 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1001,6 +1001,8 @@ const Toaster = /*#__PURE__*/ React.forwardRef(function Toaster(props, ref) {
+     ]);
+     const [heights, setHeights] = React.useState([]);
+     const [expanded, setExpanded] = React.useState(false);
++    const [focusWithin, setFocusWithin] = React.useState(false);
++    const focusedElementRef = React.useRef(null);
+     const [interacting, setInteracting] = React.useState(false);
+     const [actualTheme, setActualTheme] = React.useState(theme !== 'system' ? theme : typeof window !== 'undefined' ? window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : 'light');
+     const listRef = React.useRef(null);
+@@ -1098,6 +1100,9 @@ const Toaster = /*#__PURE__*/ React.forwardRef(function Toaster(props, ref) {
+     ]);
+     React.useEffect(()=>{
+         // Ensure expanded is always false when no toasts are present / only one left
++        if (!focusedElementRef.current?.isConnected) {
++            setFocusWithin(false);
++        }
+         if (toasts.length <= 1) {
+             setExpanded(false);
+         }
+@@ -1169,6 +1174,10 @@ const Toaster = /*#__PURE__*/ React.forwardRef(function Toaster(props, ref) {
+                 ...assignOffset(offset, mobileOffset)
+             },
+             onBlur: (event)=>{
++                if (!event.currentTarget.contains(event.relatedTarget)) {
++                    focusedElementRef.current = null;
++                    setFocusWithin(false);
++                }
+                 if (isFocusWithinRef.current && !event.currentTarget.contains(event.relatedTarget)) {
+                     isFocusWithinRef.current = false;
+                     if (lastFocusedElementRef.current) {
+@@ -1180,6 +1189,8 @@ const Toaster = /*#__PURE__*/ React.forwardRef(function Toaster(props, ref) {
+                 }
+             },
+             onFocus: (event)=>{
++                focusedElementRef.current = event.target;
++                setFocusWithin(true);
+                 const isNotDismissible = event.target instanceof HTMLElement && event.target.dataset.dismissible === 'false';
+                 if (isNotDismissible) return;
+                 if (!isFocusWithinRef.current) {
+@@ -1230,7 +1241,7 @@ const Toaster = /*#__PURE__*/ React.forwardRef(function Toaster(props, ref) {
+                 setHeights: setHeights,
+                 expandByDefault: expand,
+                 gap: gap,
+-                expanded: expanded,
++                expanded: expanded || focusWithin,
+                 swipeDirections: props.swipeDirections
+             });
+         }));

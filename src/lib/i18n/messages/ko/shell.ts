@@ -16,6 +16,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': '알림',
   'nav.primary': '주요 섹션',
   'nav.mobile': '섹션',
   'nav.dashboardLink': 'planned.travel 대시보드',
