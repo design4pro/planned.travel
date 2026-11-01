@@ -590,9 +590,10 @@ and records the link's creator.
   `role="status"` per surface, mounted before text is written; failures use `Alert` `danger` next to the failing
   control, linked with `aria-describedby`. The join card uses the focus move **or** a live announcement, not both.
   The sticky guest header sets `scroll-padding-top` so focus is not obscured (2.4.11). Colour is never the only
-  signal of `off` / `stale`. **Non-text contrast:** the unchecked switch track is measured by hand at about 2.2:1
-  (light) and 2.4:1 (dark) against 3:1 (1.4.11); Phase 4 measures it and, if it fails, files a follow-up for the
-  primitive (the off state text stays visible as the second signal).
+  signal of `off` / `stale`. **Non-text contrast:** #1424 corrects the shared enabled unchecked Switch boundary to use the
+  opaque interactive-boundary token, which must clear 3:1 on all supported surfaces in both themes
+  (1.4.11), at rest and on hover. Disabled styling is preserved; the off-state text stays visible as
+  the second signal.
 
 ## 📝 Visual change expected
 
