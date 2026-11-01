@@ -61,7 +61,11 @@ const messages = {
   'split.nobody': 'Ingen',
   'split.departed': 'Har lämnat resan',
   'split.departedHint':
-    'Om du avmarkerar någon som har lämnat resan tas den personens andel bort för gott.',
+    'När du sparar tas andelen för den som har lämnat resan och är avmarkerad bort för gott.',
+  'split.removedNumbered': 'Borttagen resenär {number}',
+  'split.includeRemoved': 'Ta med den borttagna resenären i denna fördelning',
+  'split.includeRemovedNumbered':
+    'Ta med den borttagna resenären {number} i denna fördelning',
   'split.includeFor': 'Ta med {name} i den här fördelningen',
   'split.how': 'Hur den här utgiften fördelas',
   'split.method.equal': 'Jämnt',

@@ -111,6 +111,7 @@ const prompt=fs.readFileSync(0,'utf8');
 note({kind:'prompt',sourceRead:/Read AGENTS|with Read|Open the file/.test(prompt)});
 if(fs.existsSync('failure')) process.exit(1);
 const body=fs.readFileSync('report.json','utf8');
+if(fs.existsSync('tool-failure')) process.stdout.write(JSON.stringify({type:'user',message:{role:'user',content:[{type:'tool_result',tool_use_id:'fixture',is_error:true,content:'MCP unavailable'}]},tool_use_result:{isError:true}})+'\\n');
 process.stdout.write(JSON.stringify({type:'result',subtype:'success',is_error:false,
  permission_denials:fs.existsSync('denied')?[{tool_name:'Read'}]:[],result:'<sentry-triage>'+body+'</sentry-triage>'}));`,
   )
@@ -191,7 +192,7 @@ describe('restricted Sentry sweep subprocess boundary', () => {
       expect(event.credentials).toEqual([])
     expect(survey.claudeAuth).toBe(true)
     expect(survey.toolSearch).toBe('false')
-    expect(args[args.indexOf('--output-format') + 1]).toBe('json')
+    expect(args[args.indexOf('--output-format') + 1]).toBe('stream-json')
     for (const event of events.filter((e) => e.kind === 'mcp')) {
       expect(event.credentials).toEqual([])
       expect(event.claudeAuth).toBe(false)
@@ -289,6 +290,23 @@ describe('restricted Sentry sweep subprocess boundary', () => {
       ).toHaveLength(0)
     },
   )
+
+  it('refuses a failed survey tool despite successful preflight and an eligible report', () => {
+    const f = fixture()
+    writeFileSync(join(f.dir, 'tool-failure'), '')
+    const result = f.run(['--file-issues'])
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain('Sentry survey tool failed')
+    expect(f.events().some((event) => event.kind === 'mcp')).toBe(true)
+    expect(f.events().some((event) => event.kind === 'survey')).toBe(true)
+    expect(
+      f
+        .events()
+        .filter(
+          (event) => event.kind === 'github' && event.args.includes('create'),
+        ),
+    ).toHaveLength(0)
+  })
 
   it('keeps deduplication and the filing cap effective', () => {
     const f = fixture()

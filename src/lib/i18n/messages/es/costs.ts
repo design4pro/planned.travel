@@ -64,7 +64,11 @@ const messages = {
   'split.nobody': 'Nadie',
   'split.departed': 'Dejó el viaje',
   'split.departedHint':
-    'Al desmarcar a alguien que dejó el viaje, su parte se elimina para siempre.',
+    'Al guardar, se elimina para siempre la parte de quien dejó el viaje y hayas desmarcado.',
+  'split.removedNumbered': 'Viajero eliminado {number}',
+  'split.includeRemoved': 'Incluir al viajero eliminado en este reparto',
+  'split.includeRemovedNumbered':
+    'Incluir al viajero eliminado {number} en este reparto',
   'split.includeFor': 'Incluir a {name} en este reparto',
   'split.how': 'Cómo se reparte este gasto',
   'split.method.equal': 'A partes iguales',

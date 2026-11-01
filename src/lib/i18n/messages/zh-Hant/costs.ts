@@ -57,7 +57,11 @@ const messages = {
   'split.everyone': '所有人',
   'split.nobody': '無人',
   'split.departed': '已離開行程',
-  'split.departedHint': '取消勾選已離開行程的人，會永久刪除其份額。',
+  'split.departedHint':
+    '儲存後，已離開行程且被取消勾選的人的份額將被永久刪除。',
+  'split.removedNumbered': '已移除的旅行者 {number}',
+  'split.includeRemoved': '將已移除的旅行者計入本次分攤',
+  'split.includeRemovedNumbered': '將已移除的旅行者 {number} 計入本次分攤',
   'split.includeFor': '將{name}納入此次分攤',
   'split.how': '這筆支出怎麼分',
   'split.method.equal': '平均',

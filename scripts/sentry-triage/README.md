@@ -160,3 +160,5 @@ report uploads are best effort and expire after two days.
 
 Protocol reference: [MCP lifecycle](https://modelcontextprotocol.io/specification/2025-03-26/basic/lifecycle)
 and [tools discovery](https://modelcontextprotocol.io/specification/2025-03-26/server/tools).
+
+The trusted host inspects the survey’s verbose stream transcript and refuses filing on any failed tool result (`is_error` or MCP `isError`), even when the final report and session claim success. A successful connection preflight does not override a later survey failure.
