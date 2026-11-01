@@ -1110,7 +1110,7 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   rollback of work that already succeeded.
 - **Ban and impersonation are always audited.** `platform.user.banned`, `platform.user.unbanned`,
   `platform.user.impersonation_started`, `platform.user.impersonation_ended` and
-  `platform.user.impersonation_workspace_changed` are appended without exception. For the first
+  `platform.user.impersonation_workspace_changed` are audited subject to the stated gaps below. For the first
   four that claim rests entirely on §2.6 (the fifth rests on a different mechanism, described after
   the two stated exceptions below): `/admin/ban-user`, `/admin/unban-user`, `/admin/impersonate-user`
   and `/admin/stop-impersonating` all answer `404` over HTTP, so `src/server/fns/console/*` is the
@@ -1144,9 +1144,14 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   It appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
   is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
   four, and like the ban tripwire it swallows every error it can raise: a switch that succeeded is
-  never failed by its own audit row. **Its two stated gaps are logged at `error`, never silent:** an
+  never failed by its own audit row. **Its hook-level gaps are logged at `error`, never silent:** an
   operator role that cannot be read writes no row (§6.4), and neither does an impersonated update that
-  reaches the hook without a request context (`audit.impersonation-workspace.no-context`). Also always audited: `platform.user.role_changed`,
+  reaches the hook without a request context (`audit.impersonation-workspace.no-context`). There is also a persistence gap before the
+  after-hook: Better Auth writes KV before D1. If KV persistence succeeds and the D1 session update
+  rejects, KV can hold the new workspace while D1 retains the old one, with no workspace-switch
+  audit event. Over HTTP the existing auth error callback logs an `error` line named `api.error`.
+  This is a generic request failure, not proof of KV/D1 divergence; direct `auth.api` calls do not
+  carry that HTTP logging guarantee. The predecessor race is stated in §6.4. Also always audited: `platform.user.role_changed`,
   `platform.user.deleted`, `platform.session.revoked`, `platform.session.revoked_all`,
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
@@ -1422,11 +1427,16 @@ landing workspace may have been created by the impersonation itself, because `se
 provisions a personal workspace for an account that has none; the start event is the only row that
 shows it. A workspace the per-request fallback provisions mid-session is not shown anywhere (below).
 
-So is every workspace the operator moves into between the two. A change of the session's
+Workspace switches between the two are audited subject to the gaps in §4.3. A change of the session's
 `activeOrganizationId` inside an impersonated session appends
 `platform.user.impersonation_workspace_changed` to `platform_audit_log`, in the same timeline as the
 start and the end, so §4.4's query on `(entity_type, entity_id)` reads start, switches and end in
-order. It is the platform log and not the tenant `audit_log`, for the reason §4.5 gives: a switch
+order of recorded events, not a complete commit ordering. `before.organizationId` is the workspace
+in the session resolved for the request, not a predecessor read atomically from the updated D1 row.
+Overlapping switches or stale KV reads can both resolve X, recording X to Y and X to Z instead of
+X to Y followed by Y to Z. Sequential requests with fresh session reads record the expected pairs,
+but there is no atomic predecessor-chain guarantee. A KV-first D1 failure can leave no switch event
+at all (§4.3). It is the platform log and not the tenant `audit_log`, for the reason §4.5 gives: a switch
 writes nothing inside a workspace. The actor is the operator - `actor_user_id` is `impersonatedBy` and
 `actor_role` is read from the operator's own `user` row at that moment, never from the worn
 session - and `entity_id` is the target. `changes` is `{ before: { organizationId }, after:
@@ -1437,7 +1447,7 @@ workspace the target does not belong to all do; the plugin clears it before it r
 request is still a switch of the session and is recorded as one. A `null` workspace means the next
 request falls back to the oldest membership (`src/server/auth/session.ts`), and that fallback is
 not itself recorded, nor is a per-request choice made by `requireOrg` without a session update: the
-ledger shows the workspace a session started in and every switch that went through a session update,
+ledger shows the workspace a session started in and successfully audited session updates,
 and nothing that only a single request resolved. If
 the operator's role cannot be read, no row is written and an `error` line says so: a row naming an
 administrator as `user` is worse than a gap that is logged. The same holds for an impersonated

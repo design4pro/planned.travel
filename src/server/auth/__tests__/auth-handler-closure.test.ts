@@ -1321,6 +1321,99 @@ describe('a workspace switch inside an impersonated session', () => {
     })
   })
 
+  it('records consecutive workspace pairs for two sequential HTTP switches', async () => {
+    const cookie = await impersonate()
+
+    for (const organizationId of [secondOrganizationId, ownOrganizationId]) {
+      const response = await post(
+        '/organization/set-active',
+        { organizationId },
+        cookie,
+      )
+      expect(response.status).toBe(200)
+      expect(activeOrganizationOf(cookie)).toBe(organizationId)
+    }
+
+    expect(
+      shared.appendPlatformAudit.mock.calls.map(([, actor, entry]) => ({
+        actor,
+        entry,
+      })),
+    ).toEqual([
+      {
+        actor: OPERATOR_ACTOR(),
+        entry: {
+          action: ACTION,
+          entityId: targetId,
+          changes: {
+            before: { organizationId: ownOrganizationId },
+            after: { organizationId: secondOrganizationId },
+          },
+        },
+      },
+      {
+        actor: OPERATOR_ACTOR(),
+        entry: {
+          action: ACTION,
+          entityId: targetId,
+          changes: {
+            before: { organizationId: secondOrganizationId },
+            after: { organizationId: ownOrganizationId },
+          },
+        },
+      },
+    ])
+  })
+
+  it('leaves KV advanced without an audit row when the D1 session update fails over HTTP', async () => {
+    const cookie = await impersonate()
+    const token = decodeURIComponent(cookie.split('=')[1]).split('.')[0]
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { adapter } = await getAuth().$context
+    const originalUpdate = adapter.update.bind(adapter)
+    const update = vi.spyOn(adapter, 'update').mockImplementation(async (input) => {
+      if (
+        input.model === 'session' &&
+        Object.hasOwn(input.update, 'activeOrganizationId')
+      ) {
+        throw new Error('Injected D1 session update failure')
+      }
+      return originalUpdate(input)
+    })
+    const response = await post(
+      '/organization/set-active',
+      { organizationId: secondOrganizationId },
+      cookie,
+    )
+    update.mockRestore()
+
+    expect(response.status).toBe(500)
+    expect(activeOrganizationOf(cookie)).toBe(ownOrganizationId)
+    expect(JSON.parse(shared.kv.get(token) ?? 'null')).toMatchObject({
+      session: {
+        activeOrganizationId: secondOrganizationId,
+      },
+    })
+    expect(shared.appendPlatformAudit).not.toHaveBeenCalled()
+    const diagnostics = error.mock.calls.map(([line]) => String(line))
+    expect(
+      diagnostics.some((line) => {
+        try {
+          const diagnostic = JSON.parse(line)
+          return (
+            diagnostic.scope === 'auth' &&
+            diagnostic.level === 'error' &&
+            diagnostic.event === 'api.error'
+          )
+        } catch {
+          return false
+        }
+      }),
+    ).toBe(true)
+    expect(diagnostics.join('\n')).not.toContain(token)
+    expect(diagnostics.join('\n')).not.toContain(cookie)
+  })
+
   it('writes the same row for the in-process call, which is what the server functions make', async () => {
     const cookie = await impersonate()
 
