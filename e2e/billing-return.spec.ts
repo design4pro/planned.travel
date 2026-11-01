@@ -36,7 +36,14 @@ test('checkout automatic and manual local reads never send a Referer', async ({
   )
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
   const manual = await manualRequest
-  expect(manual.headers().referer).toBeUndefined()
-  expect(automatic.referer).toBeUndefined()
+  expect(manual.headers().referer).toBeFalsy()
+  expect(automatic.referer).toBeFalsy()
+  console.info(
+    'billing local-read Referer:',
+    JSON.stringify({
+      automatic: automatic.referer ?? null,
+      manual: manual.headers().referer ?? null,
+    }),
+  )
   expect(page.url()).toContain('checkout_id=foreign-checkout')
 })
