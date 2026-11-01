@@ -441,6 +441,20 @@ const messages = {
   'panel.stat.streakSingle': 'Un viaggio nel {last}',
   'panel.stat.streakNone':
     'Aggiungi un viaggio con date per iniziare una serie',
+  'visitEdit.edit': 'Modifica visita',
+  'visitEdit.note': 'Nota',
+  'visitEdit.save': 'Salva visita',
+  'visitEdit.cancel': 'Annulla',
+  'visitEdit.loading': 'Caricamento della visita',
+  'visitEdit.saving': 'Salvataggio della visita',
+  'visitEdit.failed':
+    'Salvataggio non confermato. La bozza è conservata; riprova.',
+  'visitEdit.missing': 'Questa visita non è più disponibile. Riapri il paese.',
+  'visitEdit.noteInvalid': 'Usa al massimo 2000 caratteri.',
+  'visitEdit.bounds': 'La prima visita non può seguire l’ultima.',
+  'visitEdit.future': 'Scegli oggi o una data precedente.',
+  'visitEdit.dateInvalid': 'Inserisci una data reale nel formato AAAA-MM-GG.',
+  'visitEdit.reload': 'Salvato. Ricarica la scheda',
 } satisfies TranslationOf<typeof En>
 
 export default messages

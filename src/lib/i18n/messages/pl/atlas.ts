@@ -461,6 +461,20 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Podróż w roku {last}',
   'panel.stat.streakNone': 'Dodaj podróż z datami, aby rozpocząć serię',
+  'visitEdit.edit': 'Edytuj wizytę',
+  'visitEdit.note': 'Notatka',
+  'visitEdit.save': 'Zapisz wizytę',
+  'visitEdit.cancel': 'Anuluj',
+  'visitEdit.loading': 'Wczytywanie wizyty',
+  'visitEdit.saving': 'Zapisywanie wizyty',
+  'visitEdit.failed':
+    'Nie udało się potwierdzić zapisu. Szkic zachowano; spróbuj ponownie.',
+  'visitEdit.missing': 'Ta wizyta nie jest już dostępna. Otwórz kraj ponownie.',
+  'visitEdit.noteInvalid': 'Użyj maksymalnie 2000 znaków.',
+  'visitEdit.bounds': 'Pierwsza wizyta nie może być późniejsza niż ostatnia.',
+  'visitEdit.future': 'Wybierz dzisiejszą lub wcześniejszą datę.',
+  'visitEdit.dateInvalid': 'Podaj rzeczywistą datę w formacie RRRR-MM-DD.',
+  'visitEdit.reload': 'Zapisano. Odśwież rekord',
 } satisfies TranslationOf<typeof En>
 
 export default messages

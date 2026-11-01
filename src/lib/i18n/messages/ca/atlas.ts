@@ -437,6 +437,21 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Un viatge el {last}',
   'panel.stat.streakNone': 'Afegeix un viatge amb dates per iniciar una ratxa',
+  'visitEdit.edit': 'Edita la visita',
+  'visitEdit.note': 'Nota',
+  'visitEdit.save': 'Desa la visita',
+  'visitEdit.cancel': 'Cancel·la',
+  'visitEdit.loading': 'S’està carregant la visita',
+  'visitEdit.saving': 'S’està desant la visita',
+  'visitEdit.failed':
+    'No s’ha pogut confirmar el desament. Es conserva l’esborrany; torna-ho a provar.',
+  'visitEdit.missing':
+    'Aquesta visita ja no està disponible. Torna a obrir el país.',
+  'visitEdit.noteInvalid': 'Fes servir com a màxim 2000 caràcters.',
+  'visitEdit.bounds': 'La primera visita no pot ser posterior a l’última.',
+  'visitEdit.future': 'Tria avui o una data anterior.',
+  'visitEdit.dateInvalid': 'Introdueix una data real amb el format AAAA-MM-DD.',
+  'visitEdit.reload': 'Desat. Torna a carregar la fitxa',
 } satisfies TranslationOf<typeof En>
 
 export default messages

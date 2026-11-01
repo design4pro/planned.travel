@@ -25,7 +25,8 @@ import {
 import { z } from 'zod'
 import { foldPlaceName } from '#/lib/atlas/place-name'
 import { VISITED_REGIONS_MAX_PER_TRAVELLER } from '#/lib/atlas/limits'
-import { QuotaExceededError } from './context'
+import { NotFoundError, QuotaExceededError } from './context'
+import { countryVisitEditSchema } from '#/lib/atlas/visit-edit'
 import {
   BUCKET_LIST_KINDS,
   bucketListItems,
@@ -216,6 +217,36 @@ export async function markCountryVisited(
     continent: values.continent ?? existing.continent,
     note: values.note ?? existing.note,
   })
+}
+
+/** Corrections preserve visit identity and counters; ownership is also bound into UPDATE. */
+export async function updateCountryVisit(
+  scope: TenantScope,
+  input: z.input<typeof countryVisitEditSchema>,
+): Promise<{
+  before: VisitedCountry
+  visit: VisitedCountry
+  changed: boolean
+}> {
+  const { countryCode, ...patch } = countryVisitEditSchema.parse(input)
+  const owner = allOf(
+    eq(visitedCountries.userId, scope.ctx.userId),
+    eq(visitedCountries.countryCode, countryCode),
+  )
+  const before = await visitedCountriesRepository.findOne(scope, owner)
+  if (!before) throw new NotFoundError('visited country', countryCode)
+  const changed =
+    before.firstVisitedOn !== patch.firstVisitedOn ||
+    before.lastVisitedOn !== patch.lastVisitedOn ||
+    before.note !== patch.note
+  if (!changed) return { before, visit: before, changed }
+  const [visit] = await visitedCountriesRepository.updateWhere(
+    scope,
+    allOf(owner, eq(visitedCountries.id, before.id)),
+    patch,
+  )
+  if (!visit) throw new NotFoundError('visited country', countryCode)
+  return { before, visit, changed }
 }
 
 export async function unmarkCountryVisited(

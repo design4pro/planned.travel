@@ -31,8 +31,14 @@ import {
   markCountryVisited,
   isUniqueConstraintViolation,
   unmarkCountryVisited,
+  updateCountryVisit,
 } from '#/server/repos'
 import { appScope } from './context'
+import { serverToday } from '#/server/clock'
+import {
+  countryVisitEditSchema,
+  countryVisitEditForToday,
+} from '#/lib/atlas/visit-edit'
 
 import type { Continent } from '#/lib/atlas/continents'
 import type { BucketListItem, VisitedCountry } from '#/server/db/types'
@@ -647,5 +653,53 @@ export const unmarkRegionVisitedFn = createServerFn({ method: 'POST' })
     return {
       ...(await countryRegions(scope, row.countryCode)),
       country: await atlasCountryState(scope, row.countryCode),
+    }
+  })
+
+export const loadCountryVisitFn = createServerFn({ method: 'GET' })
+  .validator(z.strictObject({ countryCode: countryCodeSchema }))
+  .handler(async ({ data }) => ({
+    country: await atlasCountryState(await appScope(), data.countryCode),
+    today: serverToday(),
+  }))
+
+export const updateCountryVisitInputSchema = countryVisitEditSchema
+
+export const updateCountryVisitFn = createServerFn({ method: 'POST' })
+  .validator(updateCountryVisitInputSchema)
+  .handler(async ({ data }) => {
+    const scope = await appScope()
+    const parsed = countryVisitEditForToday(serverToday()).safeParse(data)
+    if (!parsed.success)
+      return {
+        country: null,
+        errors: parsed.error.issues.map((issue) => ({
+          field: String(issue.path[0]),
+          reason: issue.message,
+        })),
+      }
+    const { before, visit, changed } = await updateCountryVisit(
+      scope,
+      parsed.data,
+    )
+    if (changed) {
+      await requestTravelStatsRecompute(
+        scope,
+        [scope.ctx.userId],
+        affectedStatYears(
+          before.firstVisitedOn,
+          before.lastVisitedOn,
+          visit.firstVisitedOn,
+          visit.lastVisitedOn,
+        ),
+        { route: 'atlas' },
+      )
+    }
+    return {
+      country: {
+        ...(await atlasCountryState(scope, data.countryCode)),
+        visit: visitRecordOf(visit),
+      },
+      errors: null,
     }
   })

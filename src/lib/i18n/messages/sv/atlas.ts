@@ -408,6 +408,21 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'En resa under {last}',
   'panel.stat.streakNone': 'Lägg till en resa med datum för att börja en följd',
+  'visitEdit.edit': 'Redigera besök',
+  'visitEdit.note': 'Anteckning',
+  'visitEdit.save': 'Spara besök',
+  'visitEdit.cancel': 'Avbryt',
+  'visitEdit.loading': 'Läser in besök',
+  'visitEdit.saving': 'Sparar besök',
+  'visitEdit.failed':
+    'Det gick inte att bekräfta sparandet. Utkastet finns kvar; försök igen.',
+  'visitEdit.missing':
+    'Besöket är inte längre tillgängligt. Öppna landet igen.',
+  'visitEdit.noteInvalid': 'Använd högst 2 000 tecken.',
+  'visitEdit.bounds': 'Första besöket får inte vara efter det sista.',
+  'visitEdit.future': 'Välj idag eller ett tidigare datum.',
+  'visitEdit.dateInvalid': 'Ange ett giltigt datum i formatet ÅÅÅÅ-MM-DD.',
+  'visitEdit.reload': 'Sparat. Läs in posten igen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

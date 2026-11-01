@@ -48,6 +48,8 @@ const atlas = vi.hoisted(() => ({
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('#/server/fns/atlas', () => ({
+  loadCountryVisitFn: vi.fn(),
+  updateCountryVisitFn: vi.fn(),
   loadCountryRegionsFn: vi.fn().mockResolvedValue({ regions: [], total: 0 }),
   markRegionVisitedFn: vi.fn(),
   unmarkRegionVisitedFn: vi.fn(),

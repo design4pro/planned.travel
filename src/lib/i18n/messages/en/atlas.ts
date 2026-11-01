@@ -504,6 +504,20 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'A trip in {last}',
   'panel.stat.streakNone': 'Add a trip with dates to start a streak',
+  'visitEdit.edit': 'Edit visit',
+  'visitEdit.note': 'Note',
+  'visitEdit.save': 'Save visit',
+  'visitEdit.cancel': 'Cancel',
+  'visitEdit.loading': 'Loading visit',
+  'visitEdit.saving': 'Saving visit',
+  'visitEdit.failed':
+    'Could not confirm the save. Your draft is kept; try again.',
+  'visitEdit.missing': 'This visit is no longer available. Reopen the country.',
+  'visitEdit.noteInvalid': 'Use at most 2,000 characters.',
+  'visitEdit.bounds': 'First visit must be on or before last visit.',
+  'visitEdit.future': 'Use today or an earlier date.',
+  'visitEdit.dateInvalid': 'Enter a real date in YYYY-MM-DD format.',
+  'visitEdit.reload': 'Saved. Reload the record',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -22,6 +22,8 @@ import type { CountryActionsProps } from '../country-actions'
  * when one rejects, and what it sends when the reader presses a key.
  */
 const atlas = vi.hoisted(() => ({
+  loadVisit: vi.fn(),
+  saveVisit: vi.fn(),
   mark: vi.fn(),
   unmark: vi.fn(),
   add: vi.fn(),
@@ -30,6 +32,8 @@ const atlas = vi.hoisted(() => ({
 const router = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('#/server/fns/atlas', () => ({
+  loadCountryVisitFn: atlas.loadVisit,
+  updateCountryVisitFn: atlas.saveVisit,
   loadCountryRegionsFn: vi.fn().mockResolvedValue({ regions: [], total: 0 }),
   markRegionVisitedFn: vi.fn(),
   unmarkRegionVisitedFn: vi.fn(),
@@ -1259,4 +1263,42 @@ it('keeps a confirmed country cascade actionable and confirmed when the loader r
   expect(dialog.textContent).toContain(
     '1 region you recorded in France stays on your record.',
   )
+})
+
+
+it('offers the shared visit editor and submits a correction without marking again', async () => {
+  atlas.loadVisit.mockResolvedValue({
+    country: answer({ visit: { visitCount: 1 } }),
+    today: '2026-08-20',
+  })
+  atlas.saveVisit.mockResolvedValue({
+    country: answer({ visit: { visitCount: 1 } }),
+    errors: null,
+  })
+  render(
+    <CountryActions
+      countryCode="FR"
+      visit={{
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+        visitCount: 1,
+        note: null,
+      }}
+      bucketGoal={null}
+    />,
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+  await userEvent.type(await screen.findByLabelText('Note'), 'Paris')
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  await waitFor(() =>
+    expect(atlas.saveVisit).toHaveBeenCalledWith({
+      data: {
+        countryCode: 'FR',
+        firstVisitedOn: null,
+        lastVisitedOn: null,
+        note: 'Paris',
+      },
+    }),
+  )
+  expect(atlas.mark).not.toHaveBeenCalled()
 })

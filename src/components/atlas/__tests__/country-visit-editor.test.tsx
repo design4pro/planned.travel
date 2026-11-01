@@ -1,0 +1,200 @@
+import '#/components/ui/__tests__/test-env'
+import { beforeEach, expect, it, vi } from 'vitest'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { CountryVisitEditor } from '../country-visit-editor'
+
+const api = vi.hoisted(() => ({
+  load: vi.fn(),
+  save: vi.fn(),
+  invalidate: vi.fn(),
+}))
+vi.mock('#/server/fns/atlas', () => ({
+  loadCountryVisitFn: api.load,
+  updateCountryVisitFn: api.save,
+}))
+vi.mock('@tanstack/react-router', () => ({
+  useRouter: () => ({ invalidate: api.invalidate }),
+}))
+const visit = { firstVisitedOn: null, lastVisitedOn: null, note: null }
+const mount = () =>
+  render(
+    <CountryVisitEditor
+      countryCode="FR"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+async function open() {
+  await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+  return screen.findByLabelText('First visit')
+}
+beforeEach(() => {
+  vi.clearAllMocks()
+  api.load.mockResolvedValue({ country: { visit }, today: '2026-08-20' })
+  api.save.mockResolvedValue({ country: { visit }, errors: null })
+  api.invalidate.mockResolvedValue(undefined)
+})
+it('loads the server clock, cancels without writing and restores focus', async () => {
+  mount()
+  const field = await open()
+  expect(field.getAttribute('max')).toBe('2026-08-20')
+  await waitFor(() => expect(document.activeElement).toBe(field))
+  await userEvent.type(screen.getByLabelText('Note'), 'draft')
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(api.save).not.toHaveBeenCalled()
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Edit visit' }),
+    ),
+  )
+})
+it('validates bounds, future dates and note length before any write', async () => {
+  mount()
+  const first = await open()
+  fireEvent.change(first, { target: { value: '2026-08-21' } })
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(await screen.findByText('Use today or an earlier date.')).toBeTruthy()
+  fireEvent.change(first, { target: { value: '2026-08-19' } })
+  fireEvent.change(screen.getByLabelText('Last visit'), {
+    target: { value: '2026-08-18' },
+  })
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(
+    await screen.findByText('First visit must be on or before last visit.'),
+  ).toBeTruthy()
+  fireEvent.change(first, { target: { value: '' } })
+  fireEvent.change(screen.getByLabelText('Note'), {
+    target: { value: 'x'.repeat(2001) },
+  })
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(await screen.findByText('Use at most 2,000 characters.')).toBeTruthy()
+  expect(api.save).not.toHaveBeenCalled()
+})
+it('holds pending, retains draft on failure and permits an idempotent retry', async () => {
+  let reject: (reason: Error) => void = () => {}
+  api.save.mockReturnValueOnce(
+    new Promise((_resolve, fail) => {
+      reject = fail
+    }),
+  )
+  mount()
+  await open()
+  await userEvent.type(screen.getByLabelText('Note'), 'Paris')
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(screen.getByLabelText('Note').getAttribute('readonly')).not.toBeNull()
+  expect(
+    screen.getByRole('button', { name: 'Cancel' }).getAttribute('disabled'),
+  ).not.toBeNull()
+  reject(new Error('offline'))
+  await waitFor(() =>
+    expect(screen.getByLabelText('Note').getAttribute('readonly')).toBeNull(),
+  )
+  expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe(
+    'Paris',
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(api.save).toHaveBeenLastCalledWith({
+    data: {
+      countryCode: 'FR',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      note: 'Paris',
+    },
+  })
+  await waitFor(() => expect(api.invalidate).toHaveBeenCalled())
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Edit visit' }),
+    ),
+  )
+})
+it('a reply from a closed country cannot apply its draft to another country', async () => {
+  let resolve: (value: unknown) => void = () => {}
+  api.load.mockReturnValueOnce(
+    new Promise((done) => {
+      resolve = done
+    }),
+  )
+  const ui = render(
+    <CountryVisitEditor
+      key="FR"
+      countryCode="FR"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+  ui.rerender(
+    <CountryVisitEditor
+      key="JP"
+      countryCode="JP"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+  resolve({
+    country: { visit: { ...visit, note: 'France draft' } },
+    today: '2026-08-20',
+  })
+  await open()
+  expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe('')
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(api.save).toHaveBeenLastCalledWith({
+    data: {
+      countryCode: 'JP',
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      note: null,
+    },
+  })
+})
+
+it('refuses a native date field with incomplete calendar input rather than clearing it', async () => {
+  mount()
+  const first = await open()
+  Object.defineProperty(first, 'validity', {
+    configurable: true,
+    value: { badInput: true },
+  })
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(
+    await screen.findByText('Enter a real date in YYYY-MM-DD format.'),
+  ).toBeTruthy()
+  expect(api.save).not.toHaveBeenCalled()
+})
+
+it('refreshes Atlas after a save completes for a closed country without replacing the new draft', async () => {
+  let resolve: (value: unknown) => void = () => {}
+  api.save.mockReturnValueOnce(
+    new Promise((done) => {
+      resolve = done
+    }),
+  )
+  const ui = render(
+    <CountryVisitEditor
+      key="FR"
+      countryCode="FR"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+  await open()
+  await userEvent.type(screen.getByLabelText('Note'), 'Paris')
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  ui.rerender(
+    <CountryVisitEditor
+      key="JP"
+      countryCode="JP"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+  await open()
+  await userEvent.type(screen.getByLabelText('Note'), 'Tokyo')
+  resolve({ country: { visit: { ...visit, note: 'Paris' } }, errors: null })
+  await waitFor(() => expect(api.invalidate).toHaveBeenCalled())
+  expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe(
+    'Tokyo',
+  )
+})
