@@ -201,6 +201,7 @@ it('refreshes Atlas after a save completes for a closed country without replacin
 
 it('restores focus after retrying a failed post-save refresh without saving again', async () => {
   api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  api.invalidate.mockRejectedValueOnce(new Error('still offline'))
   mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
@@ -213,6 +214,10 @@ it('restores focus after retrying a failed post-save refresh without saving agai
   await userEvent.tab()
   expect(document.activeElement).toBe(retry)
   await userEvent.keyboard('{Enter}')
+  await waitFor(() => expect(api.invalidate).toHaveBeenCalledTimes(2))
+  expect(document.activeElement).toBe(retry)
+  expect(screen.getByRole('button', { name: /Reload/ })).toBe(retry)
+  await userEvent.keyboard('{Enter}')
   await waitFor(() =>
     expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
   )
@@ -220,5 +225,30 @@ it('restores focus after retrying a failed post-save refresh without saving agai
     screen.getByRole('button', { name: 'Edit visit' }),
   )
   expect(api.save).toHaveBeenCalledTimes(1)
-  expect(api.invalidate).toHaveBeenCalledTimes(2)
+  expect(api.invalidate).toHaveBeenCalledTimes(3)
+})
+
+it('preserves focus moved away while a refresh retry is pending', async () => {
+  let finish: () => void = () => {}
+  api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  api.invalidate.mockReturnValueOnce(
+    new Promise<void>((resolve) => {
+      finish = resolve
+    }),
+  )
+  mount()
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  await userEvent.click(await screen.findByRole('button', { name: /Reload/ }))
+  const edit = screen.getByRole('button', { name: 'Edit visit' })
+  edit.focus()
+  await userEvent.keyboard('{Enter}')
+  const first = await screen.findByLabelText('First visit')
+  await waitFor(() => expect(document.activeElement).toBe(first))
+  finish()
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
+  )
+  expect(document.activeElement).toBe(first)
+  expect(api.save).toHaveBeenCalledTimes(1)
 })

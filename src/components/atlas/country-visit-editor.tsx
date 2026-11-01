@@ -253,13 +253,14 @@ export function CountryVisitEditor({
       {refreshFailed ? (
         <Button
           size="sm"
-          onClick={() => {
+          onClick={(event) => {
+            const reload = event.currentTarget
             void router
               .invalidate()
               .then(() => {
                 if (!alive.current) return
+                if (document.activeElement === reload) trigger.current?.focus()
                 setRefreshFailed(false)
-                trigger.current?.focus()
               })
               .catch(() => {})
           }}
