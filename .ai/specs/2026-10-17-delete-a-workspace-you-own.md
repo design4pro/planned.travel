@@ -763,5 +763,4 @@ claims and explicit pins cannot provision through this fallback. Sequential relo
 recovered membership without repeating departure or updating the session.
 
 The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
-requests, rather than introducing another shared resolver. The implementation PR reference will
-be recorded when this change is published.
+requests, rather than introducing another shared resolver. Implementation: PR #1708.
