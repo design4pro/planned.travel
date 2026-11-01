@@ -33,6 +33,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'toaster.label': 'Powiadomienia',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Główne sekcje',
   'nav.mobile': 'Sekcje',

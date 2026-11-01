@@ -25,6 +25,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'toaster.label': 'Notifications de l’application',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Rubriques principales',
   'nav.mobile': 'Rubriques',
