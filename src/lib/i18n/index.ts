@@ -84,3 +84,5 @@ export type {
   TranslateStored,
   TranslationOf,
 } from './types'
+
+export { RECOVERY_CATALOGUES } from './recovery-catalogues'

@@ -1026,7 +1026,13 @@ would start, in a file holding both scales with nothing to say which `admin` is 
 - `src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')`, so a new
   namespace file is picked up with no shared index for fifteen items to fight over. Measured in
   round 1: an explicit per-locale importer emits 23 separate chunks and inlines none of them into
-  the entry — the glob must keep that property.
+  the entry — the glob must keep that property for ordinary catalogues. Root recovery bundles only
+  a generated projection of existing `shell.error.*`, `shell.session.*`, `shell.feedback.*`,
+  `shell.nav.homeLink` and `ui.status.working` copy for all locales, independently of lazy imports.
+  Regenerate it with `pnpm exec tsx scripts/i18n/generate-recovery.ts`; its parity test checks the
+  projection against the ordinary catalogues. An empty root loader catalogue still signals a failed
+  refresh; only the document provider receives recovery copy, in the negotiated language or English
+  when negotiation itself failed.
 - `src/lib/i18n/types.ts` derives the key union from `import type` of the eleven **`en`**
   namespace files. English is the only source of truth for what a key is.
 - The parity test globs `messages/*/*.ts`. It fails on a key in `en` and missing elsewhere, a key

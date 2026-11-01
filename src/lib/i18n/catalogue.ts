@@ -32,7 +32,8 @@ import type {
  * what §8 requires the glob to keep. A request needs exactly one locale, and
  * behind these thunks V8 compiles and evaluates only that one, keeping the
  * other twenty-two out of a cold isolate's one-second startup budget
- * (`docs/ARCHITECTURE.md` §2.1).
+ * (`docs/ARCHITECTURE.md` §2.1). Root recovery uses a separate generated
+ * projection; the ordinary namespace imports here stay lazy.
  *
  * **Why keys are qualified.** A merged key is `<namespace>.<key in the file>`;
  * see `./types` for why that is the collision-proof shape rather than a
