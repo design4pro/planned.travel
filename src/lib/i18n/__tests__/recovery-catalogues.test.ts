@@ -15,7 +15,8 @@ describe('bundled root recovery copy', () => {
             key.startsWith('shell.session.') ||
             key.startsWith('shell.feedback.') ||
             key === 'shell.nav.homeLink' ||
-            key === 'ui.status.working',
+            key === 'ui.status.working' ||
+            key === 'ui.action.remove',
         ),
       )
       expect(RECOVERY_CATALOGUES[locale]).toEqual(recovery)

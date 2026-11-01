@@ -56,6 +56,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'افتح مساحة العمل الحالية',
     'shell.session.workspaceChangedDismiss': 'ليس الآن',
     'ui.status.working': 'جارٍ التنفيذ',
+    'ui.action.remove': 'إزالة',
   },
   ca: {
     'shell.nav.homeLink': 'Inici de planned.travel',
@@ -111,6 +112,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Obre l’espai de treball actual',
     'shell.session.workspaceChangedDismiss': 'Ara no',
     'ui.status.working': 'S’està desant',
+    'ui.action.remove': 'Suprimeix',
   },
   cs: {
     'shell.nav.homeLink': 'Domovská stránka planned.travel',
@@ -165,6 +167,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Otevřít aktuální prostor',
     'shell.session.workspaceChangedDismiss': 'Teď ne',
     'ui.status.working': 'Zpracování',
+    'ui.action.remove': 'Odebrat',
   },
   de: {
     'shell.nav.homeLink': 'planned.travel Startseite',
@@ -222,6 +225,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Aktuellen Arbeitsbereich öffnen',
     'shell.session.workspaceChangedDismiss': 'Jetzt nicht',
     'ui.status.working': 'Wird gespeichert',
+    'ui.action.remove': 'Entfernen',
   },
   el: {
     'shell.nav.homeLink': 'Αρχική του planned.travel',
@@ -279,6 +283,7 @@ export const RECOVERY_CATALOGUES = {
       'Άνοιγμα του τρέχοντος χώρου εργασίας',
     'shell.session.workspaceChangedDismiss': 'Όχι τώρα',
     'ui.status.working': 'Σε εξέλιξη',
+    'ui.action.remove': 'Αφαίρεση',
   },
   en: {
     'shell.nav.homeLink': 'planned.travel home',
@@ -334,6 +339,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Open the current workspace',
     'shell.session.workspaceChangedDismiss': 'Not now',
     'ui.status.working': 'Working',
+    'ui.action.remove': 'Remove',
   },
   es: {
     'shell.nav.homeLink': 'Inicio de planned.travel',
@@ -389,6 +395,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Abrir el espacio de trabajo actual',
     'shell.session.workspaceChangedDismiss': 'Ahora no',
     'ui.status.working': 'Guardando',
+    'ui.action.remove': 'Quitar',
   },
   fr: {
     'shell.nav.homeLink': 'Accueil planned.travel',
@@ -447,6 +454,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Ouvrir l’espace de travail actuel',
     'shell.session.workspaceChangedDismiss': 'Pas maintenant',
     'ui.status.working': 'Enregistrement',
+    'ui.action.remove': 'Retirer',
   },
   hu: {
     'shell.nav.homeLink': 'planned.travel főoldal',
@@ -502,6 +510,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Az aktuális munkaterület megnyitása',
     'shell.session.workspaceChangedDismiss': 'Most nem',
     'ui.status.working': 'Feldolgozás',
+    'ui.action.remove': 'Eltávolítás',
   },
   id: {
     'shell.nav.homeLink': 'Beranda planned.travel',
@@ -560,6 +569,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Buka ruang kerja saat ini',
     'shell.session.workspaceChangedDismiss': 'Nanti saja',
     'ui.status.working': 'Memproses',
+    'ui.action.remove': 'Hapus',
   },
   it: {
     'shell.nav.homeLink': 'Pagina iniziale di planned.travel',
@@ -616,6 +626,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Apri lo spazio di lavoro attuale',
     'shell.session.workspaceChangedDismiss': 'Non ora',
     'ui.status.working': 'Salvataggio',
+    'ui.action.remove': 'Rimuovi',
   },
   ja: {
     'shell.nav.homeLink': 'planned.travel ホーム',
@@ -672,6 +683,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': '現在のワークスペースを開く',
     'shell.session.workspaceChangedDismiss': '今はしない',
     'ui.status.working': '処理中',
+    'ui.action.remove': '削除',
   },
   ko: {
     'shell.nav.homeLink': 'planned.travel 홈',
@@ -726,6 +738,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': '현재 워크스페이스 열기',
     'shell.session.workspaceChangedDismiss': '나중에',
     'ui.status.working': '처리 중',
+    'ui.action.remove': '삭제',
   },
   nl: {
     'shell.nav.homeLink': 'planned.travel startpagina',
@@ -781,6 +794,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Open de huidige werkruimte',
     'shell.session.workspaceChangedDismiss': 'Niet nu',
     'ui.status.working': 'Bezig met opslaan',
+    'ui.action.remove': 'Verwijderen',
   },
   pl: {
     'shell.nav.homeLink': 'Strona główna planned.travel',
@@ -837,6 +851,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Otwórz bieżącą przestrzeń',
     'shell.session.workspaceChangedDismiss': 'Nie teraz',
     'ui.status.working': 'Przetwarzanie',
+    'ui.action.remove': 'Usuń',
   },
   'pt-BR': {
     'shell.nav.homeLink': 'Início do planned.travel',
@@ -893,6 +908,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Abrir o espaço de trabalho atual',
     'shell.session.workspaceChangedDismiss': 'Agora não',
     'ui.status.working': 'Salvando',
+    'ui.action.remove': 'Remover',
   },
   ru: {
     'shell.nav.homeLink': 'Главная страница planned.travel',
@@ -948,6 +964,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Открыть текущее пространство',
     'shell.session.workspaceChangedDismiss': 'Не сейчас',
     'ui.status.working': 'Выполняется',
+    'ui.action.remove': 'Убрать',
   },
   sv: {
     'shell.nav.homeLink': 'planned.travel startsida',
@@ -1003,6 +1020,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Öppna den aktuella arbetsytan',
     'shell.session.workspaceChangedDismiss': 'Inte nu',
     'ui.status.working': 'Sparar',
+    'ui.action.remove': 'Ta bort',
   },
   tr: {
     'shell.nav.homeLink': 'planned.travel ana sayfası',
@@ -1059,6 +1077,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Geçerli çalışma alanını aç',
     'shell.session.workspaceChangedDismiss': 'Şimdi değil',
     'ui.status.working': 'İşleniyor',
+    'ui.action.remove': 'Kaldır',
   },
   uk: {
     'shell.nav.homeLink': 'Головна сторінка planned.travel',
@@ -1113,6 +1132,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Відкрити поточний простір',
     'shell.session.workspaceChangedDismiss': 'Не зараз',
     'ui.status.working': 'Виконується',
+    'ui.action.remove': 'Прибрати',
   },
   vi: {
     'shell.nav.homeLink': 'Trang chủ planned.travel',
@@ -1170,6 +1190,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': 'Mở không gian làm việc hiện tại',
     'shell.session.workspaceChangedDismiss': 'Để sau',
     'ui.status.working': 'Đang xử lý',
+    'ui.action.remove': 'Gỡ bỏ',
   },
   'zh-Hans': {
     'shell.nav.homeLink': 'planned.travel 首页',
@@ -1219,6 +1240,7 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': '打开当前工作区',
     'shell.session.workspaceChangedDismiss': '暂不',
     'ui.status.working': '处理中',
+    'ui.action.remove': '移除',
   },
   'zh-Hant': {
     'shell.nav.homeLink': 'planned.travel 首頁',
@@ -1268,5 +1290,6 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace': '開啟目前的工作區',
     'shell.session.workspaceChangedDismiss': '暫不',
     'ui.status.working': '處理中',
+    'ui.action.remove': '移除',
   },
 } as const satisfies Record<Locale, Catalogue>
