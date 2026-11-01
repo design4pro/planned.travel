@@ -269,7 +269,7 @@ const messages = {
   'admin.denied.body':
     '필요하다면 이 워크스페이스의 소유자나 관리자에게 역할을 바꿔 달라고 해 주세요.',
   'admin.denied.action': '대시보드로 돌아가기',
-  'admin.eyebrow': '워크스페이스 관리',
+  'admin.eyebrow': '워크스페이스 콘솔',
   'admin.description': '{plan} 플랜 · {date} 생성',
   'admin.createdUnknown': '최근',
   'admin.workspaceSettings': '워크스페이스 설정',
@@ -301,11 +301,21 @@ const messages = {
   'admin.members.joined': '참여',
   'admin.members.role.label': '{name}의 역할',
   'admin.members.role.saved': '{name}님의 역할이 {role}(으)로 바뀌었어요.',
-  'admin.members.role.impersonated': '다른 계정으로 활동하는 동안에는 역할을 바꿀 수 없어요.',
-  'admin.members.role.notPermitted': '이 변경은 할 수 없어요. 소유자 역할을 부여하거나 소유자를 바꿀 수 있는 사람은 소유자뿐이에요.',
-  'admin.members.role.lastOwner': '이 워크스페이스의 유일한 소유자예요. 먼저 다른 사람을 소유자로 지정하세요.',
+  'admin.members.role.impersonated':
+    '이 세션에서는 역할을 변경할 수 없어요. 다시 로그인하거나 다른 계정으로 활동하는 것을 종료한 뒤 역할을 변경하세요.',
+  'admin.members.role.notPermitted':
+    '이 변경은 할 수 없어요. 소유자 역할을 부여하거나 소유자를 변경하려면 워크스페이스 소유자에게 요청하세요.',
+  'admin.members.role.lastOwner':
+    '워크스페이스에는 소유자가 있어야 해요. 먼저 다른 멤버를 소유자로 지정하세요.',
   'admin.members.role.notFound': '이 사람은 더 이상 워크스페이스에 없어요. 목록을 새로 불러왔어요.',
   'admin.members.role.failed': '역할을 바꾸지 못했어요. 다시 시도해 주세요.',
+  'admin.members.role.demote.title': '내 역할을 변경할까요?',
+  'admin.members.role.demote.admin':
+    '더 이상 워크스페이스 소유자를 관리할 수 없어요. 다른 소유자만 역할을 복구할 수 있어요.',
+  'admin.members.role.demote.member':
+    '워크스페이스 콘솔과 결제, 멤버, 설정 관리 기능에 접근할 수 없게 돼요. 역할을 복구하려면 워크스페이스 소유자에게 요청하세요.',
+  'admin.members.role.demote.confirm': '내 역할 변경',
+  'admin.members.role.pending': '역할 변경 중…',
   'admin.members.role.promote.title': '{name}님을 소유자로 지정할까요?',
   'admin.members.role.promote.body':
     '{name}님도 결제, 멤버, 설정까지 당신과 같은 권한을 갖게 돼요. 소유자는 당신을 포함한 다른 소유자를 강등하거나 내보낼 수 있어요.',

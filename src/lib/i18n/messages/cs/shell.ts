@@ -368,7 +368,7 @@ const messages = {
   'admin.denied.body':
     'Pokud to potřebujete, požádejte vlastníka nebo správce tohoto prostoru o změnu své funkce.',
   'admin.denied.action': 'Zpět na přehled',
-  'admin.eyebrow': 'Správa prostoru',
+  'admin.eyebrow': 'Konzole pracovního prostoru',
   'admin.description': 'Tarif {plan} · vytvořeno {date}',
   'admin.createdUnknown': 'nedávno',
   'admin.workspaceSettings': 'Nastavení prostoru',
@@ -417,13 +417,21 @@ const messages = {
   'admin.members.joined': 'Členem od',
   'admin.members.role.label': 'Role uživatele {name}',
   'admin.members.role.saved': '{name} má nyní roli: {role}.',
-  'admin.members.role.impersonated': 'Roli nelze změnit, dokud jednáte jako jiný účet.',
+  'admin.members.role.impersonated':
+    'V této relaci nelze měnit role. Přihlaste se znovu nebo před změnou rolí ukončete jednání za jiný účet.',
   'admin.members.role.notPermitted':
-    'Tuto změnu provést nemůžete. Roli vlastníka může udělit nebo změnit jen vlastník.',
+    'Tuto změnu nemůžete provést. Požádejte vlastníka prostoru o udělení role vlastníka nebo změnu vlastníka.',
   'admin.members.role.lastOwner':
-    'Toto je jediný vlastník pracovního prostoru. Nejdřív jmenujte jiného vlastníka.',
+    'Pracovní prostor musí mít vlastníka. Nejprve tuto roli přidělte jinému členovi.',
   'admin.members.role.notFound': 'Tato osoba už v pracovním prostoru není. Seznam byl obnoven.',
   'admin.members.role.failed': 'Roli se nepodařilo změnit. Zkuste to znovu.',
+  'admin.members.role.demote.title': 'Změnit vlastní roli?',
+  'admin.members.role.demote.admin':
+    'Už nebudete moci spravovat vlastníky prostoru. Vaši roli může obnovit jen jiný vlastník.',
+  'admin.members.role.demote.member':
+    'Ztratíte přístup ke konzoli pracovního prostoru a správě fakturace, členů a nastavení. O obnovení role požádejte vlastníka prostoru.',
+  'admin.members.role.demote.confirm': 'Změnit mou roli',
+  'admin.members.role.pending': 'Změna role…',
   'admin.members.role.promote.title': 'Udělat z {name} vlastníka?',
   'admin.members.role.promote.body':
     '{name} bude mít stejnou moc jako vy: fakturaci, členy a nastavení. Vlastník může snížit roli nebo odebrat kteréhokoli jiného vlastníka, i vás.',

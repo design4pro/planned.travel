@@ -356,7 +356,7 @@ const messages = {
   'admin.denied.body':
     'Si ho necessites, demana a un propietari o a un administrador d’aquest espai que et canviï el rol.',
   'admin.denied.action': 'Torna al tauler',
-  'admin.eyebrow': 'Administració de l’espai',
+  'admin.eyebrow': 'Consola de l’espai',
   'admin.description': 'Pla {plan} · creat {date}',
   'admin.createdUnknown': 'fa poc',
   'admin.workspaceSettings': 'Configuració de l’espai',
@@ -402,14 +402,22 @@ const messages = {
   'admin.members.joined': 'S’hi va unir',
   'admin.members.role.label': 'Rol de {name}',
   'admin.members.role.saved': '{name} ara és {role}.',
-  'admin.members.role.impersonated': 'No es pot canviar un rol mentre actueu com un altre compte.',
+  'admin.members.role.impersonated':
+    'No es poden canviar rols en aquesta sessió. Torneu a iniciar sessió o deixeu d’actuar com aquest compte abans de canviar rols.',
   'admin.members.role.notPermitted':
-    'No podeu fer aquest canvi. Només un propietari pot concedir el rol de propietari o canviar un propietari.',
+    'No podeu fer aquest canvi. Demaneu a un propietari de l’espai que atorgui el rol de propietari o canviï un propietari.',
   'admin.members.role.lastOwner':
-    'Aquest és l’únic propietari de l’espai de treball. Nomeneu-ne primer un altre.',
+    'L’espai ha de conservar un propietari. Primer feu propietari un altre membre.',
   'admin.members.role.notFound':
     'Aquesta persona ja no és a l’espai de treball. La llista s’ha actualitzat.',
   'admin.members.role.failed': 'No s’ha pogut canviar el rol. Torneu-ho a provar.',
+  'admin.members.role.demote.title': 'Voleu canviar el vostre rol?',
+  'admin.members.role.demote.admin':
+    'Ja no podreu gestionar propietaris de l’espai. Només un altre propietari podrà restaurar el vostre rol.',
+  'admin.members.role.demote.member':
+    'Perdreu l’accés a la consola de l’espai i als controls de facturació, membres i configuració. Demaneu a un propietari de l’espai que restauri el vostre rol.',
+  'admin.members.role.demote.confirm': 'Canvia el meu rol',
+  'admin.members.role.pending': 'S’està canviant el rol…',
   'admin.members.role.promote.title': 'Voleu fer propietari {name}?',
   'admin.members.role.promote.body':
     '{name} tindrà el mateix poder que vós: facturació, membres i paràmetres. Un propietari pot rebaixar o treure qualsevol altre propietari, també a vós.',

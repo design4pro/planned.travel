@@ -392,7 +392,7 @@ const messages = {
   'admin.denied.body':
     'اطلب من مالك مساحة العمل أو أحد مسؤوليها تغيير دورك إن كنت بحاجة إليه.',
   'admin.denied.action': 'العودة إلى اللوحة',
-  'admin.eyebrow': 'إدارة مساحة العمل',
+  'admin.eyebrow': 'وحدة تحكم مساحة العمل',
   'admin.description': 'خطة {plan} · أُنشئت في {date}',
   'admin.createdUnknown': 'حديثًا',
   'admin.workspaceSettings': 'إعدادات مساحة العمل',
@@ -447,12 +447,21 @@ const messages = {
   'admin.members.joined': 'تاريخ الانضمام',
   'admin.members.role.label': 'دور {name}',
   'admin.members.role.saved': '{name} أصبح الآن: {role}.',
-  'admin.members.role.impersonated': 'لا يمكن تغيير الدور أثناء تصرفك بصفة حساب آخر.',
+  'admin.members.role.impersonated':
+    'لا يمكن تغيير الأدوار في هذه الجلسة. سجّل الدخول مجددًا أو توقف عن العمل بصفة حساب آخر قبل تغيير الأدوار.',
   'admin.members.role.notPermitted':
-    'لا يمكنك إجراء هذا التغيير. وحده المالك يستطيع منح دور المالك أو تغيير دور مالك.',
-  'admin.members.role.lastOwner': 'هذا هو المالك الوحيد لمساحة العمل. عيّن مالكًا آخر أولًا.',
+    'لا يمكنك إجراء هذا التغيير. اطلب من مالك مساحة العمل منح دور المالك أو تغيير مالك.',
+  'admin.members.role.lastOwner':
+    'يجب أن تحتفظ مساحة العمل بمالك. عيّن عضوًا آخر مالكًا أولًا.',
   'admin.members.role.notFound': 'لم يعد هذا الشخص في مساحة العمل. جرى تحديث القائمة.',
   'admin.members.role.failed': 'تعذّر تغيير الدور. حاول مرة أخرى.',
+  'admin.members.role.demote.title': 'هل تريد تغيير دورك؟',
+  'admin.members.role.demote.admin':
+    'لن تتمكن بعد الآن من إدارة مالكي مساحة العمل. لا يمكن استعادة دورك إلا بواسطة مالك آخر.',
+  'admin.members.role.demote.member':
+    'ستفقد الوصول إلى وحدة تحكم مساحة العمل وإدارة الفوترة والأعضاء والإعدادات. اطلب من مالك مساحة العمل استعادة دورك.',
+  'admin.members.role.demote.confirm': 'تغيير دوري',
+  'admin.members.role.pending': 'جارٍ تغيير الدور…',
   'admin.members.role.promote.title': 'هل تريد جعل {name} مالكًا؟',
   'admin.members.role.promote.body':
     'سيملك {name} القدر نفسه من الصلاحيات الذي تملكه: الفوترة والأعضاء والإعدادات. يستطيع المالك خفض دور أي مالك آخر أو إزالته، بمن فيهم أنت.',

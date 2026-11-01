@@ -414,7 +414,7 @@ const messages = {
   'admin.denied.body':
     'Ask an owner or an admin of this workspace to change your role if you need it.',
   'admin.denied.action': 'Back to the dashboard',
-  'admin.eyebrow': 'Workspace admin',
+  'admin.eyebrow': 'Workspace console',
   'admin.description': '{plan} plan · created {date}',
   'admin.createdUnknown': 'recently',
   'admin.workspaceSettings': 'Workspace settings',
@@ -455,14 +455,21 @@ const messages = {
   'admin.members.role.label': 'Role of {name}',
   'admin.members.role.saved': '{name} is now {role}.',
   'admin.members.role.impersonated':
-    'A role cannot be changed while you are acting as another account.',
+    'Roles cannot be changed in this session. Sign in again, or stop impersonating the account before changing roles.',
   'admin.members.role.notPermitted':
-    'You cannot make that change. Only an owner can grant the owner role or change an owner.',
+    'You cannot make that change. Ask a workspace owner to grant the owner role or change an owner.',
   'admin.members.role.lastOwner':
-    'This is the only owner of the workspace. Make someone else an owner first.',
+    'The workspace must keep an owner. Make another member an owner first.',
   'admin.members.role.notFound':
     'This person is no longer in the workspace. The list has been refreshed.',
   'admin.members.role.failed': 'The role could not be changed. Try again.',
+  'admin.members.role.demote.title': 'Change your role?',
+  'admin.members.role.demote.admin':
+    'You will no longer manage workspace owners. Only another owner can restore your role.',
+  'admin.members.role.demote.member':
+    'You will lose access to the Workspace console and its billing, member and settings controls. Ask a workspace owner to restore your role.',
+  'admin.members.role.demote.confirm': 'Change my role',
+  'admin.members.role.pending': 'Changing role…',
   'admin.members.role.promote.title': 'Make {name} an owner?',
   'admin.members.role.promote.body':
     '{name} will have the same power as you: billing, members and settings. An owner can demote or remove any other owner, including you.',

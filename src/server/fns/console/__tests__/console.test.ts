@@ -2048,7 +2048,7 @@ describe('deleting an account that owns a workspace', () => {
     })
     const message = (refusal as Error).message
     expect(message).toContain('Acme Travel')
-    expect(message).toMatch(/promote another owner/i)
+    expect(message).toMatch(/promote another member to owner/i)
     expect(message).toMatch(/suspend/i)
     // The operator is in the platform console, which has no role action: the promotion is an
     // owner's act, in that workspace's own console, and the sentence must not order the operator to it.

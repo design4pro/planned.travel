@@ -253,7 +253,7 @@ const messages = {
   'admin.denied.body':
     '如果确实需要，请这个工作区的所有者或管理员改一下你的角色。',
   'admin.denied.action': '回到我的面板',
-  'admin.eyebrow': '工作区管理',
+  'admin.eyebrow': '工作区控制台',
   'admin.description': '{plan}方案 · {date}创建',
   'admin.createdUnknown': '最近',
   'admin.workspaceSettings': '工作区设置',
@@ -283,11 +283,21 @@ const messages = {
   'admin.members.joined': '加入时间',
   'admin.members.role.label': '{name} 的角色',
   'admin.members.role.saved': '{name} 现在是{role}。',
-  'admin.members.role.impersonated': '以其他账号身份操作时，无法更改角色。',
-  'admin.members.role.notPermitted': '你无法进行此更改。只有所有者才能授予所有者角色或更改所有者。',
-  'admin.members.role.lastOwner': '这是该工作区唯一的所有者。请先指定另一位所有者。',
+  'admin.members.role.impersonated':
+    '当前会话无法更改角色。请重新登录，或停止以其他账号身份操作后再更改角色。',
+  'admin.members.role.notPermitted':
+    '你无法进行此更改。请联系工作区所有者授予所有者角色或更改所有者。',
+  'admin.members.role.lastOwner':
+    '工作区必须保留一位所有者。请先将其他成员设为所有者。',
   'admin.members.role.notFound': '此人已不在工作区中。列表已刷新。',
   'admin.members.role.failed': '无法更改角色。请重试。',
+  'admin.members.role.demote.title': '更改你自己的角色？',
+  'admin.members.role.demote.admin':
+    '你将无法管理工作区所有者。只有其他所有者才能恢复你的角色。',
+  'admin.members.role.demote.member':
+    '你将无法访问工作区控制台及其账单、成员和设置管理功能。请联系工作区所有者恢复你的角色。',
+  'admin.members.role.demote.confirm': '更改我的角色',
+  'admin.members.role.pending': '正在更改角色…',
   'admin.members.role.promote.title': '让 {name} 成为所有者？',
   'admin.members.role.promote.body': '{name} 将拥有与你相同的权力：账单、成员和设置。所有者可以降级或移除任何其他所有者，包括你。',
   'admin.members.role.promote.confirm': '设为所有者',

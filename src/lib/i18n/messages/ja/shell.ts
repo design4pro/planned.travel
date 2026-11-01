@@ -277,7 +277,7 @@ const messages = {
   'admin.denied.body':
     '必要なときは、このワークスペースのオーナーか管理者に役割を変えてもらってください。',
   'admin.denied.action': 'ダッシュボードに戻る',
-  'admin.eyebrow': 'ワークスペース管理',
+  'admin.eyebrow': 'ワークスペースコンソール',
   'admin.description': '{plan}プラン · {date}作成',
   'admin.createdUnknown': '最近',
   'admin.workspaceSettings': 'ワークスペースの設定',
@@ -311,11 +311,21 @@ const messages = {
   'admin.members.joined': '参加',
   'admin.members.role.label': '{name} のロール',
   'admin.members.role.saved': '{name} さんのロールは {role} になりました。',
-  'admin.members.role.impersonated': '別のアカウントとして操作している間は、ロールを変更できません。',
-  'admin.members.role.notPermitted': 'この変更はできません。オーナーのロールを付与したり、オーナーを変更したりできるのはオーナーだけです。',
-  'admin.members.role.lastOwner': 'このワークスペースの唯一のオーナーです。先に別の人をオーナーにしてください。',
+  'admin.members.role.impersonated':
+    'このセッションではロールを変更できません。再度ログインするか、別のアカウントとしての操作を終了してから変更してください。',
+  'admin.members.role.notPermitted':
+    'この変更はできません。オーナーロールの付与やオーナーの変更は、ワークスペースのオーナーに依頼してください。',
+  'admin.members.role.lastOwner':
+    'ワークスペースにはオーナーが必要です。先に別のメンバーをオーナーにしてください。',
   'admin.members.role.notFound': 'この人はもうワークスペースにいません。一覧を更新しました。',
   'admin.members.role.failed': 'ロールを変更できませんでした。もう一度お試しください。',
+  'admin.members.role.demote.title': '自分のロールを変更しますか？',
+  'admin.members.role.demote.admin':
+    'ワークスペースのオーナーの管理ができなくなります。ロールを復元できるのは別のオーナーだけです。',
+  'admin.members.role.demote.member':
+    'ワークスペースコンソールと、請求・メンバー・設定の管理機能にアクセスできなくなります。ロールの復元はワークスペースのオーナーに依頼してください。',
+  'admin.members.role.demote.confirm': '自分のロールを変更',
+  'admin.members.role.pending': 'ロールを変更中…',
   'admin.members.role.promote.title': '{name} さんをオーナーにしますか?',
   'admin.members.role.promote.body':
     '{name} さんにはあなたと同じ権限が付きます。請求、メンバー、設定を扱えます。オーナーは、あなたを含む他のオーナーを降格したり削除したりできます。',
