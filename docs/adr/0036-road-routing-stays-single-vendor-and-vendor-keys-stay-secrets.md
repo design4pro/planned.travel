@@ -6,6 +6,9 @@ Issue: #664
 Refs: ADR 0019 (road routing is bought from HERE - its Decision and Alternatives text stands as
 written), ADR 0011, ADR 0013
 
+Proposed successor for #1319: [ADR 0047](0047-eligible-providers-for-editable-day-routes.md).
+It changes provider selection only on acceptance; this document retains its current status.
+
 ## Context
 
 The request behind #664 asked for road routing from HERE, OpenRouteService and Google behind one

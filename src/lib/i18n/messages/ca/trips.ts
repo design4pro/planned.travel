@@ -173,7 +173,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Afegeix un lloc, {day}',
   'plan.addPlace.quota':
     'Has arribat al límit de llocs del teu pla. Millora’l per afegir-ne més.',
-  'plan.addPlace.quotaAction': 'Veure els plans',
+  'plan.addPlace.quotaAction': 'Veure els plans (s’obre en una pestanya nova)',
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Sortida',
   'plan.day.addStay': 'Afegeix una estada, {day}',

@@ -176,7 +176,8 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Ajouter un lieu, {day}',
   'plan.addPlace.quota':
     'Vous avez atteint la limite de lieux de votre formule. Passez à une formule supérieure pour en ajouter.',
-  'plan.addPlace.quotaAction': 'Voir les formules',
+  'plan.addPlace.quotaAction':
+    'Voir les formules (s’ouvre dans un nouvel onglet)',
   'plan.stay.checkIn': 'Arrivée',
   'plan.stay.checkOut': 'Départ',
   'plan.day.addStay': 'Ajouter un hébergement, {day}',

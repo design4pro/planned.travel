@@ -196,6 +196,84 @@ describe('planner write callers', () => {
     )
   })
 
+  it.each(['closed', 'replaced'] as const)(
+    'routes a late quota refusal when the form is %s',
+    async (owner) => {
+      const pending = deferred()
+      mocks.write.mockReturnValue(pending.promise)
+      await mount()
+      await menu('Edit place')
+      submit()
+      await close()
+      if (owner === 'replaced') {
+        await menu('Edit place', 'p2')
+        await userEvent.clear(screen.getByLabelText(/^Name/))
+        await userEvent.type(screen.getByLabelText(/^Name/), 'New draft')
+      }
+      await act(async () =>
+        pending.reject(
+          new Error(
+            encodePublicFailure({
+              kind: 'unexpected',
+              code: 'QUOTA_EXCEEDED',
+              reference: 'ref-1',
+            }),
+          ),
+        ),
+      )
+      expect(mocks.error).toHaveBeenCalledExactlyOnceWith(
+        messages['trips.plan.addPlace.quota'],
+        expect.objectContaining({
+          id: expect.any(String),
+          duration: 8000,
+          action: expect.objectContaining({
+            label: 'See plans (opens in a new tab)',
+          }),
+        }),
+      )
+      const openTab = vi.spyOn(window, 'open').mockReturnValue(null)
+      const action = mocks.error.mock.calls[0][1].action
+      action.onClick()
+      action.onClick()
+      expect(openTab).toHaveBeenCalledExactlyOnceWith(
+        '/settings/billing',
+        '_blank',
+        'noopener,noreferrer',
+      )
+      expect(screen.queryByRole('alert')).toBeNull()
+      if (owner === 'replaced') {
+        expect((screen.getByLabelText(/^Name/) as HTMLInputElement).value).toBe(
+          'New draft',
+        )
+      } else expect(screen.queryByRole('dialog')).toBeNull()
+    },
+  )
+
+  it('names the quota form link with its new-tab behavior and keeps the draft', async () => {
+    mocks.write.mockRejectedValue(
+      new Error(
+        encodePublicFailure({
+          kind: 'unexpected',
+          code: 'QUOTA_EXCEEDED',
+          reference: 'ref-1',
+        }),
+      ),
+    )
+    await mount()
+    await menu('Edit place')
+    submit()
+    await act(async () => {})
+    expect(
+      screen
+        .getByRole('link', { name: 'See plans (opens in a new tab)' })
+        .getAttribute('target'),
+    ).toBe('_blank')
+    expect((screen.getByLabelText(/^Name/) as HTMLInputElement).value).toBe(
+      'Place p1',
+    )
+    expect(mocks.error).not.toHaveBeenCalled()
+  })
+
   it('toasts a pinned place name in Polish', async () => {
     mocks.write.mockResolvedValue(undefined)
     await mount(payload, 'pl')

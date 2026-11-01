@@ -403,6 +403,23 @@ describe('LanguageSwitcher — choosing a language', () => {
     expect(screen.getByRole('status').textContent).toBe('')
   })
 
+  it('stays stale with no success announcement when the requested locale has only recovery copy', async () => {
+    router.invalidate.mockImplementation(async () => {
+      setRoot(false, 'pl', {})
+    })
+    const { user } = mount()
+    await open(user)
+    await user.click(chip('pl'))
+
+    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+    expect(notify.warning).toHaveBeenCalledWith(
+      PlSettings['language.reload.title'],
+      expect.anything(),
+    )
+    expect(notify.success).not.toHaveBeenCalled()
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
   it('still tells the person the page did not change when the on-screen catalogue cannot be fetched', async () => {
     router.invalidate.mockImplementation(async () => {
       setRoot(false, 'en', {})

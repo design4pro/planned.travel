@@ -43,6 +43,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': 'Notifikasi',
   'nav.primary': 'Bagian utama',
   'nav.mobile': 'Bagian',
   'nav.dashboardLink': 'Dasbor planned.travel',
