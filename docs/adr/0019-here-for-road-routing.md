@@ -4,6 +4,9 @@ Status: accepted
 Date: 2026-09-15
 See also: ADR 0036 (a second routing vendor and vendor keys in the console, asked again and answered the same way)
 
+Proposed successor for #1319: [ADR 0047](0047-eligible-providers-for-editable-day-routes.md).
+It changes provider selection only on acceptance; this document retains its current status.
+
 ## Context
 
 Gate B of `docs/plans/02-places-and-maps.md` - routed segment times, road distance and day travel
