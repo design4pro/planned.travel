@@ -256,7 +256,11 @@ export function CountryVisitEditor({
           onClick={() => {
             void router
               .invalidate()
-              .then(() => setRefreshFailed(false))
+              .then(() => {
+                if (!alive.current) return
+                setRefreshFailed(false)
+                trigger.current?.focus()
+              })
               .catch(() => {})
           }}
         >

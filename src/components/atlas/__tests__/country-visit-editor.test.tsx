@@ -198,3 +198,27 @@ it('refreshes Atlas after a save completes for a closed country without replacin
     'Tokyo',
   )
 })
+
+it('restores focus after retrying a failed post-save refresh without saving again', async () => {
+  api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  mount()
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  const retry = await screen.findByRole('button', { name: /Reload/ })
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Edit visit' }),
+    ),
+  )
+  await userEvent.tab()
+  expect(document.activeElement).toBe(retry)
+  await userEvent.keyboard('{Enter}')
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
+  )
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Edit visit' }),
+  )
+  expect(api.save).toHaveBeenCalledTimes(1)
+  expect(api.invalidate).toHaveBeenCalledTimes(2)
+})
