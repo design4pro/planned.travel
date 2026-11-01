@@ -86,14 +86,16 @@ expansion, redesign before enabling the feature, never hand-edit migration SQL. 
 usage_records merely to maintain a separate counter: live rows are the count authority.
 
 `assertQuota(scope, 'taxonomy', current, additional)` gives the standard refusal, but its separate
-read is insufficient for concurrency. Every actual growing write must enforce the same resolved
-ceiling inside its INSERT statement with tenant-scoped counts of categories and tags. Use guarded
+read is insufficient for concurrency. Every actual growing write except the fixed once-only
+bootstrap below must enforce the same resolved ceiling inside its INSERT statement with tenant-scoped
+counts of categories and tags. The bootstrap is limited to the complete eight-row starter set and
+its atomic marker, as specified below. Use guarded
 `INSERT ... SELECT ... WHERE count + additional <= limit`; distinguish slug conflicts from quota
 refusal. An error or zero inserted rows never reports success. Existing rows above their resolved
 ceiling are preserved: read, edit, reorder and delete still work; additional creation is refused.
 
-Cover `createCategory`, `createTag`, `resolveTags`, default initialization and all direct inserts
-found by caller search. `resolveTags` retains its existing maximum of 50 supplied names, deduplicates
+Cover `createCategory`, `createTag`, `resolveTags` and all direct inserts found by caller search;
+default initialization follows the bounded bootstrap rule below. `resolveTags` retains its existing maximum of 50 supplied names, deduplicates
 normalized slugs, counts only missing rows, and inserts the entire missing set or none. Pass that
 bounded input as one validated JSON parameter and expand with SQLite JSON table functions, rather
 than binding five columns for each of 50 rows. Resolve current existing slugs within the guarded
