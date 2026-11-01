@@ -279,13 +279,30 @@ export function ExpenseDialog({
   const [form, setForm] = useState<FormState>(() =>
     initialState(expense, tripCurrency, today, categories, defaultCategory),
   )
-  // Fixed when the dialog opens, like the draft it seeds: a person who leaves the trip while this is
-  // open keeps the row they had.
+  // Fixed when the dialog opens to seed the draft; SplitEditor also lists rows that lose membership.
   const [departed] = useState(() =>
     (departedPeople ?? []).filter((person) =>
       expense?.shares.some((share) => share.userId === person.userId),
     ),
   )
+  // The edited expense's own payer when they have left the trip: the select must keep offering
+  // them, or its stored value has no option and picking someone else cannot be undone. Never a
+  // payer of another expense, and a share holder who is not the payer stays out of the select.
+  const [departedPayer] = useState(() => {
+    const payerId = expense?.paidBy ?? null
+    if (
+      payerId === null ||
+      people.some((person) => person.userId === payerId)
+    ) {
+      return null
+    }
+    return (
+      departedPeople?.find((person) => person.userId === payerId) ?? {
+        userId: payerId,
+        name: null,
+      }
+    )
+  })
   const [draft, setDraft] = useState<SplitDraft>(() =>
     expense === null
       ? emptyDraft(offered)
@@ -638,14 +655,30 @@ export function ExpenseDialog({
               <SimpleSelect
                 options={[
                   { value: NO_PAYER, label: t('costs.expense.nobodyYet') },
-                  ...offered.map((person) => ({
-                    value: person.userId,
-                    label:
-                      person.userId === viewerUserId
-                        ? t('costs.payment.youSuffix', { name: person.name })
-                        : person.name,
-                    description: person.email === '' ? undefined : person.email,
-                  })),
+                  ...(departedPayer === null
+                    ? []
+                    : [
+                        {
+                          value: departedPayer.userId,
+                          label:
+                            departedPayer.name ?? t('costs.person.removed'),
+                        },
+                      ]),
+                  ...offered.map((person) => {
+                    const name =
+                      person.leftWorkspace === true
+                        ? t('costs.person.removed')
+                        : person.name
+                    return {
+                      value: person.userId,
+                      label:
+                        person.userId === viewerUserId
+                          ? t('costs.payment.youSuffix', { name })
+                          : name,
+                      description:
+                        person.email === '' ? undefined : person.email,
+                    }
+                  }),
                 ]}
                 value={form.paidBy}
                 onValueChange={(next) => setForm({ ...form, paidBy: next })}
@@ -653,7 +686,10 @@ export function ExpenseDialog({
             </Field>
 
             <SplitEditor
-              people={offered}
+              // Keep the opening draft and payer choices, but recognise departures on a reload.
+              people={offered.filter((person) =>
+                people.some((member) => member.userId === person.userId),
+              )}
               departedPeople={departed}
               viewerUserId={viewerUserId}
               draft={draft}

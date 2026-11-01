@@ -17,6 +17,10 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'collab.readOnly.archived':
+    'This trip is archived. Collaboration is read-only.',
+  'collab.readOnly.role':
+    'Only trip owners and editors can change the conversation, notes and polls.',
   'notFound.title': "We can't find this trip",
   'notFound.body':
     "It isn't among the trips you can open in the workspace you're in now. It may have been deleted, or you may not have access to it.",
@@ -243,7 +247,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Add a place to {day}',
   'plan.addPlace.quota':
     'You’ve reached your plan’s limit on places. Upgrade to add more.',
-  'plan.addPlace.quotaAction': 'See plans',
+  'plan.addPlace.quotaAction': 'See plans (opens in a new tab)',
   /* ---------------------------------------------- a stay on the day */
   /**
    * What a day header says about a stay covering it: `checkIn` on its first
@@ -470,6 +474,8 @@ const messages = {
   'book.pinnedCaption': 'Pinned to a day of the plan',
   'book.readOnly.archived':
     'This trip is archived, so its bookings and stays are read-only. Restore the trip to change them.',
+  'book.readOnly.role':
+    'You can read these bookings and stays. Only the trip’s owner and editors can change them.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'This change was refused. Review the current trip before making more changes.',
@@ -477,6 +483,8 @@ const messages = {
     'The trip could not be refreshed. Try again before making changes.',
   'transports.readOnly.archived':
     'This trip is archived. Restore it to change transports.',
+  'transports.readOnly.role':
+    'You can read these transports. Only the trip’s owner and editors can change them.',
   'transports.title': 'Transports',
   'transports.empty': 'Nothing recorded yet',
   /**
@@ -623,8 +631,10 @@ const messages = {
     'A trip holds at most {limit} guests, because a longer list makes the participant pickers and the split arithmetic hard to read',
   'people.error.guestMergeTarget':
     'Choose somebody who is already on this trip',
-  'plan.weather.badge.forecast': 'Forecast: {condition}, high {max}, low {min}',
-  'plan.weather.badge.forecastNoCondition': 'Forecast: high {max}, low {min}',
+  'plan.weather.badge.forecast':
+    'Forecast: {figures}, {condition} (high {max}, low {min})',
+  'plan.weather.badge.forecastNoCondition':
+    'Forecast: {figures} (high {max}, low {min})',
   'plan.weather.badge.unavailable': 'Weather unavailable for this day',
   'plan.weather.badge.loading': 'Loading weather',
   'plan.weather.badge.recorded': 'Recorded: high {max}, low {min}',
@@ -663,6 +673,8 @@ const messages = {
   'plan.weather.panel.low': 'Low',
   'plan.weather.panel.recordedNote': 'Measured values for this day.',
   'plan.weather.panel.temperatureTypical': 'Typical high / low',
+  'plan.weather.panel.typicalHigh': 'Typical high',
+  'plan.weather.panel.typicalLow': 'Typical low',
   'plan.weather.panel.estimateNote':
     'A long-term average for this month, not a forecast.',
   'plan.weather.attribution.metNorway': 'Forecast data: MET Norway, CC BY 4.0',

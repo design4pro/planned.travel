@@ -421,6 +421,22 @@ const messages = {
   'panel.stat.streakSingle': 'Ένα ταξίδι το {last}',
   'panel.stat.streakNone':
     'Πρόσθεσε ένα ταξίδι με ημερομηνίες για να ξεκινήσεις μια σειρά',
+  'visitEdit.edit': 'Επεξεργασία επίσκεψης',
+  'visitEdit.note': 'Σημείωση',
+  'visitEdit.save': 'Αποθήκευση επίσκεψης',
+  'visitEdit.cancel': 'Ακύρωση',
+  'visitEdit.loading': 'Φόρτωση επίσκεψης',
+  'visitEdit.saving': 'Αποθήκευση σε εξέλιξη',
+  'visitEdit.failed':
+    'Η αποθήκευση δεν επιβεβαιώθηκε. Το πρόχειρο διατηρείται· δοκίμασε ξανά.',
+  'visitEdit.missing':
+    'Αυτή η επίσκεψη δεν είναι πλέον διαθέσιμη. Άνοιξε ξανά τη χώρα.',
+  'visitEdit.noteInvalid': 'Χρησιμοποίησε έως 2.000 χαρακτήρες.',
+  'visitEdit.bounds':
+    'Η πρώτη επίσκεψη δεν μπορεί να είναι μετά την τελευταία.',
+  'visitEdit.future': 'Επίλεξε σήμερα ή παλαιότερη ημερομηνία.',
+  'visitEdit.dateInvalid': 'Δώσε πραγματική ημερομηνία σε μορφή ΕΕΕΕ-ΜΜ-ΗΗ.',
+  'visitEdit.reload': 'Αποθηκεύτηκε. Επαναφόρτωση εγγραφής',
 } satisfies TranslationOf<typeof En>
 
 export default messages

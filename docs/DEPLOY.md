@@ -1634,7 +1634,13 @@ pnpm exec wrangler queues info planned-travel-tasks
 # planned-travel-tasks-dlq: consumeTaskBatch records the failure in KV and R2 and then acks,
 # so the platform queue stays empty in normal operation whether or not jobs are dying
 # (ARCHITECTURE.md §2.4). No output means no job has failed terminally in the last 14 days,
-# which is the healthy case.
+# which is the healthy case. An expected refusal is not a terminal failure and leaves nothing
+# here: a trip export or trip copy whose requester has left the workspace, or whose trip is
+# gone (or no longer readable to the requester, which reads the same), is acked as abandoned
+# (`TaskAbandonedError`) with one `info` line, `task abandoned`, carrying the task id, kind,
+# workspace id and a reason code (`requester-left`, `trip-gone`). It is not written to
+# `dead-letter/`: an export's envelope holds the whole trip document and the requester's
+# address, and a copy's holds ids only but is an expected refusal, not a fault.
 pnpm exec wrangler kv key list --binding KV --prefix "task:dead:" --remote
 
 # The backstop, and the one failure this listing cannot show: if KV or R2 is down, the
@@ -1655,7 +1661,8 @@ pnpm exec wrangler kv key get --binding KV --remote --text "task:dead:<id>"
 # `DEAD_LETTER_RETENTION_DAYS` (14 when unset; a value that is not plain digits, or is 0, is
 # ignored; set it as a `vars` entry in `wrangler.jsonc`). The run is weekly and production-only
 # (staging registers just `0 3 * * *`), so a body is gone at most about three weeks after it was
-# written; copy it out while investigating.
+# written on production, and on staging it is never pruned: it stays until someone deletes it
+# by hand; copy it out while investigating.
 pnpm exec wrangler r2 object get \
   "planned-travel-files/dead-letter/<YYYY-MM-DD>/<id>.json" --file ./dead-task.json --remote
 
@@ -1680,7 +1687,13 @@ runs even if another rejects, and the first rejection is rethrown. Tenant retent
 constant `TENANT_AUDIT_RETENTION_DAYS = 400` (owner confirms), with 200 ids per delete and one
 250-batch cap across workspaces. Watch `deleted`, `batches`, `organizations`, `drained`;
 `drained: false` is an error requiring investigation. Backup/export artifact retention remains
-unimplemented and still emits its warning. Production still has exactly three cron expressions.
+unimplemented and still emits its warning. For a finished trip export that means the "kept for 7
+days" wording holds for the reader, not for the bytes: after seven days the export is neither
+listed nor downloadable and its KV pointer is gone, but the object stays under
+`exports/<org>/<trip>/` until the same trip is exported again, the trip is deleted (the purge
+takes the export keys it can list; an export still running when the trip is deleted writes after
+that listing, and a listing that fails is only logged, so either can leave the object), or the
+weekly export sweep of #1287 is written. Production still has exactly three cron expressions.
 
 **Use this read-back, not `wrangler deployments list`.** That command lists Worker _versions_ —
 id, author, source, deployment time — and never prints a cron expression, so it cannot tell you
@@ -2337,6 +2350,15 @@ button actually produces.
 The widget is loaded from its own chunk, after hydration, for the same reason the recorder is - the
 form and the screenshot editor are ~20 kB that only matters to somebody who clicks the button.
 
+**Credential query values are redacted in every telemetry string.** The case-insensitive keys
+`token`, `access_token`, `refresh_token`, `id_token`, `code`, `password`, `secret`, `client_secret`,
+`api_key`, `apikey` and `authorization` are covered, including repeated parameters, encoded keys
+and values, malformed values, embedded absolute/relative URLs and nested encoded redirects at any
+depth. Harmless `code` values are deliberately redacted too. Useful paths and ordinary query
+parameters remain; request URLs still lose their entire query. Password-reset URLs and the reset
+flow itself are unchanged. The shared scrub reaches errors, transactions, spans, logs, breadcrumbs,
+feedback metadata, replay envelopes and custom recording events in the existing browser/Worker hooks.
+
 **A secret in a URL path is redacted before it leaves the app.** `/join/<segment>` (the trip invite
 link) is replaced by `/join/[redacted]` by `src/lib/sentry-scrub.ts` in every channel both runtimes
 send: the event, transaction and span names, span attributes keyed `params.token`, breadcrumbs and
@@ -2346,20 +2368,20 @@ logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackUR
 processor routes them through the same scrub, and the replay integration's recording events pass
 through `beforeAddRecordingEvent`. The DOM recorder's own events (the
 page `href` in its Meta event, link attributes in a snapshot) are not reachable by any SDK hook, so
-the recorder does not run on a join location: `src/lib/sentry-replay.ts` never starts it on the
+the recorder does not run on a credential-query or join location: `src/lib/sentry-replay.ts` never starts it on the
 page, or on a sign-in page whose `redirect` or `callbackURL` carries the link (at any encoding
 depth, buffering for an error included), and a navigation onto one stops it with `flush: false`,
-which drops what was buffered. Once off for a join location it stays off until the next document
-load, and `beforeAddRecordingEvent` drops every event while the address holds a join path.
-**Replay quota:** a session that opens a join link is not replayed for the rest of that page
-load, and a join page that errors yields no replay, only the redacted error event and the
+which drops what was buffered. Once off for a sensitive location it stays off until the next document
+load, and `beforeAddRecordingEvent` drops every event while the address holds a credential query or join path.
+**Replay quota:** a session that opens a credential query or join link is not replayed for the rest of that page
+load, and a sensitive page that errors yields no replay, only the redacted error event and the
 structured log line (link id, outcome); the replay quota drops slightly. `requestFields` in
 `src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
 so do not call it on a `/join/` request.
 
-**No feedback button on a join location.** A feedback screenshot is an attachment no scrub can read,
+**No feedback button on a credential-query or join location.** A feedback screenshot is an attachment no scrub can read,
 and a window capture shows the address bar, so `FeedbackWidget` builds no button while the address
-holds a join path (the same test as the replay, on the router's location) and builds it again when
+holds a credential query or join path, including nested encoded URLs (the same test as the replay, on the router's location) and builds it again when
 the visitor navigates away.
 
 ### 17.3 The source-map token

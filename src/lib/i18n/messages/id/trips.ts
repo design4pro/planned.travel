@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Perjalanan ini diarsipkan. Kolaborasi hanya dapat dibaca.',
+  'collab.readOnly.role':
+    'Hanya pemilik dan editor perjalanan yang dapat mengubah percakapan, catatan, dan jajak pendapat.',
   'notFound.title': 'Kami tidak dapat menemukan perjalanan ini',
   'notFound.body':
     'Perjalanan ini tidak termasuk yang dapat kamu buka di ruang kerja saat ini. Mungkin perjalanan ini telah dihapus, atau kamu tidak memiliki akses.',
@@ -166,7 +170,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Tambahkan tempat, {day}',
   'plan.addPlace.quota':
     'Anda telah mencapai batas tempat pada paket Anda. Tingkatkan paket untuk menambah lebih banyak.',
-  'plan.addPlace.quotaAction': 'Lihat paket',
+  'plan.addPlace.quotaAction': 'Lihat paket (terbuka di tab baru)',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Tambahkan penginapan, {day}',
@@ -299,6 +303,8 @@ const messages = {
   'book.pinnedCaption': 'Disematkan pada satu hari rencana',
   'book.readOnly.archived':
     'Perjalanan ini diarsipkan, jadi pemesanan dan penginapannya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
+  'book.readOnly.role':
+    'Anda bisa melihat pemesanan dan penginapan ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Perubahan ini ditolak. Periksa keadaan perjalanan saat ini sebelum membuat perubahan lain.',
@@ -306,6 +312,8 @@ const messages = {
     'Perjalanan tidak dapat dimuat ulang. Coba lagi sebelum membuat perubahan.',
   'transports.readOnly.archived':
     'Perjalanan ini diarsipkan. Pulihkan untuk mengubah transportasi.',
+  'transports.readOnly.role':
+    'Anda bisa melihat transportasi ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
   'transports.title': 'Transportasi',
   'transports.empty': 'Belum ada yang dicatat',
   'transports.count.transports': {
@@ -401,9 +409,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Pilih seseorang yang sudah ada di perjalanan ini',
   'plan.weather.badge.forecast':
-    'Prakiraan: {condition}, tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures}, {condition} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Prakiraan: tertinggi {max}, terendah {min}',
+    'Prakiraan: {figures} (tertinggi {max}, terendah {min})',
   'plan.weather.badge.unavailable': 'Cuaca tidak tersedia untuk hari ini',
   'plan.weather.badge.loading': 'Memuat cuaca',
   'plan.weather.badge.recorded': 'Tercatat: tertinggi {max}, terendah {min}',
@@ -443,6 +451,8 @@ const messages = {
   'plan.weather.panel.low': 'Terendah',
   'plan.weather.panel.recordedNote': 'Nilai terukur pada hari tersebut.',
   'plan.weather.panel.temperatureTypical': 'Tertinggi / terendah umumnya',
+  'plan.weather.panel.typicalHigh': 'Tertinggi umumnya',
+  'plan.weather.panel.typicalLow': 'Terendah umumnya',
   'plan.weather.panel.estimateNote':
     'Rata-rata jangka panjang untuk bulan ini, bukan prakiraan.',
   'plan.weather.attribution.metNorway': 'Data prakiraan: MET Norway, CC BY 4.0',

@@ -422,6 +422,21 @@ const messages = {
   'panel.stat.streakSingle': 'Eine Reise im Jahr {last}',
   'panel.stat.streakNone':
     'Füge eine Reise mit Datum hinzu, um eine Serie zu beginnen',
+  'visitEdit.edit': 'Besuch bearbeiten',
+  'visitEdit.note': 'Notiz',
+  'visitEdit.save': 'Besuch speichern',
+  'visitEdit.cancel': 'Abbrechen',
+  'visitEdit.loading': 'Besuch wird geladen',
+  'visitEdit.saving': 'Besuch wird gespeichert',
+  'visitEdit.failed':
+    'Speicherung nicht bestätigt. Dein Entwurf bleibt erhalten; versuche es erneut.',
+  'visitEdit.missing':
+    'Dieser Besuch ist nicht mehr verfügbar. Öffne das Land erneut.',
+  'visitEdit.noteInvalid': 'Verwende höchstens 2.000 Zeichen.',
+  'visitEdit.bounds': 'Der erste Besuch darf nicht nach dem letzten liegen.',
+  'visitEdit.future': 'Wähle heute oder ein früheres Datum.',
+  'visitEdit.dateInvalid': 'Gib ein gültiges Datum im Format JJJJ-MM-TT ein.',
+  'visitEdit.reload': 'Gespeichert. Eintrag neu laden',
 } satisfies TranslationOf<typeof En>
 
 export default messages

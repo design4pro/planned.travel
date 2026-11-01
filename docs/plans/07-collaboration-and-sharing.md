@@ -13,8 +13,8 @@ only two unauthenticated surfaces in the product.
 - **The room is complete.** `src/server/do/trip-room.ts` is one SQLite-backed Durable Object per
   trip on the WebSocket Hibernation API, with `acceptWebSocket` at `:238`, a ping/pong auto-response
   installed at `:180-181`, a rate-limit close at `:751`, an alarm at `:420` and an idle
-  `deleteAll()` at `:430`. `src/server/do/trip-room-client.ts:33` states the addressing rule in one
-  line — one object per trip, the trip id is the shard key — and `src/server/do/protocol.ts` is the
+  erasure that retains unexpired revocation barriers (#1608). `src/server/do/trip-room-client.ts:33`
+  states the addressing rule in one line — one object per trip, the trip id is the shard key — and `src/server/do/protocol.ts` is the
   isomorphic Zod contract both ends validate against.
 - **One component subscribes.** `grep -rn useTripRoom src/` returns the definition, the barrel
   re-export at `src/components/modules/collab/index.ts:8`, and a single call site:
@@ -343,9 +343,9 @@ as `07-S2` does.
   and anyone on an archived trip connect as `viewer` and have their patches refused inside the room,
   and so does a session an operator is impersonating (docs/ACCESS.md §6.4, #1253).
   The role is read at connect, so the writes that change it close the sockets they affect and the
-  client's reconnect picks the stored role up: a role change, a removal or a leave closes that
-  person's sockets, and an archive, a restore, a delete or a visibility narrowed to private closes the
-  whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050). A person who
+  client's reconnect picks the stored role up: a role change, an add, a removal or a leave closes
+  that person's sockets, and an archive, a restore, a delete or a visibility narrowed to private
+  closes the whole room (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, #1050; the table that says which write closes whom is `evictionsFor` in `src/server/fns/-lib/trip-access-change.ts`, #1181). A person who
   stops belonging to the workspace - removed, leaving, or banned, signed out everywhere or deleted by
   the platform console - has their sockets closed in every room of it by the `trip-room-evict` queue
   task, which the auth hooks enqueue once the change committed (#1073); so does a person who ends
@@ -358,10 +358,13 @@ as `07-S2` does.
   sessions clears; only a D1 check closes it, #1085) (#1176); a revoke of the other sessions reads
   the person's other live session rows after it ran and ends each through Better Auth's adapter,
   row and blob, whether or not the per-user session index named it (#1240). The close is
-  best effort: a room that cannot be reached, or a connect already in flight whose upgrade reaches
-  the room after the close, leaves the old role for at most the maximum socket age plus the
-  alarm interval (15 + 5 minutes, about 20 minutes). Refusing a connect minted before a
-  revocation is the exact race fix (#1085). The age cap adds one reconnect per open socket per
+  best effort: a room that cannot be reached leaves the old role for at most the maximum socket
+  age plus the alarm interval (15 + 5 minutes, about 20 minutes). A connect already in flight whose
+  upgrade reaches the room after the close is refused, not served: the identity carries `issuedAt`
+  (the app Worker's clock, taken before the role is read), a close carries `revokedAt` (the same
+  clock, taken after the write), the room keeps it as a watermark for 15 minutes and closes a
+  connect minted before it at once with the room-closed code, so the client reconnects through
+  the connect handler (#1085). Recording the watermark costs a storage write and an alarm in every room a close reaches, including a room nobody has open (a sign-out or leave fans out to every trip the person can reach), and each member's first reconnect after a whole-room close is usually refused once more (it falls inside the 1 second skew margin). The age cap adds one reconnect per open socket per
   maximum age: one app Worker request, a session read, two D1 reads and one Durable Object fetch,
   plus the screen loader re-read. Nothing in this stage relaxes any of that, and the provider does
   not pass a trip id the layout did not already resolve through its own loader.
@@ -2504,7 +2507,8 @@ The six items of `docs/SPEC.md` §7 apply unchanged, exactly as under `07-S1`.
 - One observation recorded rather than acted on, because it belongs to another row: this stage adds
   no caller of `closeTripRoom`. Evicting a live socket is what **removal** from a trip needs, not
   what an invite link needs, and #1050 gave removal, role changes and the trip lifecycle their
-  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`).
+  callers (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`, reached through
+  `settleTripAccessChange` in `src/server/fns/-lib/trip-access-change.ts`).
 
 ## Cross-plan collisions
 

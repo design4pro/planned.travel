@@ -19,6 +19,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 
 - All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are three, and closed (SPEC §6): `server/catalog`, the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
 - `components/ui` never fetches data and never imports from `server/`.
+- Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception; raw SQL against them stays limited to the provisioning module (SPEC §6).
 - Validate every server-function input with Zod. Named exports only (route modules excepted).
 - Definition of done for any task: docs/SPEC.md §7. Decomposition rule ("one concept, one owner"): docs/SPEC.md §8.
 - User-facing copy is never hardcoded — it lives in the 23-locale catalogue, and a new key lands in every locale in the same change (the parity test enforces this; procedure: the `i18n-messages` skill, contract: docs/SPEC.md §9).

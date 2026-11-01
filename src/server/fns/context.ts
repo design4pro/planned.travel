@@ -127,12 +127,13 @@ async function evictQuietly(
 
 /**
  * Closes one person's open sockets in a trip's room, after their access to the trip changed (a new
- * role, a removal, leaving). The room reads a connection's role once, at connect, so this is what
- * makes the change reach a tab that is already open: it reconnects through the connect handler and
- * picks up the stored role.
+ * role, an add, a removal, leaving). The room reads a connection's role once, at connect, so this is
+ * what makes the change reach a tab that is already open: it reconnects through the connect handler
+ * and picks up the stored role.
  *
  * Call it only after the database write succeeded, with ids taken from the rows the repository
- * resolved - never straight from the request.
+ * resolved - never straight from the request. A trip handler does not call it: it states the change
+ * to `settleTripAccessChange` (`./-lib/trip-access-change`), which owns which write closes whom.
  */
 export function closeRoomFor(
   scope: TenantScope,

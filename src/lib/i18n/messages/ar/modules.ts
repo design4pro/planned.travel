@@ -1104,17 +1104,25 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - أُنشئ في {when}',
   'files.export.madeAt': '{date}، {time}',
-  'files.export.email.subject': '{title} جاهز',
+  'files.export.email.subject': 'التصدير جاهز: {title}',
   'files.export.email.body': {
-    zero: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
-    one: 'تصدير الرحلة جاهز. يُحفظ لمدة يوم واحد.',
-    two: 'تصدير الرحلة جاهز. يُحفظ لمدة يومين.',
-    few: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} أيام.',
-    many: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يومًا.',
-    other: 'تصدير الرحلة جاهز. يُحفظ لمدة {count} يوم.',
+    zero: 'تصدير {title} جاهز. يُحفظ لمدة {count} يوم.',
+    one: 'تصدير {title} جاهز. يُحفظ لمدة {count} يوم.',
+    two: 'تصدير {title} جاهز. يُحفظ لمدة يومين.',
+    few: 'تصدير {title} جاهز. يُحفظ لمدة {count} أيام.',
+    many: 'تصدير {title} جاهز. يُحفظ لمدة {count} يومًا.',
+    other: 'تصدير {title} جاهز. يُحفظ لمدة {count} يوم.',
   },
-  'files.export.email.action': 'افتح {title}',
-  'files.export.email.text': 'تصدير الرحلة جاهز: {url}',
+  'files.export.email.action': 'الانتقال إلى التصدير',
+  'files.export.email.text': '{body}\n\n{limit}\n\nالانتقال إلى التصدير: {url}',
+  'files.export.limit': {
+    zero: 'تحتفظ الرحلة بأحدث {count} تصدير.',
+    one: 'تحتفظ الرحلة بأحدث {count} تصدير.',
+    two: 'تحتفظ الرحلة بأحدث تصديرين.',
+    few: 'تحتفظ الرحلة بأحدث {count} تصديرات.',
+    many: 'تحتفظ الرحلة بأحدث {count} تصديرًا.',
+    other: 'تحتفظ الرحلة بأحدث {count} تصدير.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'تصدير الرحلة',
@@ -1478,6 +1486,12 @@ const messages = {
   'files.readOnly.title': 'ملفات للقراءة فقط',
   'files.readOnly.role':
     'يمكن لمالكي الرحلة ومحرريها فقط رفع الملفات أو إعادة تسميتها أو حذفها. لا يزال بإمكانك تنزيلها.',
+  'files.readOnly.archived':
+    'هذه الرحلة مؤرشفة، لذا الملفات للقراءة فقط. لا يزال بإمكانك تنزيلها. استعد الرحلة من الأرشيف لتغييرها.',
+  'lists.readOnly.role':
+    'يمكنك قراءة هذه القوائم. لا يغيّرها إلا مالك الرحلة ومحرّروها.',
+  'lists.readOnly.archived':
+    'هذه الرحلة مؤرشفة، لذا القوائم للقراءة فقط. استعد الرحلة من الأرشيف لتغييرها.',
   'vacay.kind.vacation': 'إجازة',
   'vacay.kind.half_day': 'نصف يوم إجازة',
   'vacay.kind.sick': 'إجازة مرضية',

@@ -59,7 +59,7 @@ Measured at HEAD (`86841140`), by reading the code.
   When its owner is deleted it keeps all its trips, files, journeys and its `subscriptions` row, with no member left.
   `deleteWorkspace` does not exist (plan 09 designs it). The console does not delete workspaces.
 - **No R2 sweep.** The only object deletion is per trip (`trip-purge`, keys captured before the rows go) and per file.
-  `exports/**` objects have no deleter (`dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
+  `exports/**` objects are removed only with a deleted trip and by the workspace prefix sweep, with no age sweep (#1287; `dead-letter/**` got one in phase 7, see the amendment); the weekly retention slot of `src/server/worker.ts` logs
   "cron half has no handler yet" for the R2 half. Journey deletion never touches R2.
 - **Departure is not deletion.** A person leaves a workspace through Better Auth's organization endpoints or the console;
   only their `member` row goes (`removeMember` now runs through the product auth adapter, #1008). Their rows in that workspace stay under a live
@@ -250,7 +250,7 @@ pending invitations disappeared.
 | Store                                                                                 | Holds                                                                                   | Outcome                                                                                                                                                                                                                      |
 | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | R2 `trips/<org>/<trip>/…` (files, covers)                                             | Trip files; metadata `uploadedBy`                                                       | Removed with a deleted trip (`trip-purge`) and with a deleted workspace (prefix sweep). Kept for shared trips, metadata rewritten.                                                                                           |
-| R2 `exports/<org>/<trip>/…`                                                           | Plan exports                                                                            | Swept with the workspace prefix. The `pdf-export` handler writes them (and a KV `export:<taskId>` record) but no producer enqueues it today, and nothing deletes them; whatever starts producing them ships its deleter.     |
+| R2 `exports/<org>/<trip>/…`                                                           | Plan exports                                                                            | Swept with the workspace prefix and removed with a deleted trip (`trip-purge` takes the export keys it can list). `requestTripExport` enqueues the `pdf-export` handler, which writes them (and a KV `export:<taskId>` record); nothing removes a finished export by age, #1287 owns that sweep. |
 | R2 journey photo keys                                                                 | Journey photos (no production writer; keys are caller-chosen, no org segment)           | Collected from `journey_photos` before the rows go; swept by key.                                                                                                                                                            |
 | R2 `avatars/<org>/<user>`                                                             | Portrait (plan 09; not written today)                                                   | Swept by key when it exists.                                                                                                                                                                                                 |
 | R2 `dead-letter/<date>/<id>.json`                                                     | Whole failed message bodies (emails with token URLs, `requestedBy`), **no org segment** | Not scanned per person. A date-prefixed retention deleter is a **prerequisite slice**; the erasure's own envelopes carry no user id.                                                                                         |
@@ -564,7 +564,7 @@ and any change made by this PR to code, schema or migrations.
 - **F1. Memberless workspaces already exist** from past console deletions; they keep rows, files and a subscription row.
   A listing and a cleanup through the same `deleteWorkspace`.
 - **F2. The privacy "Take it" promise** now has per-trip PDF, calendar and GeoJSON downloads (#1063). The PDF plan-gating conflict remains a person’s decision in #1079.
-- **F3. `dead-letter/` and `exports/` have no deleter** (`dead-letter/` fixed in phase 7, #1055); the weekly retention slot is a logged no-op
+- **F3. `dead-letter/` had no deleter** (fixed in phase 7, #1055) and `exports/` has no age sweep (#1287); the weekly retention slot is a logged no-op
   (`BACKUP_RETENTION_DAYS` is read and unused).
 - **F4. (fixed in phase 7, #1055) `logAuth` writes recipient emails to console** on `email.queued` / `email.queue_failed`, against `logger.ts`'s "never log a raw email".
 - **F5. (fixed in phase 7, #1055) Soft-deleted chat messages keep their body** (`collab.ts` `deleteMessage`).
@@ -780,10 +780,10 @@ gated the ticket (`risk-high`, approved, confidence high):
   ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a
   renewal is paid, nothing in the product notices. Whether the engine cancels or refunds at the provider, or
   alerts on that log, is for a person.
-- **Journey photo keys are swept as given (#1419).** `listWorkspaceJourneyPhotoKeys` returns free-form `storageKey` and
-  `thumbnailKey` values; nothing ties them to `journeys/<org>/`. Only the dev seed writes them today. The upload
-  path that arrives later must store them under a prefix of the workspace, or the sweep must refuse keys outside
-  it; until then the engine phase must not pass keys from any other source.
+- **Journey photo keys must belong to the workspace (#1419).** New `storageKey` and `thumbnailKey` values
+  must use the exact `journeys/<organizationId>/` namespace. `listWorkspaceJourneyPhotoKeys` remains a
+  tenant-scoped reference read; the sweep independently rejects foreign and legacy unscoped keys, retaining
+  those objects. The dev seed uses the same workspace namespace; future upload writers must do so too.
 
 ## Amendment - phase 5 (issue #1058)
 
@@ -903,3 +903,13 @@ at most 200 ids and one 250-batch cap covers the whole run. Structured logs reco
 `batches`, `organizations`, `drained`; remaining work is an error, with no audit row about the prune.
 The trip history panel, overview activity list and action-count chart stop showing activity older
 than 400 days once pruned. This enforces retention only; per-person anonymisation is unchanged.
+
+## Amendment - revocation-preserving room reset (#1608, PR #1671)
+
+This supersedes the room-reset descriptions above. Reset closes sockets and erases entity
+content, commit history and person identifiers. It first persists the latest applicable revocation
+timestamp as a non-personal room barrier, so a failed write does not destroy a newer barrier on retry.
+Selective deletion uses batches of at most 128 keys instead of `deleteAll()`. Reset and idle erasure
+retain unexpired barriers through the existing 15-minute TTL; their pruning alarm never postpones an
+earlier alarm. Reset persistence failures propagate to the caller. The adapter stamps reset after the
+revoking write; older Workers without that stamp still reset without weakening an existing barrier.

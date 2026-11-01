@@ -17,6 +17,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': '通知',
   'nav.primary': '主なセクション',
   'nav.mobile': 'セクション',
   'nav.dashboardLink': 'planned.travel ダッシュボード',
@@ -66,6 +67,7 @@ const messages = {
   'workspace.createPermanent':
     'planned.travel には、ワークスペースを削除するオプションはまだありません。作成または参加したワークスペースはすべて上限に含まれ、{limit}個のワークスペースに所属すると、新しく作成することはできません。',
   'workspace.createName': 'ワークスペース名',
+  'workspace.createNameRequired': 'ワークスペース名を入力してください。',
   'workspace.createUpgrade':
     '「{workspace}」はフリープランで、ワークスペースを追加で作成できるのは有料プランのワークスペースだけです。ほかのワークスペースに有料プランのものがあれば、そちらに切り替えて作成してください。ない場合は「{workspace}」を有料プランにアップグレードしてください。',
   'workspace.createLimitReached': '上限いっぱいのワークスペースに所属しているため、新しく作成することはできません。',
@@ -572,6 +574,7 @@ const messages = {
   'trips.card.copying': '複製中',
   'trips.card.copyingLabel': '{title} はまだ複製中です',
   'trips.card.copyingReason': '複製が終わるまでお待ちください。',
+  'trips.card.archivedReason': '編集するには、この旅行を復元してください。',
   'metric.trips': '旅',
   'metric.places': '場所',
   'metric.members': 'メンバー',

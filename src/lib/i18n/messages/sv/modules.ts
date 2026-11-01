@@ -1059,13 +1059,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - skapad {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} är klar',
+  'files.export.email.subject': 'Export klar: {title}',
   'files.export.email.body': {
-    one: 'Reseexporten är klar. Den sparas i {count} dag.',
-    other: 'Reseexporten är klar. Den sparas i {count} dagar.',
+    one: 'Din export av {title} är klar. Den sparas i {count} dag.',
+    other: 'Din export av {title} är klar. Den sparas i {count} dagar.',
   },
-  'files.export.email.action': 'Öppna {title}',
-  'files.export.email.text': 'Reseexporten är klar: {url}',
+  'files.export.email.action': 'Gå till exporten',
+  'files.export.email.text': '{body}\n\n{limit}\n\nGå till exporten: {url}',
+  'files.export.limit': {
+    one: 'En resa behåller sin {count} senaste export.',
+    other: 'En resa behåller sina {count} senaste exporter.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Exportera resan',
@@ -1346,6 +1350,12 @@ const messages = {
   'files.readOnly.title': 'Skrivskyddade filer',
   'files.readOnly.role':
     'Bara resans ägare och redigerare kan ladda upp, byta namn på eller ta bort filer. Du kan fortfarande ladda ner dem.',
+  'files.readOnly.archived':
+    'Den här resan är arkiverad, så filerna är skrivskyddade. Du kan fortfarande ladda ned dem. Återställ resan för att ändra dem.',
+  'lists.readOnly.role':
+    'Du kan läsa de här listorna. Bara resans ägare och redigerare kan ändra dem.',
+  'lists.readOnly.archived':
+    'Den här resan är arkiverad, så listorna är skrivskyddade. Återställ resan för att ändra dem.',
   'vacay.kind.vacation': 'Ledighet',
   'vacay.kind.half_day': 'Halv ledig dag',
   'vacay.kind.sick': 'Sjukdag',

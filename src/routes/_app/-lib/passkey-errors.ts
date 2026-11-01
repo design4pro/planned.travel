@@ -7,16 +7,19 @@
  * `src/routes/(auth)/-lib/errors.ts`, and written out as literals for the same reason: a composed
  * key needs a cast to reach `MessageKey`, and the cast is what hides a renamed catalogue entry.
  */
+import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import type { AuthFailure, PasskeyRegistrationResult } from '#/lib/auth/client'
 import type { MessageKey } from '#/lib/i18n'
 
-/** Codes `src/server/auth/passkey/plugin.ts` answers with. */
-const LIMIT_REACHED = 'PASSKEY_LIMIT_REACHED'
-const SESSION_NOT_FRESH = 'PASSKEY_SESSION_NOT_FRESH'
-const PASSWORD_REQUIRED = 'PASSKEY_PASSWORD_REQUIRED'
-const INVALID_PASSWORD = 'PASSKEY_INVALID_PASSWORD'
+const {
+  limitReached: LIMIT_REACHED,
+  sessionNotFresh: SESSION_NOT_FRESH,
+  passwordRequired: PASSWORD_REQUIRED,
+  invalidPassword: INVALID_PASSWORD,
+  notFound,
+} = PASSKEY_ERROR_CODES
 /** The passkey is not on the account (anymore): the removal's goal already holds. */
-export const PASSKEY_NOT_FOUND = 'PASSKEY_NOT_FOUND'
+export const PASSKEY_NOT_FOUND = notFound
 
 /** A sentence for the status region, and whether it comes with the Sign in again action. */
 export interface PasskeyNotice {

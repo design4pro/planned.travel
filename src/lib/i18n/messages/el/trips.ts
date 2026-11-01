@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Αυτό το ταξίδι έχει αρχειοθετηθεί. Η συνεργασία είναι μόνο για ανάγνωση.',
+  'collab.readOnly.role':
+    'Μόνο οι ιδιοκτήτες και οι συντάκτες του ταξιδιού μπορούν να αλλάζουν τη συζήτηση, τις σημειώσεις και τις δημοσκοπήσεις.',
   'notFound.title': 'Δεν μπορούμε να βρούμε αυτό το ταξίδι',
   'notFound.body':
     'Δεν είναι ανάμεσα στα ταξίδια που μπορείς να ανοίξεις στον τρέχοντα χώρο εργασίας. Ίσως έχει διαγραφεί ή δεν έχεις πρόσβαση σε αυτό.',
@@ -171,7 +175,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
   'plan.addPlace.quota':
     'Φτάσατε το όριο τοποθεσιών του πακέτου σας. Αναβαθμίστε για να προσθέσετε περισσότερες.',
-  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα',
+  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα (ανοίγει σε νέα καρτέλα)',
   'plan.stay.checkIn': 'Άφιξη',
   'plan.stay.checkOut': 'Αποχώρηση',
   'plan.day.addStay': 'Προσθήκη διαμονής, {day}',
@@ -311,6 +315,8 @@ const messages = {
   'book.pinnedCaption': 'Καρφιτσωμένο σε μια μέρα του προγράμματος',
   'book.readOnly.archived':
     'Αυτό το ταξίδι είναι αρχειοθετημένο, οπότε οι κρατήσεις και οι διαμονές είναι μόνο για ανάγνωση. Επαναφέρετε το ταξίδι για να τις αλλάξετε.',
+  'book.readOnly.role':
+    'Μπορείτε να διαβάσετε αυτές τις κρατήσεις και διαμονές. Μόνο ο ιδιοκτήτης του ταξιδιού και οι συντάκτες μπορούν να τις αλλάξουν.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Αυτή η αλλαγή απορρίφθηκε. Ελέγξτε την τρέχουσα κατάσταση του ταξιδιού πριν κάνετε άλλες αλλαγές.',
@@ -318,6 +324,8 @@ const messages = {
     'Δεν ήταν δυνατή η ανανέωση του ταξιδιού. Δοκιμάστε ξανά πριν κάνετε αλλαγές.',
   'transports.readOnly.archived':
     'Αυτό το ταξίδι έχει αρχειοθετηθεί. Επαναφέρετέ το για να αλλάξετε τις μετακινήσεις.',
+  'transports.readOnly.role':
+    'Μπορείτε να διαβάσετε αυτές τις μετακινήσεις. Μόνο ο ιδιοκτήτης του ταξιδιού και οι συντάκτες μπορούν να τις αλλάξουν.',
   'transports.title': 'Μετακινήσεις',
   'transports.empty': 'Τίποτα καταγεγραμμένο ακόμη',
   'transports.count.transports': {
@@ -417,9 +425,9 @@ const messages = {
     'Ένα ταξίδι χωράει έως {limit} καλεσμένους, γιατί μια μεγαλύτερη λίστα δυσκολεύει την επιλογή συμμετεχόντων και την ανάγνωση του καταμερισμού εξόδων',
   'people.error.guestMergeTarget': 'Επίλεξε κάποιον που είναι ήδη στο ταξίδι',
   'plan.weather.badge.forecast':
-    'Πρόγνωση: {condition}, μέγιστη {max}, ελάχιστη {min}',
+    'Πρόγνωση: {figures}, {condition} (μέγιστη {max}, ελάχιστη {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Πρόγνωση: μέγιστη {max}, ελάχιστη {min}',
+    'Πρόγνωση: {figures} (μέγιστη {max}, ελάχιστη {min})',
   'plan.weather.badge.unavailable':
     'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
   'plan.weather.badge.loading': 'Φόρτωση καιρού',
@@ -460,6 +468,8 @@ const messages = {
   'plan.weather.panel.low': 'Ελάχιστη',
   'plan.weather.panel.recordedNote': 'Μετρημένες τιμές για αυτήν την ημέρα.',
   'plan.weather.panel.temperatureTypical': 'Τυπική μέγιστη / ελάχιστη',
+  'plan.weather.panel.typicalHigh': 'Τυπική μέγιστη',
+  'plan.weather.panel.typicalLow': 'Τυπική ελάχιστη',
   'plan.weather.panel.estimateNote':
     'Μακροπρόθεσμος μέσος όρος για αυτόν τον μήνα, όχι πρόγνωση.',
   'plan.weather.attribution.metNorway':

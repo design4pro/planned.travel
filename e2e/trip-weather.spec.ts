@@ -178,11 +178,14 @@ test.describe('DOC-08 — the weather of a day', () => {
     const lisbon = await tripIdByName(context, LISBON)
     await onRoute(context, planRoute(lisbon), async (page) => {
       await showDays(page)
-      await openAndCloseByKeyboard(
-        page,
-        dayRegion(page, LISBON_DAYS.forecastToday),
-        BADGE.forecast,
-      )
+      for (const key of ['Enter', 'Space']) {
+        await openAndCloseByKeyboard(
+          page,
+          dayRegion(page, LISBON_DAYS.forecastToday),
+          BADGE.forecast,
+          key,
+        )
+      }
       await openAndCloseByKeyboard(
         page,
         dayRegion(page, LISBON_DAYS.recorded),
@@ -346,18 +349,19 @@ async function expectLisbonStates(page: Page): Promise<void> {
   ).toHaveCount(0)
 }
 
-/** Tab from the day's header to its badge and open it with Enter: the keyboard way in. */
+/** Tab from the day's header to its badge and open it with Enter or Space: the keyboard ways in. */
 async function openByKeyboard(
   page: Page,
   region: Locator,
   name: RegExp,
+  key = 'Enter',
 ): Promise<Locator> {
   const badge = region.getByRole('button', { name })
   await dayHeader(region).focus()
   await page.keyboard.press('Tab')
   await expect(badge).toBeFocused()
 
-  await page.keyboard.press('Enter')
+  await page.keyboard.press(key)
   const panel = page.getByRole('dialog', { name: /^Weather for / })
   await expect(panel).toBeVisible()
   return panel
@@ -371,8 +375,9 @@ async function openAndCloseByKeyboard(
   page: Page,
   region: Locator,
   name: RegExp,
+  key = 'Enter',
 ): Promise<void> {
-  const panel = await openByKeyboard(page, region, name)
+  const panel = await openByKeyboard(page, region, name, key)
   await page.keyboard.press('Escape')
   await expect(panel).toBeHidden()
   await expect(region.getByRole('button', { name })).toBeFocused()

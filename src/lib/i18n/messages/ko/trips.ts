@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    '이 여행은 보관되었습니다. 공동 작업은 읽기 전용입니다.',
+  'collab.readOnly.role':
+    '여행 소유자와 편집자만 대화, 메모 및 설문을 변경할 수 있습니다.',
   'notFound.title': '이 여행을 찾을 수 없어요',
   'notFound.body':
     '현재 워크스페이스에서 열 수 있는 여행에 포함되어 있지 않아요. 삭제되었거나 접근 권한이 없을 수 있어요.',
@@ -165,7 +169,7 @@ const messages = {
   'plan.addPlace.forDayNamed': '장소 추가 — {day}',
   'plan.addPlace.quota':
     '요금제의 장소 한도에 도달했습니다. 더 추가하려면 요금제를 업그레이드하세요.',
-  'plan.addPlace.quotaAction': '요금제 보기',
+  'plan.addPlace.quotaAction': '요금제 보기 (새 탭에서 열림)',
   'plan.stay.checkIn': '체크인',
   'plan.stay.checkOut': '체크아웃',
   'plan.day.addStay': '숙소 추가 — {day}',
@@ -297,6 +301,8 @@ const messages = {
   'book.pinnedCaption': '일정의 특정 날짜에 고정됨',
   'book.readOnly.archived':
     '이 여행은 보관되어 있어 예약과 숙박은 읽기 전용입니다. 변경하려면 여행을 복원하세요.',
+  'book.readOnly.role':
+    '이 예약과 숙박은 볼 수만 있습니다. 여행 소유자와 편집자만 변경할 수 있습니다.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     '이 변경은 거부되었습니다. 추가 변경 전에 현재 여행 상태를 확인하세요.',
@@ -304,6 +310,8 @@ const messages = {
     '여행을 새로 불러오지 못했습니다. 변경하기 전에 다시 시도하세요.',
   'transports.readOnly.archived':
     '이 여행은 보관되었습니다. 교통편을 변경하려면 복원하세요.',
+  'transports.readOnly.role':
+    '이 교통편은 볼 수만 있습니다. 여행 소유자와 편집자만 변경할 수 있습니다.',
   'transports.title': '이동',
   'transports.empty': '아직 기록된 것이 없습니다',
   'transports.count.transports': {
@@ -394,8 +402,10 @@ const messages = {
   'people.error.guestLimit':
     '여행 한 건에 게스트는 최대 {limit}명입니다. 목록이 더 길면 참가자 선택과 비용 분담을 읽기 어려워지기 때문입니다',
   'people.error.guestMergeTarget': '이미 이 여행에 있는 사람을 선택하세요',
-  'plan.weather.badge.forecast': '예보: {condition}, 최고 {max}, 최저 {min}',
-  'plan.weather.badge.forecastNoCondition': '예보: 최고 {max}, 최저 {min}',
+  'plan.weather.badge.forecast':
+    '예보: {figures}, {condition} (최고 {max}, 최저 {min})',
+  'plan.weather.badge.forecastNoCondition':
+    '예보: {figures} (최고 {max}, 최저 {min})',
   'plan.weather.badge.unavailable': '이 날의 날씨를 불러올 수 없습니다',
   'plan.weather.badge.loading': '날씨 불러오는 중',
   'plan.weather.badge.recorded': '관측: 최고 {max}, 최저 {min}',
@@ -434,6 +444,8 @@ const messages = {
   'plan.weather.panel.low': '최저',
   'plan.weather.panel.recordedNote': '이 날의 관측값입니다.',
   'plan.weather.panel.temperatureTypical': '평년 최고 / 최저',
+  'plan.weather.panel.typicalHigh': '평년 최고',
+  'plan.weather.panel.typicalLow': '평년 최저',
   'plan.weather.panel.estimateNote': '이 달의 장기 평균이며 예보가 아닙니다.',
   'plan.weather.attribution.metNorway': '예보 데이터: MET Norway, CC BY 4.0',
   'plan.weather.attribution.nasaPower':

@@ -51,6 +51,7 @@ function mountRail(
       <CostsRail
         snapshot={snapshot(byCategory)}
         people={[]}
+        departedPeople={[]}
         viewerUserId="u-1"
         currency="EUR"
         display={{ mode: 'per-trip', code: 'EUR' }}

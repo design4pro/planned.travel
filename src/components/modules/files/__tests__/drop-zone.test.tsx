@@ -3,8 +3,16 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 
+import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -30,11 +38,17 @@ const EN: Catalogue = {
 const stubs = vi.hoisted(() => ({
   router: { invalidate: vi.fn() },
   upload: vi.fn(),
+  download: vi.fn(),
+  remove: vi.fn(),
+  update: vi.fn(),
 }))
 
 /** The real module reads the Worker environment through the request scope, which jsdom has none of. */
-vi.mock('#/server/fns/files', () => ({ deleteTripFileFn: vi.fn() }))
-vi.mock('../download', () => ({ downloadTripFile: vi.fn() }))
+vi.mock('#/server/fns/files', () => ({
+  deleteTripFileFn: stubs.remove,
+  updateTripFileFn: stubs.update,
+}))
+vi.mock('../download', () => ({ downloadTripFile: stubs.download }))
 vi.mock('../upload', () => ({ uploadFile: stubs.upload }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => stubs.router,
@@ -47,11 +61,13 @@ const TEXT_DRAG = { dataTransfer: { types: ['text/plain'], files: [] } }
 function renderLibrary(
   canWrite = true,
   files: ReadonlyArray<FileData> = [],
+  archived = false,
 ): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <FileLibrary
         canWrite={canWrite}
+        archived={archived}
         tripId="trip-1"
         files={files}
         people={[]}
@@ -84,7 +100,10 @@ function overlayOf(zone: HTMLElement): Element {
   return overlay
 }
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
 
 describe('the drop zone', () => {
   it('rests idle, with its overlay hidden from assistive technology and from the pointer', () => {
@@ -166,6 +185,17 @@ describe('the drop zone', () => {
   })
 })
 
+it('says the trip is archived, not that the role is short, to a reader of an archived trip', () => {
+  renderLibrary(false, [], true)
+  expect(
+    screen.getByText(
+      'This trip is archived, so its files are read-only. You can still download them. Restore the trip to change them.',
+    ),
+  ).toBeTruthy()
+  expect(screen.queryByText(/Only trip owners and editors/)).toBeNull()
+  expect(document.querySelector('[data-part="file-drop"]')).toBeNull()
+})
+
 it('a reader has no upload surface or paste listener', () => {
   renderLibrary(false)
   expect(document.querySelector('[data-part="file-drop"]')).toBeNull()
@@ -193,9 +223,14 @@ it('a reader has no upload surface or paste listener', () => {
   expect(stubs.upload).not.toHaveBeenCalled()
 })
 
-it.each([false, true])(
-  'file actions follow write permission %s and retain download',
-  async (canWrite) => {
+it.each([
+  { canWrite: false, surface: 'list' as const },
+  { canWrite: true, surface: 'list' as const },
+  { canWrite: false, surface: 'table' as const },
+  { canWrite: true, surface: 'table' as const },
+])(
+  'file actions on $surface follow write permission $canWrite and retain download',
+  async ({ canWrite, surface }) => {
     renderLibrary(canWrite, [
       {
         id: 'file-1',
@@ -209,7 +244,9 @@ it.each([false, true])(
       },
     ])
     fireEvent.pointerDown(
-      screen.getByRole('button', { name: 'Actions for ticket.pdf' }),
+      within(
+        screen.getByRole(surface, { name: 'Files attached to this trip' }),
+      ).getByRole('button', { name: 'Actions for ticket.pdf' }),
       { button: 0, ctrlKey: false, pointerType: 'mouse' },
     )
     expect(
@@ -223,3 +260,143 @@ it.each([false, true])(
     )
   },
 )
+
+const BOOKING: FileData = {
+  id: 'booking',
+  filename: 'Hotel-Lisbon-booking.pdf',
+  contentType: 'application/pdf',
+  sizeBytes: 1024,
+  kind: 'document',
+  description: 'Reservation details for arrival',
+  uploadedBy: 'owner',
+  createdAt: '2026-10-19T00:00:00Z',
+}
+
+function librarySurface(surface: 'list' | 'table') {
+  return within(
+    screen.getByRole(surface, { name: 'Files attached to this trip' }),
+  )
+}
+
+function openFileMenu(surface: 'list' | 'table') {
+  const trigger = librarySurface(surface).getByRole('button', {
+    name: `Actions for ${BOOKING.filename}`,
+  })
+  trigger.focus()
+  fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+}
+
+it.each(['list', 'table'] as const)(
+  'keeps filtering, descriptions and download on the %s',
+  async (surface) => {
+    stubs.download.mockResolvedValue({ filename: BOOKING.filename })
+    renderLibrary(false, [
+      BOOKING,
+      {
+        ...BOOKING,
+        id: 'photo',
+        filename: 'arrival.jpg',
+        kind: 'image',
+        description: null,
+      },
+    ])
+    expect(
+      librarySurface(surface).getByText(BOOKING.description ?? ''),
+    ).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Document/ }))
+    expect(librarySurface(surface).queryByText('arrival.jpg')).toBeNull()
+    expect(librarySurface(surface).getByText(BOOKING.filename)).toBeTruthy()
+    openFileMenu(surface)
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Download/ }))
+    await waitFor(() =>
+      expect(stubs.download).toHaveBeenCalledWith({
+        tripId: 'trip-1',
+        fileId: 'booking',
+        filename: BOOKING.filename,
+      }),
+    )
+  },
+)
+
+it.each(['list', 'table'] as const)(
+  'keeps rename and removal confirmation/error on the %s',
+  async (surface) => {
+    const errorToast = vi.spyOn(toast, 'error')
+    stubs.remove.mockRejectedValue(new Error('Removal refused'))
+    renderLibrary(true, [BOOKING])
+    openFileMenu(surface)
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Rename/ }))
+    expect(await screen.findByDisplayValue(BOOKING.filename)).toBeTruthy()
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    openFileMenu(surface)
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Remove/ }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain(BOOKING.filename)
+    expect(stubs.remove).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove file' }))
+    await waitFor(() => expect(errorToast).toHaveBeenCalled())
+    expect(stubs.remove).toHaveBeenCalledWith({
+      data: { tripId: 'trip-1', fileId: 'booking' },
+    })
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    errorToast.mockRestore()
+  },
+)
+it.each([
+  [true, false],
+  [false, false],
+  [false, true],
+])(
+  'protects outside drops with canWrite=%s archived=%s and cleans up',
+  (canWrite, archived) => {
+    renderLibrary(canWrite, [], archived)
+    for (const type of ['dragover', 'drop']) {
+      for (const types of [['Files'], ['text/plain'], ['text/uri-list']]) {
+        const event = new Event(type, { bubbles: true, cancelable: true })
+        Object.defineProperty(event, 'dataTransfer', {
+          value: { types, files: [] },
+        })
+        fireEvent(document.body, event)
+        expect(event.defaultPrevented).toBe(types.includes('Files'))
+      }
+    }
+    cleanup()
+    expect(fireEvent.drop(document.body, FILES_DRAG)).toBe(true)
+  },
+)
+
+it.each(['text/plain', 'text/uri-list'])(
+  'leaves %s drags alone in the zone',
+  (type) => {
+    const zone = open()
+    for (const eventType of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+      const event = new Event(eventType, { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'dataTransfer', {
+        value: { types: [type], files: [] },
+      })
+      fireEvent(zone, event)
+      expect(event.defaultPrevented).toBe(false)
+    }
+  },
+)
+
+it('uploads an in-zone file exactly once without stopping propagation', async () => {
+  stubs.upload.mockClear()
+  stubs.upload.mockImplementation(() => new Promise(() => {}))
+  const zone = open()
+  const bubbled = vi.fn()
+  window.addEventListener('drop', bubbled)
+  try {
+    fireEvent.drop(zone, {
+      dataTransfer: {
+        types: ['Files'],
+        files: [new File(['bytes'], 'ticket.pdf', { type: 'application/pdf' })],
+      },
+    })
+    await waitFor(() => expect(stubs.upload).toHaveBeenCalledTimes(1))
+    expect(bubbled).toHaveBeenCalledTimes(1)
+  } finally {
+    window.removeEventListener('drop', bubbled)
+  }
+})

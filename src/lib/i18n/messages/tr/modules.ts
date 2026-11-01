@@ -1053,13 +1053,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - oluşturulma: {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} hazır',
+  'files.export.email.subject': 'Dışa aktarım hazır: {title}',
   'files.export.email.body': {
-    one: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
-    other: 'Gezi dışa aktarımı hazır. {count} gün boyunca saklanır.',
+    one: '{title} için dışa aktarımınız hazır. {count} gün saklanır.',
+    other: '{title} için dışa aktarımınız hazır. {count} gün saklanır.',
   },
-  'files.export.email.action': '{title} öğesini aç',
-  'files.export.email.text': 'Gezi dışa aktarımı hazır: {url}',
+  'files.export.email.action': 'Dışa aktarıma git',
+  'files.export.email.text': '{body}\n\n{limit}\n\nDışa aktarıma git: {url}',
+  'files.export.limit': {
+    one: 'Bir seyahatin en yeni {count} dışa aktarımı saklanır.',
+    other: 'Bir seyahatin en yeni {count} dışa aktarımı saklanır.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Geziyi dışa aktar',
@@ -1341,6 +1345,12 @@ const messages = {
   'files.readOnly.title': 'Salt okunur dosyalar',
   'files.readOnly.role':
     'Yalnızca seyahat sahipleri ve düzenleyicileri dosya yükleyebilir, yeniden adlandırabilir veya silebilir. Dosyaları indirmeye devam edebilirsin.',
+  'files.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden dosyalar salt okunur. Yine de indirebilirsiniz. Değiştirmek için seyahati geri yükleyin.',
+  'lists.readOnly.role':
+    'Bu listeleri görüntüleyebilirsiniz. Yalnızca seyahatin sahibi ve düzenleyiciler değiştirebilir.',
+  'lists.readOnly.archived':
+    'Bu seyahat arşivlendi, bu yüzden listeler salt okunur. Değiştirmek için seyahati geri yükleyin.',
   'vacay.kind.vacation': 'İzin',
   'vacay.kind.half_day': 'Yarım gün izin',
   'vacay.kind.sick': 'Hastalık izni',

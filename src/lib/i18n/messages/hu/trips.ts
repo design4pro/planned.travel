@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Ez az utazás archiválva van. Az együttműködés csak olvasható.',
+  'collab.readOnly.role':
+    'Csak az utazás tulajdonosai és szerkesztői módosíthatják a beszélgetést, a jegyzeteket és a szavazásokat.',
   'notFound.title': 'Nem találjuk ezt az utazást',
   'notFound.body':
     'Nem szerepel a jelenlegi munkaterületen megnyitható utazások között. Lehet, hogy törölték, vagy nincs hozzáférésed.',
@@ -169,7 +173,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Hely hozzáadása: {day}',
   'plan.addPlace.quota':
     'Elérted a csomagod helyekre vonatkozó korlátját. Válts magasabb csomagra, hogy többet adhass hozzá.',
-  'plan.addPlace.quotaAction': 'Csomagok megtekintése',
+  'plan.addPlace.quotaAction': 'Csomagok megtekintése (új lapon nyílik meg)',
   'plan.stay.checkIn': 'Bejelentkezés',
   'plan.stay.checkOut': 'Kijelentkezés',
   'plan.day.addStay': 'Szállás hozzáadása: {day}',
@@ -310,6 +314,8 @@ const messages = {
   'book.pinnedCaption': 'Az útiterv egy napjához rögzítve',
   'book.readOnly.archived':
     'Ez az utazás archiválva van, ezért a foglalások és a szállások csak olvashatók. Állítsd vissza az utazást a módosításukhoz.',
+  'book.readOnly.role':
+    'Ezeket a foglalásokat és szállásokat megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják őket.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'A módosítást elutasítottuk. További módosítások előtt ellenőrizd az utazás aktuális állapotát.',
@@ -317,6 +323,8 @@ const messages = {
     'Az utazást nem sikerült frissíteni. Módosítás előtt próbáld újra.',
   'transports.readOnly.archived':
     'Ez az utazás archiválva van. Állítsd vissza a közlekedés módosításához.',
+  'transports.readOnly.role':
+    'Ezeket a közlekedési tételeket megtekintheted. Csak az utazás tulajdonosa és a szerkesztők módosíthatják őket.',
   'transports.title': 'Utak',
   'transports.empty': 'Még nincs rögzítve semmi',
   'transports.count.transports': {
@@ -412,9 +420,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Válassz valakit, aki már részt vesz az utazáson',
   'plan.weather.badge.forecast':
-    'Előrejelzés: {condition}, maximum {max}, minimum {min}',
+    'Előrejelzés: {figures}, {condition} (maximum {max}, minimum {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Előrejelzés: maximum {max}, minimum {min}',
+    'Előrejelzés: {figures} (maximum {max}, minimum {min})',
   'plan.weather.badge.unavailable': 'Az időjárás nem érhető el erre a napra',
   'plan.weather.badge.loading': 'Időjárás betöltése',
   'plan.weather.badge.recorded': 'Mért adat: maximum {max}, minimum {min}',
@@ -454,6 +462,8 @@ const messages = {
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Mért értékek erre a napra.',
   'plan.weather.panel.temperatureTypical': 'Jellemző max. / min.',
+  'plan.weather.panel.typicalHigh': 'Jellemző maximum',
+  'plan.weather.panel.typicalLow': 'Jellemző minimum',
   'plan.weather.panel.estimateNote':
     'Az adott hónap hosszú távú átlaga, nem előrejelzés.',
   'plan.weather.attribution.metNorway':

@@ -38,6 +38,7 @@ import {
   requireTrip,
 } from '#/server/repos'
 import {
+  EXPORT_KEEP_COUNT,
   EXPORT_TTL_SECONDS,
   exportObjectKey,
   exportPointerKey,
@@ -45,7 +46,7 @@ import {
 } from '#/server/storage/export-artifacts'
 import { assertUpstreamOk } from '../http'
 import { enqueueTask } from '../jobs'
-import { TaskConfigurationError, TaskPermanentError } from '../types'
+import { TaskAbandonedError, TaskConfigurationError } from '../types'
 import type { Locale } from '#/lib/i18n'
 import type { Database } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
@@ -199,8 +200,8 @@ function scopeFor(
  * and the trip is still readable to them. Reads for authorisation only: the document stays the one
  * the request built. The organization is the envelope's, never the payload's.
  *
- * A member row or trip that is gone cannot come back on retry, so both are permanent. Anything
- * else (a D1 hiccup) rethrows, and the queue redelivers.
+ * A member row or trip that is gone cannot come back on retry, so both are abandoned: the consumer
+ * acks them without a dead letter. Anything else (a D1 hiccup) rethrows, and the queue redelivers.
  */
 async function recheckScope(
   db: Database,
@@ -210,7 +211,8 @@ async function recheckScope(
   const probe = scopeFor(db, context.orgId, payload.requestedBy, 'member')
   const membership = await getMembership(probe, payload.requestedBy)
   if (membership === null) {
-    throw new TaskPermanentError(
+    throw new TaskAbandonedError(
+      'requester-left',
       `User ${payload.requestedBy} is no longer a member of ${context.orgId}; the trip export is abandoned`,
     )
   }
@@ -225,7 +227,8 @@ async function recheckScope(
     return { tripId: trip.id, timeZone: resolveTimeZone(trip.timezone) }
   } catch (cause) {
     if (cause instanceof NotFoundError) {
-      throw new TaskPermanentError(
+      throw new TaskAbandonedError(
+        'trip-gone',
         `Trip ${payload.tripId} is gone; there is nothing left to export`,
         { cause },
       )
@@ -405,14 +408,16 @@ function readyEmail(
 ) {
   const body = t('modules.files.export.email.body', {
     count: EXPORT_TTL_SECONDS / SECONDS_PER_DAY,
+    title,
   })
-  const action = t('modules.files.export.email.action', { title })
+  const action = t('modules.files.export.email.action')
+  const limit = t('modules.files.export.limit', { count: EXPORT_KEEP_COUNT })
   return {
     to: [to],
     // A title may be 200 characters; the email payload's subject is capped at the same 200.
     subject: cutSubject(t('modules.files.export.email.subject', { title })),
-    html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
-    text: t('modules.files.export.email.text', { url }),
+    html: `<div lang="${locale}" dir="${directionOf(locale)}"><p>${escapeHtml(body)}</p><p>${escapeHtml(limit)}</p><p><a href="${escapeHtml(url)}">${escapeHtml(action)}</a></p></div>`,
+    text: t('modules.files.export.email.text', { body, limit, url }),
     tag: 'export-ready',
   }
 }

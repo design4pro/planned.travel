@@ -229,6 +229,8 @@ function startContext(): StartContext {
 }
 
 const {
+  updateCountryVisitFn,
+  updateCountryVisitInputSchema,
   AtlasConflictError,
   AtlasQuotaError,
   addCountryToBucketListFn,
@@ -1440,5 +1442,97 @@ describe('region cascade workspace boundary', () => {
     expect(sent).toHaveLength(1)
     expect(JSON.stringify(sent)).not.toContain(other.organizationId)
     expect(JSON.stringify(sent)).not.toContain(other.ownerUserId)
+  })
+})
+
+
+describe('visit correction boundary', () => {
+  const patch = {
+    countryCode: 'FR',
+    firstVisitedOn: '2024-02-29',
+    lastVisitedOn: '2025-01-01',
+    note: '  Paris  ',
+  }
+  const correct = async (data: unknown) =>
+    startStorage.run(startContext(), () =>
+      updateCountryVisitFn({ data: updateCountryVisitInputSchema.parse(data) }),
+    )
+  it('preserves identity and count, recomputes old and new years, and skips unchanged retries', async () => {
+    await markVisited({ countryCode: 'FR', visitedOn: '2023-01-01' })
+    const before = (await atlasCountryState(tenant.scope, 'FR')).visit
+    stubs.sent = []
+    await correct(patch)
+    expect((await atlasCountryState(tenant.scope, 'FR')).visit).toMatchObject({
+      id: before?.id,
+      visitCount: 1,
+      note: 'Paris',
+      firstVisitedOn: patch.firstVisitedOn,
+      lastVisitedOn: patch.lastVisitedOn,
+    })
+    expect(
+      stubs.sent
+        .map((entry) => taskEnvelopeSchema.parse(entry.body))
+        .map((entry) => entry.payload),
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ statYear: 0 }),
+        expect.objectContaining({ statYear: 2023 }),
+        expect.objectContaining({ statYear: 2024 }),
+        expect.objectContaining({ statYear: 2025 }),
+      ]),
+    )
+    stubs.sent = []
+    await correct(patch)
+    expect(stubs.sent).toEqual([])
+    await correct({
+      ...patch,
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      note: '',
+    })
+    expect((await atlasCountryState(tenant.scope, 'FR')).visit).toMatchObject({
+      id: before?.id,
+      visitCount: 1,
+      firstVisitedOn: null,
+      lastVisitedOn: null,
+      note: null,
+    })
+  })
+  it('rejects injected identities and invalid input without touching the row', async () => {
+    await markVisited({ countryCode: 'FR' })
+    const before = await atlasCountryState(tenant.scope, 'FR')
+    stubs.sent = []
+    for (const invalid of [
+      { userId: other.ownerUserId },
+      { organizationId: other.organizationId },
+      { id: 'row' },
+      { visitCount: 20 },
+      { firstVisitedOn: '2025-02-29' },
+      { firstVisitedOn: '2025-01-02', lastVisitedOn: '2025-01-01' },
+      { note: 'x'.repeat(2001) },
+    ]) {
+      await expect(correct({ ...patch, ...invalid })).rejects.toThrow()
+    }
+    await correct({
+      ...patch,
+      firstVisitedOn: '2999-01-01',
+      lastVisitedOn: null,
+    })
+    expect(await atlasCountryState(tenant.scope, 'FR')).toEqual(before)
+    expect(stubs.sent).toEqual([])
+  })
+  it('requires authentication and refuses colleagues, other tenants and missing records', async () => {
+    const colleague = tenant.scopeFor(await tenant.addUser('colleague-editor'))
+    for (const scope of [colleague, other.scope]) {
+      signIn(scope)
+      await markVisited({ countryCode: 'FR' })
+      const before = await atlasCountryState(scope, 'FR')
+      signIn(tenant.scope)
+      await expect(correct(patch)).rejects.toThrow()
+      expect((await atlasCountryState(tenant.scope, 'FR')).visit).toBeNull()
+      expect(await atlasCountryState(scope, 'FR')).toEqual(before)
+    }
+    signIn(null)
+    await expect(correct(patch)).rejects.toBeInstanceOf(AuthRequirementError)
   })
 })

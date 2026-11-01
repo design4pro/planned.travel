@@ -21,6 +21,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': 'Ειδοποιήσεις',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Βασικές ενότητες',
   'nav.mobile': 'Ενότητες',
@@ -76,6 +77,7 @@ const messages = {
   'workspace.createPermanent':
     'Στο planned.travel δεν υπάρχει ακόμη επιλογή διαγραφής ενός χώρου εργασίας. Κάθε χώρος εργασίας που δημιουργείτε ή στον οποίο εντάσσεστε προσμετράται στο όριο: όταν ανήκετε σε {limit} χώρους εργασίας, δεν μπορείτε να δημιουργήσετε άλλον.',
   'workspace.createName': 'Όνομα χώρου εργασίας',
+  'workspace.createNameRequired': 'Εισαγάγετε ένα όνομα για τον χώρο εργασίας.',
   'workspace.createUpgrade':
     'Ο χώρος «{workspace}» είναι στο πρόγραμμα Δωρεάν και μόνο ένας χώρος εργασίας με επί πληρωμή πρόγραμμα μπορεί να δημιουργήσει άλλον. Αν κάποιος από τους άλλους χώρους εργασίας σας έχει επί πληρωμή πρόγραμμα, μεταβείτε σε αυτόν και δημιουργήστε από εκεί. Διαφορετικά, αναβαθμίστε τον χώρο «{workspace}».',
   'workspace.createLimitReached':
@@ -662,6 +664,7 @@ const messages = {
   'trips.card.copying': 'Αντιγράφεται',
   'trips.card.copyingLabel': 'Το {title} αντιγράφεται ακόμη',
   'trips.card.copyingReason': 'Περιμένετε να ολοκληρωθεί η αντιγραφή.',
+  'trips.card.archivedReason': 'Επαναφέρετε αυτό το ταξίδι για να το επεξεργαστείτε.',
   'metric.trips': 'Ταξίδια',
   'metric.places': 'Μέρη',
   'metric.members': 'Μέλη',

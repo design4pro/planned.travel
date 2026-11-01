@@ -7,7 +7,7 @@
  * `env.TRIP_ROOM`, and tests can pass a stub.
  */
 
-import { TRIP_ROOM_IDENTITY_HEADER, encodeTripRoomIdentity } from './protocol'
+import { TRIP_ROOM_IDENTITY_HEADER, TRIP_ROOM_REVOKED_AT_HEADER, encodeTripRoomIdentity } from './protocol'
 import type { CommitEntry, EntitySnapshot, PresenceMember, TripPatch, TripRoomIdentity } from './protocol'
 
 export interface TripRoomStub {
@@ -95,9 +95,23 @@ export async function commitToTripRoom(
   return (await response.json())
 }
 
-async function postClose(namespace: TripRoomNamespace, tripId: string, body?: string): Promise<void> {
+/**
+ * Stamps `revokedAt` when the request is built, which is after the caller awaited the revoking
+ * write: a connect minted before it may have read the old role, and the room refuses it. The stamp
+ * is a header so the body contracts do not change and an older room still evicts.
+ */
+async function postClose(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  now: () => number,
+  body?: string,
+): Promise<void> {
   const response = await stubFor(namespace, tripId).fetch(
-    new Request(tripRoomUrl(tripId, 'close'), { method: 'POST', body }),
+    new Request(tripRoomUrl(tripId, 'close'), {
+      method: 'POST',
+      headers: { [TRIP_ROOM_REVOKED_AT_HEADER]: String(now()) },
+      body,
+    }),
   )
   if (!response.ok) {
     throw new Error(`Trip room close failed with ${response.status}`)
@@ -105,31 +119,51 @@ async function postClose(namespace: TripRoomNamespace, tripId: string, body?: st
 }
 
 /**
- * Evicts every connected client, e.g. after a trip is archived, restored or deleted. The shipped
- * client reconnects through the connect handler, which re-checks the stored role.
+ * Evicts every connected client, e.g. after a trip is archived, restored or deleted, and has the
+ * room refuse a connect minted before now (see `TripRoom.handleClose`). The shipped client
+ * reconnects through the connect handler, which re-checks the stored role. Call it after the write
+ * that revokes access resolved.
  */
-export function closeTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
-  return postClose(namespace, tripId)
+export function closeTripRoom(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  now: () => number = Date.now,
+): Promise<void> {
+  return postClose(namespace, tripId, now)
 }
 
 /**
  * Evicts one person's sockets — every tab and device — and nobody else's, e.g. after their role on
  * the trip changed or they were taken off it. The room finds them by the identity tag it put on each
- * socket at connect.
+ * socket at connect, and refuses that person's connect minted before now. Call it after the write
+ * that revokes access resolved.
  */
-export function closeTripRoomFor(namespace: TripRoomNamespace, tripId: string, userId: string): Promise<void> {
-  return postClose(namespace, tripId, JSON.stringify({ userId }))
+export function closeTripRoomFor(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  userId: string,
+  now: () => number = Date.now,
+): Promise<void> {
+  return postClose(namespace, tripId, now, JSON.stringify({ userId }))
 }
 
 /**
  * Closes a room's sockets and erases its stored state (see `TripRoom.handleReset`). For a trip that
  * is gone or whose people are being erased: a live room never clears itself. Call it **after** the
  * trip's rows are gone, so a socket that reconnects is refused at the connect handler instead of
- * rebuilding the room from rows that are about to be deleted.
+ * rebuilding the room from rows that are about to be deleted. The timestamp also refuses connects
+ * already authorized before deletion; reset retains only a non-personal room barrier.
  */
-export async function resetTripRoom(namespace: TripRoomNamespace, tripId: string): Promise<void> {
+export async function resetTripRoom(
+  namespace: TripRoomNamespace,
+  tripId: string,
+  now: () => number = Date.now,
+): Promise<void> {
   const response = await stubFor(namespace, tripId).fetch(
-    new Request(tripRoomUrl(tripId, 'reset'), { method: 'POST' }),
+    new Request(tripRoomUrl(tripId, 'reset'), {
+      method: 'POST',
+      headers: { [TRIP_ROOM_REVOKED_AT_HEADER]: String(now()) },
+    }),
   )
   if (!response.ok) {
     throw new Error(`Trip room reset failed with ${response.status}`)

@@ -790,6 +790,13 @@ Rules:
   and removes only rows that same call wrote (the organization, its membership and its participation
   anchor): the withdrawal is never pointed at an organization that already exists. Adding a table is
   a contract change.
+- Better Auth's own tables, reached through the library's adapter (`ctx.context.adapter`), are
+  not application SQL and sit outside this contract: this is not a fourth exception and not a
+  precedent for SQL. The passkey plugin (`src/server/auth/passkey/plugin.ts`) reads and writes the
+  `passkey` table that way; that table is user-keyed and has no `organization_id`, but other
+  Better Auth tables do relate to a workspace, so being auth-owned says nothing about tenancy.
+  Application queries still pass through the tenant-scoped repository, and raw SQL against an auth
+  table stays limited to the provisioning module above.
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a
@@ -1019,7 +1026,13 @@ would start, in a file holding both scales with nothing to say which `admin` is 
 - `src/lib/i18n/catalogue.ts` aggregates with `import.meta.glob('./messages/*/*.ts')`, so a new
   namespace file is picked up with no shared index for fifteen items to fight over. Measured in
   round 1: an explicit per-locale importer emits 23 separate chunks and inlines none of them into
-  the entry — the glob must keep that property.
+  the entry — the glob must keep that property for ordinary catalogues. Root recovery bundles only
+  a generated projection of existing `shell.error.*`, `shell.session.*`, `shell.feedback.*`,
+  `shell.nav.homeLink`, `ui.status.working` and `ui.action.remove` copy for all locales, independently of lazy imports.
+  Regenerate it with `pnpm exec tsx scripts/i18n/generate-recovery.ts`; its parity test checks the
+  projection against the ordinary catalogues. An empty root loader catalogue still signals a failed
+  refresh; only the document provider receives recovery copy, in the negotiated language or English
+  when negotiation itself failed.
 - `src/lib/i18n/types.ts` derives the key union from `import type` of the eleven **`en`**
   namespace files. English is the only source of truth for what a key is.
 - The parity test globs `messages/*/*.ts`. It fails on a key in `en` and missing elsewhere, a key

@@ -972,12 +972,15 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - 產生於 {when}',
   'files.export.madeAt': '{date} {time}',
-  'files.export.email.subject': '{title} 已準備好',
+  'files.export.email.subject': '匯出已就緒：{title}',
   'files.export.email.body': {
-    other: '行程匯出已準備好。將保留 {count} 天。',
+    other: '{title}的匯出已就緒，將保留{count}天。',
   },
-  'files.export.email.action': '開啟 {title}',
-  'files.export.email.text': '行程匯出已準備好：{url}',
+  'files.export.email.action': '前往匯出',
+  'files.export.email.text': '{body}\n\n{limit}\n\n前往匯出: {url}',
+  'files.export.limit': {
+    other: '每個旅行保留最新的{count}個匯出。',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': '匯出行程',
@@ -1196,6 +1199,12 @@ const messages = {
   'files.readOnly.title': '唯讀檔案',
   'files.readOnly.role':
     '只有旅行擁有者和編輯者可以上傳、重新命名或刪除檔案。你仍然可以下載檔案。',
+  'files.readOnly.archived':
+    '此行程已封存，因此檔案為唯讀。你仍然可以下載。還原該行程後才能變更。',
+  'lists.readOnly.role':
+    '你可以查看這些清單。只有行程的擁有者和編輯者可以變更。',
+  'lists.readOnly.archived':
+    '此行程已封存，因此清單為唯讀。還原該行程後才能變更。',
   'vacay.kind.vacation': '休假',
   'vacay.kind.half_day': '半天休假',
   'vacay.kind.sick': '病假',

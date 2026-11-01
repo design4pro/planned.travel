@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Aquest viatge està arxivat. La col·laboració és de només lectura.',
+  'collab.readOnly.role':
+    'Només els propietaris i editors del viatge poden modificar la conversa, les notes i les enquestes.',
   'notFound.title': 'No trobem aquest viatge',
   'notFound.body':
     'No és entre els viatges que pots obrir a l’espai de treball actual. Potser s’ha suprimit o no hi tens accés.',
@@ -169,7 +173,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Afegeix un lloc, {day}',
   'plan.addPlace.quota':
     'Has arribat al límit de llocs del teu pla. Millora’l per afegir-ne més.',
-  'plan.addPlace.quotaAction': 'Veure els plans',
+  'plan.addPlace.quotaAction': 'Veure els plans (s’obre en una pestanya nova)',
   'plan.stay.checkIn': 'Entrada',
   'plan.stay.checkOut': 'Sortida',
   'plan.day.addStay': 'Afegeix una estada, {day}',
@@ -315,6 +319,8 @@ const messages = {
   'book.pinnedCaption': 'Fixat a un dia del pla',
   'book.readOnly.archived':
     'Aquest viatge està arxivat, així que les reserves i les estades són només de lectura. Restaura el viatge per canviar-les.',
+  'book.readOnly.role':
+    'Pots veure aquestes reserves i estades. Només el propietari del viatge i qui pot editar les poden canviar.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Aquest canvi s’ha rebutjat. Revisa l’estat actual del viatge abans de fer més canvis.',
@@ -322,6 +328,8 @@ const messages = {
     'No s’ha pogut actualitzar el viatge. Torna-ho a provar abans de fer canvis.',
   'transports.readOnly.archived':
     'Aquest viatge està arxivat. Restaura’l per modificar els transports.',
+  'transports.readOnly.role':
+    'Pots veure aquests transports. Només el propietari del viatge i qui pot editar els poden canviar.',
   'transports.title': 'Trajectes',
   'transports.empty': 'Encara no s’ha registrat res',
   'transports.count.transports': {
@@ -420,9 +428,9 @@ const messages = {
     'Un viatge admet com a màxim {limit} convidats, perquè una llista més llarga fa difícils de llegir la tria de participants i el repartiment de despeses',
   'people.error.guestMergeTarget': 'Tria algú que ja sigui en aquest viatge',
   'plan.weather.badge.forecast':
-    'Previsió: {condition}, màxima {max}, mínima {min}',
+    'Previsió: {figures}, {condition} (màxima {max}, mínima {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsió: màxima {max}, mínima {min}',
+    'Previsió: {figures} (màxima {max}, mínima {min})',
   'plan.weather.badge.unavailable':
     'El temps no està disponible per a aquest dia',
   'plan.weather.badge.loading': "S'està carregant el temps",
@@ -463,6 +471,8 @@ const messages = {
   'plan.weather.panel.low': 'Mínima',
   'plan.weather.panel.recordedNote': "Valors mesurats d'aquest dia.",
   'plan.weather.panel.temperatureTypical': 'Màxima / mínima habituals',
+  'plan.weather.panel.typicalHigh': 'Màxima habitual',
+  'plan.weather.panel.typicalLow': 'Mínima habitual',
   'plan.weather.panel.estimateNote':
     "Mitjana a llarg termini d'aquest mes, no una previsió.",
   'plan.weather.attribution.metNorway':

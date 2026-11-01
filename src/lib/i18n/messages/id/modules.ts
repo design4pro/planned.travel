@@ -1052,12 +1052,16 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - dibuat pada {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} sudah siap',
+  'files.export.email.subject': 'Ekspor siap: {title}',
   'files.export.email.body': {
-    other: 'Ekspor perjalanan sudah siap. Disimpan selama {count} hari.',
+    other:
+      'Ekspor {title} Anda sudah siap. Ekspor disimpan selama {count} hari.',
   },
-  'files.export.email.action': 'Buka {title}',
-  'files.export.email.text': 'Ekspor perjalanan sudah siap: {url}',
+  'files.export.email.action': 'Buka ekspor',
+  'files.export.email.text': '{body}\n\n{limit}\n\nBuka ekspor: {url}',
+  'files.export.limit': {
+    other: 'Satu perjalanan menyimpan {count} ekspor terbarunya.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Ekspor perjalanan',
@@ -1307,6 +1311,12 @@ const messages = {
   'files.readOnly.title': 'Berkas hanya baca',
   'files.readOnly.role':
     'Hanya pemilik dan editor perjalanan yang dapat mengunggah, mengganti nama, atau menghapus berkas. Kamu tetap dapat mengunduhnya.',
+  'files.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi berkasnya hanya bisa dibaca. Anda masih bisa mengunduhnya. Pulihkan perjalanan untuk mengubahnya.',
+  'lists.readOnly.role':
+    'Anda bisa melihat daftar ini. Hanya pemilik perjalanan dan yang bisa mengedit yang dapat mengubahnya.',
+  'lists.readOnly.archived':
+    'Perjalanan ini diarsipkan, jadi daftarnya hanya bisa dibaca. Pulihkan perjalanan untuk mengubahnya.',
   'vacay.kind.vacation': 'Cuti',
   'vacay.kind.half_day': 'Cuti setengah hari',
   'vacay.kind.sick': 'Izin sakit',

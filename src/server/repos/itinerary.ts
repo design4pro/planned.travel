@@ -52,8 +52,10 @@ import { requireReservationOfTrip } from './reservations'
 import {
   TRIP_WRITE_ROLES,
   assertTripRole,
+  canReadTrip,
   requireTrip,
   requireWritableTrip,
+  tripMemberUserIds,
 } from './trips'
 import {
   currencySchema,
@@ -327,8 +329,14 @@ export interface ItineraryDay {
 }
 
 /**
- * The whole itinerary in four scoped queries: days, assignments, places and participants.
- * Stops are ordered by `order_index` then id, so ties from a fractional reorder stay stable.
+ * The whole itinerary in five scoped queries: days, assignments, places, participants and the
+ * trip's members. Stops are ordered by `order_index` then id, so ties from a fractional reorder stay
+ * stable.
+ *
+ * A stop lists only the participants who are **current trip members** (#1086): a person who leaves
+ * the trip disappears from its stops, but their `assignment_participants` rows are kept, so they
+ * reappear if they rejoin. Permanent deletion belongs to the erasure work (#811). The membership is
+ * read once per itinerary, in the same parallel read as the places and participants.
  */
 export async function getTripItinerary(
   scope: TenantScope,
@@ -345,18 +353,23 @@ export async function getTripItinerary(
   const placeIds = [...new Set(assignments.map((row) => row.placeId))]
   const assignmentIds = assignments.map((row) => row.id)
 
-  const [placeRows, participantRows] = await Promise.all([
+  const [placeRows, participantRows, memberIds] = await Promise.all([
     placesRepository.findByIds(scope, placeIds),
     assignmentIds.length === 0
       ? Promise.resolve([])
       : assignmentParticipantsAccess.findMany(scope, {
           where: inArray(assignmentParticipants.assignmentId, assignmentIds),
         }),
+    tripMemberUserIds(scope, tripId),
   ])
 
   const placesById = new Map(placeRows.map((row) => [row.id, row]))
+  const currentMembers = new Set(memberIds)
   const participantsByAssignment = new Map<string, Array<string>>()
   for (const row of participantRows) {
+    if (!currentMembers.has(row.userId)) {
+      continue
+    }
     const bucket = participantsByAssignment.get(row.assignmentId)
     if (bucket) {
       bucket.push(row.userId)
@@ -531,7 +544,8 @@ export async function createAssignment(
   input: CreateAssignmentInput,
 ): Promise<DayAssignment> {
   const values = createAssignmentInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
+  await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
 
@@ -552,11 +566,21 @@ async function nextOrderIndex(
   return last === undefined ? 0 : last.orderIndex + 1
 }
 
+/**
+ * Edits one stop. Checks visibility, archive state (`requireWritableTrip`) and write role,
+ * in that order, before writing; an unreadable trip stays `NotFoundError` (ADR 0007).
+ */
 export async function updateAssignment(
   scope: TenantScope,
   assignmentId: string,
   input: UpdateAssignmentInput,
 ): Promise<DayAssignment> {
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
+  await requireWritableTrip(scope, assignment.tripId)
+  await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   return dayAssignmentsRepository.requireUpdate(
     scope,
     assignmentId,
@@ -564,7 +588,18 @@ export async function updateAssignment(
   )
 }
 
-/** Applies a whole day's new order in one batch. */
+/**
+ * Applies a whole day's new order in one batch.
+ *
+ * The input names bare stop ids, so each distinct trip is checked for visibility, archive state
+ * and write role, in that order, before anything is written:
+ *
+ * - **A stop of a trip the caller may not see is dropped**, exactly like an id the workspace does
+ *   not hold, so the answer never tells an outsider that the stop exists (ADR 0007).
+ * - **A visible archived trip refuses the whole call** with `TripArchivedError`, without writes.
+ * - **A stop of a trip the caller may see but not edit refuses the whole call** with the trip-role
+ *   error, and nothing is written, not even the stops that were editable.
+ */
 export async function reorderAssignments(
   scope: TenantScope,
   input: ReorderAssignmentsInput,
@@ -574,8 +609,20 @@ export async function reorderAssignments(
     scope,
     moves.map((move) => move.assignmentId),
   )
-  const knownIds = new Set(known.map((row) => row.id))
-  const applicable = moves.filter((move) => knownIds.has(move.assignmentId))
+  const visibleIds = new Set<string>()
+  for (const tripId of new Set(known.map((row) => row.tripId))) {
+    if (!(await canReadTrip(scope, tripId))) {
+      continue
+    }
+    await requireWritableTrip(scope, tripId)
+    await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
+    for (const row of known) {
+      if (row.tripId === tripId) {
+        visibleIds.add(row.id)
+      }
+    }
+  }
+  const applicable = moves.filter((move) => visibleIds.has(move.assignmentId))
   if (applicable.length === 0) {
     return []
   }
@@ -672,11 +719,11 @@ export async function reorderDayTimelines(
 ): Promise<Array<WrittenDayTimeline>> {
   const values = reorderDayTimelinesInput.parse(input)
 
-  // Read first, then role, then every named day: a caller who may not see the trip
-  // learns nothing beyond `NotFoundError`, and only a reader who has proved they may
+  // Visibility first, then archive state, role and every named day: an unreadable trip
+  // reveals nothing beyond `NotFoundError`, and only a reader who has proved they may
   // see it can be told `FORBIDDEN` (PRD #104 decisions 1 and 6). Nothing is written
   // until all of them have passed.
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await Promise.all(
     values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
@@ -1047,13 +1094,33 @@ export async function deletePlaceWithJourneys(
   return writtenDays(restated.map((day) => day.written))
 }
 
-/** Replaces the participant set of one stop. */
+/**
+ * Replaces the participant set of one stop.
+ *
+ * Starts from a row id and checks the stop's trip for visibility, archive state
+ * (`requireWritableTrip`) and write role, in that order. An unreadable
+ * trip stays `NotFoundError` (ADR 0007); nothing is written until all three pass.
+ *
+ * Only a **current member of the stop's trip** (any role) may be listed (#1086). A list naming
+ * anyone else - a workspace member who is not on the trip, a person who has left it, a user of
+ * another workspace, an id that matches no user - is refused as a whole with one
+ * `NotFoundError('trip member', 'named in the request')` that names no id, and the stored set is
+ * untouched. A stop carries no debt, so unlike an expense a person who has left is not kept
+ * listable: re-saving a set without them succeeds, naming them is refused. The membership check runs
+ * after the trip guards above, so a caller who may not see the trip is answered the trip's refusal.
+ * {@link getTripItinerary} applies the same definition of member when it reads the set back.
+ */
 export async function setAssignmentParticipants(
   scope: TenantScope,
   assignmentId: string,
   userIds: ReadonlyArray<string>,
 ): Promise<Array<string>> {
-  await dayAssignmentsRepository.requireById(scope, assignmentId)
+  const assignment = await dayAssignmentsRepository.requireById(
+    scope,
+    assignmentId,
+  )
+  await requireWritableTrip(scope, assignment.tripId)
+  await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   const parsed = [
     ...new Set(
       z
@@ -1062,6 +1129,10 @@ export async function setAssignmentParticipants(
         .parse([...userIds]),
     ),
   ]
+  const members = new Set(await tripMemberUserIds(scope, assignment.tripId))
+  if (parsed.some((userId) => !members.has(userId))) {
+    throw new NotFoundError('trip member', 'named in the request')
+  }
 
   await assignmentParticipantsAccess.removeWhere(
     scope,

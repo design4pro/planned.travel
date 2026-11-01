@@ -1075,13 +1075,17 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - gemaakt op {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': '{title} is klaar',
+  'files.export.email.subject': 'Export klaar: {title}',
   'files.export.email.body': {
-    one: 'De reisexport is klaar. Hij wordt {count} dag bewaard.',
-    other: 'De reisexport is klaar. Hij wordt {count} dagen bewaard.',
+    one: 'Je export van {title} is klaar. Deze wordt {count} dag bewaard.',
+    other: 'Je export van {title} is klaar. Deze wordt {count} dagen bewaard.',
   },
-  'files.export.email.action': '{title} openen',
-  'files.export.email.text': 'De reisexport is klaar: {url}',
+  'files.export.email.action': 'Ga naar de export',
+  'files.export.email.text': '{body}\n\n{limit}\n\nGa naar de export: {url}',
+  'files.export.limit': {
+    one: 'Een reis bewaart de {count} nieuwste export.',
+    other: 'Een reis bewaart de {count} nieuwste exports.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Reis exporteren',
@@ -1367,6 +1371,12 @@ const messages = {
   'files.readOnly.title': 'Alleen-lezenbestanden',
   'files.readOnly.role':
     'Alleen eigenaren en bewerkers van de reis kunnen bestanden uploaden, hernoemen of verwijderen. Je kunt ze nog steeds downloaden.',
+  'files.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de bestanden zijn alleen-lezen. Je kunt ze nog steeds downloaden. Herstel de reis om ze te wijzigen.',
+  'lists.readOnly.role':
+    'Je kunt deze lijsten lezen. Alleen de eigenaar van de reis en bewerkers kunnen ze wijzigen.',
+  'lists.readOnly.archived':
+    'Deze reis is gearchiveerd, dus de lijsten zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
   'vacay.kind.vacation': 'Verlof',
   'vacay.kind.half_day': 'Halve verlofdag',
   'vacay.kind.sick': 'Ziektedag',

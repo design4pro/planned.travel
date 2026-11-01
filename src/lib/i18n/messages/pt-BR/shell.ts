@@ -27,6 +27,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'toaster.label': 'Notificações',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Seções principais',
   'nav.mobile': 'Seções',
@@ -82,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'No planned.travel ainda não há opção para excluir um espaço. Cada espaço que você cria ou em que entra conta para o limite: quando você participa de {limit} espaços, não é possível criar outro.',
   'workspace.createName': 'Nome do espaço',
+  'workspace.createNameRequired': 'Digite um nome para o espaço.',
   'workspace.createUpgrade':
     '“{workspace}” está no plano Grátis, e só um espaço com plano pago pode criar outro. Se algum dos seus outros espaços tiver plano pago, troque para ele e crie a partir de lá. Caso contrário, faça o upgrade de “{workspace}”.',
   'workspace.createLimitReached':
@@ -699,6 +701,7 @@ const messages = {
   'trips.card.copying': 'Copiando',
   'trips.card.copyingLabel': '{title} ainda está sendo copiada',
   'trips.card.copyingReason': 'Espere a cópia terminar.',
+  'trips.card.archivedReason': 'Restaure esta viagem para editá-la.',
   'metric.trips': 'Viagens',
   'metric.places': 'Lugares',
   'metric.members': 'Membros',

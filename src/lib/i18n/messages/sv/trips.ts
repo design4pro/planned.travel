@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Den här resan är arkiverad. Samarbetet är skrivskyddat.',
+  'collab.readOnly.role':
+    'Endast resans ägare och redigerare kan ändra konversationen, anteckningarna och omröstningarna.',
   'notFound.title': 'Vi kan inte hitta den här resan',
   'notFound.body':
     'Den finns inte bland resorna du kan öppna i din nuvarande arbetsyta. Den kan ha tagits bort, eller så saknar du åtkomst till den.',
@@ -167,7 +171,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
   'plan.addPlace.quota':
     'Du har nått gränsen för platser i din plan. Uppgradera för att lägga till fler.',
-  'plan.addPlace.quotaAction': 'Visa planer',
+  'plan.addPlace.quotaAction': 'Visa planer (öppnas i en ny flik)',
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',
   'plan.day.addStay': 'Lägg till ett boende: {day}',
@@ -305,6 +309,8 @@ const messages = {
   'book.pinnedCaption': 'Fäst vid en dag i planen',
   'book.readOnly.archived':
     'Den här resan är arkiverad, så bokningarna och boendena är skrivskyddade. Återställ resan för att ändra dem.',
+  'book.readOnly.role':
+    'Du kan läsa de här bokningarna och boendena. Bara resans ägare och redigerare kan ändra dem.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Ändringen nekades. Kontrollera resans aktuella läge innan du gör fler ändringar.',
@@ -312,6 +318,8 @@ const messages = {
     'Resan kunde inte uppdateras. Försök igen innan du gör ändringar.',
   'transports.readOnly.archived':
     'Den här resan är arkiverad. Återställ den för att ändra transporter.',
+  'transports.readOnly.role':
+    'Du kan läsa de här transporterna. Bara resans ägare och redigerare kan ändra dem.',
   'transports.title': 'Färder',
   'transports.empty': 'Inget noterat än',
   'transports.count.transports': {
@@ -404,8 +412,9 @@ const messages = {
     'En resa rymmer högst {limit} gäster, eftersom en längre lista gör deltagarväljarna och kostnadsfördelningen svåra att läsa',
   'people.error.guestMergeTarget': 'Välj någon som redan är med på resan',
   'plan.weather.badge.forecast':
-    'Prognos: {condition}, högst {max}, lägst {min}',
-  'plan.weather.badge.forecastNoCondition': 'Prognos: högst {max}, lägst {min}',
+    'Prognos: {figures}, {condition} (högst {max}, lägst {min})',
+  'plan.weather.badge.forecastNoCondition':
+    'Prognos: {figures} (högst {max}, lägst {min})',
   'plan.weather.badge.unavailable':
     'Vädret är inte tillgängligt för den här dagen',
   'plan.weather.badge.loading': 'Läser in vädret',
@@ -446,6 +455,8 @@ const messages = {
   'plan.weather.panel.low': 'Lägsta',
   'plan.weather.panel.recordedNote': 'Uppmätta värden för den här dagen.',
   'plan.weather.panel.temperatureTypical': 'Typiskt högsta / lägsta',
+  'plan.weather.panel.typicalHigh': 'Typiskt högsta',
+  'plan.weather.panel.typicalLow': 'Typiskt lägsta',
   'plan.weather.panel.estimateNote':
     'Ett långtidsmedelvärde för den här månaden, inte en prognos.',
   'plan.weather.attribution.metNorway': 'Prognosdata: MET Norway, CC BY 4.0',

@@ -24,6 +24,7 @@
  */
 import { z } from 'zod'
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import {
   WORKSPACE_LIMIT,
   createOrganizationWithinLimit,
@@ -39,7 +40,16 @@ import type { TenantScope } from '#/server/repos'
  * a `slug` on the payload would be a second, forgeable input. The slug is derived on the server.
  */
 export const createWorkspaceInput = z.strictObject({
-  name: z.string().trim().min(1).max(60),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(60)
+    // The dialog checks the same rule first and says so in the reader's language; this sentence is
+    // the fallback for a caller that does not.
+    .refine(hasVisibleCharacter, {
+      message: 'The name needs at least one visible character.',
+    }),
 })
 
 /**

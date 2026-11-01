@@ -43,6 +43,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'toaster.label': 'Notifikasi',
   'nav.primary': 'Bagian utama',
   'nav.mobile': 'Bagian',
   'nav.dashboardLink': 'Dasbor planned.travel',
@@ -94,6 +95,7 @@ const messages = {
   'workspace.createPermanent':
     'Di planned.travel belum ada opsi untuk menghapus ruang kerja. Setiap ruang kerja yang Anda buat atau ikuti dihitung dalam batas: setelah Anda tergabung di {limit} ruang kerja, Anda tidak dapat membuat yang baru.',
   'workspace.createName': 'Nama ruang kerja',
+  'workspace.createNameRequired': 'Masukkan nama ruang kerja.',
   'workspace.createUpgrade':
     '“{workspace}” ada di paket Gratis, dan hanya ruang kerja dengan paket berbayar yang bisa membuat ruang kerja lain. Jika salah satu ruang kerja Anda yang lain memakai paket berbayar, pindah ke sana dan buat dari sana. Jika tidak, tingkatkan paket “{workspace}”.',
   'workspace.createLimitReached':
@@ -624,6 +626,7 @@ const messages = {
   'trips.card.copying': 'Menyalin',
   'trips.card.copyingLabel': '{title} masih disalin',
   'trips.card.copyingReason': 'Tunggu sampai penyalinan selesai.',
+  'trips.card.archivedReason': 'Pulihkan perjalanan ini untuk mengeditnya.',
   'metric.trips': 'Perjalanan',
   'metric.places': 'Tempat',
   'metric.members': 'Anggota',

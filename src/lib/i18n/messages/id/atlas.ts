@@ -387,6 +387,23 @@ const messages = {
   'panel.stat.streakSingle': 'Satu perjalanan pada tahun {last}',
   'panel.stat.streakNone':
     'Tambahkan perjalanan bertanggal untuk memulai rangkaian',
+  'visitEdit.edit': 'Edit kunjungan',
+  'visitEdit.note': 'Catatan',
+  'visitEdit.save': 'Simpan kunjungan',
+  'visitEdit.cancel': 'Batal',
+  'visitEdit.loading': 'Memuat kunjungan',
+  'visitEdit.saving': 'Menyimpan kunjungan',
+  'visitEdit.failed':
+    'Penyimpanan belum dapat dipastikan. Draf tetap tersimpan; coba lagi.',
+  'visitEdit.missing':
+    'Kunjungan ini tidak tersedia lagi. Buka kembali negaranya.',
+  'visitEdit.noteInvalid': 'Gunakan maksimal 2.000 karakter.',
+  'visitEdit.bounds':
+    'Kunjungan pertama tidak boleh setelah kunjungan terakhir.',
+  'visitEdit.future': 'Pilih hari ini atau tanggal sebelumnya.',
+  'visitEdit.dateInvalid':
+    'Masukkan tanggal yang valid dalam format TTTT-BB-HH.',
+  'visitEdit.reload': 'Tersimpan. Muat ulang catatan',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -78,6 +78,18 @@
   --color-info-soft: #e5eafb;
   --color-info-on: #ffffff; /* 6.64:1 */
 
+  /* Categorical data: surface / surface-2 / surface-inset contrast ratios.
+     All pairs must stay >= 15 CIE76 apart: a product requirement, not WCAG.
+     Chips use surface-inset; every data ink there also clears 4.5:1 text. */
+  --color-data-1: #1d4fd8; /* 6.64 / 5.89 / 5.57 */
+  --color-data-2: #256256; /* 7.09 / 6.29 / 5.95 */
+  --color-data-3: #8a5305; /* 6.33 / 5.61 / 5.31 */
+  --color-data-4: #7542a0; /* 6.90 / 6.12 / 5.79 */
+  --color-data-5: #b22f22; /* 6.32 / 5.60 / 5.30 */
+  --color-data-6: #006d80; /* 6.00 / 5.32 / 5.04 */
+  --color-data-7: #a12570; /* 6.97 / 6.18 / 5.85 */
+  --color-data-8: #5b5951; /* 7.02 / 6.22 / 5.89 */
+
   /* ---------------------------------------------------------------- inverse
      The near-black panel treatment. `inverse-muted` is the quiet tier, and it
      has to clear AA on the *composed* ground rather than on bare `inverse`: the
@@ -98,10 +110,10 @@
   --color-inverse-brand: #5fbba0;
 
   /* ------------------------------------------------------- atlas country layer
-     The world map is the only surface in the product where colour carries data
-     rather than decoration, so it gets its own named group instead of borrowing
-     one. A live MapLibre paint property is JSON and cannot read a custom
-     property, so every value below is mirrored literally by `MapPalette.country`
+     The world map has its own sequential country ramp, separate from the
+     categorical data palette above. A live MapLibre paint property is JSON and
+     cannot read a custom property, so every value below is mirrored literally
+     by `MapPalette.country`
      in `src/lib/map/palette.ts`. This file stays the source of truth: change a
      value here first, then mirror it there.
 
@@ -297,6 +309,18 @@
     --color-info-soft: #151e33;
     --color-info-on: #16150f; /* 8.24:1 */
 
+    /* Categorical data: surface / surface-2 / surface-inset contrast ratios.
+       All pairs must stay >= 15 CIE76 apart: a product requirement, not WCAG.
+       Chips use surface-inset; every data ink there also clears 4.5:1 text. */
+    --color-data-1: #8aacf9; /* 7.76 / 7.18 / 6.50 */
+    --color-data-2: #5fbba0; /* 7.55 / 6.99 / 6.32 */
+    --color-data-3: #e0a32e; /* 7.84 / 7.25 / 6.56 */
+    --color-data-4: #c49af0; /* 7.66 / 7.08 / 6.41 */
+    --color-data-5: #f0776a; /* 6.27 / 5.80 / 5.25 */
+    --color-data-6: #56c4d8; /* 8.53 / 7.89 / 7.14 */
+    --color-data-7: #ef8cc4; /* 7.65 / 7.07 / 6.40 */
+    --color-data-8: #adaba3; /* 7.58 / 7.01 / 6.34 */
+
     /* Deliberately *not* the flip of the light slab.
        `accent` flips, because a primary button in the dark should be the
        near-white one. A 1376x360 panel is a different problem: flipped, the
@@ -443,6 +467,18 @@
   --color-info: #8aacf9;
   --color-info-soft: #151e33;
   --color-info-on: #16150f;
+
+  /* Categorical data: surface / surface-2 / surface-inset contrast ratios.
+     All pairs must stay >= 15 CIE76 apart: a product requirement, not WCAG.
+     Chips use surface-inset; every data ink there also clears 4.5:1 text. */
+  --color-data-1: #8aacf9; /* 7.76 / 7.18 / 6.50 */
+  --color-data-2: #5fbba0; /* 7.55 / 6.99 / 6.32 */
+  --color-data-3: #e0a32e; /* 7.84 / 7.25 / 6.56 */
+  --color-data-4: #c49af0; /* 7.66 / 7.08 / 6.41 */
+  --color-data-5: #f0776a; /* 6.27 / 5.80 / 5.25 */
+  --color-data-6: #56c4d8; /* 8.53 / 7.89 / 7.14 */
+  --color-data-7: #ef8cc4; /* 7.65 / 7.07 / 6.40 */
+  --color-data-8: #adaba3; /* 7.58 / 7.01 / 6.34 */
 
   --color-inverse: #16221d;
   --color-inverse-on: #f8f7f4;
@@ -774,6 +810,9 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+  /* The shell's side gutter: 16 / 24 / 32px at the base, `sm` and `lg`. `gutter-x`
+     (styles.css) lifts it to the safe-area inset where the inset is larger. */
+  --gutter-x: 1rem;
 
   /* ------------------------------------------------ ink on a chosen colour
      A traveller's own colour, a category's colour and a map pin's colour come
@@ -805,4 +844,15 @@
    changes under the offsets composing it. */
 [data-impersonated] {
   --impersonation-h: 3.5rem; /* 56px */
+}
+
+@media (width >= 40rem) {
+  :root {
+    --gutter-x: 1.5rem;
+  }
+}
+@media (width >= 64rem) {
+  :root {
+    --gutter-x: 2rem;
+  }
 }

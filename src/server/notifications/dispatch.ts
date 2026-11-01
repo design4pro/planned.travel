@@ -302,9 +302,9 @@ function chunk<T>(items: ReadonlyArray<T>, size: number): Array<Array<T>> {
  * Deterministic and *per person*: a redelivery sends one message to one person. The obvious
  * alternative — one envelope carrying the whole recipient list, which `emailPayloadSchema.to`
  * would allow — is wrong twice over. `handleEmail` posts `to` as a single provider message, so
- * fifty travellers would each read the other forty-nine addresses; and its provider idempotency
- * key is built from `to.join(',')`, so adding one recipient changes the key and re-sends to
- * everybody already served.
+ * fifty travellers would each read the other forty-nine addresses; and a shared envelope would
+ * have to be re-keyed whenever the recipient list changed, which re-sends to everybody already
+ * served. The provider idempotency key is this id, so it stays stable across redeliveries.
  */
 export function notificationTaskId(
   kind: string,

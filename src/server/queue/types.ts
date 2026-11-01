@@ -96,7 +96,7 @@ export const pdfExportPayloadSchema = z.object({
   tripId: z.string().min(1).max(64),
   requestedBy: z.string().min(1).max(64),
   document: exportDocumentSchema,
-  /** Notify this address when the artifact is ready. */
+  /** Notify when ready; the producer sets this address from the session, never from client input. */
   notify: z.string().email().optional(),
   /**
    * The requester's language, for the document shell and the "ready" email.
@@ -243,8 +243,8 @@ export type TripPurgePayload = z.infer<typeof tripPurgePayloadSchema>
  * only copy rows its own tenant already holds.
  *
  * `requestedBy` is who receives the completion notification, and whose membership the handler
- * re-reads — a requester who has left the workspace by the time the message lands is a permanent
- * failure, not a copy made on their behalf.
+ * re-reads — a requester who has left the workspace by the time the message lands is an abandoned
+ * task, not a copy made on their behalf.
  *
  * The envelope's own id is deterministic on the **target** id, which the producer has just minted
  * and which cannot repeat: a redelivery is one job, and a second Copy on the same source is a
@@ -596,6 +596,31 @@ export class TaskPermanentError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
     super(message, options)
     this.name = 'TaskPermanentError'
+  }
+}
+
+/**
+ * Why a task was dropped without being a failure. A code, never prose, so a log line stays free of content.
+ * `trip-gone` also covers a trip the requester can no longer read: to them it is gone.
+ */
+export type TaskAbandonedReason = 'requester-left' | 'trip-gone'
+
+/**
+ * A task whose premise ended before it ran: the requester left the workspace or the trip was
+ * deleted. Retrying cannot help, and it is not a fault either, so the consumer acks it without a
+ * dead letter. A subclass of {@link TaskPermanentError} so anything that asks `isPermanentFailure`
+ * still sees a permanent outcome.
+ */
+export class TaskAbandonedError extends TaskPermanentError {
+  readonly reason: TaskAbandonedReason
+  constructor(
+    reason: TaskAbandonedReason,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options)
+    this.name = 'TaskAbandonedError'
+    this.reason = reason
   }
 }
 

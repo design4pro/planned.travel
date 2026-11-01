@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Эта поездка в архиве. Совместная работа доступна только для чтения.',
+  'collab.readOnly.role':
+    'Только владельцы и редакторы поездки могут изменять беседу, заметки и опросы.',
   'notFound.title': 'Не можем найти эту поездку',
   'notFound.body':
     'Её нет среди поездок, которые вы можете открыть в текущем рабочем пространстве. Возможно, она удалена или у вас нет к ней доступа.',
@@ -173,7 +177,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
   'plan.addPlace.quota':
     'Вы достигли лимита мест в вашем тарифе. Перейдите на более высокий тариф, чтобы добавить ещё.',
-  'plan.addPlace.quotaAction': 'Посмотреть тарифы',
+  'plan.addPlace.quotaAction': 'Посмотреть тарифы (откроется в новой вкладке)',
   'plan.stay.checkIn': 'Заезд',
   'plan.stay.checkOut': 'Выезд',
   'plan.day.addStay': 'Добавить проживание, {day}',
@@ -326,6 +330,8 @@ const messages = {
   'book.pinnedCaption': 'Закреплено за днём маршрута',
   'book.readOnly.archived':
     'Эта поездка в архиве, поэтому бронирования и проживание доступны только для чтения. Восстановите поездку, чтобы их изменить.',
+  'book.readOnly.role':
+    'Вы можете просматривать эти бронирования и проживание. Изменять их могут только владелец поездки и редакторы.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Это изменение отклонено. Проверьте текущее состояние поездки перед дальнейшими изменениями.',
@@ -333,6 +339,8 @@ const messages = {
     'Не удалось обновить поездку. Повторите попытку перед внесением изменений.',
   'transports.readOnly.archived':
     'Эта поездка в архиве. Восстановите её, чтобы изменить транспорт.',
+  'transports.readOnly.role':
+    'Вы можете просматривать этот транспорт. Изменять его могут только владелец поездки и редакторы.',
   'transports.title': 'Переезды',
   'transports.empty': 'Пока ничего не записано',
   'transports.count.transports': {
@@ -433,9 +441,9 @@ const messages = {
     'В поездке может быть не больше {limit} гостей: длинный список затрудняет выбор участников и чтение разделения расходов',
   'people.error.guestMergeTarget': 'Выберите того, кто уже участвует в поездке',
   'plan.weather.badge.forecast':
-    'Прогноз: {condition}, максимум {max}, минимум {min}',
+    'Прогноз: {figures}, {condition} (максимум {max}, минимум {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Прогноз: максимум {max}, минимум {min}',
+    'Прогноз: {figures} (максимум {max}, минимум {min})',
   'plan.weather.badge.unavailable': 'Погода на этот день недоступна',
   'plan.weather.badge.loading': 'Загрузка погоды',
   'plan.weather.badge.recorded': 'Зафиксировано: максимум {max}, минимум {min}',
@@ -475,6 +483,8 @@ const messages = {
   'plan.weather.panel.low': 'Минимум',
   'plan.weather.panel.recordedNote': 'Измеренные значения за этот день.',
   'plan.weather.panel.temperatureTypical': 'Типичные макс. / мин.',
+  'plan.weather.panel.typicalHigh': 'Типичный максимум',
+  'plan.weather.panel.typicalLow': 'Типичный минимум',
   'plan.weather.panel.estimateNote':
     'Многолетнее среднее за этот месяц, а не прогноз.',
   'plan.weather.attribution.metNorway':

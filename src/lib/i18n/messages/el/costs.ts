@@ -62,7 +62,12 @@ const messages = {
   'split.nobody': 'Κανείς',
   'split.departed': 'Έφυγε από το ταξίδι',
   'split.departedHint':
-    'Αν αποεπιλέξετε κάποιον που έφυγε από το ταξίδι, το μερίδιό του αφαιρείται οριστικά.',
+    'Μόλις αποθηκεύσετε, το μερίδιο όποιου έφυγε από το ταξίδι και έχει αποεπιλεγεί αφαιρείται οριστικά.',
+  'split.removedNumbered': 'Ταξιδιώτης που αφαιρέθηκε {number}',
+  'split.includeRemoved':
+    'Συμπερίληψη του ταξιδιώτη που αφαιρέθηκε σε αυτόν τον επιμερισμό',
+  'split.includeRemovedNumbered':
+    'Συμπερίληψη του ταξιδιώτη που αφαιρέθηκε {number} σε αυτόν τον επιμερισμό',
   'split.includeFor': 'Συμπερίληψη του {name} σε αυτόν τον διαχωρισμό',
   'split.how': 'Πώς μοιράζεται αυτό το έξοδο',
   'split.method.equal': 'Ισόποσα',
@@ -177,7 +182,7 @@ const messages = {
     one: '{others} ακόμη ταξιδιώτης',
     other: '{others} ακόμη ταξιδιώτες',
   },
-  'memberBar.notSplit': 'Δεν έχει ανατεθεί σε κανέναν',
+  'memberBar.notSplit': 'Δεν έχει μοιραστεί σε κανέναν',
   'totalTile.label': 'Συνολικά έξοδα ταξιδιού',
   'totalTile.captionPlanned':
     'Προγραμματισμένα {amount} για όλους τους ταξιδιώτες',
@@ -325,6 +330,14 @@ const messages = {
     one: 'Γράφτηκε {expenses} έξοδο στο CSV.',
     other: 'Γράφτηκαν {expenses} έξοδα στο CSV.',
   },
+  'export.csv.title': 'Τίτλος',
+  'export.csv.category': 'Κατηγορία',
+  'export.csv.originalAmount': 'Αρχικό ποσό',
+  'export.csv.originalCurrency': 'Αρχικό νόμισμα',
+  'export.csv.rate': 'Ισοτιμία',
+  'export.csv.splitMethod': 'Τρόπος διαίρεσης',
+  'export.csv.notes': 'Σημειώσεις',
+  'export.csv.amountIn': 'Ποσό σε {currency}',
   'list.daySpent': 'δαπανήθηκαν {amount}',
   'skeleton.loading': 'Φόρτωση των εξόδων',
   'row.noPayer': 'Χωρίς πληρωτή ακόμη',

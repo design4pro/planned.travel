@@ -2892,8 +2892,8 @@ six `POST` writes:
 
 `loadTripPeople` returns the invitable set **already filtered** to workspace members who are not yet
 on the trip, so the client never receives a directory it then has to subtract from, plus the trip's
-`visibility` and the caller's role. `setTripVisibilityFn` writes through `updateTrip`, whose
-`assertTripRole` is `owner` (decision 6); `'public'` is not accepted here — it is the share plan's
+`visibility` and the caller's role. `setTripVisibilityFn` writes through `setTripVisibility` (it was `updateTrip` until #1040, which refuses an
+archived trip), whose `assertTripRole` is `owner` (decision 6); `'public'` is not accepted here — it is the share plan's
 value and this switch has two positions.
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; `z.enum(TRIP_MEMBER_ROLES)` for the role,
@@ -3113,6 +3113,9 @@ outside the workspace has to travel before they can be put on a trip. No package
 `01-S7` · Wave 5 · effort **M**. Scheduled behind `01-S6` rather than in wave 2; the Area brief argues
 why, and the argument is that the card grows two membership-fed affordances and should be designed
 once.
+
+> Superseded in part: the people count this stage describes as `countTripPeople` is now read by
+> `readTripCardFacts` (`src/server/repos/trip-cards.ts`), and `countTripPeople` no longer exists.
 
 ### Reference rows
 

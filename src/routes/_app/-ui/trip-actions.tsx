@@ -70,6 +70,7 @@ import {
 } from '#/components/modules/shared'
 import { uploadFile } from '#/components/modules/files/upload'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { inclusiveDays } from '#/lib/trip-dates'
 import { formatNumber } from '../-lib/format'
@@ -133,6 +134,14 @@ export function TripEditSheet({
       failureRef.current?.focus()
     }
   }, [coverFailure])
+  const errorRef = useRef<HTMLDivElement>(null)
+  // The re-read after a refusal can take the owner role away while Save or Retry holds focus; both
+  // go (disabled, hidden), so focus moves to the refusal that explains it.
+  useEffect(() => {
+    if (!isOwner) {
+      errorRef.current?.focus()
+    }
+  }, [isOwner])
   /** A file already stored whose cover write failed, so a retry does not upload it twice. */
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
@@ -188,6 +197,10 @@ export function TripEditSheet({
   }
 
   async function submit({ skipCover = false } = {}): Promise<void> {
+    // A refused save re-read the role; a sheet that outlived it must not write with it.
+    if (!isOwner) {
+      return
+    }
     setSaving(true)
     setError(null)
     setCoverFailure(null)
@@ -220,6 +233,16 @@ export function TripEditSheet({
           ? t(refusal, { current: trip.currency })
           : messageOf(cause, t('shell.editTrip.error')),
       )
+      // Any other refusal may mean the reader's role changed under this sheet: read the trip again
+      // so `trip.role` follows. The currency refusal has its own message, and any other failure
+      // keeps the trip it has.
+      if (refusal === null && readPublicFailure(cause).kind === 'refusal') {
+        try {
+          await router.invalidate()
+        } catch {
+          // The refusal is already on screen; a failed re-read must not replace it.
+        }
+      }
     } finally {
       setSaving(false)
     }
@@ -257,34 +280,12 @@ export function TripEditSheet({
             }}
           >
             {error === null ? null : (
-              <Alert
-                tone="danger"
-                title={t('shell.editTrip.errorTitle')}
-                actions={
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    shape="pill"
-                    onClick={() => {
-                      if (form.canSave) void submit()
-                    }}
-                  >
-                    {t('shell.editTrip.retry')}
-                  </Button>
-                }
-              >
-                {error}
-              </Alert>
-            )}
-
-            {coverFailure === null ? null : (
-              <div ref={failureRef} tabIndex={-1} className="outline-none">
+              <div ref={errorRef} tabIndex={-1} className="outline-none">
                 <Alert
-                  tone="warning"
-                  title={t('shell.newTrip.coverFailedTitle')}
+                  tone="danger"
+                  title={t('shell.editTrip.errorTitle')}
                   actions={
-                    <>
+                    isOwner ? (
                       <Button
                         type="button"
                         variant="secondary"
@@ -296,18 +297,46 @@ export function TripEditSheet({
                       >
                         {t('shell.editTrip.retry')}
                       </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        shape="pill"
-                        onClick={() => {
-                          if (form.canSave) void submit({ skipCover: true })
-                        }}
-                      >
-                        {t('shell.editTrip.coverContinue')}
-                      </Button>
-                    </>
+                    ) : undefined
+                  }
+                >
+                  {error}
+                </Alert>
+              </div>
+            )}
+
+            {coverFailure === null ? null : (
+              <div ref={failureRef} tabIndex={-1} className="outline-none">
+                <Alert
+                  tone="warning"
+                  title={t('shell.newTrip.coverFailedTitle')}
+                  actions={
+                    isOwner ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          shape="pill"
+                          onClick={() => {
+                            if (form.canSave) void submit()
+                          }}
+                        >
+                          {t('shell.editTrip.retry')}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          shape="pill"
+                          onClick={() => {
+                            if (form.canSave) void submit({ skipCover: true })
+                          }}
+                        >
+                          {t('shell.editTrip.coverContinue')}
+                        </Button>
+                      </>
+                    ) : undefined
                   }
                 >
                   {t('shell.editTrip.coverFailed', { name: coverFailure.name })}
@@ -346,7 +375,7 @@ export function TripEditSheet({
             form={`trip-edit-${trip.id}`}
             variant="primary"
             shape="pill"
-            disabled={!form.canSave}
+            disabled={!form.canSave || !isOwner}
             loading={saving}
             loadingLabel={t('shell.editTrip.saving')}
           >
@@ -729,6 +758,13 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
             </DropdownMenuLabel>
           ) : null}
 
+          {/* Edit is off on an archived trip, whose details the repository refuses to write (#1040). */}
+          {trip.isArchived && trip.role === 'owner' && !trip.copyPending ? (
+            <DropdownMenuLabel>
+              {t('shell.trips.card.archivedReason')}
+            </DropdownMenuLabel>
+          ) : null}
+
           {/*
             Copy is first and is offered to every reader, because every reader may copy (PRD #104
             decision 6) — so it is the first of a viewer's two items rather than an owner's
@@ -762,7 +798,7 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
               <DropdownMenuItem
                 icon={<Pencil />}
                 onSelect={() => setEditing(true)}
-                disabled={frozen}
+                disabled={frozen || trip.isArchived}
               >
                 {t('shell.tripActions.edit')}
               </DropdownMenuItem>

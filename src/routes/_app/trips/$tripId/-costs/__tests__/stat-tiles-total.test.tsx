@@ -4,10 +4,12 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { totalsFor } from '#/components/costs'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Ar from '#/lib/i18n/messages/ar/costs'
 import De from '#/lib/i18n/messages/de/costs'
 import En from '#/lib/i18n/messages/en/costs'
 import { StatTiles } from '../stat-tiles'
 
+import type { ComponentProps } from 'react'
 import type { Catalogue, Locale } from '#/lib/i18n'
 import type { CostsSnapshot } from '#/components/costs'
 import type { CostsExpense, CostsPerson } from '#/server/fns/costs'
@@ -72,13 +74,20 @@ function snapshotOf(expenses: ReadonlyArray<CostsExpense>): CostsSnapshot {
   }
 }
 
-function mount(locale: Locale, messages: Catalogue, snapshot: CostsSnapshot) {
+function mount(
+  locale: Locale,
+  messages: Catalogue,
+  snapshot: CostsSnapshot,
+  departedPeople: ComponentProps<typeof StatTiles>['departedPeople'] = [],
+  people: ReadonlyArray<CostsPerson> = PEOPLE,
+) {
   return render(
     <I18nProvider locale={locale} messages={messages}>
       <StatTiles
         snapshot={snapshot}
         totals={totalsFor(snapshot, 'u-me')}
-        people={PEOPLE}
+        people={people}
+        departedPeople={departedPeople}
         viewerUserId="u-me"
         currency="EUR"
         budgetTargetMinor={null}
@@ -109,6 +118,98 @@ describe('the "Total trip spend" tile', () => {
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['You, 40%', 'Mika, 40%', 'Removed traveller, 20%'])
+  })
+
+  it('names a departed traveller by name, and the catalogue only when the workspace has none', () => {
+    mount('en', namespaceCatalogue('costs', En), snapshot, [
+      { userId: 'u-gone', name: 'Gil', image: null },
+    ])
+
+    const list = screen.getByRole('list', { name: 'Who it was spent on' })
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['You, 40%', 'Mika, 40%', 'Gil, 20%'])
+  })
+
+  it('words a departed traveller with no name from the reader’s own locale', () => {
+    mount('de', namespaceCatalogue('costs', De), snapshot, [
+      { userId: 'u-gone', name: null, image: null },
+    ])
+
+    const list = screen.getByRole('list', { name: De['memberBar.label'] })
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toContainEqual(expect.stringContaining(De['person.removed']))
+  })
+
+  describe('a trip member whose workspace profile is gone (#1212)', () => {
+    // The server names them in English and sets `leftWorkspace`; the tile words them itself.
+    const gone = (userId: string): CostsPerson => ({
+      userId,
+      name: 'Removed traveller',
+      email: '',
+      image: null,
+      role: 'member',
+      leftWorkspace: true,
+    })
+    const rows = (label: string): Array<string | null> =>
+      within(screen.getByRole('list', { name: label }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent)
+
+    it('is named from the reader’s locale, not the server’s English', () => {
+      mount(
+        'ar',
+        namespaceCatalogue('costs', Ar),
+        snapshotOf([
+          expense(
+            [
+              ['u-me', 8_000],
+              ['u-gone', 2_000],
+            ],
+            10_000,
+          ),
+        ]),
+        [],
+        [...PEOPLE, gone('u-gone')],
+      )
+
+      expect(rows(Ar['memberBar.label']).join(' ')).toContain(
+        Ar['person.removed'],
+      )
+      expect(rows(Ar['memberBar.label']).join(' ')).not.toContain(
+        'Removed traveller',
+      )
+    })
+
+    it('stays one row per person when two of them are gone', () => {
+      mount(
+        'en',
+        namespaceCatalogue('costs', En),
+        snapshotOf([
+          expense(
+            [
+              ['u-me', 5_000],
+              ['u-gone-a', 3_000],
+              ['u-gone-b', 2_000],
+            ],
+            10_000,
+          ),
+        ]),
+        [],
+        [...PEOPLE, gone('u-gone-a'), gone('u-gone-b')],
+      )
+
+      expect(rows(En['memberBar.label'])).toEqual([
+        'You, 50%',
+        'Removed traveller, 30%',
+        'Removed traveller, 20%',
+      ])
+    })
   })
 
   it('renders its label, caption and figures from the catalogue', () => {

@@ -29,6 +29,7 @@ import {
   downloadCsv,
   expensesCsv,
   filterExpenses,
+  findPerson,
   formatDayShort,
   isFiltered,
   totalsFor,
@@ -152,7 +153,7 @@ export function CostsScreen({
     const who = paymentWho(
       row,
       (userId) =>
-        data.people.find((person) => person.userId === userId)?.name ??
+        findPerson(data.people, data.departedPeople, userId)?.name ??
         t('costs.person.removed'),
       data.viewerUserId,
       t,
@@ -198,8 +199,9 @@ export function CostsScreen({
         filters,
         data.people,
         data.viewerUserId,
+        t('costs.person.removed'),
       ),
-    [snapshot.expenses, filters, data.people, data.viewerUserId],
+    [snapshot.expenses, filters, data.people, data.viewerUserId, t],
   )
 
   const visibleMinor = visible.reduce(
@@ -303,6 +305,7 @@ export function CostsScreen({
         people: data.people,
         viewerUserId: data.viewerUserId,
         display: data.displayCurrency,
+        t,
       }),
     )
     toast.success(t('costs.export.ready.title'), {
@@ -477,6 +480,7 @@ export function CostsScreen({
           snapshot={snapshot}
           totals={totals}
           people={data.people}
+          departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
           currency={data.currency}
           budgetTargetMinor={data.budgetTargetMinor}
@@ -549,6 +553,7 @@ export function CostsScreen({
               <ExpenseList
                 rows={visible}
                 people={data.people}
+                departedPeople={data.departedPeople}
                 viewerUserId={data.viewerUserId}
                 currency={data.currency}
                 display={data.displayCurrency}
@@ -563,6 +568,7 @@ export function CostsScreen({
           <CostsRail
             snapshot={snapshot}
             people={data.people}
+            departedPeople={data.departedPeople}
             viewerUserId={data.viewerUserId}
             currency={data.currency}
             display={data.displayCurrency}
@@ -622,6 +628,7 @@ export function CostsScreen({
           onOpenChange={setOpen}
           currency={session.currency}
           people={data.people}
+          departedPeople={data.departedPeople}
           loadPreview={(request) =>
             previewCurrencyChangeFn({
               data: { tripId: data.tripId, ...request },
@@ -653,7 +660,7 @@ export function CostsScreen({
           currency={data.currency}
           affects={[session.row.fromUserId, session.row.toUserId].map(
             (userId) =>
-              data.people.find((person) => person.userId === userId)?.name ??
+              findPerson(data.people, data.departedPeople, userId)?.name ??
               t('costs.person.removedTarget'),
           )}
           onConfirm={() => removePayment(session.row)}
@@ -681,7 +688,7 @@ export function CostsScreen({
           currency={data.currency}
           affects={session.row.shares.map(
             (share) =>
-              data.people.find((person) => person.userId === share.userId)
+              findPerson(data.people, data.departedPeople, share.userId)
                 ?.name ?? t('costs.person.removedTarget'),
           )}
           onConfirm={() => removeExpense(session.row)}

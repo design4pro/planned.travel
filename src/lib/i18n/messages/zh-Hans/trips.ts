@@ -14,6 +14,8 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived': '此旅行已归档。协作内容仅供阅读。',
+  'collab.readOnly.role': '只有旅行所有者和编辑者可以更改对话、笔记和投票。',
   'notFound.title': '找不到此行程',
   'notFound.body':
     '此行程不在你当前工作空间可打开的行程中。它可能已被删除，或者你没有访问权限。',
@@ -156,7 +158,7 @@ const messages = {
   'plan.addPlace.forDayNamed': '添加地点——{day}',
   'plan.addPlace.quota':
     '你已达到当前套餐的地点数量上限。升级套餐即可添加更多。',
-  'plan.addPlace.quotaAction': '查看套餐',
+  'plan.addPlace.quotaAction': '查看套餐（在新标签页中打开）',
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '添加住宿——{day}',
@@ -286,12 +288,16 @@ const messages = {
   'book.pinnedCaption': '已固定到行程中的某一天',
   'book.readOnly.archived':
     '此行程已归档，因此预订和住宿为只读。恢复该行程后才能更改。',
+  'book.readOnly.role':
+    '你可以查看这些预订和住宿。只有行程的所有者和编辑者可以更改。',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     '此更改已被拒绝。继续更改前，请查看行程的当前状态。',
   'transports.recovery.failed': '无法刷新行程。请重试后再进行更改。',
   'transports.readOnly.archived':
     '此行程已归档。请先恢复行程，再修改交通安排。',
+  'transports.readOnly.role':
+    '你可以查看这些交通安排。只有行程的所有者和编辑者可以更改。',
   'transports.title': '交通',
   'transports.empty': '尚未记录',
   'transports.count.transports': {
@@ -372,8 +378,10 @@ const messages = {
   'people.error.guestLimit':
     '一次旅行最多 {limit} 位访客，因为名单更长会让参与者选择和费用分摊难以阅读',
   'people.error.guestMergeTarget': '请选择已在本次旅行中的人',
-  'plan.weather.badge.forecast': '预报：{condition}，最高 {max}，最低 {min}',
-  'plan.weather.badge.forecastNoCondition': '预报：最高 {max}，最低 {min}',
+  'plan.weather.badge.forecast':
+    '预报：{figures}，{condition}（最高 {max}，最低 {min}）',
+  'plan.weather.badge.forecastNoCondition':
+    '预报：{figures}（最高 {max}，最低 {min}）',
   'plan.weather.badge.unavailable': '这一天的天气暂不可用',
   'plan.weather.badge.loading': '正在加载天气',
   'plan.weather.badge.recorded': '实测：最高 {max}， 最低 {min}',
@@ -412,6 +420,8 @@ const messages = {
   'plan.weather.panel.low': '最低',
   'plan.weather.panel.recordedNote': '这一天的实测数值。',
   'plan.weather.panel.temperatureTypical': '常年最高 / 最低',
+  'plan.weather.panel.typicalHigh': '常年最高',
+  'plan.weather.panel.typicalLow': '常年最低',
   'plan.weather.panel.estimateNote': '本月的长期平均值，并非预报。',
   'plan.weather.attribution.metNorway': '预报数据：MET Norway，CC BY 4.0',
   'plan.weather.attribution.nasaPower':

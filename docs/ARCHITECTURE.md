@@ -138,7 +138,10 @@ slices that matter.
 - **Queue producer** → `src/server/queue/jobs.ts` writes a validated, idempotency-keyed
   envelope to `TASKS`; the consumer batches 10 messages with a 5 s timeout, 5 retries and a
   10 s retry delay, and records a terminal failure itself — a summary in `KV` under
-  `task:dead:`, the full body in `FILES` under `dead-letter/` — before acking the message.
+  `task:dead:`, the full body in `FILES` under `dead-letter/` — before acking the message. An
+  expected refusal (a trip export or copy whose requester has left the workspace, or whose trip
+  is gone) is the exception: it is acked as abandoned with one `info` line of ids and a reason
+  code, and writes neither, because the envelope holds the whole trip.
   `planned-travel-tasks-dlq` is named on the consumer as a backstop for a Worker that dies
   before settling a message, so it stays empty in normal operation and is not the signal.
 - **Billing webhook** → `/api/polar/webhook`, mounted at `src/routes/api/polar/webhook.ts`.
@@ -207,7 +210,8 @@ slices that matter.
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
 entry rule. These are architectural paths; some surfaces remain planned. Bounded
 `…Unscoped` repo functions take a plain `Database` only under SPEC §5 FU-3; this does not add
-another catalog member.
+another catalog member. Better Auth's own tables reached through its adapter (the passkey plugin's
+user-keyed `passkey` table) are not application SQL and not a fourth path (SPEC §6).
 
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
   `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three

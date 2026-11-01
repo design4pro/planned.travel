@@ -754,7 +754,8 @@ export function isCurrencyNotNullFailure(cause: unknown): boolean {
  * form was filled in under. A tab loaded before an owner re-based the trip (`./trip-currency`)
  * would otherwise save its typed digits into the new currency as if they were already in it. The
  * check reads the trip the writer has just resolved, so it costs no query; a caller that says
- * nothing (booking sync, the seed) is not checked. Nothing has been written when this throws.
+ * nothing (booking sync, the seed) is not checked. Nothing has been written when this throws. The
+ * booking and stay writers (`fns/reservations.ts`, `fns/stay-writes.ts`) call it too.
  */
 export function assertExpectedTripCurrency(
   trip: Pick<Trip, 'currency'>,
@@ -1076,6 +1077,12 @@ export async function createTrip(
  * A trip's metadata is its owner's (PRD #104 decision 6): moving the dates moves every member's day
  * run, so an editor — who owns the plan's *content* — is refused here.
  *
+ * **An archived trip refuses the whole patch** with a {@link TripArchivedError}, before anything is
+ * read or written (#1040): a date move deletes days, and a save that moves no date still repairs a
+ * day run that disagrees with the dates, so freezing only the dates would leave the day-run
+ * synchronisation reachable. The owner restores the trip first. Who can see the trip is the one
+ * detail that stays open, through {@link setTripVisibility}.
+ *
  * **The budget currency is the one field that is not simply patched.** A different currency is
  * applied only while nothing on the trip is priced - relabelling a trip that has money in it would
  * keep every figure and change what it is in - and is refused with a {@link CurrencyRefusalError},
@@ -1088,6 +1095,9 @@ export async function updateTrip(
   input: UpdateTripInput,
 ): Promise<Trip> {
   const existing = await requireOwnedTrip(scope, tripId)
+  if (existing.isArchived) {
+    throw new TripArchivedError()
+  }
   const { currency, ...values } = definedOnly(updateTripInput.parse(input))
 
   // A tab on the previous bundle sends the currency on every save, so only a *different* one is a
@@ -1097,9 +1107,6 @@ export async function updateTrip(
   // which is why the current sheet sends the currency only when the reader changed it.
   const currencyChanged =
     currency !== undefined && currency !== existing.currency
-  if (currencyChanged && existing.isArchived) {
-    throw new TripArchivedError()
-  }
 
   const startDate =
     values.startDate === undefined ? existing.startDate : values.startDate
@@ -1130,6 +1137,23 @@ export async function updateTrip(
   }
 
   return trip
+}
+
+/**
+ * Decides who can find the trip. Owner only, and open on an archived trip.
+ *
+ * Its own writer rather than `updateTrip` because that one refuses an archived trip: visibility
+ * decides who may see the record, not what the record says, and making the owner restore a trip to
+ * withdraw a share would put friction on a privacy action. Built like {@link archiveTrip}: the owner
+ * guard, then one column.
+ */
+export async function setTripVisibility(
+  scope: TenantScope,
+  tripId: string,
+  visibility: Trip['visibility'],
+): Promise<Trip> {
+  await requireOwnedTrip(scope, tripId)
+  return tripsRepository.requireUpdate(scope, tripId, { visibility })
 }
 
 /**
@@ -2169,9 +2193,12 @@ export async function tripRoleFor(
  * person with (`src/routes/api/trip-room/-lib/connect.ts`), so widening it widens who may patch the
  * room. The room reads it once, at connect: the writes that change a role, remove a member or archive
  * the trip close the sockets they affect, so the next connect applies this rule again
- * (`closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`). A missed close or an in-flight
- * connect retains the old role for at most the maximum socket age plus the alarm interval
- * (15 + 5 minutes, about 20 minutes). Refusing a connect minted before revocation is #1085.
+ * (`evictionsFor` in `src/server/fns/-lib/trip-access-change.ts` names them; the closes are
+ * `closeRoomFor` and `closeRoom` in `src/server/fns/context.ts`). A connect already in flight when
+ * the close lands is refused by the room, which remembers the close as a revocation watermark and
+ * compares it with the `issuedAt` the connect handler stamped before it read the role (#1085). A
+ * close that never reached the room retains the old role for at most the maximum socket age plus the
+ * alarm interval (15 + 5 minutes, about 20 minutes).
  */
 export function canWritePlan(
   trip: Pick<Trip, 'isArchived'>,

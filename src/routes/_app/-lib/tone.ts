@@ -131,8 +131,9 @@ export function transportIcon(mode: string): LucideIcon {
  * An expense row has no image to carry it, so the leading chip is the only thing
  * that tells a reader what kind of spend they are looking at before they read the
  * words. One shared glyph for every category is worse than none: a bank fee drawn
- * with a fork and knife is actively misleading. Every tint pairs a `-soft` ground
- * with its own hue as ink, which the token set holds at 5.3–5.6:1.
+ * with a fork and knife is actively misleading. Each category has its own data
+ * hue on the existing inset ground, with at least 4.5:1 contrast in both themes
+ * for text and icons.
  */
 export const EXPENSE_CATEGORY_ICON: Record<string, LucideIcon> = {
   accommodation: BedDouble,
@@ -146,14 +147,14 @@ export const EXPENSE_CATEGORY_ICON: Record<string, LucideIcon> = {
 }
 
 export const EXPENSE_CATEGORY_TINT: Record<string, string> = {
-  accommodation: 'bg-info-soft text-info',
-  transport: 'bg-brand-subtle text-brand',
-  food: 'bg-warning-soft text-warning',
-  activities: 'bg-success-soft text-success',
-  shopping: 'bg-danger-soft text-danger',
-  fees: 'bg-surface-inset text-ink-3',
-  insurance: 'bg-info-soft text-info',
-  other: 'bg-surface-inset text-ink-3',
+  accommodation: 'bg-surface-inset text-data-1',
+  transport: 'bg-surface-inset text-data-2',
+  food: 'bg-surface-inset text-data-3',
+  activities: 'bg-surface-inset text-data-4',
+  shopping: 'bg-surface-inset text-data-5',
+  fees: 'bg-surface-inset text-data-6',
+  insurance: 'bg-surface-inset text-data-7',
+  other: 'bg-surface-inset text-data-8',
 }
 
 export function expenseIcon(category: string): LucideIcon {
@@ -161,21 +162,9 @@ export function expenseIcon(category: string): LucideIcon {
 }
 
 export function expenseTint(category: string): string {
-  return EXPENSE_CATEGORY_TINT[category] ?? 'bg-surface-inset text-ink-3'
-}
-
-/** Ordered swatch classes for category and label chips, so colours stay stable. */
-export const CATEGORY_SWATCHES: ReadonlyArray<string> = [
-  'bg-brand',
-  'bg-info',
-  'bg-warning',
-  'bg-success',
-  'bg-danger',
-  'bg-ink-3',
-]
-
-export function swatchFor(index: number): string {
-  return CATEGORY_SWATCHES[index % CATEGORY_SWATCHES.length] ?? 'bg-ink-3'
+  return Object.hasOwn(EXPENSE_CATEGORY_TINT, category)
+    ? EXPENSE_CATEGORY_TINT[category]
+    : EXPENSE_CATEGORY_TINT.other
 }
 
 /* ------------------------------------------------------- ink on a data colour */

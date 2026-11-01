@@ -1097,15 +1097,20 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - generat el {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'A punt: {title}',
+  'files.export.email.subject': 'Exportació preparada: {title}',
   'files.export.email.body': {
-    one: 'L’exportació del viatge és a punt. Es conserva durant {count} dia.',
-    many: 'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+    one: 'La teva exportació de {title} està preparada. Es conserva durant {count} dia.',
+    many: 'La teva exportació de {title} està preparada. Es conserva durant {count} dies.',
     other:
-      'L’exportació del viatge és a punt. Es conserva durant {count} dies.',
+      'La teva exportació de {title} està preparada. Es conserva durant {count} dies.',
   },
-  'files.export.email.action': 'Obre {title}',
-  'files.export.email.text': 'L’exportació del viatge és a punt: {url}',
+  'files.export.email.action': 'Ves a l’exportació',
+  'files.export.email.text': '{body}\n\n{limit}\n\nVes a l’exportació: {url}',
+  'files.export.limit': {
+    one: 'Un viatge conserva la seva {count} exportació més recent.',
+    many: 'Un viatge conserva les seves {count} exportacions més recents.',
+    other: 'Un viatge conserva les seves {count} exportacions més recents.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Exporta el viatge',
@@ -1415,6 +1420,12 @@ const messages = {
   'files.readOnly.title': 'Fitxers de només lectura',
   'files.readOnly.role':
     'Només els propietaris i editors del viatge poden pujar, reanomenar o suprimir fitxers. Encara els pots baixar.',
+  'files.readOnly.archived':
+    'Aquest viatge està arxivat, així que els fitxers són només de lectura. Encara els pots baixar. Restaura el viatge per canviar-los.',
+  'lists.readOnly.role':
+    'Pots veure aquestes llistes. Només el propietari del viatge i qui pot editar les poden canviar.',
+  'lists.readOnly.archived':
+    'Aquest viatge està arxivat, així que les llistes són només de lectura. Restaura el viatge per canviar-les.',
   'vacay.kind.vacation': 'Vacances',
   'vacay.kind.half_day': 'Mig dia de vacances',
   'vacay.kind.sick': 'Baixa mèdica',

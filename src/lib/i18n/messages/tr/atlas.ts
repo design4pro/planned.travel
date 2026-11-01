@@ -414,6 +414,19 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Bir seyahat, yıl: {last}',
   'panel.stat.streakNone': 'Seri başlatmak için tarihli bir seyahat ekle',
+  'visitEdit.edit': 'Ziyareti düzenle',
+  'visitEdit.note': 'Not',
+  'visitEdit.save': 'Ziyareti kaydet',
+  'visitEdit.cancel': 'İptal',
+  'visitEdit.loading': 'Ziyaret yükleniyor',
+  'visitEdit.saving': 'Ziyaret kaydediliyor',
+  'visitEdit.failed': 'Kayıt doğrulanamadı. Taslağın korundu; yeniden dene.',
+  'visitEdit.missing': 'Bu ziyaret artık mevcut değil. Ülkeyi yeniden aç.',
+  'visitEdit.noteInvalid': 'En fazla 2.000 karakter kullan.',
+  'visitEdit.bounds': 'İlk ziyaret son ziyaretten sonra olamaz.',
+  'visitEdit.future': 'Bugünü veya daha önceki bir tarihi seç.',
+  'visitEdit.dateInvalid': 'YYYY-AA-GG biçiminde gerçek bir tarih gir.',
+  'visitEdit.reload': 'Kaydedildi. Kaydı yeniden yükle',
 } satisfies TranslationOf<typeof En>
 
 export default messages

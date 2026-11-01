@@ -47,14 +47,15 @@ import {
   removeTripMember,
   renameTripGuest,
   requireTrip,
+  setTripVisibility,
   shortTextSchema,
   tripRoleFor,
-  updateTrip,
   updateTripMember,
 } from '#/server/repos'
 import { readTripInvite } from '#/server/repos/invites'
 import type { TripInviteView } from '#/server/repos/invites'
 import { orAbsent } from '#/server/fns/-lib/absence'
+import { settleTripAccessChange } from '#/server/fns/-lib/trip-access-change'
 import { appScope } from '../../../-server/context'
 
 import type { OrAbsent } from '#/lib/absence'
@@ -317,25 +318,6 @@ async function memberOnTrip(
 }
 
 /**
- * Closes a person's open sockets in the trip's room, so a role change, a removal or a leave reaches
- * a tab that is already open instead of waiting for it to reconnect (the room reads the role once,
- * at connect).
- *
- * Called only once the write has succeeded, with the trip and person from the rows the repository
- * resolved. The bridge is reached at call time for the reason `plan.ts` records at `mirrorDayOrder`:
- * `#/server/fns/context` imports `cloudflare:workers`, and this file is in the planner route's module
- * graph. A room that cannot be reached is logged inside the helper and never fails the write.
- */
-async function evictFromRoom(
-  scope: TenantScope,
-  tripId: string,
-  userId: string,
-): Promise<void> {
-  const { closeRoomFor } = await import('#/server/fns/context')
-  await closeRoomFor(scope, tripId, userId)
-}
-
-/**
  * Tells somebody they are on a trip.
  *
  * Caught, logged once, and the add still answers success: the membership row *is* the write, D1 has
@@ -405,6 +387,9 @@ export const addTripMemberFn = createServerFn({ method: 'POST' })
           userId: data.userId,
           role: data.role,
         })
+        // Straight after the write, so the actor-name read below cannot skip it: a workspace member
+        // watching an organization-visible trip holds a `viewer` socket that this add outdates.
+        await settleTripAccessChange(scope, { kind: 'member-added', member })
 
         await announceInvitation(
           scope,
@@ -438,9 +423,11 @@ export const setTripRoleFn = createServerFn({ method: 'POST' })
         const updated = await updateTripMember(scope, row.id, {
           role: data.role,
         })
-        if (updated.role !== row.role) {
-          await evictFromRoom(scope, updated.tripId, updated.userId)
-        }
+        await settleTripAccessChange(scope, {
+          kind: 'role-changed',
+          before: row,
+          after: updated,
+        })
         return { memberId: updated.id, role: data.role }
       })
     },
@@ -457,7 +444,10 @@ export const removeTripMemberFn = createServerFn({ method: 'POST' })
         const row = await memberOnTrip(scope, trip.id, data.memberId)
 
         await removeTripMember(scope, row.id)
-        await evictFromRoom(scope, trip.id, row.userId)
+        await settleTripAccessChange(scope, {
+          kind: 'member-removed',
+          member: row,
+        })
         await enqueueTripStatsFor(scope, trip, [row.userId])
 
         return { removed: true }
@@ -487,7 +477,10 @@ export const leaveTripFn = createServerFn({ method: 'POST' })
         }
 
         await removeTripMember(scope, row.id)
-        await evictFromRoom(scope, trip.id, row.userId)
+        await settleTripAccessChange(scope, {
+          kind: 'member-left',
+          member: row,
+        })
         await enqueueTripStatsFor(scope, trip, [row.userId])
 
         return { removed: true }
@@ -498,10 +491,11 @@ export const leaveTripFn = createServerFn({ method: 'POST' })
 /**
  * Decides who can find the trip.
  *
- * Written through `updateTrip`, whose `requireOwnedTrip` is the owner guard PRD #104 decision 6
- * asks for — there is no visibility writer of this module's own. It has no expected refusal, so it
- * keeps a plain return: a non-owner is `FORBIDDEN`, which is the generic failure, and the screen
- * shows no switch to them in the first place.
+ * Written through `setTripVisibility`, whose owner guard is the one PRD #104 decision 6 asks for.
+ * It is not `updateTrip`, which refuses an archived trip: who can see a trip is not what the record
+ * says, so the owner can still withdraw a share without restoring the trip first (#1040). It has no
+ * expected refusal, so it keeps a plain return: a non-owner is `FORBIDDEN`, which is the generic
+ * failure, and the screen shows no switch to them in the first place.
  */
 export const setTripVisibilityFn = createServerFn({ method: 'POST' })
   .validator(setTripVisibilityInput)
@@ -515,18 +509,12 @@ export const setTripVisibilityFn = createServerFn({ method: 'POST' })
       const scope = await appScope()
       // Read before the write: only the row as it stood knows whether this narrows the trip.
       const before = await requireTrip(scope, data.tripId)
-      const trip = await updateTrip(scope, data.tripId, {
-        visibility: data.visibility,
+      const trip = await setTripVisibility(scope, data.tripId, data.visibility)
+      await settleTripAccessChange(scope, {
+        kind: 'visibility-changed',
+        before,
+        after: trip,
       })
-      if (
-        visibilityOf(before) === 'organization' &&
-        visibilityOf(trip) === 'private'
-      ) {
-        // Workspace members who stop being able to read the trip were never on it, so the room
-        // cannot name them: every socket goes, and the members reconnect through the connect handler.
-        const { closeRoom } = await import('#/server/fns/context')
-        await closeRoom(scope, trip.id)
-      }
       return { tripId: trip.id, visibility: visibilityOf(trip) }
     },
   )

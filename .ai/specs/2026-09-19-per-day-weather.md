@@ -1,11 +1,11 @@
 # Weather for every day of a trip, from free sources we are licensed to use
 
-| Field              | Value                                           |
-| ------------------ | ----------------------------------------------- |
-| **Status**         | in-progress                                     |
-| **Issue**          | #631                                            |
-| **Spec PR**        | #636                                            |
-| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501 |
+| Field              | Value                                                         |
+| ------------------ | ------------------------------------------------------------- |
+| **Status**         | in-progress                                                   |
+| **Issue**          | #631                                                          |
+| **Spec PR**        | #636                                                          |
+| **Implementation** | #1003, #1004, #1044, #1046, #1192, #1197, #1501, #1610, #1654 |
 
 ## 📝 TLDR
 
@@ -459,42 +459,44 @@ reproduction and nothing else.
 New keys in `src/lib/i18n/messages/en/trips.ts`. The implementation lands every one of them in all 23
 locales in the same change (`i18n-messages` skill).
 
-| Key                                     | en text                                               |
-| --------------------------------------- | ----------------------------------------------------- |
-| `plan.weather.badge.forecast`           | `Forecast: {condition}, high {max}, low {min}`        |
-| `plan.weather.badge.recorded`           | `Recorded: high {max}, low {min}`                     |
-| `plan.weather.badge.estimate`           | `Estimate: typical high {max}, low {min}`             |
-| `plan.weather.badge.unavailable`        | `Weather unavailable for this day`                    |
-| `plan.weather.badge.notYetRecorded`     | `Not yet recorded`                                    |
-| `plan.weather.badge.loading`            | `Loading weather`                                     |
-| `plan.weather.panel.title`              | `Weather for {date}`                                  |
-| `plan.weather.panel.temperature`        | `High / low`                                          |
-| `plan.weather.panel.temperatureTypical` | `Typical high / low`                                  |
-| `plan.weather.panel.precipitation`      | `Precipitation`                                       |
-| `plan.weather.panel.probability`        | `{percent} chance`                                    |
-| `plan.weather.panel.wind`               | `Wind`                                                |
-| `plan.weather.panel.sunrise`            | `Sunrise`                                             |
-| `plan.weather.panel.sunset`             | `Sunset`                                              |
-| `plan.weather.panel.slot.night`         | `Night`                                               |
-| `plan.weather.panel.slot.morning`       | `Morning`                                             |
-| `plan.weather.panel.slot.afternoon`     | `Afternoon`                                           |
-| `plan.weather.panel.slot.evening`       | `Evening`                                             |
-| `plan.weather.panel.estimateNote`       | `A long-term average for this month, not a forecast.` |
-| `plan.weather.panel.recordedNote`       | `Measured values for this day.`                       |
-| `plan.weather.attribution.metNorway`    | `Forecast data: MET Norway, CC BY 4.0`                |
-| `plan.weather.attribution.nasaPower`    | `Data: NASA Langley Research Center POWER Project`    |
-| `plan.weather.condition.clear`          | `Clear`                                               |
-| `plan.weather.condition.fair`           | `Fair`                                                |
-| `plan.weather.condition.partlyCloudy`   | `Partly cloudy`                                       |
-| `plan.weather.condition.cloudy`         | `Cloudy`                                              |
-| `plan.weather.condition.fog`            | `Fog`                                                 |
-| `plan.weather.condition.rain`           | `Rain`                                                |
-| `plan.weather.condition.heavyRain`      | `Heavy rain`                                          |
-| `plan.weather.condition.sleet`          | `Sleet`                                               |
-| `plan.weather.condition.snow`           | `Snow`                                                |
-| `plan.weather.condition.thunder`        | `Thunder`                                             |
-| `plan.weather.panel.noSunrise`          | `No sunrise`                                          |
-| `plan.weather.panel.noSunset`           | `No sunset`                                           |
+| Key                                     | en text                                                    |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `plan.weather.badge.forecast`           | `Forecast: {figures}, {condition} (high {max}, low {min})` |
+| `plan.weather.badge.recorded`           | `Recorded: high {max}, low {min}`                          |
+| `plan.weather.badge.estimate`           | `Estimate: typical high {max}, low {min}`                  |
+| `plan.weather.badge.unavailable`        | `Weather unavailable for this day`                         |
+| `plan.weather.badge.notYetRecorded`     | `Not yet recorded`                                         |
+| `plan.weather.badge.loading`            | `Loading weather`                                          |
+| `plan.weather.panel.title`              | `Weather for {date}`                                       |
+| `plan.weather.panel.temperature`        | `High / low`                                               |
+| `plan.weather.panel.temperatureTypical` | `Typical high / low`                                       |
+| `plan.weather.panel.typicalHigh`        | `Typical high`                                             |
+| `plan.weather.panel.typicalLow`         | `Typical low`                                              |
+| `plan.weather.panel.precipitation`      | `Precipitation`                                            |
+| `plan.weather.panel.probability`        | `{percent} chance`                                         |
+| `plan.weather.panel.wind`               | `Wind`                                                     |
+| `plan.weather.panel.sunrise`            | `Sunrise`                                                  |
+| `plan.weather.panel.sunset`             | `Sunset`                                                   |
+| `plan.weather.panel.slot.night`         | `Night`                                                    |
+| `plan.weather.panel.slot.morning`       | `Morning`                                                  |
+| `plan.weather.panel.slot.afternoon`     | `Afternoon`                                                |
+| `plan.weather.panel.slot.evening`       | `Evening`                                                  |
+| `plan.weather.panel.estimateNote`       | `A long-term average for this month, not a forecast.`      |
+| `plan.weather.panel.recordedNote`       | `Measured values for this day.`                            |
+| `plan.weather.attribution.metNorway`    | `Forecast data: MET Norway, CC BY 4.0`                     |
+| `plan.weather.attribution.nasaPower`    | `Data: NASA Langley Research Center POWER Project`         |
+| `plan.weather.condition.clear`          | `Clear`                                                    |
+| `plan.weather.condition.fair`           | `Fair`                                                     |
+| `plan.weather.condition.partlyCloudy`   | `Partly cloudy`                                            |
+| `plan.weather.condition.cloudy`         | `Cloudy`                                                   |
+| `plan.weather.condition.fog`            | `Fog`                                                      |
+| `plan.weather.condition.rain`           | `Rain`                                                     |
+| `plan.weather.condition.heavyRain`      | `Heavy rain`                                               |
+| `plan.weather.condition.sleet`          | `Sleet`                                                    |
+| `plan.weather.condition.snow`           | `Snow`                                                     |
+| `plan.weather.condition.thunder`        | `Thunder`                                                  |
+| `plan.weather.panel.noSunrise`          | `No sunrise`                                               |
+| `plan.weather.panel.noSunset`           | `No sunset`                                                |
 
 The popover's temperature row takes `plan.weather.panel.temperature` for a `forecast` and a
 `recorded` day and `plan.weather.panel.temperatureTypical` for an `estimate`: the estimate is a
@@ -502,7 +504,9 @@ long-term average, and a row labelled "High / low" over it would read as a predi
 keys rather than one interpolated string because the wording differs, not a word inside it.
 
 MET's symbol codes are mapped to the condition groups by a table in `day-weather-badge.tsx`'s model
-file; the day/night suffix is dropped for the label.
+file; the day/night suffix is dropped for the label. The panel alone tells the Night slot apart,
+on the client: a moon for `clear`, a cloud with a moon for `fair` and `partlyCloudy` (#1089). A
+slot with no sky draws the badge's muted thermometer in its icon row, so the strip stays aligned.
 
 ## 📝 Observability
 
@@ -835,3 +839,6 @@ What ships with the browser proof (#826) differs from the design above in these 
 46. **"No outbound call" is asserted twice.** The browser cannot see what the Worker fetches, so the journey checks that the page itself requests nothing from `api.met.no` or `power.larc.nasa.gov`, and reads the `met-norway` and `nasa-power` call counts on `/console/providers` (the provider ledger counts every outbound call the Worker makes) before and after and requires them to be equal.
 47. **The layout-shift assertion covers the weather answer, not the whole visit.** The shell's top navigation shifts by 0.00073 at about 0.7 s, before any weather request, when its font loads. The journey counts the shifts reported after the read is released and requires exactly 0, with no tolerance; the whole-visit total is attached to the test as an annotation. The proof found one real shift of 0.000027, a `not-yet-recorded` clock drawn into the skeleton's own `<span>`, and `day-weather-badge.tsx` gives it a `key` so the element is replaced; the journey fails without it. The shell navigation is not changed here.
 48. **The pictures are taken when `WEATHER_EVIDENCE_DIR` is set.** One PNG per theme, width (360, 1280, 2560) and state, written to that directory; the test is skipped otherwise, and no frame is compared in the suite. On a phone the days are behind the "Days" sheet, which the journey opens first.
+49. **The keyboard test opens the forecast badge with both keys.** The forecast day is opened with Enter and again with Space, and each time closed with Escape, with focus asserted back on the badge; the recorded and estimate badges stay on Enter. The rest of what #1088 asked for (the seed, the development-only `serverNow()`, the unavailable day, the stable header) had already shipped with items 42 to 48.
+50. **The forecast badge's name contains its visible text (WCAG 2.5.3, #1090).** `plan.weather.badge.forecast` and `forecastNoCondition` gain a `{figures}` placeholder right after the localised "Forecast" prefix, filled with the exact visible run (`12°/4°C`), and the spelled-out high and low follow in parentheses: `Forecast: 12°/4°C, Rain (high 12°C, low 4°C)`. All 23 locales. The recorded and estimate names are unchanged.
+51. **A lone estimate figure is "typical" and the note leads the panel (#1205, PR #1654, a follow-up to #1204).** Supersedes the sentence of item 40 that has the panel label the lone figure `High` or `Low`: for an estimate it is `Typical high` or `Typical low` (`plan.weather.panel.typicalHigh` and `typicalLow`, in all 23 locales, each with the word the locale already uses in its `estimateHigh` and `estimateLow` badge names), so a single average never reads as a prediction. A recorded or forecast reading keeps the plain `High` / `Low`. The note of a recorded day and of an estimate ("Measured values for this day.", "A long-term average for this month, not a forecast.") is now the first element of the panel, directly under the popover title and before the rows, moved in the DOM and not with CSS ordering, so a phone reader and a screen reader learn what the figures are before they read them. The credit line stays last for all three kinds. No new copy for the note; the badge's accessible name is unchanged; the visible "Estimate" word in the badge stays out of scope.

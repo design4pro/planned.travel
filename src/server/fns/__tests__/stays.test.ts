@@ -14,7 +14,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  CurrencyRefusalError,
   TripArchivedError,
+  TripRoleError,
   addTripMember,
   archiveTrip,
   createTrip,
@@ -28,6 +30,7 @@ import {
 import { NotFoundError } from '#/server/repos/context'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
+import type { SeededTenant } from '#/server/repos/__tests__/harness'
 import type { Day, Trip } from '#/server/db/types'
 import type * as Repos from '#/server/repos'
 import type { TenantScope } from '#/server/repos'
@@ -78,11 +81,13 @@ vi.mock('../context', () => ({
 }))
 
 const { createStay, deleteStay, updateStay } = await import('../stay-writes')
+const { stayInputSchema, stayUpdateSchema } = await import('../stays')
 const { bookingDeskPayload } = await import('../reservations')
 
 /* -------------------------------------------------------------------- setup */
 
 let scope: TenantScope
+let tenantOf: SeededTenant
 let trip: Trip
 let days: Array<Day>
 
@@ -120,7 +125,8 @@ function stayPayload(overrides: Record<string, unknown> = {}) {
 beforeEach(async () => {
   stubs.failStayWrite = false
   const harness = await createHarness()
-  scope = (await harness.seedTenant('stays')).scope
+  tenantOf = await harness.seedTenant('stays')
+  scope = tenantOf.scope
   trip = await createTrip(scope, {
     title: 'Tokyo in spring',
     startDate: '2026-04-10',
@@ -397,6 +403,146 @@ describe('a stay and the booking that pays for it', () => {
       NotFoundError,
     )
     expect(await listTripAccommodations(scope, trip.id)).toHaveLength(1)
+  })
+})
+
+describe('a stay saved under a trip currency that is no longer the trip’s', () => {
+  const STALE = 'EUR'
+
+  async function snapshot(owner: TenantScope, tripId: string) {
+    return {
+      bookings: await listTripReservations(owner, { tripId }),
+      stays: await listTripAccommodations(owner, tripId),
+      lines: await listTripExpenses(owner, tripId),
+    }
+  }
+
+  it('refuses a create and an update with the key and writes nothing', async () => {
+    const { reservationId, stayId } = await createStay(
+      scope,
+      stayPayload({ priceMinor: 30_000, currency: 'JPY' }),
+    )
+    const before = await snapshot(scope, trip.id)
+
+    const create = await captureError(() =>
+      createStay(
+        scope,
+        stayPayload({ title: 'Another', expectedTripCurrency: STALE }),
+      ),
+    )
+    const update = await captureError(() =>
+      updateStay(scope, {
+        ...stayPayload({ title: 'Rewritten', expectedTripCurrency: STALE }),
+        reservationId,
+        stayId,
+      }),
+    )
+
+    for (const error of [create, update]) {
+      expect(error).toBeInstanceOf(CurrencyRefusalError)
+      expect(error.message).toBe('costs.refusal.tripCurrencyChanged')
+    }
+    expect(await snapshot(scope, trip.id)).toEqual(before)
+  })
+
+  it('saves under the current currency and never stores the field', async () => {
+    const { reservationId, stayId } = await createStay(
+      scope,
+      stayPayload({ expectedTripCurrency: 'JPY' }),
+    )
+    await updateStay(scope, {
+      ...stayPayload({ title: 'Renamed', expectedTripCurrency: 'JPY' }),
+      reservationId,
+      stayId,
+    })
+
+    const [booking] = await listTripReservations(scope, { tripId: trip.id })
+    const [stay] = await listTripAccommodations(scope, trip.id)
+    expect(booking?.title).toBe('Renamed')
+    expect(booking).not.toHaveProperty('expectedTripCurrency')
+    expect(stay).not.toHaveProperty('expectedTripCurrency')
+  })
+
+  it('declares the field on both schemas, which strip a key they do not know', () => {
+    const fields = { ...stayPayload(), expectedTripCurrency: ' eur ' }
+
+    expect(stayInputSchema.parse(fields).expectedTripCurrency).toBe('EUR')
+    expect(
+      stayUpdateSchema.parse({ ...fields, reservationId: 'r', stayId: 's' })
+        .expectedTripCurrency,
+    ).toBe('EUR')
+    expect(
+      stayInputSchema.safeParse({ ...fields, expectedTripCurrency: 'EU' })
+        .success,
+    ).toBe(false)
+  })
+
+  it('answers a viewer with the role refusal, not the currency one', async () => {
+    const viewerId = await tenantOf.addUser('A viewer')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+
+    const error = await captureError(() =>
+      createStay(
+        tenantOf.scopeFor(viewerId),
+        stayPayload({ expectedTripCurrency: STALE }),
+      ),
+    )
+
+    expect(error).toBeInstanceOf(TripRoleError)
+    expect(error).not.toBeInstanceOf(CurrencyRefusalError)
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+  })
+
+  it('answers the other workspace’s trip and row as not found, never as a currency refusal', async () => {
+    const harness = await createHarness()
+    const elsewhere = await harness.seedTenant('stays-elsewhere')
+    const abroad = await createTrip(elsewhere.scope, {
+      title: 'Lisbon',
+      startDate: '2026-05-01',
+      endDate: '2026-05-04',
+      currency: 'EUR',
+    })
+    const [first, , , last] = await listTripDays(elsewhere.scope, abroad.id)
+    const foreign = await createStay(elsewhere.scope, {
+      ...stayPayload(),
+      tripId: abroad.id,
+      startDayId: first?.id ?? '',
+      endDayId: last?.id ?? '',
+    })
+    const hereBefore = await snapshot(scope, trip.id)
+    const thereBefore = await snapshot(elsewhere.scope, abroad.id)
+
+    const attempts = [
+      () =>
+        createStay(
+          scope,
+          stayPayload({ tripId: abroad.id, expectedTripCurrency: 'XXX' }),
+        ),
+      () =>
+        updateStay(scope, {
+          ...stayPayload({ tripId: abroad.id, expectedTripCurrency: 'XXX' }),
+          reservationId: foreign.reservationId,
+          stayId: foreign.stayId,
+        }),
+      () =>
+        updateStay(scope, {
+          ...stayPayload({ expectedTripCurrency: 'XXX' }),
+          reservationId: foreign.reservationId,
+          stayId: foreign.stayId,
+        }),
+    ]
+    for (const attempt of attempts) {
+      const error = await captureError(attempt)
+      expect(error).toBeInstanceOf(NotFoundError)
+      expect(error).not.toBeInstanceOf(CurrencyRefusalError)
+    }
+
+    expect(await snapshot(scope, trip.id)).toEqual(hereBefore)
+    expect(await snapshot(elsewhere.scope, abroad.id)).toEqual(thereBefore)
   })
 })
 

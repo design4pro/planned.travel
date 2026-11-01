@@ -1106,15 +1106,21 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - généré le {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Prêt : {title}',
+  'files.export.email.subject': 'Exportation prête : {title}',
   'files.export.email.body': {
-    one: 'L’exportation du voyage est prête. Elle est conservée {count} jour.',
-    many: 'L’exportation du voyage est prête. Elle est conservée {count} jours.',
+    one: 'Votre exportation de {title} est prête. Elle est conservée pendant {count} jour.',
+    many: 'Votre exportation de {title} est prête. Elle est conservée pendant {count} jours.',
     other:
-      'L’exportation du voyage est prête. Elle est conservée {count} jours.',
+      'Votre exportation de {title} est prête. Elle est conservée pendant {count} jours.',
   },
-  'files.export.email.action': 'Ouvrir {title}',
-  'files.export.email.text': 'L’exportation du voyage est prête : {url}',
+  'files.export.email.action': 'Accéder à l’exportation',
+  'files.export.email.text':
+    '{body}\n\n{limit}\n\nAccéder à l’exportation : {url}',
+  'files.export.limit': {
+    one: 'Un voyage conserve son exportation la plus récente ({count}).',
+    many: 'Un voyage conserve ses {count} exportations les plus récentes.',
+    other: 'Un voyage conserve ses {count} exportations les plus récentes.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Exporter le voyage',
@@ -1425,6 +1431,12 @@ const messages = {
   'files.readOnly.title': 'Fichiers en lecture seule',
   'files.readOnly.role':
     'Seuls les propriétaires et les éditeurs du voyage peuvent ajouter, renommer ou supprimer des fichiers. Vous pouvez toujours les télécharger.',
+  'files.readOnly.archived':
+    'Ce voyage est archivé, les fichiers sont donc en lecture seule. Vous pouvez toujours les télécharger. Restaurez le voyage pour les modifier.',
+  'lists.readOnly.role':
+    'Vous pouvez consulter ces listes. Seuls le propriétaire du voyage et les éditeurs peuvent les modifier.',
+  'lists.readOnly.archived':
+    'Ce voyage est archivé, les listes sont donc en lecture seule. Restaurez le voyage pour les modifier.',
   'vacay.kind.vacation': 'Congé',
   'vacay.kind.half_day': 'Demi-journée de congé',
   'vacay.kind.sick': 'Maladie',

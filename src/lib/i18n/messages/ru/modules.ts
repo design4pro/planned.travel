@@ -1099,15 +1099,21 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - создано {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Готово: {title}',
+  'files.export.email.subject': 'Экспорт готов: {title}',
   'files.export.email.body': {
-    one: 'Экспорт поездки готов. Он хранится {count} день.',
-    few: 'Экспорт поездки готов. Он хранится {count} дня.',
-    many: 'Экспорт поездки готов. Он хранится {count} дней.',
-    other: 'Экспорт поездки готов. Он хранится {count} дня.',
+    one: 'Экспорт поездки {title} готов. Он хранится {count} день.',
+    few: 'Экспорт поездки {title} готов. Он хранится {count} дня.',
+    many: 'Экспорт поездки {title} готов. Он хранится {count} дней.',
+    other: 'Экспорт поездки {title} готов. Он хранится {count} дня.',
   },
-  'files.export.email.action': 'Открыть: {title}',
-  'files.export.email.text': 'Экспорт поездки готов: {url}',
+  'files.export.email.action': 'Перейти к экспорту',
+  'files.export.email.text': '{body}\n\n{limit}\n\nПерейти к экспорту: {url}',
+  'files.export.limit': {
+    one: 'Поездка хранит {count} последний экспорт.',
+    few: 'Поездка хранит {count} последних экспорта.',
+    many: 'Поездка хранит {count} последних экспортов.',
+    other: 'Поездка хранит {count} последнего экспорта.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Экспорт поездки',
@@ -1438,6 +1444,12 @@ const messages = {
   'files.readOnly.title': 'Файлы только для чтения',
   'files.readOnly.role':
     'Только владельцы и редакторы поездки могут загружать, переименовывать или удалять файлы. Вы по-прежнему можете их скачивать.',
+  'files.readOnly.archived':
+    'Эта поездка в архиве, поэтому файлы доступны только для чтения. Скачивать их по-прежнему можно. Восстановите поездку, чтобы их изменить.',
+  'lists.readOnly.role':
+    'Вы можете просматривать эти списки. Изменять их могут только владелец поездки и редакторы.',
+  'lists.readOnly.archived':
+    'Эта поездка в архиве, поэтому списки доступны только для чтения. Восстановите поездку, чтобы их изменить.',
   'vacay.kind.vacation': 'Отпуск',
   'vacay.kind.half_day': 'Полдня отпуска',
   'vacay.kind.sick': 'Больничный',

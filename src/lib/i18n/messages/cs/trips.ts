@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Tato cesta je archivována. Spolupráce je pouze pro čtení.',
+  'collab.readOnly.role':
+    'Pouze vlastníci a editoři cesty mohou měnit konverzaci, poznámky a ankety.',
   'notFound.title': 'Tuto cestu nemůžeme najít',
   'notFound.body':
     'Není mezi cestami, které můžete otevřít v aktuálním pracovním prostoru. Možná byla smazána nebo k ní nemáte přístup.',
@@ -171,7 +175,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Přidat místo: {day}',
   'plan.addPlace.quota':
     'Dosáhli jste limitu míst ve svém tarifu. Přejděte na vyšší tarif a přidejte další.',
-  'plan.addPlace.quotaAction': 'Zobrazit tarify',
+  'plan.addPlace.quotaAction': 'Zobrazit tarify (otevře se na nové kartě)',
   'plan.stay.checkIn': 'Příjezd',
   'plan.stay.checkOut': 'Odjezd',
   'plan.day.addStay': 'Přidat ubytování: {day}',
@@ -323,6 +327,8 @@ const messages = {
   'book.pinnedCaption': 'Připnuto ke dni programu',
   'book.readOnly.archived':
     'Tato cesta je archivovaná, takže rezervace a pobyty jsou jen pro čtení. Chcete-li je změnit, cestu obnovte.',
+  'book.readOnly.role':
+    'Tyto rezervace a pobyty si můžete prohlížet. Měnit je může jen vlastník cesty a ti, kdo mohou upravovat.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Tato změna byla odmítnuta. Před dalšími změnami zkontrolujte aktuální stav cesty.',
@@ -330,6 +336,8 @@ const messages = {
     'Cestu se nepodařilo aktualizovat. Před provedením změn to zkuste znovu.',
   'transports.readOnly.archived':
     'Tato cesta je archivovaná. Obnovte ji, abyste mohli změnit dopravu.',
+  'transports.readOnly.role':
+    'Tuto dopravu si můžete prohlížet. Měnit ji může jen vlastník cesty a ti, kdo mohou upravovat.',
   'transports.title': 'Přesuny',
   'transports.empty': 'Zatím nic zaznamenáno',
   'transports.count.transports': {
@@ -426,9 +434,9 @@ const messages = {
     'Výlet pojme nejvýše {limit} hostů, protože delší seznam znepřehledňuje výběr účastníků i rozdělení nákladů',
   'people.error.guestMergeTarget': 'Vyber někoho, kdo už je na tomto výletě',
   'plan.weather.badge.forecast':
-    'Předpověď: {condition}, maximum {max}, minimum {min}',
+    'Předpověď: {figures}, {condition} (maximum {max}, minimum {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Předpověď: maximum {max}, minimum {min}',
+    'Předpověď: {figures} (maximum {max}, minimum {min})',
   'plan.weather.badge.unavailable': 'Počasí pro tento den není k dispozici',
   'plan.weather.badge.loading': 'Načítání počasí',
   'plan.weather.badge.recorded': 'Naměřeno: maximum {max}, minimum {min}',
@@ -468,6 +476,8 @@ const messages = {
   'plan.weather.panel.low': 'Minimum',
   'plan.weather.panel.recordedNote': 'Naměřené hodnoty pro tento den.',
   'plan.weather.panel.temperatureTypical': 'Typické max. / min.',
+  'plan.weather.panel.typicalHigh': 'Typické maximum',
+  'plan.weather.panel.typicalLow': 'Typické minimum',
   'plan.weather.panel.estimateNote':
     'Dlouhodobý průměr pro tento měsíc, nikoli předpověď.',
   'plan.weather.attribution.metNorway':

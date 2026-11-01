@@ -27,6 +27,7 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { formatConversion, formatMoney } from '#/lib/money'
 import {
+  findPerson,
   groupByDay,
   isOptimisticId,
   shareOf,
@@ -37,11 +38,16 @@ import { ConvertedFigure } from './converted-figure'
 import { CategoryGlyph, categoryLabel } from './categories'
 
 import type { DisplayCurrency } from '#/lib/money'
-import type { CostsExpense, CostsPerson } from '#/server/fns/costs'
+import type {
+  CostsDepartedPerson,
+  CostsExpense,
+  CostsPerson,
+} from '#/server/fns/costs'
 
 export interface ExpenseListProps {
   readonly rows: ReadonlyArray<CostsExpense>
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly currency: string
   readonly display: DisplayCurrency
@@ -55,6 +61,7 @@ export interface ExpenseListProps {
 export function ExpenseList({
   rows,
   people,
+  departedPeople,
   viewerUserId,
   currency,
   display,
@@ -85,6 +92,7 @@ export function ExpenseList({
                   <ExpenseRow
                     row={row}
                     people={people}
+                    departedPeople={departedPeople}
                     viewerUserId={viewerUserId}
                     currency={currency}
                     display={display}
@@ -106,6 +114,7 @@ export function ExpenseList({
 function ExpenseRow({
   row,
   people,
+  departedPeople,
   viewerUserId,
   currency,
   display,
@@ -116,6 +125,7 @@ function ExpenseRow({
 }: {
   row: CostsExpense
   people: ReadonlyArray<CostsPerson>
+  departedPeople: ReadonlyArray<CostsDepartedPerson>
   viewerUserId: string
   currency: string
   display: DisplayCurrency
@@ -126,7 +136,10 @@ function ExpenseRow({
 }) {
   const locale = useLocale()
   const t = useTranslate()
-  const payer = people.find((person) => person.userId === row.paidBy)
+  const payer =
+    row.paidBy === null
+      ? undefined
+      : findPerson(people, departedPeople, row.paidBy)
   const conversion = formatConversion(row, locale)
   const mine = shareOf(row, viewerUserId)
   // A row the server has never seen has no id to edit or delete against, so its

@@ -66,6 +66,7 @@ import {
   isCoverContentType,
   tripStoragePrefix,
 } from '#/lib/trip-cover'
+import { settleTripAccessChange } from '#/server/fns/-lib/trip-access-change'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
@@ -608,19 +609,6 @@ export const createTripFn = createServerFn({ method: 'POST' })
     return { tripId: trip.id }
   })
 
-/**
- * Closes every socket in the trip's room after the trip was archived or restored, so an
- * open tab goes back through the connect handler instead of keeping the role it connected with.
- *
- * The bridge is reached at call time for the reason `taskQueue` is above: `#/server/fns/context`
- * imports `cloudflare:workers`, which a route module's static graph must not. A room that cannot be
- * reached is logged inside the helper and never fails the write.
- */
-async function evictRoom(scope: TenantScope, tripId: string): Promise<void> {
-  const { closeRoom } = await import('#/server/fns/context')
-  await closeRoom(scope, tripId)
-}
-
 /** The two columns a cover is: the object it is stored as, and the URL a browser reads it from. */
 export interface TripCoverPatch {
   readonly coverImageKey: string | null
@@ -786,7 +774,7 @@ export const archiveTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: true }> => {
       const scope = await appScope()
       const trip = await archiveTrip(scope, data.tripId)
-      await evictRoom(scope, trip.id)
+      await settleTripAccessChange(scope, { kind: 'trip-archived', trip })
       return { tripId: trip.id, isArchived: true }
     },
   )
@@ -800,7 +788,7 @@ export const restoreTripFn = createServerFn({ method: 'POST' })
     }): Promise<{ readonly tripId: string; readonly isArchived: false }> => {
       const scope = await appScope()
       const trip = await restoreTrip(scope, data.tripId)
-      await evictRoom(scope, trip.id)
+      await settleTripAccessChange(scope, { kind: 'trip-restored', trip })
       return { tripId: trip.id, isArchived: false }
     },
   )
@@ -882,8 +870,7 @@ export const deleteTripFn = createServerFn({ method: 'POST' })
       affectedStatYears(trip.startDate),
       memberIds,
     )
-    const { resetRoom } = await import('#/server/fns/context')
-    await resetRoom(scope, trip.id)
+    await settleTripAccessChange(scope, { kind: 'trip-deleted', trip })
 
     return { deleted: true }
   })

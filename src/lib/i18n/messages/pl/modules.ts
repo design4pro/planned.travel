@@ -1107,15 +1107,22 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - wygenerowano {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Gotowe: {title}',
+  'files.export.email.subject': 'Eksport gotowy: {title}',
   'files.export.email.body': {
-    one: 'Eksport podróży jest gotowy. Będzie dostępny przez {count} dzień.',
-    few: 'Eksport podróży jest gotowy. Będzie dostępny przez {count} dni.',
-    many: 'Eksport podróży jest gotowy. Będzie dostępny przez {count} dni.',
-    other: 'Eksport podróży jest gotowy. Będzie dostępny przez {count} dnia.',
+    one: 'Eksport podróży {title} jest gotowy. Będzie dostępny przez {count} dzień.',
+    few: 'Eksport podróży {title} jest gotowy. Będzie dostępny przez {count} dni.',
+    many: 'Eksport podróży {title} jest gotowy. Będzie dostępny przez {count} dni.',
+    other:
+      'Eksport podróży {title} jest gotowy. Będzie dostępny przez {count} dnia.',
   },
-  'files.export.email.action': 'Otwórz: {title}',
-  'files.export.email.text': 'Eksport podróży jest gotowy: {url}',
+  'files.export.email.action': 'Przejdź do eksportu',
+  'files.export.email.text': '{body}\n\n{limit}\n\nPrzejdź do eksportu: {url}',
+  'files.export.limit': {
+    one: 'Podróż zachowuje {count} najnowszy eksport.',
+    few: 'Podróż zachowuje {count} najnowsze eksporty.',
+    many: 'Podróż zachowuje {count} najnowszych eksportów.',
+    other: 'Podróż zachowuje {count} najnowszego eksportu.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Eksport podróży',
@@ -1442,6 +1449,12 @@ const messages = {
   'files.readOnly.title': 'Pliki tylko do odczytu',
   'files.readOnly.role':
     'Tylko właściciele i edytorzy wyjazdu mogą przesyłać pliki, zmieniać ich nazwy lub je usuwać. Nadal możesz je pobierać.',
+  'files.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc pliki są tylko do odczytu. Nadal możesz je pobierać. Przywróć podróż, aby je zmienić.',
+  'lists.readOnly.role':
+    'Możesz przeglądać te listy. Zmieniać je mogą tylko właściciel podróży i edytorzy.',
+  'lists.readOnly.archived':
+    'Ta podróż jest zarchiwizowana, więc listy są tylko do odczytu. Przywróć podróż, aby je zmienić.',
   'vacay.kind.vacation': 'Urlop',
   'vacay.kind.half_day': 'Pół dnia urlopu',
   'vacay.kind.sick': 'Zwolnienie chorobowe',

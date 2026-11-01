@@ -330,8 +330,9 @@ export async function readPlanBoard(
  * The archive first, because `requireWritableTrip` also asks whether the caller
  * may see the trip at all, and a caller who may not learns `NotFoundError` and
  * nothing else; the role only after that. Place repository writers also enforce
- * the shared owner/editor role list, so callers outside this handler cannot bypass
- * it. This handler keeps the archive check before the role check (PRD #104
+ * the shared owner/editor role list, and so do the stop writers (`createAssignment`,
+ * `updateAssignment`, `reorderAssignments`), so callers outside this handler cannot
+ * bypass it. This handler keeps the archive check before the role check (PRD #104
  * decision 6). The same composition `writableTripDay` records for notes.
  */
 async function requireEditablePlan(

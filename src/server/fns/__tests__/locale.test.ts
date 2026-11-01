@@ -46,6 +46,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { SUPPORTED_LOCALES, directionOf } from '#/lib/i18n'
 import { createQueryClient } from '#/lib/query'
+import EnShell from '#/lib/i18n/messages/en/shell'
+import ArShell from '#/lib/i18n/messages/ar/shell'
 import { Route as rootRoute } from '#/routes/__root'
 import { negotiateLocaleFrom } from '../locale'
 
@@ -74,9 +76,11 @@ const wire = vi.hoisted(
   (): {
     negotiated: NegotiatedLocale
     fail: boolean
+    failRoute: boolean
     failCatalogue: boolean
   } => ({
     fail: false,
+    failRoute: false,
     failCatalogue: false,
     negotiated: { locale: 'en', dir: 'ltr', signedIn: false },
   }),
@@ -283,12 +287,18 @@ function probeTag(html: string): string {
 async function serveDocument(
   locale: Locale,
   signedIn = false,
+  failRoute = false,
 ): Promise<string> {
   wire.negotiated = { locale, dir: directionOf(locale), signedIn }
 
+  wire.failRoute = failRoute
   const index = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
+    loader: () => {
+      if (wire.failRoute) throw new Error('private SQL diagnostic')
+    },
+    errorComponent: rootRoute.options.errorComponent,
     component: DirectionProbe,
   })
   const router = createRouter({
@@ -319,12 +329,62 @@ describe('the served document', () => {
     )
   })
 
-  it.each(['fail', 'failCatalogue'] as const)(
-    'uses a signed-out source-language fallback on %s',
-    async (failure) => {
+  it.each([
+    { failure: 'fail' as const, locale: 'en' },
+    { failure: 'failCatalogue' as const, locale: 'de' },
+  ])(
+    'uses a signed-out $locale recovery document on $failure',
+    async ({ failure, locale }) => {
       wire[failure] = true
       try {
-        expect(await serveDocument('de', true)).toContain('<html lang="en"')
+        expect(await serveDocument('de', true)).toContain(
+          `<html lang="${locale}"`,
+        )
+      } finally {
+        wire[failure] = false
+      }
+    },
+  )
+
+  it.each([
+    {
+      failure: 'fail' as const,
+      requested: 'ar' as const,
+      locale: 'en',
+      dir: 'ltr',
+      copy: EnShell,
+    },
+    {
+      failure: 'failCatalogue' as const,
+      requested: 'en' as const,
+      locale: 'en',
+      dir: 'ltr',
+      copy: EnShell,
+    },
+    {
+      failure: 'failCatalogue' as const,
+      requested: 'ar' as const,
+      locale: 'ar',
+      dir: 'rtl',
+      copy: ArShell,
+    },
+  ])(
+    'renders readable $locale root recovery after $failure',
+    async ({ failure, requested, locale, dir, copy }) => {
+      wire[failure] = true
+      try {
+        const html = await serveDocument(requested, false, true)
+        expect(html).toContain(`<html lang="${locale}" dir="${dir}"`)
+        for (const key of [
+          'error.root',
+          'error.body',
+          'error.retry',
+          'error.dashboard',
+        ] as const) {
+          expect(html).toContain(copy[key])
+        }
+        expect(html).not.toContain('shell.error.')
+        expect(html).not.toContain('private SQL diagnostic')
       } finally {
         wire[failure] = false
       }

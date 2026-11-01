@@ -5,6 +5,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
+import { TRIP_ROOM_REVOKED_AT_HEADER } from '../protocol'
 import {
   closeTripRoom,
   closeTripRoomFor,
@@ -20,6 +21,7 @@ function stubNamespace(status = 200) {
     url: string
     method: string
     body: string
+    revokedAt?: string
   }> = []
   const namespace: TripRoomNamespace = {
     idFromName: (name) => name as unknown as DurableObjectId,
@@ -30,6 +32,8 @@ function stubNamespace(status = 200) {
           url: request.url,
           method: request.method,
           body: await request.text(),
+          revokedAt:
+            request.headers.get(TRIP_ROOM_REVOKED_AT_HEADER) ?? undefined,
         })
         return new Response(null, { status })
       },
@@ -38,11 +42,13 @@ function stubNamespace(status = 200) {
   return { namespace, requests }
 }
 
+const NOW = 1_700_000_000_000
+
 describe('closing a trip room from the app Worker', () => {
-  it('closes the whole room with no body', async () => {
+  it('closes the whole room with no body, stamping revokedAt in a header', async () => {
     const { namespace, requests } = stubNamespace()
 
-    await closeTripRoom(namespace, 'trip-1')
+    await closeTripRoom(namespace, 'trip-1', () => NOW)
 
     expect(requests).toEqual([
       {
@@ -50,14 +56,15 @@ describe('closing a trip room from the app Worker', () => {
         url: 'https://trip-room.internal/trip-1/close',
         method: 'POST',
         body: '',
+        revokedAt: String(NOW),
       },
     ])
   })
 
-  it('closes one person’s sockets by naming them in the body', async () => {
+  it('closes one person’s sockets by naming them in the body, stamping revokedAt in a header', async () => {
     const { namespace, requests } = stubNamespace()
 
-    await closeTripRoomFor(namespace, 'trip-1', 'user-7')
+    await closeTripRoomFor(namespace, 'trip-1', 'user-7', () => NOW)
 
     expect(requests).toEqual([
       {
@@ -65,8 +72,22 @@ describe('closing a trip room from the app Worker', () => {
         url: 'https://trip-room.internal/trip-1/close',
         method: 'POST',
         body: JSON.stringify({ userId: 'user-7' }),
+        revokedAt: String(NOW),
       },
     ])
+  })
+
+  it('takes revokedAt when the request is sent, after the awaited write', async () => {
+    const { namespace, requests } = stubNamespace()
+    let clock = 1
+    const write = async () => {
+      clock = NOW
+    }
+
+    await write()
+    await closeTripRoom(namespace, 'trip-1', () => clock)
+
+    expect(requests[0].revokedAt).toBe(String(NOW))
   })
 
   it('throws when the room refuses, so the caller can log it', async () => {
@@ -85,7 +106,7 @@ describe('resetting trip rooms from the app Worker', () => {
   it('posts to the reset route of the trip’s own object', async () => {
     const { namespace, requests } = stubNamespace()
 
-    await resetTripRoom(namespace, 'trip-1')
+    await resetTripRoom(namespace, 'trip-1', () => NOW)
 
     expect(requests).toEqual([
       {
@@ -93,6 +114,7 @@ describe('resetting trip rooms from the app Worker', () => {
         url: 'https://trip-room.internal/trip-1/reset',
         method: 'POST',
         body: '',
+        revokedAt: String(NOW),
       },
     ])
   })

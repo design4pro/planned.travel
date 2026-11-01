@@ -74,7 +74,9 @@
  * Each call is aborted at {@link WEATHER_CALL_TIMEOUT_MS}, inside a {@link WEATHER_DEADLINE_MS}
  * deadline for the whole request. The per-call bound is the smaller on purpose: calls fan out under
  * the deadline, and a per-call bound above it could never fire - one hung provider would take every
- * location down together instead of only itself.
+ * location down together instead of only itself. The deadline only ends the wait: the resolution
+ * is registered with the request's `waitUntil`, so a spend, a call or a write still in flight when
+ * it answers completes after the response rather than being dropped with the request.
  */
 
 import { z } from 'zod'
@@ -1145,6 +1147,8 @@ interface Resolved {
 interface CacheTally {
   /** Locations every reading of which was served from an entry still inside its expiry. */
   hits: number
+  /** Locations whose cache readings have all settled; a deadline can leave the rest unread. */
+  reads: number
 }
 
 /**
@@ -1170,57 +1174,90 @@ async function resolvePlaces(
     const pending = new Map<string, Array<string>>()
     const unserved = new Set<string>()
 
+    // A location is read once every place that draws on it has settled; only then is it a hit or a
+    // miss, so a deadline that cuts the reads short leaves the unfinished ones out of both.
+    const unsettled = new Map<string, number>()
+    const places: Array<ReadonlySet<string> | ReadonlyArray<string>> = [
+      ...[...plan.forecast.keys()].map((key) => [key]),
+      ...[...plan.estimate.values()].map((place) => place.locations),
+      ...[...plan.recorded.values()].map((place) => place.locations),
+    ]
+    for (const locations of places) {
+      for (const location of locations) {
+        unsettled.set(location, (unsettled.get(location) ?? 0) + 1)
+      }
+    }
+    const counted = async (
+      locations: ReadonlySet<string> | ReadonlyArray<string>,
+      read: () => Promise<void>,
+    ): Promise<void> => {
+      await read()
+      for (const location of locations) {
+        const left = (unsettled.get(location) ?? 1) - 1
+        unsettled.set(location, left)
+        if (left === 0) {
+          tally.reads += 1
+          if (!unserved.has(location)) {
+            tally.hits += 1
+          }
+        }
+      }
+    }
+
     await Promise.all([
-      ...[...plan.forecast].map(async ([key]) => {
-        const entry = await readEntry(runtime, key)
-        if (entry !== null && isFresh(runtime, entry)) {
-          into.forecast.set(key, entry.series)
-          return
-        }
-        unserved.add(key)
-        if (entry !== null) {
-          stale.set(key, entry)
-        }
-      }),
-      ...[...plan.estimate].map(async ([cell, place]) => {
-        const months = await readEstimateEntry(runtime, place.coordinate)
-        if (months !== null) {
-          into.estimate.set(cell, months)
-          return
-        }
-        for (const location of place.locations) {
-          unserved.add(location)
-        }
-      }),
-      ...[...plan.recorded].map(async ([cell, place]) => {
-        const days: RecordedDays = new Map()
-        into.recorded.set(cell, days)
-        const missing: Array<string> = []
-        await Promise.all(
-          [...place.dates].map(async (date) => {
-            const read = await readRecordedEntry(
-              runtime,
-              place.coordinate,
-              date,
-            )
-            if (read === 'miss') {
-              missing.push(date)
-            } else {
-              days.set(date, read === 'empty' ? null : read)
-            }
-          }),
-        )
-        if (missing.length > 0) {
-          pending.set(cell, missing)
+      ...[...plan.forecast].map(([key]) =>
+        counted([key], async () => {
+          const entry = await readEntry(runtime, key)
+          if (entry !== null && isFresh(runtime, entry)) {
+            into.forecast.set(key, entry.series)
+            return
+          }
+          unserved.add(key)
+          if (entry !== null) {
+            stale.set(key, entry)
+          }
+        }),
+      ),
+      ...[...plan.estimate].map(([cell, place]) =>
+        counted(place.locations, async () => {
+          const months = await readEstimateEntry(runtime, place.coordinate)
+          if (months !== null) {
+            into.estimate.set(cell, months)
+            return
+          }
           for (const location of place.locations) {
             unserved.add(location)
           }
-        }
-      }),
+        }),
+      ),
+      ...[...plan.recorded].map(([cell, place]) =>
+        counted(place.locations, async () => {
+          const days: RecordedDays = new Map()
+          into.recorded.set(cell, days)
+          const missing: Array<string> = []
+          await Promise.all(
+            [...place.dates].map(async (date) => {
+              const read = await readRecordedEntry(
+                runtime,
+                place.coordinate,
+                date,
+              )
+              if (read === 'miss') {
+                missing.push(date)
+              } else {
+                days.set(date, read === 'empty' ? null : read)
+              }
+            }),
+          )
+          if (missing.length > 0) {
+            pending.set(cell, missing)
+            for (const location of place.locations) {
+              unserved.add(location)
+            }
+          }
+        }),
+      ),
     ])
-    tally.hits += [...plan.locations].filter(
-      (location) => !unserved.has(location),
-    ).length
 
     const failedForecast = new Set<string>()
     const failedRecorded = new Set<string>()
@@ -1341,7 +1378,7 @@ interface Eligible {
   readonly key: string
 }
 
-/** Settles when `work` does, or at `ms`, whichever is first; whatever `work` leaves behind stays. */
+/** Settles when `work` does, or at `ms`, whichever is first; `work` itself is not cancelled. */
 async function untilDeadline(
   work: Promise<unknown>,
   ms: number,
@@ -1364,7 +1401,9 @@ async function untilDeadline(
  *
  * `hits` and `misses` count locations, not days: a location is a hit when entries inside their
  * expiry served every reading it needed and a miss otherwise, whether the provider was then asked
- * or not. The only identifier is the organisation's, which the call was already metered against.
+ * or not. A miss is counted among the locations whose cache reads settled before the deadline; one
+ * still being read when the deadline answered is neither, though it stays in `locations`. The only
+ * identifier is the organisation's, which the call was already metered against.
  */
 function logResolution(
   runtime: WeatherRuntime,
@@ -1372,6 +1411,7 @@ function logResolution(
     readonly locations: number
     readonly eligible: ReadonlyArray<Eligible | null>
     readonly hits: number
+    readonly reads: number
     readonly outcomes: ReadonlyArray<WeatherOutcome>
   },
 ): void {
@@ -1386,7 +1426,7 @@ function logResolution(
     locations: resolution.locations,
     days,
     hits: resolution.hits,
-    misses: resolution.locations - resolution.hits,
+    misses: resolution.reads - resolution.hits,
     unavailable: resolution.outcomes.filter(
       (outcome) => outcome.status === 'unavailable',
     ).length,
@@ -1549,17 +1589,18 @@ export async function resolveTripWeather(
     estimate: new Map(),
     recorded: new Map(),
   }
-  const tally: CacheTally = { hits: 0 }
-  await untilDeadline(
-    resolvePlaces(
-      runtime,
-      { locations: new Set(kept.keys()), forecast, estimate, recorded },
-      today,
-      resolved,
-      tally,
-    ),
-    WEATHER_DEADLINE_MS,
+  const tally: CacheTally = { hits: 0, reads: 0 }
+  // The one resolution, started once: the request waits on it only up to the deadline, while
+  // `waitUntil` keeps the allowance spend, the provider calls and the cache writes alive past it.
+  const resolution = resolvePlaces(
+    runtime,
+    { locations: new Set(kept.keys()), forecast, estimate, recorded },
+    today,
+    resolved,
+    tally,
   )
+  runtime.outbound.waitUntil(resolution)
+  await untilDeadline(resolution, WEATHER_DEADLINE_MS)
 
   const grouped = new Map<string, GroupedForecast>()
   const groupedFor = (key: string, steps: ReadonlyArray<ForecastStep>) => {
@@ -1682,6 +1723,7 @@ export async function resolveTripWeather(
     locations: kept.size,
     eligible,
     hits: tally.hits,
+    reads: tally.reads,
     outcomes,
   })
   return outcomes

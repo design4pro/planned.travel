@@ -295,11 +295,11 @@ Wave 0's stages are minted below. The per-wave shared-file stages for waves 1 to
 when the wave opens, taking the next free `00-S<k>` id, and this table is where they are recorded —
 so that at any moment there is exactly one answer to "who owns the schema module this wave".
 
-| Wave | Schema stage               | Bindings + worker stage                                                                                                         | Token stage                                                      | Primitive stage                                                                          |
-| ---- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 0    | `00-S1`                    | none required — no wave-1 plan has filed a binding requirement, and the table above says why none should be taken speculatively | none required — no wave-1 plan has filed a token requirement yet | none required — the 42 shipped primitive modules cover every wave-1 surface named so far |
-| 0    | `00-S6` (follow-up)        | none required                                                                                                                   | none required                                                    | none required                                                                            |
-| 1–6  | minted when the wave opens | minted when the wave opens                                                                                                      | minted when the wave opens                                       | minted when the wave opens                                                               |
+| Wave | Schema stage               | Bindings + worker stage                                                                                                         | Token stage                                                                                 | Primitive stage                                                                          |
+| ---- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 0    | `00-S1`                    | none required — no wave-1 plan has filed a binding requirement, and the table above says why none should be taken speculatively | `--color-data-1` … `--color-data-8` shipped by #1502 for `04-S2`; chips use `surface-inset` | none required — the 42 shipped primitive modules cover every wave-1 surface named so far |
+| 0    | `00-S6` (follow-up)        | none required                                                                                                                   | none required                                                                               | none required                                                                            |
+| 1–6  | minted when the wave opens | minted when the wave opens                                                                                                      | minted when the wave opens                                                                  | minted when the wave opens                                                               |
 
 A wave with no filed requirement mints no stage. An empty stage is worse than a missing one: it
 invites an agent to invent work in the one file where invention is most expensive.
@@ -604,9 +604,10 @@ No column, no index, no migration.
   (`src/server/queue/types.ts:31`) — and it is the wrong shape twice over. Measured: `handleEmail`
   (`src/server/queue/handlers/email.ts:40`) posts `to: payload.to` as a single provider message, so
   fifty travellers would each read the other forty-nine addresses; and its provider idempotency key
-  (`:33`) is built from `payload.to.join(',')`, so adding one recipient changes the key and re-sends
-  to everybody already served. One envelope per recipient costs more messages and is the only shape
-  that is both private and idempotent per person. Its deterministic id is
+  is the envelope id (`eventId ?? taskId`), so one shared envelope would have to change id whenever
+  the recipient list changed and would re-send to everybody already served. One envelope per
+  recipient costs more messages and is the only shape that is both private and idempotent per
+  person. Its deterministic id is
   `notify:<eventKind>:<entityId>:<recipientUserId>`, so a redelivery sends one message to one person.
 - **Channels with no transport.** `push` and `webhook` have no provider and no binding. Dispatch
   writes the in-app row, emits one structured log line naming the channel it could not serve, and

@@ -7,14 +7,21 @@
  * an error to the sender. The room is driven through its own `TripRoomState` / `TripRoomSocket`
  * ports, with no Worker and no `WebSocketPair`.
  */
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createLogger, createMemorySink } from '../../observability/logger'
 import { TripRoom } from '../trip-room'
 import {
   TRIP_ROOM_CLOSED_REASON,
   TRIP_ROOM_ALARM_INTERVAL_MS,
+  TRIP_ROOM_IDENTITY_HEADER,
+  TRIP_ROOM_IDLE_TTL_MS,
   TRIP_ROOM_MAX_SOCKET_AGE_MS,
   TRIP_ROOM_PROTOCOL_VERSION,
+  TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS,
+  TRIP_ROOM_REVOCATION_SKEW_MS,
+  TRIP_ROOM_REVOCATION_TTL_MS,
+  TRIP_ROOM_REVOKED_AT_HEADER,
 } from '../protocol'
 
 import type {
@@ -65,13 +72,14 @@ function fakeStorage(): TripRoomStorage & {
       storage.writes += 1
       data.clear()
     },
-    getAlarm: async () => null,
+    getAlarm: async () => storage.alarmAt,
     setAlarm: async (scheduledTime: number) => {
       storage.alarmAt = scheduledTime
       storage.alarmSet += 1
     },
     deleteAlarm: async () => {
       storage.alarmDeleted += 1
+      storage.alarmAt = null
     },
   }
   return storage
@@ -187,6 +195,25 @@ function joinedRoom(roles: Array<'editor' | 'viewer'>) {
 }
 
 describe('the trip room write gate', () => {
+  it('keeps not-joined for a patch sent before hello, whatever the role', async () => {
+    const storage = fakeStorage()
+    const state: TripRoomState = {
+      storage,
+      acceptWebSocket: () => undefined,
+      getWebSockets: () => [],
+    }
+    const room = new TripRoom(state, {})
+
+    for (const role of ['editor', 'viewer'] as const) {
+      const socket = fakeSocket(identityWith(role, 'ana'), `early-${role}`)
+      await room.webSocketMessage(socket, PATCH)
+      expect(socket.sent).toEqual([
+        expect.objectContaining({ t: 'error', code: 'not-joined', requestId: 'req-1' }),
+      ])
+    }
+    expect(storage.writes).toBe(0)
+  })
+
   it('refuses a viewer socket’s patch without writing, moving the version or telling anyone else', async () => {
     const { room, storage, sockets } = await joinedRoom(['viewer', 'editor'])
     const [viewer, editor] = sockets
@@ -196,6 +223,7 @@ describe('the trip room write gate', () => {
     expect(viewer.sent).toEqual([
       expect.objectContaining({
         t: 'error',
+        code: 'read-only',
         message: 'This connection is read-only',
         requestId: 'req-1',
       }),
@@ -548,6 +576,7 @@ describe('socket age backstop', () => {
     now += 1
     young.sent.length = 0
     const armedBefore = storage.alarmSet
+    storage.alarmAt = null
     await resumed.alarm()
     for (const expired of [old, silent]) {
       expect(expired.closedWith).toBe(CLOSE_ROOM_CLOSED)
@@ -564,5 +593,425 @@ describe('socket age backstop', () => {
     await resumed.webSocketMessage(old, PATCH)
     await resumed.fetch(commitRequest())
     expect(old.sent.filter((frame) => frame.t === 'commit')).toEqual([])
+  })
+})
+
+describe('refusing a connect minted before a revocation reached the room', () => {
+  const REVOKED_AT = 1_700_000_000_000
+  const BEFORE = REVOKED_AT - 5_000
+  const SKEW = TRIP_ROOM_REVOCATION_SKEW_MS
+
+  let now = REVOKED_AT
+  let pending: FakeSocket
+  let storage: ReturnType<typeof fakeStorage>
+  let accepted: Array<FakeSocket>
+  let room: TripRoom
+  let sink: ReturnType<typeof createMemorySink>
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    now = REVOKED_AT
+    storage = fakeStorage()
+    accepted = []
+    sink = createMemorySink()
+    const state: TripRoomState = {
+      storage,
+      acceptWebSocket: (socket) => {
+        accepted.push(socket as FakeSocket)
+      },
+      getWebSockets: (tag) =>
+        tag === undefined
+          ? accepted
+          : accepted.filter(
+              (socket) =>
+                (
+                  socket.deserializeAttachment() as {
+                    identity: TripRoomIdentity
+                  }
+                ).identity.user.id === tag,
+            ),
+    }
+    const NativeResponse = Response
+    vi.stubGlobal(
+      'WebSocketPair',
+      class {
+        0 = fakeSocket(identityWith('editor', 'client'), 'client')
+        1 = pending
+      },
+    )
+    vi.stubGlobal(
+      'Response',
+      class extends NativeResponse {
+        constructor(body: BodyInit | null, init: ResponseInit) {
+          super(body, {
+            ...init,
+            status: init.status === 101 ? 200 : init.status,
+          })
+        }
+      },
+    )
+    let ids = 0
+    room = new TripRoom(
+      state,
+      {},
+      {
+        now: () => now,
+        newId: () => `conn-${ids++}`,
+        logger: createLogger({ sink }),
+      },
+    )
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  /** Opens a socket for `userId` through the room's connect route; `via` picks header or query. */
+  async function connect(
+    userId: string,
+    issuedAt: number | undefined,
+    via: 'header' | 'query' = 'header',
+    settle = true,
+  ): Promise<FakeSocket> {
+    const identity = {
+      ...identityWith('editor', userId),
+      ...(issuedAt === undefined ? {} : { issuedAt }),
+    }
+    const encoded = JSON.stringify(identity)
+    pending = fakeSocket(identity, 'pending')
+    const response =
+      via === 'header'
+        ? await room.fetch(
+            new Request('https://room/connect', {
+              headers: {
+                upgrade: 'websocket',
+                [TRIP_ROOM_IDENTITY_HEADER]: encoded,
+              },
+            }),
+          )
+        : await room.fetch(
+            new Request(
+              `https://room/connect?identity=${encodeURIComponent(encoded)}`,
+              { headers: { upgrade: 'websocket' } },
+            ),
+          )
+    expect(response.status).toBe(200)
+    // A refused socket is closed after the upgrade finished; let that happen before the test reads it.
+    if (settle) await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
+    return pending
+  }
+
+  function closeAt(revokedAt: number | string | null, body?: unknown) {
+    return room.fetch(
+      new Request('https://room/close', {
+        method: 'POST',
+        headers:
+          revokedAt === null
+            ? {}
+            : { [TRIP_ROOM_REVOKED_AT_HEADER]: String(revokedAt) },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      }),
+    )
+  }
+
+  function expectRefused(socket: FakeSocket) {
+    expect(socket.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect(socket.closedReason).toBe(TRIP_ROOM_CLOSED_REASON)
+    expect(socket.sent).toEqual([])
+  }
+
+  it('closes a refused socket only after the upgrade finished', async () => {
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    const ana = await connect('ana', BEFORE, 'header', false)
+    expect(ana.closedWith).toBeNull()
+    await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
+    expectRefused(ana)
+  })
+
+  it('refuses the stale connect of the person a close named, and not another person’s', async () => {
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+
+    const ana = await connect('ana', BEFORE)
+    const ben = await connect('ben', BEFORE)
+
+    expectRefused(ana)
+    expect(ben.closedWith).toBeNull()
+  })
+
+  it('refuses everyone’s stale connect after a whole-room close', async () => {
+    await closeAt(REVOKED_AT)
+
+    expectRefused(await connect('ana', BEFORE))
+    expectRefused(await connect('ben', BEFORE))
+  })
+
+  it('applies the later of the room’s watermark and the person’s, and never moves one back', async () => {
+    now = REVOKED_AT + 40_000
+    await closeAt(REVOKED_AT + 20_000)
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    expect(storage.data.get('w:room')).toBe(REVOKED_AT + 20_000)
+
+    expectRefused(await connect('ana', REVOKED_AT + 10_000))
+
+    await closeAt(REVOKED_AT + 40_000, { userId: 'ben' })
+    await closeAt(REVOKED_AT + 30_000, { userId: 'ben' })
+    expect(storage.data.get('w:u:ben')).toBe(REVOKED_AT + 40_000)
+    expectRefused(await connect('ben', REVOKED_AT + 35_000))
+    expectRefused(await connect('ana', REVOKED_AT + 15_000))
+  })
+
+  it('refuses up to the watermark plus the skew margin and accepts from it', async () => {
+    await closeAt(REVOKED_AT)
+
+    expectRefused(await connect('ana', REVOKED_AT + SKEW - 1))
+    const exact = await connect('ana', REVOKED_AT + SKEW)
+    expect(exact.closedWith).toBeNull()
+  })
+
+  it('refuses a connect with no issuedAt where a watermark applies and accepts it elsewhere', async () => {
+    const free = await connect('ana', undefined)
+    expect(free.closedWith).toBeNull()
+
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+
+    expectRefused(await connect('ana', undefined))
+    expect((await connect('ben', undefined)).closedWith).toBeNull()
+  })
+
+  it('refuses through the ?identity= query exactly as through the header', async () => {
+    await closeAt(REVOKED_AT)
+
+    expectRefused(await connect('ana', BEFORE, 'query'))
+    const fresh = await connect('ana', REVOKED_AT + SKEW, 'query')
+    expect(fresh.closedWith).toBeNull()
+  })
+
+  it('never joins, announces or counts a refused socket, and ignores what it sends', async () => {
+    const peer = await connect('ben', BEFORE)
+    await room.webSocketMessage(peer, HELLO)
+    peer.sent.length = 0
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    peer.sent.length = 0
+    storage.writes = 0
+
+    const ana = await connect('ana', BEFORE)
+    await room.webSocketMessage(ana, HELLO)
+    await room.webSocketMessage(ana, PATCH)
+    expectRefused(ana)
+    await room.webSocketClose(ana, CLOSE_ROOM_CLOSED, TRIP_ROOM_CLOSED_REASON, true)
+
+    expect(peer.sent).toEqual([])
+    expect(storage.data.has('meta')).toBe(false)
+    const snapshot = await room.fetch(new Request('https://room/snapshot'))
+    await expect(snapshot.json()).resolves.toMatchObject({ peers: [{ user: { id: 'ben' } }] })
+    expect(sink.records.filter((r) => r.msg.includes('refused'))).toEqual([
+      expect.objectContaining({ tripId: TRIP_ID, orgId: 'org-1', userId: 'ana' }),
+    ])
+    expect(JSON.stringify(sink.records)).not.toContain('@')
+  })
+
+  it('still evicts a close without a valid revokedAt, records nothing and warns', async () => {
+    const ana = await connect('ana', BEFORE)
+    const ben = await connect('ben', BEFORE)
+
+    for (const missing of [null, 'soon', '-5', '12.5', '']) {
+      const response = await closeAt(missing, { userId: 'ana' })
+      expect(response.status).toBe(200)
+    }
+    await closeAt(null)
+
+    expect(ana.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect(ben.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect([...storage.data.keys()].filter((key) => key.startsWith('w:'))).toEqual([])
+    expect(sink.records.filter((r) => r.level === 'warn')).toHaveLength(6)
+    expect((await connect('ana', undefined)).closedWith).toBeNull()
+  })
+
+  it('keeps the existing userId validation: a body naming no person is a 400 and records nothing', async () => {
+    const response = await closeAt(REVOKED_AT, { userId: '' })
+
+    expect(response.status).toBe(400)
+    expect([...storage.data.keys()].filter((key) => key.startsWith('w:'))).toEqual([])
+  })
+
+  it('schedules the alarm for a close in a version-0 room, keeps it while a watermark is left and prunes it after the TTL', async () => {
+    await closeAt(REVOKED_AT)
+    expect(storage.alarmAt).toBe(REVOKED_AT + TRIP_ROOM_ALARM_INTERVAL_MS)
+
+    now = REVOKED_AT + TRIP_ROOM_REVOCATION_TTL_MS
+    storage.alarmAt = null
+    await room.alarm()
+    expect(storage.data.has('w:room')).toBe(true)
+    expect(storage.alarmAt).toBe(now + TRIP_ROOM_ALARM_INTERVAL_MS)
+
+    now += 1
+    storage.alarmAt = null
+    await room.alarm()
+    expect(storage.data.has('w:room')).toBe(false)
+    expect(storage.alarmAt).toBeNull()
+    expect((await connect('ana', undefined)).closedWith).toBeNull()
+  })
+  function resetAt(stamp: number | string | null) {
+    return room.fetch(
+      new Request('https://room/reset', {
+        method: 'POST',
+        headers:
+          stamp === null
+            ? {}
+            : { [TRIP_ROOM_REVOKED_AT_HEADER]: String(stamp) },
+      }),
+    )
+  }
+
+  it('resets content and person identifiers while retaining the latest applicable barrier', async () => {
+    await room.fetch(commitRequest())
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    now += 500
+    await closeAt(now, { userId: 'ben' })
+    await resetAt(REVOKED_AT)
+    expect([...storage.data]).toEqual([['w:room', now]])
+    expectRefused(await connect('ana', BEFORE))
+    expectRefused(await connect('ben', undefined))
+    expect((await connect('ana', now + SKEW)).closedWith).toBeNull()
+    expect(storage.alarmAt).not.toBeNull()
+    for (const legacy of [null, 'soon', '-1', '1.5']) {
+      await resetAt(legacy)
+      expect([...storage.data]).toEqual([['w:room', now]])
+    }
+  })
+
+  it('orders reset after an in-flight commit and erases its result', async () => {
+    const put = storage.put
+    let release = () => {}
+    const paused = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let started = () => {}
+    const entered = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    storage.put = async (entries) => {
+      if ('meta' in entries) {
+        started()
+        await paused
+      }
+      await put(entries)
+    }
+    const commit = room.fetch(commitRequest())
+    await entered
+    const reset = resetAt(REVOKED_AT)
+    release()
+    await Promise.all([commit, reset])
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('preserves barriers during idle erasure, then prunes them at expiry', async () => {
+    await room.fetch(commitRequest())
+    now += TRIP_ROOM_IDLE_TTL_MS + 1
+    await closeAt(now)
+    storage.alarmAt = null
+    await room.alarm()
+    expect([...storage.data]).toEqual([['w:room', now]])
+    expect(storage.alarmAt).not.toBeNull()
+    now += TRIP_ROOM_REVOCATION_TTL_MS + 1
+    storage.alarmAt = null
+    await room.alarm()
+    expect(storage.data.size).toBe(0)
+    expect(storage.alarmAt).toBeNull()
+  })
+
+  it('rejects timestamps beyond the allowed skew without weakening an existing barrier', async () => {
+    await closeAt(REVOKED_AT)
+    await closeAt(REVOKED_AT + SKEW + 1)
+    await resetAt('999999999999999')
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+    expectRefused(await connect('ana', BEFORE))
+    expect((await connect('ana', REVOKED_AT + SKEW)).closedWith).toBeNull()
+  })
+
+  it('still evicts and answers 200 when close cannot persist its watermark', async () => {
+    const ana = await connect('ana', BEFORE)
+    storage.put = async () => {
+      throw new Error('storage unavailable')
+    }
+    expect((await closeAt(REVOKED_AT)).status).toBe(200)
+    expectRefused(ana)
+    expect(sink.records.some((record) => record.level === 'error')).toBe(true)
+  })
+
+  it('makes a failed reset observable and retryable without discarding a newer barrier', async () => {
+    await closeAt(REVOKED_AT, { userId: 'ana' })
+    const put = storage.put
+    storage.put = async () => {
+      throw new Error('storage unavailable')
+    }
+    await expect(resetAt(REVOKED_AT - 1)).rejects.toThrow('storage unavailable')
+    expect(storage.data.get('w:u:ana')).toBe(REVOKED_AT)
+    storage.put = put
+    await resetAt(REVOKED_AT - 1)
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('never postpones an earlier alarm while recording, resetting or pruning barriers', async () => {
+    storage.alarmAt = now + 10
+    await closeAt(REVOKED_AT)
+    expect(storage.alarmAt).toBe(now + 10)
+    await resetAt(REVOKED_AT)
+    expect(storage.alarmAt).toBe(now + 10)
+    await room.alarm()
+    expect(storage.alarmAt).toBe(now + 10)
+  })
+
+  it('closes refused sockets on communication and by alarm if their timer is lost', async () => {
+    await closeAt(REVOKED_AT)
+    const speaking = await connect('ana', BEFORE, 'header', false)
+    const silent = await connect('ben', BEFORE, 'header', false)
+    vi.clearAllTimers()
+    await room.webSocketMessage(speaking, HELLO)
+    expectRefused(speaking)
+    now += TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS + 1
+    storage.alarmAt = null
+    const resumed = new TripRoom(
+      { storage, acceptWebSocket: () => {}, getWebSockets: () => accepted },
+      {},
+      { now: () => now },
+    )
+    await resumed.alarm()
+    expectRefused(silent)
+  })
+
+  it('tolerates a peer closure and repeated close before the delayed refusal', async () => {
+    await closeAt(REVOKED_AT)
+    const ana = await connect('ana', BEFORE, 'header', false)
+    ana.close = () => {
+      throw new Error('already closed')
+    }
+    await room.webSocketClose(ana, 1000, '', true)
+    await closeAt(REVOKED_AT)
+    await vi.advanceTimersByTimeAsync(TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS)
+  })
+
+  it('erases a large room within the storage batch bound and preserves the barrier', async () => {
+    for (let index = 0; index < 300; index++)
+      storage.data.set(`e:${index}`, { by: 'ana' })
+    const remove = storage.delete
+    storage.delete = async (keys) => {
+      expect(keys.length).toBeLessThanOrEqual(128)
+      return remove(keys)
+    }
+    await resetAt(REVOKED_AT)
+    expect([...storage.data]).toEqual([['w:room', REVOKED_AT]])
+  })
+
+  it('prunes watermarks without skipping the maximum socket age backstop', async () => {
+    const ana = await connect('ana', BEFORE)
+    await room.webSocketMessage(ana, HELLO)
+    await closeAt(REVOKED_AT, { userId: 'ben' })
+    now += TRIP_ROOM_MAX_SOCKET_AGE_MS + 1
+    storage.alarmAt = null
+    await room.alarm()
+    expect(ana.closedWith).toBe(CLOSE_ROOM_CLOSED)
+    expect(storage.data.has('w:u:ben')).toBe(false)
   })
 })

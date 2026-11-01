@@ -27,6 +27,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'toaster.label': 'Сповіщення',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Основні розділи',
   'nav.mobile': 'Розділи',
@@ -82,6 +83,7 @@ const messages = {
   'workspace.createPermanent':
     'У planned.travel поки немає можливості видалити простір. Кожен простір, який ви створюєте або до якого приєднуєтесь, входить до ліміту: коли ви належите до {limit} просторів, створити ще один не можна.',
   'workspace.createName': 'Назва простору',
+  'workspace.createNameRequired': 'Введіть назву простору.',
   'workspace.createUpgrade':
     '«{workspace}» на тарифі «Безкоштовний», а створити ще один простір може лише простір із платним тарифом. Якщо якийсь із ваших інших просторів має платний тариф, перемкніться на нього й створіть простір звідти. Інакше переведіть «{workspace}» на платний тариф.',
   'workspace.createLimitReached':
@@ -719,6 +721,7 @@ const messages = {
   'trips.card.copying': 'Копіюється',
   'trips.card.copyingLabel': '{title} ще копіюється',
   'trips.card.copyingReason': 'Зачекайте, доки копіювання завершиться.',
+  'trips.card.archivedReason': 'Відновіть цю подорож, щоб її редагувати.',
   'metric.trips': 'Поїздки',
   'metric.places': 'Місця',
   'metric.members': 'Учасники',

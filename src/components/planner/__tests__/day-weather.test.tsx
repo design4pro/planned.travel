@@ -120,13 +120,60 @@ function badge(
   )
 }
 
+/** True when `later` comes after `earlier` in document order. */
+const follows = (earlier: Node, later: Node) =>
+  (earlier.compareDocumentPosition(later) &
+    Node.DOCUMENT_POSITION_FOLLOWING) !==
+  0
+
+describe('the forecast badge name contains its visible text (WCAG 2.5.3)', () => {
+  const noCondition = forecast({ ...READING, symbol: null })
+
+  it.each([
+    ['Celsius', FORECAST, 'metric'],
+    ['Fahrenheit', FORECAST, 'imperial'],
+    ['no condition', noCondition, 'metric'],
+  ] as const)('holds for %s', (_label, weather, unit) => {
+    badge(weather, unit)
+
+    const button = screen.getByRole('button', { name: /^Forecast/ })
+    const visible = button.textContent ?? ''
+    expect(visible).not.toBe('')
+    expect(button.getAttribute('aria-label')).toContain(visible)
+  })
+
+  it('matches a speech command that speaks the visible label', () => {
+    badge(FORECAST)
+
+    expect(screen.getByRole('button', { name: /12°\/4°C/ })).toBeDefined()
+  })
+
+  it('holds in a right-to-left locale', async () => {
+    const arabic = await loadCatalogue('ar')
+    mount(
+      <I18nProvider locale="ar" messages={arabic}>
+        <DayWeatherBadge
+          weather={FORECAST}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+      </I18nProvider>,
+    )
+
+    const button = screen.getByRole('button')
+    const visible = button.textContent ?? ''
+    expect(visible).not.toBe('')
+    expect(button.getAttribute('aria-label')).toContain(visible)
+  })
+})
+
 describe('DayWeatherBadge', () => {
-  it('names a forecast with the word Forecast first, then the condition, high and low', () => {
+  it('names a forecast with the word Forecast first, then the figures, the condition, high and low', () => {
     badge(FORECAST)
 
     expect(
       screen.getByRole('button', {
-        name: 'Forecast: Rain, high 12°C, low 4°C',
+        name: 'Forecast: 12°/4°C, Rain (high 12°C, low 4°C)',
       }),
     ).toBeDefined()
   })
@@ -136,7 +183,7 @@ describe('DayWeatherBadge', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'Forecast: Rain, high 53°F, low 40°F',
+        name: 'Forecast: 53°/40°F, Rain (high 53°F, low 40°F)',
       }),
     ).toBeDefined()
     expect(screen.getByText('53°')).toBeDefined()
@@ -146,7 +193,9 @@ describe('DayWeatherBadge', () => {
     badge(forecast({ ...READING, symbol: null }))
 
     expect(
-      screen.getByRole('button', { name: 'Forecast: high 12°C, low 4°C' }),
+      screen.getByRole('button', {
+        name: 'Forecast: 12°/4°C (high 12°C, low 4°C)',
+      }),
     ).toBeDefined()
   })
 
@@ -463,6 +512,23 @@ describe('the fuller reading of a recorded day', () => {
     expect(screen.getByText('2°C')).toBeDefined()
     expect(screen.queryByText('High / low')).toBeNull()
   })
+
+  it('reads the note before the figures and keeps the credit last', async () => {
+    const { dialog } = await open()
+
+    const note = within(dialog).getByText('Measured values for this day.')
+    expect(follows(note, within(dialog).getByText('8° / 2°C'))).toBe(true)
+    expect(
+      follows(
+        within(dialog).getByText('8° / 2°C'),
+        within(dialog).getByText(
+          'Data: NASA Langley Research Center POWER Project',
+        ),
+      ),
+    ).toBe(true)
+    expect(note.tagName).toBe('P')
+    expect(note.className).toContain('text-caption')
+  })
 })
 
 describe('the fuller reading of an estimated day', () => {
@@ -479,6 +545,38 @@ describe('the fuller reading of an estimated day', () => {
     expect(within(dialog).getByText('Typical high / low')).toBeDefined()
     expect(within(dialog).queryByText('High / low')).toBeNull()
     expect(within(dialog).getByText('8° / 2°C')).toBeDefined()
+  })
+
+  it.each([
+    ['high', { tempMinC: null }, 'Typical high', '8°C'],
+    ['low', { tempMaxC: null }, 'Typical low', '2°C'],
+  ])(
+    'labels an estimate with only a %s as typical, so it does not read as a prediction',
+    (_name, missing, label, figure) => {
+      render(
+        <DayWeatherPanel reading={{ ...ESTIMATE, ...missing }} unit="metric" />,
+      )
+
+      expect(screen.getByText(label)).toBeDefined()
+      expect(screen.getByText(figure)).toBeDefined()
+      expect(screen.queryByText(/^(High|Low)$/)).toBeNull()
+    },
+  )
+
+  it('reads the note before the figures and keeps the credit last', async () => {
+    const { dialog } = await open()
+
+    const note = within(dialog).getByText(
+      'A long-term average for this month, not a forecast.',
+    )
+    const figures = within(dialog).getByText('8° / 2°C')
+    const credit = within(dialog).getByText(
+      'Data: NASA Langley Research Center POWER Project',
+    )
+    expect(follows(note, figures)).toBe(true)
+    expect(follows(figures, credit)).toBe(true)
+    expect(note.tagName).toBe('P')
+    expect(note.className).toContain('text-caption')
   })
 
   it('says it is a long-term average and not a forecast', async () => {
@@ -527,6 +625,22 @@ describe('the fuller reading of an estimated day', () => {
 })
 
 describe('DayWeatherPanel', () => {
+  it('orders the parts as note, rows and credit for a non-forecast, and rows then credit for a forecast', () => {
+    const order = (reading: DayReading) => {
+      const { container, unmount } = render(
+        <DayWeatherPanel reading={reading} unit="metric" />,
+      )
+      const panel = container.querySelector('[data-part="day-weather-panel"]')
+      const parts = Array.from(panel?.children ?? []).map((c) => c.tagName)
+      unmount()
+      return parts
+    }
+
+    expect(order(RECORDED)).toEqual(['P', 'DL', 'P'])
+    expect(order(ESTIMATE)).toEqual(['P', 'DL', 'P'])
+    expect(order(READING)).toEqual(['DL', 'UL', 'P'])
+  })
+
   it('omits the slots region entirely for a reading with no slots', () => {
     render(
       <DayWeatherPanel reading={{ ...READING, slots: null }} unit="metric" />,
@@ -556,6 +670,82 @@ describe('DayWeatherPanel', () => {
     expect(
       screen.getAllByRole('listitem').map((slot) => slot.textContent),
     ).toEqual(['AfternoonCloudy10°', 'Evening8°'])
+  })
+
+  it('draws the badge\'s muted "no sky" mark for a slot with no sky, and announces nothing for it', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [
+            { from: '12:00', symbol: 'cloudy', tempC: 10 },
+            { from: '18:00', symbol: null, tempC: 8 },
+          ],
+        }}
+        unit="metric"
+      />,
+    )
+
+    const [, evening] = screen.getAllByRole('listitem')
+    const mark = evening.querySelector('svg.lucide-thermometer')
+    expect(mark?.getAttribute('aria-hidden')).toBe('true')
+    expect(mark?.getAttribute('class')).toContain('text-ink-4')
+    expect(mark?.getAttribute('width')).toBe('16')
+    expect(evening.textContent).toBe('Evening8°')
+  })
+
+  it.each([
+    ['clearsky', 'lucide-moon'],
+    ['fair', 'lucide-cloud-moon'],
+    ['partlycloudy', 'lucide-cloud-moon'],
+    ['rain', 'lucide-cloud-rain'],
+    ['cloudy', 'lucide-cloud'],
+  ])('draws %s in the Night slot as %s', (symbol, icon) => {
+    render(
+      <DayWeatherPanel
+        reading={{ ...READING, slots: [{ from: '00:00', symbol, tempC: 5 }] }}
+        unit="metric"
+      />,
+    )
+
+    const night = screen.getByRole('listitem')
+    expect(night.querySelector('svg.lucide-sun')).toBeNull()
+    expect(night.querySelector(`svg.${icon}`)).not.toBeNull()
+  })
+
+  it('keeps the day icons in the Morning, Afternoon and Evening slots', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [
+            { from: '06:00', symbol: 'clearsky', tempC: 6 },
+            { from: '12:00', symbol: 'fair', tempC: 11 },
+            { from: '18:00', symbol: 'partlycloudy', tempC: 8 },
+          ],
+        }}
+        unit="metric"
+      />,
+    )
+
+    const [morning, afternoon, evening] = screen.getAllByRole('listitem')
+    expect(morning.querySelector('svg.lucide-sun')).not.toBeNull()
+    expect(afternoon.querySelector('svg.lucide-cloud-sun')).not.toBeNull()
+    expect(evening.querySelector('svg.lucide-cloud-sun')).not.toBeNull()
+  })
+
+  it('names a Night condition by the condition, not by the moon', () => {
+    render(
+      <DayWeatherPanel
+        reading={{
+          ...READING,
+          slots: [{ from: '00:00', symbol: 'clearsky', tempC: 5 }],
+        }}
+        unit="metric"
+      />,
+    )
+
+    expect(screen.getByRole('listitem').textContent).toBe('NightClear5°')
   })
 
   it('leaves out a row the provider gave nothing for, rather than writing a zero', () => {

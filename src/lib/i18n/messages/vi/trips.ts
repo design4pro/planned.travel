@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Chuyến đi này đã được lưu trữ. Cộng tác chỉ có thể đọc.',
+  'collab.readOnly.role':
+    'Chỉ chủ sở hữu và người chỉnh sửa chuyến đi mới có thể thay đổi cuộc trò chuyện, ghi chú và cuộc thăm dò.',
   'notFound.title': 'Không tìm thấy chuyến đi này',
   'notFound.body':
     'Chuyến đi này không nằm trong số những chuyến đi bạn có thể mở trong không gian làm việc hiện tại. Có thể chuyến đi đã bị xóa hoặc bạn không có quyền truy cập.',
@@ -163,7 +167,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Thêm địa điểm, {day}',
   'plan.addPlace.quota':
     'Bạn đã đạt giới hạn số địa điểm của gói hiện tại. Hãy nâng cấp để thêm nữa.',
-  'plan.addPlace.quotaAction': 'Xem các gói',
+  'plan.addPlace.quotaAction': 'Xem các gói (mở trong tab mới)',
   'plan.stay.checkIn': 'Nhận phòng',
   'plan.stay.checkOut': 'Trả phòng',
   'plan.day.addStay': 'Thêm chỗ ở, {day}',
@@ -296,6 +300,8 @@ const messages = {
   'book.pinnedCaption': 'Đã ghim vào một ngày của lịch trình',
   'book.readOnly.archived':
     'Chuyến đi này đã được lưu trữ nên các đặt chỗ và nơi lưu trú chỉ có thể xem. Hãy khôi phục chuyến đi để thay đổi.',
+  'book.readOnly.role':
+    'Bạn có thể xem các đặt chỗ và nơi lưu trú này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Thay đổi này bị từ chối. Hãy kiểm tra trạng thái hiện tại của chuyến đi trước khi thay đổi thêm.',
@@ -303,6 +309,8 @@ const messages = {
     'Không thể tải lại chuyến đi. Hãy thử lại trước khi thay đổi.',
   'transports.readOnly.archived':
     'Chuyến đi này đã được lưu trữ. Hãy khôi phục để thay đổi phương tiện di chuyển.',
+  'transports.readOnly.role':
+    'Bạn có thể xem các phương tiện di chuyển này. Chỉ chủ sở hữu chuyến đi và người chỉnh sửa mới có thể thay đổi.',
   'transports.title': 'Di chuyển',
   'transports.empty': 'Chưa ghi gì',
   'transports.count.transports': {
@@ -397,9 +405,9 @@ const messages = {
     'Một chuyến đi có tối đa {limit} khách, vì danh sách dài hơn khiến việc chọn người tham gia và đọc phần chia chi phí trở nên khó khăn',
   'people.error.guestMergeTarget': 'Chọn một người đã có trong chuyến đi này',
   'plan.weather.badge.forecast':
-    'Dự báo: {condition}, cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures}, {condition} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Dự báo: cao nhất {max}, thấp nhất {min}',
+    'Dự báo: {figures} (cao nhất {max}, thấp nhất {min})',
   'plan.weather.badge.unavailable': 'Không có thông tin thời tiết cho ngày này',
   'plan.weather.badge.loading': 'Đang tải thời tiết',
   'plan.weather.badge.recorded': 'Đã ghi nhận: cao nhất {max}, thấp nhất {min}',
@@ -439,6 +447,8 @@ const messages = {
   'plan.weather.panel.low': 'Thấp nhất',
   'plan.weather.panel.recordedNote': 'Giá trị đo được của ngày này.',
   'plan.weather.panel.temperatureTypical': 'Cao nhất / thấp nhất thường gặp',
+  'plan.weather.panel.typicalHigh': 'Cao nhất thường gặp',
+  'plan.weather.panel.typicalLow': 'Thấp nhất thường gặp',
   'plan.weather.panel.estimateNote':
     'Mức trung bình dài hạn của tháng này, không phải dự báo.',
   'plan.weather.attribution.metNorway': 'Dữ liệu dự báo: MET Norway, CC BY 4.0',

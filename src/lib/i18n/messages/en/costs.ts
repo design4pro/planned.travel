@@ -83,7 +83,11 @@ const messages = {
   'split.nobody': 'Nobody',
   'split.departed': 'Left the trip',
   'split.departedHint':
-    'Unticking someone who left the trip removes their share for good.',
+    'Once you save, unticking someone who left the trip removes their share for good.',
+  'split.removedNumbered': 'Removed traveller {number}',
+  'split.includeRemoved': 'Include Removed traveller in this split',
+  'split.includeRemovedNumbered':
+    'Include Removed traveller {number} in this split',
   'split.includeFor': 'Include {name} in this split',
   'split.how': 'How this expense divides',
   'split.method.equal': 'Equally',
@@ -216,7 +220,7 @@ const messages = {
     one: '{others} other traveller',
     other: '{others} other travellers',
   },
-  'memberBar.notSplit': 'Not assigned to anyone',
+  'memberBar.notSplit': 'Not split between anyone',
   'totalTile.label': 'Total trip spend',
   'totalTile.captionPlanned': 'Planned {amount} across all travellers',
   'totalTile.captionBudget': '{amount} budgeted for the trip',
@@ -377,6 +381,15 @@ const messages = {
     one: '{expenses} expense written to CSV.',
     other: '{expenses} expenses written to CSV.',
   },
+  /** The CSV's column headings; the date, amount, currency, payer and share columns reuse `field.*` and `totalTile.yourShare`. `{currency}` is the display currency's code. */
+  'export.csv.title': 'Title',
+  'export.csv.category': 'Category',
+  'export.csv.originalAmount': 'Original amount',
+  'export.csv.originalCurrency': 'Original currency',
+  'export.csv.rate': 'Rate',
+  'export.csv.splitMethod': 'Split method',
+  'export.csv.notes': 'Notes',
+  'export.csv.amountIn': 'Amount in {currency}',
   /** A day's heading in the list: what the day's expenses came to. */
   'list.daySpent': '{amount} spent',
   'skeleton.loading': 'Loading the expenses',

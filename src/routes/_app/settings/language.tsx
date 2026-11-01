@@ -170,11 +170,20 @@ function LanguagePage() {
     setChoice(choiceOf(commit.landed))
     if (commit.status === 'stale') {
       // The row was written and the chip is right; the page behind it is not.
-      // Said in the language the reader is still looking at, because finishing
-      // the switch is exactly what did not happen.
-      toast.warning(t('settings.language.reload.title'), {
-        description: t('settings.language.reload.body', { language }),
-      })
+      // The captured translator can differ from the refreshed document locale.
+      const source = localeDescriptor(locale)
+      toast.warning(
+        <span lang={source.tag} dir={source.dir}>
+          {t('settings.language.reload.title')}
+        </span>,
+        {
+          description: (
+            <span lang={source.tag} dir={source.dir}>
+              {t('settings.language.reload.body', { language })}
+            </span>
+          ),
+        },
+      )
       return
     }
     toast.success(commit.speak('settings.language.saved', { language }))

@@ -46,9 +46,39 @@ export const TRIP_ROOM_ALARM_INTERVAL_MS = 5 * 60 * 1000
 
 /**
  * Maximum socket age before access is checked again. With the five-minute alarm interval,
- * a missed revocation close or an in-flight connect keeps its old role for about 20 minutes.
+ * a revocation close that never reached the room keeps the old role for about 20 minutes. A connect
+ * in flight while the close lands is refused instead (`TRIP_ROOM_REVOCATION_SKEW_MS`).
  */
 export const TRIP_ROOM_MAX_SOCKET_AGE_MS = 15 * 60 * 1000
+
+/**
+ * Margin added to a revocation watermark before a connect's `issuedAt` is compared with it. Both
+ * stamps come from the app Worker, but Workers on different machines can disagree by a moment, and a
+ * connect refused by mistake costs one reconnect while one accepted by mistake keeps a revoked role.
+ * Revocation stamps more than this far ahead of the room clock are rejected.
+ */
+export const TRIP_ROOM_REVOCATION_SKEW_MS = 1_000
+
+/**
+ * How long a revocation watermark is kept (three alarm intervals). A connect minted before a close
+ * and delivered to the room later than this is the stale-role window the maximum socket age bounds.
+ */
+export const TRIP_ROOM_REVOCATION_TTL_MS = 15 * 60 * 1000
+
+/**
+ * How long after the 101 a refused connect is closed. A close sent before the upgrade response
+ * left the client open and never closed in a browser run against the dev server (#1085 QA), stuck on
+ * "Reconnecting"; a short delay lets the upgrade finish first. shortcut: a fixed delay, not an
+ * acknowledgement; revisit if a client is ever seen holding a refused socket open.
+ */
+export const TRIP_ROOM_REFUSAL_CLOSE_DELAY_MS = 250
+
+/**
+ * Header the app Worker puts on a `/close` request: when, by its clock, the revoking write had
+ * resolved (epoch milliseconds). A header, not the body, so the empty-body and `{ userId }`
+ * contracts are unchanged and a room that predates it still evicts.
+ */
+export const TRIP_ROOM_REVOKED_AT_HEADER = 'x-planned-trip-revoked-at'
 
 /**
  * The close the room sends after an access or trip state change (`/close`), or when a socket
@@ -143,13 +173,15 @@ export const presenceFocusSchema = z.object({
 
 export type PresenceFocus = z.infer<typeof presenceFocusSchema>
 
-export interface PresenceMember {
-  connectionId: string
-  user: PresenceUser
-  joinedAt: number
-  lastSeenAt: number
-  focus: PresenceFocus | null
-}
+export const presenceMemberSchema = z.object({
+  connectionId: z.string(),
+  user: presenceUserSchema,
+  joinedAt: z.number(),
+  lastSeenAt: z.number(),
+  focus: presenceFocusSchema.nullable(),
+})
+
+export type PresenceMember = z.infer<typeof presenceMemberSchema>
 
 export const patchOps = ['upsert', 'delete'] as const
 export type PatchOp = (typeof patchOps)[number]
@@ -230,6 +262,12 @@ export type TripRoomErrorCode =
   | 'payload-too-large'
   | 'rate-limited'
   | 'not-joined'
+  /**
+   * The connection's role cannot write. Distinct from `not-joined` so a client
+   * that answers `not-joined` by re-sending `hello` does not loop for a viewer.
+   * An addition to the vocabulary, not a wire change: no protocol version bump.
+   */
+  | 'read-only'
   | 'internal'
 
 export type ServerMessage =
@@ -314,8 +352,31 @@ export function encodeServerMessage(message: ServerMessage): string {
 }
 
 /**
- * Client-side counterpart. Server frames are trusted (they come from our own
- * Durable Object) so this only guards against a version skew during deploys.
+ * What the client reads from a server frame, and nothing more. Plain `z.object` (never `.strict()`)
+ * so a field a newer server adds does not fail an older tab; commit entries and snapshots are not
+ * walked, because the commit frame is only a signal to re-read the loader. `error.code` is a plain
+ * string so a code added later still reaches the `protocol-mismatch` check.
+ */
+export const serverMessageSchema = z.discriminatedUnion('t', [
+  z.object({
+    t: z.literal('welcome'),
+    protocol: z.number(),
+    version: z.number(),
+    you: presenceMemberSchema,
+    peers: z.array(presenceMemberSchema),
+  }),
+  z.object({ t: z.literal('presence'), peers: z.array(presenceMemberSchema) }),
+  z.object({ t: z.literal('commit'), version: z.number(), entries: z.array(z.unknown()) }),
+  z.object({ t: z.literal('ack') }),
+  z.object({ t: z.literal('pong') }),
+  z.object({ t: z.literal('error'), code: z.string(), message: z.string() }),
+])
+
+/**
+ * Client-side counterpart. A tab that loaded the previous bundle keeps its socket across a deploy,
+ * so a frame is checked against `serverMessageSchema` and one the client does not understand is
+ * refused whole instead of being rendered. The original frame is returned, not the schema's
+ * output, so fields the client does not validate (`commits`, `snapshot`) stay available.
  */
 export function parseServerMessage(raw: string): ParseResult<ServerMessage> {
   let json: unknown
@@ -326,6 +387,14 @@ export function parseServerMessage(raw: string): ParseResult<ServerMessage> {
   }
   if (typeof json !== 'object' || json === null || !('t' in json)) {
     return { ok: false, code: 'invalid-message', message: 'Frame has no message type' }
+  }
+  const parsed = serverMessageSchema.safeParse(json)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      code: 'invalid-message',
+      message: parsed.error.issues[0]?.message ?? 'Frame does not match the protocol',
+    }
   }
   return { ok: true, value: json as ServerMessage }
 }
@@ -339,6 +408,12 @@ export const tripRoomIdentitySchema = z.object({
   user: presenceUserSchema,
   /** `viewer` connections receive commits but their patches are rejected. */
   role: z.enum(['editor', 'viewer']),
+  /**
+   * When, by the app Worker's clock, the connect began - before the session, the trip and the stored
+   * role were read. Optional because an older app Worker does not send it; the room refuses a
+   * connect without it only where a revocation watermark applies.
+   */
+  issuedAt: z.number().int().nonnegative().optional(),
 })
 
 export type TripRoomIdentity = z.infer<typeof tripRoomIdentitySchema>

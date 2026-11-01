@@ -336,6 +336,73 @@ describe('the trip room connection role', () => {
     expect(await roleOf(userId, undefined, forged)).toBe('viewer')
   })
 
+  describe('the issuedAt stamp', () => {
+    const ISSUED_AT = 1_700_000_000_000
+
+    it('hands the room the injected clock’s reading as issuedAt', async () => {
+      actAs(alpha.ownerUserId)
+      const { namespace, identities } = recordingNamespace()
+
+      await serveTripRoom(namespace, upgrade(tripId), tripId, () => ISSUED_AT)
+
+      expect(identities[0]?.issuedAt).toBe(ISSUED_AT)
+    })
+
+    it('takes the clock once, before the trip and the stored role are read', async () => {
+      actAs(alpha.ownerUserId)
+      const { namespace } = recordingNamespace()
+      const order: Array<string> = []
+      const realTrip = vi.mocked(getTrip).getMockImplementation()
+      const realRole = vi.mocked(tripRoleFor).getMockImplementation()
+      vi.mocked(getTrip).mockImplementationOnce((...args) => {
+        order.push('trip')
+        return realTrip!(...args)
+      })
+      vi.mocked(tripRoleFor).mockImplementationOnce((...args) => {
+        order.push('role')
+        return realRole!(...args)
+      })
+
+      await serveTripRoom(namespace, upgrade(tripId), tripId, () => {
+        order.push('clock')
+        return ISSUED_AT
+      })
+
+      expect(order).toEqual(['clock', 'trip', 'role'])
+    })
+
+    it('cannot be set by an identity header or an identity query the browser sends', async () => {
+      actAs(alpha.ownerUserId)
+      const forgedIdentity = encodeTripRoomIdentity({
+        tripId,
+        orgId: alpha.organizationId,
+        user: {
+          id: alpha.ownerUserId,
+          name: 'Ada',
+          initials: 'A',
+          hue: 1,
+          avatarUrl: null,
+        },
+        role: 'editor',
+        issuedAt: 4_000_000_000_000,
+      })
+      const forged = new Request(
+        `https://planned.travel/api/trip-room/${tripId}?identity=${encodeURIComponent(forgedIdentity)}`,
+        {
+          headers: {
+            upgrade: 'websocket',
+            [TRIP_ROOM_IDENTITY_HEADER]: forgedIdentity,
+          },
+        },
+      )
+      const { namespace, identities } = recordingNamespace()
+
+      await serveTripRoom(namespace, forged, tripId, () => ISSUED_AT)
+
+      expect(identities[0]?.issuedAt).toBe(ISSUED_AT)
+    })
+  })
+
   it('reads the stored role at every connection, so a demotion applies on the next reconnect', async () => {
     const userId = await alpha.addUser('Eddie')
     const member = await addTripMember(alpha.scope, {

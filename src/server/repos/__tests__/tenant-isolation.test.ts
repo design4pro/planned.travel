@@ -277,6 +277,7 @@ import {
   listFavouriteTripIds,
   setFavourite,
 } from '../trip-favourites'
+import { readTripCardFacts } from '../trip-cards'
 import {
   addTripMember,
   archiveTrip,
@@ -296,6 +297,7 @@ import {
   removeTripMember,
   requireTrip,
   restoreTrip,
+  setTripVisibility,
   shareLinksRepository,
   startTripCopy,
   tripMembersRepository,
@@ -307,7 +309,6 @@ import {
 } from '../trips'
 import {
   TripGuestMergeTargetError,
-  countTripPeople,
   createTripGuest,
   listTripGuests,
   listTripParticipants,
@@ -583,11 +584,6 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     placeId: place.id,
     startTime: '09:30',
   })
-  await setAssignmentParticipants(scope, assignment.id, [
-    tenant.ownerUserId,
-    secondUserId,
-  ])
-
   const accommodation = await createAccommodation(scope, {
     tripId: trip.id,
     startDayId: firstDay.id,
@@ -627,6 +623,10 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
     userId: companionUserId,
     role: 'editor',
   })
+  await setAssignmentParticipants(scope, assignment.id, [
+    tenant.ownerUserId,
+    companionUserId,
+  ])
   const expense = await createExpense(scope, {
     tripId: trip.id,
     dayId: firstDay.id,
@@ -763,7 +763,7 @@ async function seedWorld(tenant: SeededTenant): Promise<World> {
   const photo = await addPhoto(scope, {
     journeyId: journey.id,
     entryId: journeyEntry.id,
-    storageKey: `photos/${tenant.organizationId}/tarts.jpg`,
+    storageKey: `journeys/${tenant.organizationId}/tarts.jpg`,
     contentType: 'image/jpeg',
     sizeBytes: 102_400,
   })
@@ -1251,6 +1251,39 @@ describe('tenant isolation', () => {
     beta = await seedWorld(await harness.seedTenant('beta'))
   })
 
+  describe('journey entry sources (#1407)', () => {
+    it.each(['sourceTripId', 'sourcePlaceId', 'checkInId'] as const)(
+      'refuses foreign and missing %s in both writers without writing',
+      async (field) => {
+        const scope = alpha.tenant.scope
+        const before = await listJourneyEntries(scope, alpha.journeyId)
+        const foreign = {
+          sourceTripId: beta.tripId,
+          sourcePlaceId: beta.placeId,
+          checkInId: beta.checkInId,
+        }
+        for (const id of [foreign[field], 'missing-source']) {
+          await expect(
+            createEntry(scope, {
+              journeyId: alpha.journeyId,
+              entryDate: '2026-04-10',
+              [field]: id,
+            }),
+          ).rejects.toBeInstanceOf(NotFoundError)
+          await expect(
+            updateEntry(scope, alpha.journeyEntryId, {
+              [field]: id,
+              title: 'Must not persist',
+            }),
+          ).rejects.toBeInstanceOf(NotFoundError)
+          expect(await listJourneyEntries(scope, alpha.journeyId)).toEqual(
+            before,
+          )
+        }
+      },
+    )
+  })
+
   describe('08-S4a collection management', () => {
     it('refuses foreign ids before roles or counts and leaves both tenant worlds intact', async () => {
       const snapshot = () => ({
@@ -1402,6 +1435,24 @@ describe('tenant isolation', () => {
           eq(collectionPlaceLabels.collectionPlaceId, alpha.collectionPlaceId),
         )
       expect(links).toHaveLength(0)
+    })
+
+    it('refuses a user of another workspace as a stop’s participant', async () => {
+      const error = await captureError(() =>
+        setAssignmentParticipants(alpha.tenant.scope, alpha.assignmentId, [
+          beta.tenant.ownerUserId,
+        ]),
+      )
+      expect(error).toBeInstanceOf(NotFoundError)
+
+      const rows = await harness.db
+        .select()
+        .from(assignmentParticipants)
+        .where(eq(assignmentParticipants.assignmentId, alpha.assignmentId))
+      expect(rows.map((row) => row.userId)).not.toContain(
+        beta.tenant.ownerUserId,
+      )
+      expect(rows).toHaveLength(2)
     })
 
     it('refuses to set participants on a foreign assignment', async () => {
@@ -1669,7 +1720,7 @@ describe('tenant isolation', () => {
           addPhoto(scope, {
             journeyId: alpha.journeyId,
             entryId: beta.journeyEntryId,
-            storageKey: 'photos/stolen.jpg',
+            storageKey: `journeys/${scope.ctx.organizationId}/stolen.jpg`,
             contentType: 'image/jpeg',
           }),
         ),
@@ -4605,6 +4656,7 @@ describe('tenant isolation', () => {
 
       for (const attempt of [
         () => updateTrip(scope, beta.tripId, { title: 'Hijacked' }),
+        () => setTripVisibility(scope, beta.tripId, 'organization'),
         () => archiveTrip(scope, beta.tripId),
         () => restoreTrip(scope, beta.tripId),
         () => deleteTrip(scope, beta.tripId),
@@ -4882,8 +4934,8 @@ describe('tenant isolation', () => {
   /**
    * The purge is the one half of a delete that leaves the database entirely, so it is the one place
    * a boundary could be crossed without a tenant filter to stop it (PRD #104 decision 3). R2 has no
-   * `organization_id`; what it has is a key namespace, and every key this product mints names its
-   * organization in the second path segment. The envelope's `orgId` is the authority and the keys are
+   * `organization_id`; what it has is a key namespace, and every workspace-scoped key (`trips/<org>/…`)
+   * names its organization in the second path segment. The envelope's `orgId` is the authority and the keys are
    * a request, so an envelope forged under A that names B's objects deletes nothing.
    */
   describe('the storage purge', () => {
@@ -6416,10 +6468,10 @@ describe('tenant isolation', () => {
     })
   })
 
-  /** `01-S7` — the companion figure on every trip card, counted for a whole page at once. */
-  describe('trip people counts', () => {
+  /** `01-S7` — the companion figure on every trip card, read for a whole page at once. */
+  describe('trip card people counts', () => {
     it('counts only the caller’s trips, and gives a foreign id no entry rather than a zero', async () => {
-      const counts = await countTripPeople(alpha.tenant.scope, [
+      const facts = await readTripCardFacts(alpha.tenant.scope, [
         alpha.tripId,
         beta.tripId,
       ])
@@ -6427,18 +6479,20 @@ describe('tenant isolation', () => {
       const members = await listTripMembers(alpha.tenant.scope, alpha.tripId)
       const guests = await listTripGuests(alpha.tenant.scope, alpha.tripId)
       expect(guests.length).toBeGreaterThan(0)
-      expect(counts.get(alpha.tripId)).toBe(members.length + guests.length)
-      expect(counts.has(beta.tripId)).toBe(false)
-      expect([...counts.keys()]).toEqual([alpha.tripId])
+      expect(facts.get(alpha.tripId)?.peopleCount).toBe(
+        members.length + guests.length,
+      )
+      expect(facts.has(beta.tripId)).toBe(false)
+      expect([...facts.keys()]).toEqual([alpha.tripId])
     })
 
     it('answers an empty map for the other tenant’s ids alone', async () => {
       const betaMembers = await listTripMembers(beta.tenant.scope, beta.tripId)
       const betaGuests = await listTripGuests(beta.tenant.scope, beta.tripId)
 
-      expect(await countTripPeople(alpha.tenant.scope, [beta.tripId])).toEqual(
-        new Map(),
-      )
+      expect(
+        await readTripCardFacts(alpha.tenant.scope, [beta.tripId]),
+      ).toEqual(new Map())
 
       // A read, and nothing of B's moved under it.
       expect(await listTripMembers(beta.tenant.scope, beta.tripId)).toEqual(
@@ -6449,23 +6503,21 @@ describe('tenant isolation', () => {
       )
     })
 
-    it('reads a whole page in two grouped statements, never one per card', async () => {
+    it('reads a whole page in five statements, never one per card', async () => {
       const second = await createTrip(alpha.tenant.scope, {
         title: 'A second trip of A',
         currency: 'EUR',
       })
       harness.statements.length = 0
 
-      const counts = await countTripPeople(alpha.tenant.scope, [
+      const facts = await readTripCardFacts(alpha.tenant.scope, [
         alpha.tripId,
         second.id,
       ])
 
-      expect(counts.get(second.id)).toBe(1)
-      expect(harness.statements).toHaveLength(2)
-      for (const statement of harness.statements) {
-        expect(statement).toMatch(/group by/i)
-      }
+      expect(facts.get(second.id)?.peopleCount).toBe(1)
+      // One chunk: the readable ids and star, then places, members, guests and the caller's role.
+      expect(harness.statements).toHaveLength(5)
     })
 
     it('keeps every statement within D1’s bound-parameter limit for a full page of a hundred trips', async () => {
@@ -6475,12 +6527,12 @@ describe('tenant isolation', () => {
       ]
       harness.statements.length = 0
 
-      const counts = await countTripPeople(alpha.tenant.scope, page)
+      const facts = await readTripCardFacts(alpha.tenant.scope, page)
 
-      expect(counts.get(alpha.tripId)).toBeGreaterThan(0)
-      expect(counts.size).toBe(1)
-      // Two chunks, a members and a guests statement each.
-      expect(harness.statements).toHaveLength(4)
+      expect(facts.get(alpha.tripId)?.peopleCount).toBeGreaterThan(0)
+      expect(facts.size).toBe(1)
+      // Two chunks, five statements each.
+      expect(harness.statements).toHaveLength(10)
       for (const statement of harness.statements) {
         expect(statement.split('?').length - 1).toBeLessThanOrEqual(
           MAX_BOUND_PARAMETERS,
@@ -7508,6 +7560,7 @@ describe('tenant isolation', () => {
 
   describe('the collaboration writers', () => {
     const rowsOf = (world: World): CollabRowIds => ({
+      checkInId: world.checkInId,
       messageId: world.messageId,
       noteId: world.collabNoteId,
       pollId: world.pollId,

@@ -293,11 +293,13 @@ writes that follow still pass through the same quota guard rather than around it
 | Trip                  | Status      | Dates          | Currency | Travellers |
 | --------------------- | ----------- | -------------- | -------- | ---------- |
 | Tokyo & Kyoto         | `booked`    | 9–20 Oct 2026  | JPY      | 4          |
-| Lisbon, slowly        | `active`    | 17–23 Aug 2026 | EUR      | 2          |
+| Lisbon, slowly        | `active`    | 17–23 Aug 2026 | EUR      | 3          |
 | Dolomites, hut to hut | `completed` | 13–20 Jun 2026 | EUR      | 3          |
 | Marrakech riad week   | `archived`  | 8–15 Nov 2025  | MAD      | 2          |
 | Patagonia traverse    | `draft`     | —              | USD      | 1          |
 | Porto, one long lunch | `planning`  | —              | EUR      | 1          |
+
+Lisbon is the one trip with all three trip roles: Rafal owns it, Priya edits it and Jonas only views it. The costs-tab role journeys (`e2e/costs-roles.spec.ts`) sign in as Jonas for the viewer case and, for the editor case, as Jonas again on Dolomites, where he is an editor: Priya is suspended and cannot sign in.
 
 The flagship carries 12 days (each with a title, notes and an accommodation covering it), 38 places
 across nine categories with real coordinates, addresses, opening hours and ratings, 38 stops in

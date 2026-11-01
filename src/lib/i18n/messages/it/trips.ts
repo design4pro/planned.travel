@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Questo viaggio è archiviato. La collaborazione è di sola lettura.',
+  'collab.readOnly.role':
+    'Solo i proprietari e gli editor del viaggio possono modificare la conversazione, le note e i sondaggi.',
   'notFound.title': 'Non troviamo questo viaggio',
   'notFound.body':
     'Non è tra i viaggi che puoi aprire nello spazio di lavoro attuale. Potrebbe essere stato eliminato oppure potresti non avere accesso.',
@@ -171,7 +175,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Aggiungi un luogo, {day}',
   'plan.addPlace.quota':
     'Hai raggiunto il limite di luoghi del tuo piano. Passa a un piano superiore per aggiungerne altri.',
-  'plan.addPlace.quotaAction': 'Vedi i piani',
+  'plan.addPlace.quotaAction': 'Vedi i piani (si apre in una nuova scheda)',
   'plan.stay.checkIn': 'Check-in',
   'plan.stay.checkOut': 'Check-out',
   'plan.day.addStay': 'Aggiungi un alloggio, {day}',
@@ -317,6 +321,8 @@ const messages = {
   'book.pinnedCaption': 'Fissato a un giorno del piano',
   'book.readOnly.archived':
     'Questo viaggio è archiviato, quindi le prenotazioni e i soggiorni sono di sola lettura. Ripristina il viaggio per modificarli.',
+  'book.readOnly.role':
+    'Puoi visualizzare queste prenotazioni e questi soggiorni. Solo il proprietario del viaggio e chi può modificare possono cambiarli.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Questa modifica è stata rifiutata. Controlla lo stato attuale del viaggio prima di altre modifiche.',
@@ -324,6 +330,8 @@ const messages = {
     'Non è stato possibile aggiornare il viaggio. Riprova prima di apportare modifiche.',
   'transports.readOnly.archived':
     'Questo viaggio è archiviato. Ripristinalo per modificare i trasporti.',
+  'transports.readOnly.role':
+    'Puoi visualizzare questi trasporti. Solo il proprietario del viaggio e chi può modificare possono cambiarli.',
   'transports.title': 'Spostamenti',
   'transports.empty': 'Ancora nulla registrato',
   'transports.count.transports': {
@@ -425,9 +433,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Scegli qualcuno che è già in questo viaggio',
   'plan.weather.badge.forecast':
-    'Previsione: {condition}, massima {max}, minima {min}',
+    'Previsione: {figures}, {condition} (massima {max}, minima {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Previsione: massima {max}, minima {min}',
+    'Previsione: {figures} (massima {max}, minima {min})',
   'plan.weather.badge.unavailable': 'Meteo non disponibile per questo giorno',
   'plan.weather.badge.loading': 'Caricamento del meteo',
   'plan.weather.badge.recorded': 'Registrato: massima {max}, minima {min}',
@@ -468,6 +476,8 @@ const messages = {
   'plan.weather.panel.low': 'Minima',
   'plan.weather.panel.recordedNote': 'Valori misurati per questo giorno.',
   'plan.weather.panel.temperatureTypical': 'Massima / minima tipiche',
+  'plan.weather.panel.typicalHigh': 'Massima tipica',
+  'plan.weather.panel.typicalLow': 'Minima tipica',
   'plan.weather.panel.estimateNote':
     'Una media di lungo periodo per questo mese, non una previsione.',
   'plan.weather.attribution.metNorway':

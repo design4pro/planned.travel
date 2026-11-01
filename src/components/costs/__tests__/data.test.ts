@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
+import { namespaceTranslate } from '#/lib/i18n/__tests__/namespace-translate'
+import ArCosts from '#/lib/i18n/messages/ar/costs'
+import DeCosts from '#/lib/i18n/messages/de/costs'
+import EnCosts from '#/lib/i18n/messages/en/costs'
+
 import { memberSegments } from '../chart-geometry'
 import {
   applyOps,
@@ -9,6 +14,7 @@ import {
   displayCurrencyChoices,
   expensesCsv,
   filterExpenses,
+  findPerson,
   formatDayLabel,
   formatDayShort,
   groupByDay,
@@ -234,6 +240,51 @@ describe('shareOf', () => {
   })
 })
 
+describe('findPerson', () => {
+  const MEMBER = {
+    userId: 'u-ada',
+    name: 'Ada',
+    email: '',
+    image: 'ada.png',
+    role: 'owner',
+  }
+  const DEPARTED = [
+    { userId: 'u-cy', name: 'Cy', image: 'cy.png' },
+    { userId: 'u-ghost', name: null, image: null },
+    { userId: 'u-ada', name: 'Ada before she rejoined', image: null },
+  ]
+
+  it('finds a trip member first, even when the departed list also names them', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-ada')?.name).toBe('Ada')
+  })
+
+  it('finds a departed traveller by name and image', () => {
+    const found = findPerson([MEMBER], DEPARTED, 'u-cy')
+    expect(found?.name).toBe('Cy')
+    expect(found?.image).toBe('cy.png')
+  })
+
+  it('returns a null name for a departed traveller the workspace has no profile for', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-ghost')?.name).toBeNull()
+  })
+
+  it('returns nothing for someone the payload does not name', () => {
+    expect(findPerson([MEMBER], DEPARTED, 'u-nobody')).toBeUndefined()
+  })
+
+  it('returns a null name for a trip member the workspace has no profile for, keeping the picture', () => {
+    const left = {
+      ...MEMBER,
+      userId: 'u-left',
+      name: 'Removed traveller',
+      leftWorkspace: true,
+    }
+    const found = findPerson([MEMBER, left], DEPARTED, 'u-left')
+    expect(found?.name).toBeNull()
+    expect(found?.image).toBe('ada.png')
+  })
+})
+
 describe('shareTotalOf', () => {
   it('adds the stored shares up', () => {
     expect(shareTotalOf(ROWS[0])).toBe(30_000)
@@ -294,6 +345,29 @@ describe('sharesDoNotAddUp', () => {
 })
 
 describe('filterExpenses', () => {
+  it('matches a removed payer by the name displayed in the reader’s locale', () => {
+    const row = expense({ paidBy: 'u-gone' })
+    const people: ReadonlyArray<CostsPerson> = [
+      {
+        userId: 'u-gone',
+        name: 'Removed traveller',
+        email: '',
+        image: null,
+        role: 'member',
+        leftWorkspace: true,
+      },
+    ]
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: ArCosts['person.removed'] },
+        people,
+        'u-rafal',
+        ArCosts['person.removed'],
+      ),
+    ).toEqual([row])
+  })
+
   it('returns everything when nothing is filtered', () => {
     expect(filterExpenses(ROWS, ALL, PEOPLE, 'u-rafal')).toHaveLength(3)
   })
@@ -765,10 +839,13 @@ describe('memberShares', () => {
 describe('expensesCsv', () => {
   const BOM = '\ufeff'
   const PER_TRIP = { mode: 'per-trip', code: 'JPY' } as const
+  const en = namespaceTranslate('costs', EnCosts)
+  const de = namespaceTranslate('costs', DeCosts)
   const csv = expensesCsv({
     rows: ROWS,
     people: PEOPLE,
     viewerUserId: 'u-rafal',
+    t: en,
     display: PER_TRIP,
   })
   const lines = csv.slice(BOM.length).trimEnd().split('\r\n')
@@ -808,6 +885,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: 'Dinner, "the good one"\nwith wine' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(tricky).toContain('"Dinner, ""the good one""\nwith wine"')
@@ -819,6 +897,7 @@ describe('expensesCsv', () => {
       rows: [expense({ title: '=1+1' })],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(injected).toContain(`"'=1+1"`)
@@ -829,9 +908,54 @@ describe('expensesCsv', () => {
       rows: [],
       people: PEOPLE,
       viewerUserId: 'u-rafal',
+      t: en,
       display: PER_TRIP,
     })
     expect(empty.slice(BOM.length).trimEnd().split('\r\n')).toHaveLength(1)
+  })
+
+  it('writes the header row and the removed-traveller cell in the reader’s locale, leaving the data cells alone', () => {
+    const german = expensesCsv({
+      rows: [expense({ paidBy: 'u-gone' }), ...ROWS],
+      people: PEOPLE,
+      viewerUserId: 'u-rafal',
+      t: de,
+      display: PER_TRIP,
+    })
+    const [header, removed, ...rows] = german
+      .slice(BOM.length)
+      .trimEnd()
+      .split('\r\n')
+
+    expect(header).toBe(
+      '"Datum","Titel","Kategorie","Betrag","Währung","Ursprünglicher Betrag","Ursprüngliche Währung","Kurs","Bezahlt von","Aufteilung","Dein Anteil","Notizen","Betrag in JPY"',
+    )
+    expect(removed).toContain('"Entfernte Reisende"')
+    // Category and split-method tokens, amounts and currencies are machine-readable, not copy.
+    expect(rows[0]).toBe(lines[1])
+    expect(rows[1]).toBe(lines[2])
+  })
+
+  it('names a payer who left the workspace from the catalogue, not from the server’s English name', () => {
+    const left = expensesCsv({
+      rows: [expense({ paidBy: 'u-left' })],
+      people: [
+        ...PEOPLE,
+        {
+          userId: 'u-left',
+          name: 'Removed traveller',
+          email: '',
+          image: null,
+          role: 'member',
+          leftWorkspace: true,
+        },
+      ],
+      viewerUserId: 'u-rafal',
+      t: de,
+      display: PER_TRIP,
+    })
+    expect(left).toContain('"Entfernte Reisende"')
+    expect(left).not.toContain('Removed traveller')
   })
 
   describe('the display-currency column', () => {
@@ -874,6 +998,7 @@ describe('expensesCsv', () => {
         rows: [expense({ amountMinor: 30_000, convertedMinor: 1_850 })],
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       const [header, row] = converted.slice(BOM.length).trimEnd().split('\r\n')
@@ -890,6 +1015,7 @@ describe('expensesCsv', () => {
         rows: [expense({ amountMinor: 30_000, convertedMinor: null })],
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       const [, row] = unconverted.slice(BOM.length).trimEnd().split('\r\n')
@@ -902,6 +1028,7 @@ describe('expensesCsv', () => {
         rows: ROWS,
         people: PEOPLE,
         viewerUserId: 'u-rafal',
+        t: en,
         display: { mode: 'fixed', code: 'GBP' },
       })
       expect(fixed.startsWith(BOM)).toBe(true)

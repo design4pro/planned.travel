@@ -63,7 +63,11 @@ const messages = {
   'split.nobody': 'なし',
   'split.departed': '旅行から抜けました',
   'split.departedHint':
-    '旅行から抜けた人のチェックを外すと、その人の負担分は完全に削除されます。',
+    '保存すると、旅行から抜けた人のうちチェックを外した人の負担分が完全に削除されます。',
+  'split.removedNumbered': '削除された旅行者 {number}',
+  'split.includeRemoved': '削除された旅行者をこの割り勘に含める',
+  'split.includeRemovedNumbered':
+    '削除された旅行者 {number} をこの割り勘に含める',
   'split.includeFor': '{name}をこの分割に含める',
   'split.how': 'この支出の分け方',
   'split.method.equal': '均等',
@@ -175,7 +179,7 @@ const messages = {
   'memberBar.others': {
     other: 'ほか{others}人',
   },
-  'memberBar.notSplit': '誰にも割り当てなし',
+  'memberBar.notSplit': '誰にも分担されていない',
   'totalTile.label': '旅行の支出合計',
   'totalTile.captionPlanned': '全員で{amount}を予定',
   'totalTile.captionBudget': '旅行の予算は{amount}',
@@ -307,6 +311,14 @@ const messages = {
   'export.ready.body': {
     other: '{expenses} 件の支出を CSV に書き出しました。',
   },
+  'export.csv.title': 'タイトル',
+  'export.csv.category': 'カテゴリ',
+  'export.csv.originalAmount': '元の金額',
+  'export.csv.originalCurrency': '元の通貨',
+  'export.csv.rate': 'レート',
+  'export.csv.splitMethod': '分割方法',
+  'export.csv.notes': 'メモ',
+  'export.csv.amountIn': '{currency}での金額',
   'list.daySpent': '支出 {amount}',
   'skeleton.loading': '支出を読み込み中',
   'row.noPayer': '支払った人が未設定',

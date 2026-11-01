@@ -61,7 +61,11 @@ const messages = {
   'split.nobody': 'Tidak ada',
   'split.departed': 'Sudah keluar dari perjalanan',
   'split.departedHint':
-    'Menghapus centang orang yang sudah keluar dari perjalanan akan menghapus bagiannya secara permanen.',
+    'Saat disimpan, bagian orang yang sudah keluar dari perjalanan dan centangnya dihapus akan dihapus secara permanen.',
+  'split.removedNumbered': 'Pelancong yang dihapus {number}',
+  'split.includeRemoved': 'Sertakan pelancong yang dihapus dalam pembagian ini',
+  'split.includeRemovedNumbered':
+    'Sertakan pelancong yang dihapus {number} dalam pembagian ini',
   'split.includeFor': 'Sertakan {name} dalam pembagian ini',
   'split.how': 'Bagaimana pengeluaran ini dibagi',
   'split.method.equal': 'Rata',
@@ -174,7 +178,7 @@ const messages = {
   'memberBar.others': {
     other: '{others} pelancong lainnya',
   },
-  'memberBar.notSplit': 'Tidak ditetapkan ke siapa pun',
+  'memberBar.notSplit': 'Tidak dibagi di antara siapa pun',
   'totalTile.label': 'Total pengeluaran perjalanan',
   'totalTile.captionPlanned': 'Direncanakan {amount} untuk semua pelancong',
   'totalTile.captionBudget': 'Anggaran {amount} untuk perjalanan',
@@ -311,6 +315,14 @@ const messages = {
   'export.ready.body': {
     other: '{expenses} pengeluaran ditulis ke CSV.',
   },
+  'export.csv.title': 'Judul',
+  'export.csv.category': 'Kategori',
+  'export.csv.originalAmount': 'Jumlah asli',
+  'export.csv.originalCurrency': 'Mata uang asli',
+  'export.csv.rate': 'Kurs',
+  'export.csv.splitMethod': 'Metode pembagian',
+  'export.csv.notes': 'Catatan',
+  'export.csv.amountIn': 'Jumlah dalam {currency}',
   'list.daySpent': '{amount} terpakai',
   'skeleton.loading': 'Memuat pengeluaran',
   'row.noPayer': 'Belum ada pembayar',

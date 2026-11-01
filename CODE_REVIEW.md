@@ -42,6 +42,7 @@ floor guard script; the review now does.
   must not be removable. The stated exceptions are three, and closed (SPEC §6): `src/server/auth/provisioning.ts` (Better Auth identity tables `user`, `organization`, `member` only, never imported from the tenant schema, with the participation anchor written through `auth/participation.ts`; a fourth table is a blocker), the `…Unscoped` shape below and `src/server/catalog` (global tables, one
   reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and one ids-only tenant audit retention
   discovery read, docs/SPEC.md §5 and §6). The one other writer is `src/server/auth/participation.ts`, the auth layer's write-only `INSERT OR IGNORE` into `workspace_participants` (SPEC §5, ADR 0043): it is no precedent for any other table. SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- Better Auth's own tables reached through its adapter (`ctx.context.adapter`, as the passkey plugin does for the user-keyed `passkey` table) are not application SQL and not an exception: SPEC §6. Raw SQL against an auth table outside `auth/provisioning.ts` is still a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.
 - **A guard added to one writer reaches every sibling writer of that surface in the same PR.** A
@@ -111,7 +112,7 @@ floor guard script; the review now does.
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
 under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set. Rendering a literal
 string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
-contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`.
+contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`; the safe-area insets (`gutter-x`, `px-safe`) are the exception, because they belong to the screen and not to the reading direction.
 The one bounded exception is server refusal copy (§9 rule 10): a new name in
 `AUTHORED_ERROR_NAMES` without the same PR amending that rule is a blocker.
 

@@ -1091,15 +1091,21 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - vytvořeno {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Hotovo: {title}',
+  'files.export.email.subject': 'Export připraven: {title}',
   'files.export.email.body': {
-    one: 'Export cesty je hotový. Uchovává se {count} den.',
-    few: 'Export cesty je hotový. Uchovává se {count} dny.',
-    many: 'Export cesty je hotový. Uchovává se {count} dne.',
-    other: 'Export cesty je hotový. Uchovává se {count} dní.',
+    one: 'Export cesty {title} je připraven. Uchovává se {count} den.',
+    few: 'Export cesty {title} je připraven. Uchovává se {count} dny.',
+    many: 'Export cesty {title} je připraven. Uchovává se {count} dne.',
+    other: 'Export cesty {title} je připraven. Uchovává se {count} dní.',
   },
-  'files.export.email.action': 'Otevřít {title}',
-  'files.export.email.text': 'Export cesty je hotový: {url}',
+  'files.export.email.action': 'Přejít k exportu',
+  'files.export.email.text': '{body}\n\n{limit}\n\nPřejít k exportu: {url}',
+  'files.export.limit': {
+    one: 'Cesta uchovává {count} nejnovější export.',
+    few: 'Cesta uchovává {count} nejnovější exporty.',
+    many: 'Cesta uchovává {count} nejnovějšího exportu.',
+    other: 'Cesta uchovává {count} nejnovějších exportů.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Export cesty',
@@ -1427,6 +1433,12 @@ const messages = {
   'files.readOnly.title': 'Soubory pouze pro čtení',
   'files.readOnly.role':
     'Pouze vlastníci a editoři cesty mohou soubory nahrávat, přejmenovávat nebo mazat. Stále je můžete stahovat.',
+  'files.readOnly.archived':
+    'Tato cesta je archivovaná, takže soubory jsou jen pro čtení. Stále je můžete stáhnout. Chcete-li je změnit, cestu obnovte.',
+  'lists.readOnly.role':
+    'Tyto seznamy si můžete prohlížet. Měnit je může jen vlastník cesty a ti, kdo mohou upravovat.',
+  'lists.readOnly.archived':
+    'Tato cesta je archivovaná, takže seznamy jsou jen pro čtení. Chcete-li je změnit, cestu obnovte.',
   'vacay.kind.vacation': 'Dovolená',
   'vacay.kind.half_day': 'Půlden dovolené',
   'vacay.kind.sick': 'Nemocenská',

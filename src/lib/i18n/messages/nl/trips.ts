@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Deze reis is gearchiveerd. Samenwerking is alleen-lezen.',
+  'collab.readOnly.role':
+    'Alleen reiseigenaren en bewerkers kunnen het gesprek, de notities en de peilingen wijzigen.',
   'notFound.title': 'We kunnen deze reis niet vinden',
   'notFound.body':
     'Deze staat niet tussen de reizen die je in de huidige werkruimte kunt openen. De reis is mogelijk verwijderd of je hebt er geen toegang toe.',
@@ -169,7 +173,8 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Plek toevoegen: {day}',
   'plan.addPlace.quota':
     'Je hebt de limiet voor plaatsen van je abonnement bereikt. Upgrade om er meer toe te voegen.',
-  'plan.addPlace.quotaAction': 'Abonnementen bekijken',
+  'plan.addPlace.quotaAction':
+    'Abonnementen bekijken (opent in een nieuw tabblad)',
   'plan.stay.checkIn': 'Aankomst',
   'plan.stay.checkOut': 'Vertrek',
   'plan.day.addStay': 'Verblijf toevoegen: {day}',
@@ -310,6 +315,8 @@ const messages = {
   'book.pinnedCaption': 'Vastgezet op een dag van de route',
   'book.readOnly.archived':
     'Deze reis is gearchiveerd, dus de boekingen en verblijven zijn alleen-lezen. Herstel de reis om ze te wijzigen.',
+  'book.readOnly.role':
+    'Je kunt deze boekingen en verblijven lezen. Alleen de eigenaar van de reis en bewerkers kunnen ze wijzigen.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Deze wijziging is geweigerd. Bekijk de huidige reis voordat je meer wijzigingen aanbrengt.',
@@ -317,6 +324,8 @@ const messages = {
     'De reis kon niet worden vernieuwd. Probeer het opnieuw voordat je wijzigingen aanbrengt.',
   'transports.readOnly.archived':
     'Deze reis is gearchiveerd. Herstel de reis om vervoer te wijzigen.',
+  'transports.readOnly.role':
+    'Je kunt dit vervoer lezen. Alleen de eigenaar van de reis en bewerkers kunnen het wijzigen.',
   'transports.title': 'Trajecten',
   'transports.empty': 'Nog niets vastgelegd',
   'transports.count.transports': {
@@ -410,9 +419,9 @@ const messages = {
     'Een reis heeft hooguit {limit} gasten, omdat een langere lijst de deelnemerskeuze en de kostenverdeling moeilijk leesbaar maakt',
   'people.error.guestMergeTarget': 'Kies iemand die al op deze reis staat',
   'plan.weather.badge.forecast':
-    'Voorspelling: {condition}, maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures}, {condition} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Voorspelling: maximaal {max}, minimaal {min}',
+    'Voorspelling: {figures} (maximaal {max}, minimaal {min})',
   'plan.weather.badge.unavailable': 'Weer niet beschikbaar voor deze dag',
   'plan.weather.badge.loading': 'Weer laden',
   'plan.weather.badge.recorded': 'Gemeten: maximaal {max}, minimaal {min}',
@@ -452,6 +461,8 @@ const messages = {
   'plan.weather.panel.low': 'Laagste',
   'plan.weather.panel.recordedNote': 'Gemeten waarden voor deze dag.',
   'plan.weather.panel.temperatureTypical': 'Typisch hoogste / laagste',
+  'plan.weather.panel.typicalHigh': 'Typisch hoogste',
+  'plan.weather.panel.typicalLow': 'Typisch laagste',
   'plan.weather.panel.estimateNote':
     'Een langjarig gemiddelde voor deze maand, geen voorspelling.',
   'plan.weather.attribution.metNorway':

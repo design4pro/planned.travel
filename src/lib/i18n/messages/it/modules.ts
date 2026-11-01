@@ -1099,15 +1099,20 @@ const messages = {
   /* --------------------------- files: the trip export document and its email */
   'files.export.doc.footer': '{app} - generato il {when}',
   'files.export.madeAt': '{date}, {time}',
-  'files.export.email.subject': 'Pronto: {title}',
+  'files.export.email.subject': 'Esportazione pronta: {title}',
   'files.export.email.body': {
-    one: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorno.',
-    many: 'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+    one: 'La tua esportazione di {title} è pronta. Viene conservata per {count} giorno.',
+    many: 'La tua esportazione di {title} è pronta. Viene conservata per {count} giorni.',
     other:
-      'L’esportazione del viaggio è pronta. Viene conservata per {count} giorni.',
+      'La tua esportazione di {title} è pronta. Viene conservata per {count} giorni.',
   },
-  'files.export.email.action': 'Apri {title}',
-  'files.export.email.text': 'L’esportazione del viaggio è pronta: {url}',
+  'files.export.email.action': 'Vai all’esportazione',
+  'files.export.email.text': '{body}\n\n{limit}\n\nVai all’esportazione: {url}',
+  'files.export.limit': {
+    one: 'Un viaggio conserva la sua {count} esportazione più recente.',
+    many: 'Un viaggio conserva le sue {count} esportazioni più recenti.',
+    other: 'Un viaggio conserva le sue {count} esportazioni più recenti.',
+  },
 
   /* --------------------------- files: the trip export list */
   'files.export.label': 'Esporta il viaggio',
@@ -1417,6 +1422,12 @@ const messages = {
   'files.readOnly.title': 'File in sola lettura',
   'files.readOnly.role':
     'Solo i proprietari e gli editor del viaggio possono caricare, rinominare o eliminare file. Puoi comunque scaricarli.',
+  'files.readOnly.archived':
+    'Questo viaggio è archiviato, quindi i file sono di sola lettura. Puoi comunque scaricarli. Ripristina il viaggio per modificarli.',
+  'lists.readOnly.role':
+    'Puoi visualizzare queste liste. Solo il proprietario del viaggio e chi può modificare possono cambiarle.',
+  'lists.readOnly.archived':
+    'Questo viaggio è archiviato, quindi le liste sono di sola lettura. Ripristina il viaggio per modificarle.',
   'vacay.kind.vacation': 'Ferie',
   'vacay.kind.half_day': 'Mezza giornata di ferie',
   'vacay.kind.sick': 'Malattia',

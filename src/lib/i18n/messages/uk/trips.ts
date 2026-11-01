@@ -14,6 +14,10 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'collab.readOnly.archived':
+    'Цю подорож архівовано. Спільна робота доступна лише для читання.',
+  'collab.readOnly.role':
+    'Лише власники й редактори подорожі можуть змінювати розмову, нотатки та опитування.',
   'notFound.title': 'Не можемо знайти цю подорож',
   'notFound.body':
     'Її немає серед подорожей, які ви можете відкрити в поточному робочому просторі. Можливо, її видалено або ви не маєте до неї доступу.',
@@ -174,7 +178,8 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Додати місце, {day}',
   'plan.addPlace.quota':
     'Ви досягли ліміту місць у вашому тарифі. Перейдіть на вищий тариф, щоб додати більше.',
-  'plan.addPlace.quotaAction': 'Переглянути тарифи',
+  'plan.addPlace.quotaAction':
+    'Переглянути тарифи (відкриється в новій вкладці)',
   'plan.stay.checkIn': 'Заїзд',
   'plan.stay.checkOut': 'Виїзд',
   'plan.day.addStay': 'Додати проживання, {day}',
@@ -326,6 +331,8 @@ const messages = {
   'book.pinnedCaption': 'Закріплено за днем маршруту',
   'book.readOnly.archived':
     'Ця подорож в архіві, тому бронювання та проживання доступні лише для читання. Відновіть подорож, щоб їх змінити.',
+  'book.readOnly.role':
+    'Ви можете переглядати ці бронювання та проживання. Змінювати їх можуть лише власник подорожі та редактори.',
   /* ---------------------------------------------- the transports tab */
   'transports.recovery.refused':
     'Цю зміну відхилено. Перевірте поточний стан подорожі перед наступними змінами.',
@@ -333,6 +340,8 @@ const messages = {
     'Не вдалося оновити подорож. Спробуйте ще раз перед внесенням змін.',
   'transports.readOnly.archived':
     'Цю подорож архівовано. Відновіть її, щоб змінити транспорт.',
+  'transports.readOnly.role':
+    'Ви можете переглядати цей транспорт. Змінювати його можуть лише власник подорожі та редактори.',
   'transports.title': 'Переїзди',
   'transports.empty': 'Поки нічого не записано',
   'transports.count.transports': {
@@ -431,9 +440,9 @@ const messages = {
   'people.error.guestMergeTarget':
     'Оберіть когось, хто вже бере участь у подорожі',
   'plan.weather.badge.forecast':
-    'Прогноз: {condition}, максимум {max}, мінімум {min}',
+    'Прогноз: {figures}, {condition} (максимум {max}, мінімум {min})',
   'plan.weather.badge.forecastNoCondition':
-    'Прогноз: максимум {max}, мінімум {min}',
+    'Прогноз: {figures} (максимум {max}, мінімум {min})',
   'plan.weather.badge.unavailable': 'Погода на цей день недоступна',
   'plan.weather.badge.loading': 'Завантаження погоди',
   'plan.weather.badge.recorded': 'Зафіксовано: максимум {max}, мінімум {min}',
@@ -473,6 +482,8 @@ const messages = {
   'plan.weather.panel.low': 'Мінімум',
   'plan.weather.panel.recordedNote': 'Виміряні значення за цей день.',
   'plan.weather.panel.temperatureTypical': 'Типові макс. / мін.',
+  'plan.weather.panel.typicalHigh': 'Типовий максимум',
+  'plan.weather.panel.typicalLow': 'Типовий мінімум',
   'plan.weather.panel.estimateNote':
     'Багаторічне середнє за цей місяць, а не прогноз.',
   'plan.weather.attribution.metNorway': 'Дані прогнозу: MET Norway, CC BY 4.0',
