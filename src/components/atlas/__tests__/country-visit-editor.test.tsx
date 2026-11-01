@@ -252,3 +252,56 @@ it('preserves focus moved away while a refresh retry is pending', async () => {
   expect(document.activeElement).toBe(first)
   expect(api.save).toHaveBeenCalledTimes(1)
 })
+
+it('returns a focused refresh retry to the first field of a reopened draft', async () => {
+  api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  mount()
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  await screen.findByRole('button', { name: /Reload/ })
+  const first = await open()
+  await waitFor(() => expect(document.activeElement).toBe(first))
+  const retry = screen.getByRole('button', { name: /Reload/ })
+  retry.focus()
+  await userEvent.keyboard('{Enter}')
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
+  )
+  expect(document.activeElement).toBe(first)
+  expect(api.save).toHaveBeenCalledTimes(1)
+})
+
+it('disables refresh retry while reopening or saving the editor', async () => {
+  api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  mount()
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  const retry = await screen.findByRole('button', { name: /Reload/ })
+  let finishLoad: (value: unknown) => void = () => {}
+  api.load.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishLoad = resolve
+    }),
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+  expect(retry.getAttribute('disabled')).not.toBeNull()
+  await userEvent.click(retry)
+  expect(api.invalidate).toHaveBeenCalledTimes(1)
+  finishLoad({ country: { visit }, today: '2026-08-20' })
+  await screen.findByLabelText('First visit')
+  await waitFor(() => expect(retry.getAttribute('disabled')).toBeNull())
+  let finishSave: (value: unknown) => void = () => {}
+  api.save.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishSave = resolve
+    }),
+  )
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  expect(retry.getAttribute('disabled')).not.toBeNull()
+  await userEvent.click(retry)
+  expect(api.invalidate).toHaveBeenCalledTimes(1)
+  finishSave({ country: { visit }, errors: null })
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
+  )
+})
