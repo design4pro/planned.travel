@@ -182,11 +182,12 @@ export function useBillingReturn(
       }, BACKOFF[attempt])
     }
     async function read(isManual: boolean) {
-      if (!active || disabled || running) return
+      if (!active || disabled) return
+      if (isManual) setRefreshing(true)
+      if (running) return
       clearTimeout(timer)
       if (!isManual) attempt += 1
       running = true
-      setRefreshing(true)
       const request = new AbortController()
       controller = request
       const requestTimer = setTimeout(() => {

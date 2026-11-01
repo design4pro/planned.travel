@@ -414,3 +414,28 @@ it('suppresses referrers for automatic and manual local reads', async () => {
   }
   transport.mockRestore()
 })
+
+it('keeps automatic ticks quiet and shows activity when Refresh joins an active read', async () => {
+  let complete!: (value: {
+    entitlements: Entitlements
+    viewerId: string
+  }) => void
+  read.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        complete = resolve
+      }),
+  )
+  const { result } = renderHook(() =>
+    useBillingReturn(initial, 'viewer', 'checkout'),
+  )
+  await advance(2000)
+  expect(result.current.refreshing).toBe(false)
+  await act(() => result.current.refresh())
+  expect(result.current.refreshing).toBe(true)
+  expect(read).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    complete({ entitlements: initial, viewerId: 'viewer' })
+  })
+  expect(result.current.refreshing).toBe(false)
+})
