@@ -4,7 +4,7 @@
 | ------------------ | --------------------------------------- |
 | **Status**         | ready                                   |
 | **Issue**          | none                                    |
-| **Spec PR**        | none                                    |
+| **Spec PR**        | #1696                                    |
 | **Implementation** | none                                    |
 | **Plan**           | 10-S3 (docs/plans/10-administration.md) |
 
