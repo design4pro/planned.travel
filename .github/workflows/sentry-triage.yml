@@ -74,6 +74,7 @@ jobs:
         if: steps.gate.outputs.configured == 'true'
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Set up the toolchain
         if: steps.gate.outputs.configured == 'true'

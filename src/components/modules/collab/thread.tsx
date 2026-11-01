@@ -612,7 +612,10 @@ function MessageRow({
 }) {
   const t = useTranslate()
   const name = nameFor(people, message.userId, t)
-  const jumbo = isJumboGlyphs(message.body)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  // Segmentation and Unicode support can differ between SSR and the browser.
+  const jumbo = mounted && isJumboGlyphs(message.body)
 
   /**
    * The tallies, with the viewer's own claim folded in — so a tap changes the

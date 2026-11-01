@@ -158,7 +158,7 @@ const messages = {
   'plan.addPlace.forDayNamed': '添加地点——{day}',
   'plan.addPlace.quota':
     '你已达到当前套餐的地点数量上限。升级套餐即可添加更多。',
-  'plan.addPlace.quotaAction': '查看套餐',
+  'plan.addPlace.quotaAction': '查看套餐（在新标签页中打开）',
   'plan.stay.checkIn': '入住',
   'plan.stay.checkOut': '退房',
   'plan.day.addStay': '添加住宿——{day}',

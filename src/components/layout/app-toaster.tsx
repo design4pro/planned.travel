@@ -1,5 +1,6 @@
 import { Toaster } from 'sonner'
 import { useTheme } from '#/lib/theme'
+import { useI18n } from '#/lib/i18n/provider'
 
 import type { CSSProperties } from 'react'
 
@@ -30,14 +31,17 @@ const TOKEN_VARS = {
 
 export function AppToaster() {
   const { resolved } = useTheme()
+  const { t, dir } = useI18n()
 
   return (
     <Toaster
       theme={resolved}
+      dir={dir}
+      containerAriaLabel={t('shell.toaster.label')}
       position="bottom-center"
       // Clear the mobile tab bar so a toast never covers the navigation.
       offset="calc(var(--safe-bottom) + 5.5rem)"
-      mobileOffset="calc(var(--safe-bottom) + 5.25rem)"
+      mobileOffset={{ bottom: 'calc(var(--safe-bottom) + 5.25rem)' }}
       gap={10}
       visibleToasts={4}
       style={TOKEN_VARS}

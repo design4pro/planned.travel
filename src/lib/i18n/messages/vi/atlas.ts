@@ -381,6 +381,21 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Một chuyến đi năm {last}',
   'panel.stat.streakNone': 'Thêm chuyến đi có ngày để bắt đầu chuỗi',
+  'visitEdit.edit': 'Sửa chuyến thăm',
+  'visitEdit.note': 'Ghi chú',
+  'visitEdit.save': 'Lưu chuyến thăm',
+  'visitEdit.cancel': 'Hủy',
+  'visitEdit.loading': 'Đang tải chuyến thăm',
+  'visitEdit.saving': 'Đang lưu chuyến thăm',
+  'visitEdit.failed':
+    'Chưa thể xác nhận đã lưu. Bản nháp được giữ lại; hãy thử lại.',
+  'visitEdit.missing':
+    'Chuyến thăm này không còn khả dụng. Hãy mở lại quốc gia.',
+  'visitEdit.noteInvalid': 'Dùng tối đa 2.000 ký tự.',
+  'visitEdit.bounds': 'Lần thăm đầu không được sau lần thăm cuối.',
+  'visitEdit.future': 'Chọn hôm nay hoặc ngày trước đó.',
+  'visitEdit.dateInvalid': 'Nhập ngày có thực theo dạng YYYY-MM-DD.',
+  'visitEdit.reload': 'Đã lưu. Tải lại hồ sơ',
 } satisfies TranslationOf<typeof En>
 
 export default messages

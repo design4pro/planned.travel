@@ -168,8 +168,9 @@ export function LanguageSwitcher({
         // below read is the outcome and not the page before it.
         refresh: () => router.invalidate({ forcePending: true }),
         // The root loader never rejects: when negotiating or loading the
-        // catalogue fails it answers English with no messages. That is a
-        // refresh that did not happen, not a browser that dropped the cookie.
+        // catalogue fails it answers with no messages. Recovery copy is supplied
+        // only to the document provider. This is a failed refresh,
+        // not evidence that the browser dropped the cookie.
         refreshed: () =>
           !router.state.matches.some((match) => match.status === 'error') &&
           hasMessages(rootData(router.state.matches)?.messages),

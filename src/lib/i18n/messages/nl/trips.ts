@@ -173,7 +173,8 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Plek toevoegen: {day}',
   'plan.addPlace.quota':
     'Je hebt de limiet voor plaatsen van je abonnement bereikt. Upgrade om er meer toe te voegen.',
-  'plan.addPlace.quotaAction': 'Abonnementen bekijken',
+  'plan.addPlace.quotaAction':
+    'Abonnementen bekijken (opent in een nieuw tabblad)',
   'plan.stay.checkIn': 'Aankomst',
   'plan.stay.checkOut': 'Vertrek',
   'plan.day.addStay': 'Verblijf toevoegen: {day}',

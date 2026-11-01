@@ -1282,6 +1282,8 @@ const layout = {
     // scrolls the way it says it does.
     'group-data-[fit=squeezed]:h-(--pt-max-h)',
     '@md:flex-row',
+    // Keep the country heading while a squeezed phone panel gives its space to editing.
+    '@max-md:group-data-[fit=squeezed]:[&:has([data-part=country-visit-editor]_form)>div>article>dl]:hidden',
   ),
   /**
    * The card's column. Its width is a custom property rather than two competing

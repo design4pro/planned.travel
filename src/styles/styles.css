@@ -766,6 +766,13 @@
   z-index: var(--z-toast);
 }
 
+/* Sonner's unlayered outline reset bypasses the shared layered focus rule. */
+:root [data-sonner-toast]:focus-visible,
+:root [data-sonner-toast] [data-button]:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
 /* The nav's own row. `--nav-h` names that row and nothing else, which is why
    this pair does *not* compose the impersonation offset: the bar is a second
    row above the nav, not a taller nav, and a header that grew by the bar's

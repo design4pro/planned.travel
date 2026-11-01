@@ -178,7 +178,8 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Додати місце, {day}',
   'plan.addPlace.quota':
     'Ви досягли ліміту місць у вашому тарифі. Перейдіть на вищий тариф, щоб додати більше.',
-  'plan.addPlace.quotaAction': 'Переглянути тарифи',
+  'plan.addPlace.quotaAction':
+    'Переглянути тарифи (відкриється в новій вкладці)',
   'plan.stay.checkIn': 'Заїзд',
   'plan.stay.checkOut': 'Виїзд',
   'plan.day.addStay': 'Додати проживання, {day}',

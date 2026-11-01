@@ -65,7 +65,12 @@ const messages = {
   'split.nobody': 'Nessuno',
   'split.departed': 'Ha lasciato il viaggio',
   'split.departedHint':
-    'Deselezionare chi ha lasciato il viaggio elimina definitivamente la sua quota.',
+    'Al salvataggio, la quota di chi ha lasciato il viaggio ed è stato deselezionato viene eliminata definitivamente.',
+  'split.removedNumbered': 'Viaggiatore rimosso {number}',
+  'split.includeRemoved':
+    'Includi il viaggiatore rimosso in questa suddivisione',
+  'split.includeRemovedNumbered':
+    'Includi il viaggiatore rimosso {number} in questa suddivisione',
   'split.includeFor': 'Includi {name} in questa divisione',
   'split.how': 'Come si divide questa spesa',
   'split.method.equal': 'In parti uguali',

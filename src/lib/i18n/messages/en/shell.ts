@@ -65,6 +65,7 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'toaster.label': 'Notifications',
   /* -------------------------------------------------------------- navigation */
   /** Accessible names for the two nav landmarks, neither of which has a heading. */
   'nav.primary': 'Primary sections',

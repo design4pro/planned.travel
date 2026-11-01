@@ -2350,6 +2350,15 @@ button actually produces.
 The widget is loaded from its own chunk, after hydration, for the same reason the recorder is - the
 form and the screenshot editor are ~20 kB that only matters to somebody who clicks the button.
 
+**Credential query values are redacted in every telemetry string.** The case-insensitive keys
+`token`, `access_token`, `refresh_token`, `id_token`, `code`, `password`, `secret`, `client_secret`,
+`api_key`, `apikey` and `authorization` are covered, including repeated parameters, encoded keys
+and values, malformed values, embedded absolute/relative URLs and nested encoded redirects at any
+depth. Harmless `code` values are deliberately redacted too. Useful paths and ordinary query
+parameters remain; request URLs still lose their entire query. Password-reset URLs and the reset
+flow itself are unchanged. The shared scrub reaches errors, transactions, spans, logs, breadcrumbs,
+feedback metadata, replay envelopes and custom recording events in the existing browser/Worker hooks.
+
 **A secret in a URL path is redacted before it leaves the app.** `/join/<segment>` (the trip invite
 link) is replaced by `/join/[redacted]` by `src/lib/sentry-scrub.ts` in every channel both runtimes
 send: the event, transaction and span names, span attributes keyed `params.token`, breadcrumbs and
@@ -2359,20 +2368,20 @@ logs, plus the URL-encoded form (at any depth) inside `redirect` and `callbackUR
 processor routes them through the same scrub, and the replay integration's recording events pass
 through `beforeAddRecordingEvent`. The DOM recorder's own events (the
 page `href` in its Meta event, link attributes in a snapshot) are not reachable by any SDK hook, so
-the recorder does not run on a join location: `src/lib/sentry-replay.ts` never starts it on the
+the recorder does not run on a credential-query or join location: `src/lib/sentry-replay.ts` never starts it on the
 page, or on a sign-in page whose `redirect` or `callbackURL` carries the link (at any encoding
 depth, buffering for an error included), and a navigation onto one stops it with `flush: false`,
-which drops what was buffered. Once off for a join location it stays off until the next document
-load, and `beforeAddRecordingEvent` drops every event while the address holds a join path.
-**Replay quota:** a session that opens a join link is not replayed for the rest of that page
-load, and a join page that errors yields no replay, only the redacted error event and the
+which drops what was buffered. Once off for a sensitive location it stays off until the next document
+load, and `beforeAddRecordingEvent` drops every event while the address holds a credential query or join path.
+**Replay quota:** a session that opens a credential query or join link is not replayed for the rest of that page
+load, and a sensitive page that errors yields no replay, only the redacted error event and the
 structured log line (link id, outcome); the replay quota drops slightly. `requestFields` in
 `src/server/observability/logger.ts` logs `path` and `referrer` unredacted; nothing calls it today,
 so do not call it on a `/join/` request.
 
-**No feedback button on a join location.** A feedback screenshot is an attachment no scrub can read,
+**No feedback button on a credential-query or join location.** A feedback screenshot is an attachment no scrub can read,
 and a window capture shows the address bar, so `FeedbackWidget` builds no button while the address
-holds a join path (the same test as the replay, on the router's location) and builds it again when
+holds a credential query or join path, including nested encoded URLs (the same test as the replay, on the router's location) and builds it again when
 the visitor navigates away.
 
 ### 17.3 The source-map token

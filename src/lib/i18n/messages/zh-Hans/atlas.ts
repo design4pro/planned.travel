@@ -365,6 +365,19 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': '{last}年有一次旅行',
   'panel.stat.streakNone': '添加有日期的旅行以开始连续记录',
+  'visitEdit.edit': '编辑访问',
+  'visitEdit.note': '备注',
+  'visitEdit.save': '保存访问',
+  'visitEdit.cancel': '取消',
+  'visitEdit.loading': '正在加载访问',
+  'visitEdit.saving': '正在保存访问',
+  'visitEdit.failed': '无法确认保存。草稿已保留，请重试。',
+  'visitEdit.missing': '此访问已不可用，请重新打开该国家。',
+  'visitEdit.noteInvalid': '最多输入2000个字符。',
+  'visitEdit.bounds': '首次访问日期不能晚于最后访问日期。',
+  'visitEdit.future': '请选择今天或更早的日期。',
+  'visitEdit.dateInvalid': '请输入YYYY-MM-DD格式的真实日期。',
+  'visitEdit.reload': '已保存，重新加载记录',
 } satisfies TranslationOf<typeof En>
 
 export default messages

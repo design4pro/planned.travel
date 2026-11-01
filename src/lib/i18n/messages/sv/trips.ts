@@ -171,7 +171,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Lägg till en plats: {day}',
   'plan.addPlace.quota':
     'Du har nått gränsen för platser i din plan. Uppgradera för att lägga till fler.',
-  'plan.addPlace.quotaAction': 'Visa planer',
+  'plan.addPlace.quotaAction': 'Visa planer (öppnas i en ny flik)',
   'plan.stay.checkIn': 'Incheckning',
   'plan.stay.checkOut': 'Utcheckning',
   'plan.day.addStay': 'Lägg till ett boende: {day}',

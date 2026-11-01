@@ -52,9 +52,15 @@ interface MountOptions {
   readonly locale?: Locale
   readonly dsn?: string
   readonly theme?: 'light' | 'dark'
+  readonly recovery?: boolean
 }
 
-async function mount({ locale = 'pl', dsn = DSN, theme }: MountOptions = {}) {
+async function mount({
+  locale = 'pl',
+  dsn = DSN,
+  theme,
+  recovery = false,
+}: MountOptions = {}) {
   // Written before the module is evaluated: the theme store reads storage once, on first subscribe.
   if (theme !== undefined) window.localStorage.setItem('planned.theme', theme)
 
@@ -64,8 +70,12 @@ async function mount({ locale = 'pl', dsn = DSN, theme }: MountOptions = {}) {
   const [{ FeedbackWidget }, { I18nProvider, loadCatalogue }] =
     await Promise.all([import('../feedback-widget'), import('#/lib/i18n')])
 
+  const { RECOVERY_CATALOGUES } = await import('#/lib/i18n/recovery-catalogues')
+  const messages = recovery
+    ? RECOVERY_CATALOGUES[locale]
+    : await loadCatalogue(locale)
   const view = render(
-    <I18nProvider locale={locale} messages={await loadCatalogue(locale)}>
+    <I18nProvider locale={locale} messages={messages}>
       <FeedbackWidget />
     </I18nProvider>,
   )
@@ -127,6 +137,14 @@ describe('FeedbackWidget', () => {
     )
   })
 
+  it('keeps screenshot annotation removal translated with only root recovery messages', async () => {
+    await mount({ locale: 'pl', recovery: true })
+
+    expect((await widgetOptions()).removeHighlightText).toBe(
+      plUi['action.remove'],
+    )
+  })
+
   it('leaves the accessible name and the no-client error to the SDK', async () => {
     await mount({ locale: 'pl' })
 
@@ -180,6 +198,8 @@ describe('FeedbackWidget', () => {
   })
 
   it.each([
+    '/reset-password?token=the-secret',
+    '/login?callbackURL=%252Freset-password%253Ftoken%253Dthe-secret',
     '/join/the-secret',
     '/login?redirect=%2Fjoin%2Fthe-secret',
     '/login?callbackURL=%252Fjoin%252Fthe-secret',
@@ -197,19 +217,45 @@ describe('FeedbackWidget', () => {
     },
   )
 
-  it('builds the button again once the visitor leaves the join location', async () => {
-    route.href = '/join/the-secret'
+  it('cancels pending creation when navigation reaches a credential query', async () => {
+    let resolve: (value: unknown) => void = () => {}
+    startFeedback.mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
     const { speak } = await mount()
+    route.href = '/reset-password?token=the-secret'
+    await speak('pl')
+    resolve({ createWidget, setTheme })
     await waitFor(() => {
       expect(setTheme).toHaveBeenCalled()
     })
     expect(createWidget).not.toHaveBeenCalled()
-
     route.href = '/trips'
     await speak('pl')
-
-    await waitFor(() => {
-      expect(createWidget).toHaveBeenCalledTimes(1)
-    })
+    await widgetOptions()
+    route.href = '/reset-password?token=the-secret'
+    await speak('pl')
+    expect(removeFromDom).toHaveBeenCalledOnce()
   })
+
+  it.each(['/join/the-secret', '/reset-password?token=the-secret'])(
+    'builds the button again after leaving %s',
+    async (href) => {
+      route.href = href
+      const { speak } = await mount()
+      await waitFor(() => {
+        expect(setTheme).toHaveBeenCalled()
+      })
+      expect(createWidget).not.toHaveBeenCalled()
+
+      route.href = '/trips'
+      await speak('pl')
+
+      await waitFor(() => {
+        expect(createWidget).toHaveBeenCalledTimes(1)
+      })
+    },
+  )
 })

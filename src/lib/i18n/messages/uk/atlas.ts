@@ -455,6 +455,20 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Подорож у {last} році',
   'panel.stat.streakNone': 'Додайте подорож із датами, щоб почати серію',
+  'visitEdit.edit': 'Змінити відвідування',
+  'visitEdit.note': 'Нотатка',
+  'visitEdit.save': 'Зберегти відвідування',
+  'visitEdit.cancel': 'Скасувати',
+  'visitEdit.loading': 'Завантаження відвідування',
+  'visitEdit.saving': 'Збереження відвідування',
+  'visitEdit.failed':
+    'Не вдалося підтвердити збереження. Чернетку збережено; спробуй ще раз.',
+  'visitEdit.missing': 'Це відвідування вже недоступне. Відкрий країну знову.',
+  'visitEdit.noteInvalid': 'Використай не більше 2000 символів.',
+  'visitEdit.bounds': 'Перше відвідування не може бути пізніше за останнє.',
+  'visitEdit.future': 'Вибери сьогоднішню або ранішу дату.',
+  'visitEdit.dateInvalid': 'Вкажи дійсну дату у форматі РРРР-ММ-ДД.',
+  'visitEdit.reload': 'Збережено. Оновити запис',
 } satisfies TranslationOf<typeof En>
 
 export default messages

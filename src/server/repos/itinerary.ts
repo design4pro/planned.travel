@@ -544,7 +544,7 @@ export async function createAssignment(
   input: CreateAssignmentInput,
 ): Promise<DayAssignment> {
   const values = createAssignmentInput.parse(input)
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await requireTripDay(scope, values.tripId, values.dayId)
   await requirePlaceOfTrip(scope, values.tripId, values.placeId)
@@ -567,9 +567,8 @@ async function nextOrderIndex(
 }
 
 /**
- * Edits one stop. Starts from a row id, so it asks the stop's trip the two questions every
- * trip-scoped writer asks - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR
- * 0007), may they edit it - in that order, and writes only after both pass.
+ * Edits one stop. Checks visibility, archive state (`requireWritableTrip`) and write role,
+ * in that order, before writing; an unreadable trip stays `NotFoundError` (ADR 0007).
  */
 export async function updateAssignment(
   scope: TenantScope,
@@ -580,7 +579,7 @@ export async function updateAssignment(
     scope,
     assignmentId,
   )
-  await requireTrip(scope, assignment.tripId)
+  await requireWritableTrip(scope, assignment.tripId)
   await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   return dayAssignmentsRepository.requireUpdate(
     scope,
@@ -592,11 +591,12 @@ export async function updateAssignment(
 /**
  * Applies a whole day's new order in one batch.
  *
- * The input names bare stop ids, so each distinct trip those stops belong to is asked the two
- * questions every trip-scoped writer asks, before anything is written:
+ * The input names bare stop ids, so each distinct trip is checked for visibility, archive state
+ * and write role, in that order, before anything is written:
  *
  * - **A stop of a trip the caller may not see is dropped**, exactly like an id the workspace does
  *   not hold, so the answer never tells an outsider that the stop exists (ADR 0007).
+ * - **A visible archived trip refuses the whole call** with `TripArchivedError`, without writes.
  * - **A stop of a trip the caller may see but not edit refuses the whole call** with the trip-role
  *   error, and nothing is written, not even the stops that were editable.
  */
@@ -614,6 +614,7 @@ export async function reorderAssignments(
     if (!(await canReadTrip(scope, tripId))) {
       continue
     }
+    await requireWritableTrip(scope, tripId)
     await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
     for (const row of known) {
       if (row.tripId === tripId) {
@@ -718,11 +719,11 @@ export async function reorderDayTimelines(
 ): Promise<Array<WrittenDayTimeline>> {
   const values = reorderDayTimelinesInput.parse(input)
 
-  // Read first, then role, then every named day: a caller who may not see the trip
-  // learns nothing beyond `NotFoundError`, and only a reader who has proved they may
+  // Visibility first, then archive state, role and every named day: an unreadable trip
+  // reveals nothing beyond `NotFoundError`, and only a reader who has proved they may
   // see it can be told `FORBIDDEN` (PRD #104 decisions 1 and 6). Nothing is written
   // until all of them have passed.
-  await requireTrip(scope, values.tripId)
+  await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
   await Promise.all(
     values.days.map((day) => requireTripDay(scope, values.tripId, day.dayId)),
@@ -1096,9 +1097,9 @@ export async function deletePlaceWithJourneys(
 /**
  * Replaces the participant set of one stop.
  *
- * Starts from a row id, so it asks the stop's trip the two questions every trip-scoped writer asks
- * - may the caller see it (`requireTrip`, `NotFoundError` otherwise, ADR 0007), may they edit it -
- * in that order, and writes only after both pass.
+ * Starts from a row id and checks the stop's trip for visibility, archive state
+ * (`requireWritableTrip`) and write role, in that order. An unreadable
+ * trip stays `NotFoundError` (ADR 0007); nothing is written until all three pass.
  *
  * Only a **current member of the stop's trip** (any role) may be listed (#1086). A list naming
  * anyone else - a workspace member who is not on the trip, a person who has left it, a user of
@@ -1106,7 +1107,7 @@ export async function deletePlaceWithJourneys(
  * `NotFoundError('trip member', 'named in the request')` that names no id, and the stored set is
  * untouched. A stop carries no debt, so unlike an expense a person who has left is not kept
  * listable: re-saving a set without them succeeds, naming them is refused. The membership check runs
- * after the two guards above, so a caller who may not see the trip is answered the trip's refusal.
+ * after the trip guards above, so a caller who may not see the trip is answered the trip's refusal.
  * {@link getTripItinerary} applies the same definition of member when it reads the set back.
  */
 export async function setAssignmentParticipants(
@@ -1118,7 +1119,7 @@ export async function setAssignmentParticipants(
     scope,
     assignmentId,
   )
-  await requireTrip(scope, assignment.tripId)
+  await requireWritableTrip(scope, assignment.tripId)
   await assertTripRole(scope, assignment.tripId, TRIP_WRITE_ROLES)
   const parsed = [
     ...new Set(
