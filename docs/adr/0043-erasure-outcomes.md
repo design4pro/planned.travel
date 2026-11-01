@@ -77,7 +77,7 @@ cursor, which the catalog read finds, then enqueues the next message with the id
 marker `erasure:participants-backfilled` (run id and time). The payload carries a run id and a cursor
 and no user or organization id; the envelope's `orgId` is `system`, and the work runs under a scope
 whose user id is reserved (`system:participant-backfill`). The run keeps its progress in KV (the
-last workspace visited), and a message that does not continue it does nothing, so the marker is
+last workspace visited), and a message the run has passed does nothing, so the marker is
 written only by a chain that visited every workspace from the start. A message that arrives ahead of its run fails and retries (KV is not read-after-write consistent), and a run that stalls or is dead-lettered is recovered by starting a new run id. A forged envelope can therefore
 start a chain but cannot aim it at a person or a workspace, nor finish a run early, and the scope
 reads only the registered user columns of the workspace the catalog named. A chain that fails part-way leaves no
@@ -96,6 +96,9 @@ writes an action, so neither the table nor `PLATFORM_AUDIT_ACTIONS` changes in t
   `member`.
 - The migration is additive (`CREATE TABLE`, `CREATE INDEX`); the queue kind is inert until a producer
   lands, so a Worker that predates it never receives one.
+- Console account deletion (`deletePlatformUser`) retains `workspace_participants.user_id` rows.
+  These participation-anchor user ids remain until the erasure engine implements their removal;
+  deleting an account does not erase the anchor.
 - `workspace_participants` has no tenant-facing read.
 
 
