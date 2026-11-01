@@ -702,7 +702,10 @@ export function formatPrecipitation(
     ? Math.round((millimetres / 25.4) * 100) / 100
     : Math.round(millimetres * 10) / 10
   const symbol = imperial ? 'in' : 'mm'
-  if (millimetres > 0 && value === 0) {
+  if (
+    millimetres > 0 &&
+    (imperial ? millimetres / 25.4 < 0.01 : millimetres < 0.1)
+  ) {
     return `<${formatNumber(imperial ? 0.01 : 0.1, locale)} ${symbol}`
   }
   return `${formatNumber(value, locale)} ${symbol}`
