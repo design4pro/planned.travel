@@ -44,6 +44,8 @@ import type { NamespaceModule } from '#/lib/i18n/catalogue'
 // behind them; neither has any meaning in jsdom, and what they *do* is
 // `country-actions.test.tsx`'s subject. This file only mounts the stats tab.
 vi.mock('#/server/fns/atlas', () => ({
+  loadCountryVisitFn: vi.fn(),
+  updateCountryVisitFn: vi.fn(),
   loadCountryRegionsFn: vi.fn().mockResolvedValue({ regions: [], total: 0 }),
   markRegionVisitedFn: vi.fn(),
   unmarkRegionVisitedFn: vi.fn(),

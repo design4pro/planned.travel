@@ -422,6 +422,21 @@ const messages = {
   'panel.stat.streakSingle': 'Egy utazás, év: {last}',
   'panel.stat.streakNone':
     'Adj hozzá dátummal ellátott utazást a sorozat indításához',
+  'visitEdit.edit': 'Látogatás szerkesztése',
+  'visitEdit.note': 'Jegyzet',
+  'visitEdit.save': 'Látogatás mentése',
+  'visitEdit.cancel': 'Mégse',
+  'visitEdit.loading': 'Látogatás betöltése',
+  'visitEdit.saving': 'Látogatás mentése folyamatban',
+  'visitEdit.failed':
+    'A mentést nem sikerült megerősíteni. A piszkozat megmarad; próbáld újra.',
+  'visitEdit.missing':
+    'Ez a látogatás már nem érhető el. Nyisd meg újra az országot.',
+  'visitEdit.noteInvalid': 'Legfeljebb 2000 karaktert használj.',
+  'visitEdit.bounds': 'Az első látogatás nem lehet az utolsó után.',
+  'visitEdit.future': 'A mai vagy egy korábbi dátumot válassz.',
+  'visitEdit.dateInvalid': 'Adj meg valós dátumot ÉÉÉÉ-HH-NN formátumban.',
+  'visitEdit.reload': 'Mentve. Adatlap újratöltése',
 } satisfies TranslationOf<typeof En>
 
 export default messages

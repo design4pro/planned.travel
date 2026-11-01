@@ -16,6 +16,7 @@ vi.mock('#/server/auth/env', () => ({
 }))
 /** The Start compiler normally supplies this RPC adapter. Keep its validator and handler seam. */
 vi.mock('@tanstack/react-start', () => ({
+  createServerOnlyFn: <T,>(fn: T): T => fn,
   createServerFn: () => ({
     validator(schema: { parse: (input: unknown) => unknown }) {
       return {

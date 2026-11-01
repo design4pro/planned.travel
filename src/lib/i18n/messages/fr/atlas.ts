@@ -437,6 +437,20 @@ const messages = {
   'panel.stat.streakSingle': 'Un voyage en {last}',
   'panel.stat.streakNone':
     'Ajoutez un voyage avec des dates pour commencer une série',
+  'visitEdit.edit': 'Modifier la visite',
+  'visitEdit.note': 'Note de visite',
+  'visitEdit.save': 'Enregistrer la visite',
+  'visitEdit.cancel': 'Annuler',
+  'visitEdit.loading': 'Chargement de la visite',
+  'visitEdit.saving': 'Enregistrement de la visite',
+  'visitEdit.failed':
+    'Enregistrement non confirmé. Le brouillon est conservé ; réessaie.',
+  'visitEdit.missing': 'Cette visite est indisponible. Rouvre le pays.',
+  'visitEdit.noteInvalid': 'Utilise au maximum 2 000 caractères.',
+  'visitEdit.bounds': 'La première visite ne peut pas suivre la dernière.',
+  'visitEdit.future': 'Choisis aujourd’hui ou une date antérieure.',
+  'visitEdit.dateInvalid': 'Saisis une date réelle au format AAAA-MM-JJ.',
+  'visitEdit.reload': 'Enregistré. Recharger la fiche',
 } satisfies TranslationOf<typeof En>
 
 export default messages

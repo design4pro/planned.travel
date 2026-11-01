@@ -458,6 +458,20 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': 'Cesta v roce {last}',
   'panel.stat.streakNone': 'Přidej cestu s daty a začni sérii',
+  'visitEdit.edit': 'Upravit návštěvu',
+  'visitEdit.note': 'Poznámka',
+  'visitEdit.save': 'Uložit návštěvu',
+  'visitEdit.cancel': 'Zrušit',
+  'visitEdit.loading': 'Načítání návštěvy',
+  'visitEdit.saving': 'Ukládání návštěvy',
+  'visitEdit.failed':
+    'Uložení se nepodařilo potvrdit. Koncept zůstává; zkus to znovu.',
+  'visitEdit.missing': 'Tato návštěva už není dostupná. Otevři zemi znovu.',
+  'visitEdit.noteInvalid': 'Použij nejvýše 2 000 znaků.',
+  'visitEdit.bounds': 'První návštěva nesmí být po poslední.',
+  'visitEdit.future': 'Vyber dnešní nebo dřívější datum.',
+  'visitEdit.dateInvalid': 'Zadej skutečné datum ve formátu RRRR-MM-DD.',
+  'visitEdit.reload': 'Uloženo. Znovu načíst záznam',
 } satisfies TranslationOf<typeof En>
 
 export default messages

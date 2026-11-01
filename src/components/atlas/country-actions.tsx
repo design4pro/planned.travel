@@ -21,6 +21,7 @@ import { countryName } from '#/lib/atlas/country-names'
 import { visitSpan } from '#/lib/atlas/visit-span'
 import { formatNumber } from '#/lib/format'
 import { RegionRecord } from './region-record'
+import { CountryVisitEditor } from './country-visit-editor'
 import { visitLine } from './visit-copy'
 import {
   addCountryToBucketListFn,
@@ -861,7 +862,8 @@ export const CountryActions = React.forwardRef<
 
     const visitPending = mark.pending || unmark.pending
     const goalPending = addGoal.pending || dropGoal.pending
-    const busy = visitPending || goalPending
+    const [editPending, setEditPending] = React.useState(false)
+    const busy = visitPending || goalPending || editPending
     const visitIntent = rowIntent(mark.pending, unmark.pending, visited)
     /**
      * The row a press on the bucket-list control would remove, which is what
@@ -1240,6 +1242,15 @@ export const CountryActions = React.forwardRef<
             </>
           )}
         </p>
+
+        {visited && effectiveVisit ? (
+          <CountryVisitEditor
+            key={`visit:${code}`}
+            countryCode={code}
+            disabled={visitPending || goalPending || regionPending}
+            onPendingChange={setEditPending}
+          />
+        ) : null}
 
         <RegionRecord
           key={code}

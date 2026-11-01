@@ -418,6 +418,21 @@ const messages = {
   'panel.stat.streakSingle': 'Een reis in {last}',
   'panel.stat.streakNone':
     'Voeg een reis met datums toe om een reeks te beginnen',
+  'visitEdit.edit': 'Bezoek bewerken',
+  'visitEdit.note': 'Notitie',
+  'visitEdit.save': 'Bezoek opslaan',
+  'visitEdit.cancel': 'Annuleren',
+  'visitEdit.loading': 'Bezoek laden',
+  'visitEdit.saving': 'Bezoek opslaan…',
+  'visitEdit.failed':
+    'Opslaan niet bevestigd. Je concept blijft bewaard; probeer opnieuw.',
+  'visitEdit.missing':
+    'Dit bezoek is niet meer beschikbaar. Open het land opnieuw.',
+  'visitEdit.noteInvalid': 'Gebruik maximaal 2.000 tekens.',
+  'visitEdit.bounds': 'Het eerste bezoek mag niet na het laatste vallen.',
+  'visitEdit.future': 'Kies vandaag of een eerdere datum.',
+  'visitEdit.dateInvalid': 'Voer een geldige datum in als JJJJ-MM-DD.',
+  'visitEdit.reload': 'Opgeslagen. Gegevens opnieuw laden',
 } satisfies TranslationOf<typeof En>
 
 export default messages

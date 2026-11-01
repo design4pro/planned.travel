@@ -384,6 +384,21 @@ const messages = {
   // Translators: use a form that needs no case suffix on the year digits (especially hu and tr).
   'panel.stat.streakSingle': '{last}년에 여행',
   'panel.stat.streakNone': '날짜가 있는 여행을 추가하여 연속 기록을 시작하세요',
+  'visitEdit.edit': '방문 수정',
+  'visitEdit.note': '메모',
+  'visitEdit.save': '방문 저장',
+  'visitEdit.cancel': '취소',
+  'visitEdit.loading': '방문 불러오는 중',
+  'visitEdit.saving': '방문 저장 중',
+  'visitEdit.failed':
+    '저장을 확인하지 못했습니다. 초안은 유지됩니다. 다시 시도하세요.',
+  'visitEdit.missing':
+    '이 방문은 더 이상 이용할 수 없습니다. 국가를 다시 여세요.',
+  'visitEdit.noteInvalid': '최대 2,000자까지 입력하세요.',
+  'visitEdit.bounds': '첫 방문일은 마지막 방문일보다 늦을 수 없습니다.',
+  'visitEdit.future': '오늘 또는 이전 날짜를 선택하세요.',
+  'visitEdit.dateInvalid': 'YYYY-MM-DD 형식으로 실제 날짜를 입력하세요.',
+  'visitEdit.reload': '저장됨. 기록 다시 불러오기',
 } satisfies TranslationOf<typeof En>
 
 export default messages
