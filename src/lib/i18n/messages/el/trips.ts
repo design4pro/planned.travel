@@ -175,7 +175,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Προσθήκη τοποθεσίας, {day}',
   'plan.addPlace.quota':
     'Φτάσατε το όριο τοποθεσιών του πακέτου σας. Αναβαθμίστε για να προσθέσετε περισσότερες.',
-  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα',
+  'plan.addPlace.quotaAction': 'Δείτε τα πακέτα (ανοίγει σε νέα καρτέλα)',
   'plan.stay.checkIn': 'Άφιξη',
   'plan.stay.checkOut': 'Αποχώρηση',
   'plan.day.addStay': 'Προσθήκη διαμονής, {day}',

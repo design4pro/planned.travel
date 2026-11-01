@@ -177,7 +177,7 @@ const messages = {
   'plan.addPlace.forDayNamed': 'Добавить место, {day}',
   'plan.addPlace.quota':
     'Вы достигли лимита мест в вашем тарифе. Перейдите на более высокий тариф, чтобы добавить ещё.',
-  'plan.addPlace.quotaAction': 'Посмотреть тарифы',
+  'plan.addPlace.quotaAction': 'Посмотреть тарифы (откроется в новой вкладке)',
   'plan.stay.checkIn': 'Заезд',
   'plan.stay.checkOut': 'Выезд',
   'plan.day.addStay': 'Добавить проживание, {day}',
