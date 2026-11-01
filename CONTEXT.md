@@ -102,3 +102,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Public place** - a separately reviewed, free-public catalogue snapshot available to visitors without a workspace. It is never a collection visibility setting; private source changes do not change the published snapshot.
 - **Place proposal** - an explicitly submitted snapshot of selected public place fields awaiting platform-administrator review. Submission does not publish or widen access to the private source.
 - **Place origin** - the catalogue identifier and revision retained by a trip's independent place snapshot. An origin link is available only while the origin is publicly readable; withdrawal does not remove the trip copy.
+
+- **Billing selection hint** - an expiring, tab-local, workspace- and viewer-scoped record of the requested plan, interval and seats used only to describe a billing return. It grants no entitlement and proves no payment; effective and scheduled changes come from authoritative billing state.

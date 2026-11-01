@@ -370,9 +370,16 @@ const messages = {
   'billing.status.incomplete': 'Incomplet',
   'billing.status.incomplete_expired': 'Expiré',
 
-  'billing.checkout.completeTitle': 'Paiement reçu',
-  'billing.checkout.completeBody':
-    'Votre nouvelle formule est en cours d’application. Elle apparaît ici dès que Polar la confirme — en général en quelques secondes.',
+  'billing.return.pending': 'Vérification du changement de forfait',
+  'billing.return.checking': 'Vérification de la facturation',
+  'billing.return.confirmed': 'Forfait confirmé',
+  'billing.return.scheduled': 'Changement de forfait programmé',
+  'billing.return.delayed': 'La confirmation prend plus de temps',
+  'billing.return.body':
+    'Actualisez pour vérifier à nouveau. Si le changement reste non confirmé, contactez l’assistance.',
+  'billing.return.scheduledBody':
+    'Le changement prendra effet le {date}. Votre forfait actuel reste en vigueur jusque-là. Cela ne confirme pas les changements du nombre de places.',
+
   'billing.checkout.cancelledTitle': 'Paiement abandonné',
   'billing.checkout.cancelledBody':
     'Rien n’a été débité et votre formule n’a pas changé.',
@@ -534,9 +541,6 @@ const messages = {
     'La facturation n’est pas encore connectée sur ce déploiement, donc rien n’a été modifié. Contactez le support.',
   'billing.failure.orderNotInvoiceable':
     'Polar ne peut pas émettre de facture pour cette commande. S’il manque le nom ou l’adresse de facturation, ajoutez-les dans le portail de facturation et réessayez ; sinon, contactez le support.',
-  'billing.planChanged.title': 'Formule mise à jour',
-  'billing.planChanged.body':
-    "Le changement est déjà effectif chez Polar, qui facturera la différence. Le récapitulatif ci-dessous se met à jour en moins d'une minute.",
   'billing.discount.toggle': 'Vous avez un code promo ?',
   'billing.discount.label': 'Code promo',
   'billing.discount.hint': 'Appliqué à la formule que vous choisirez ensuite.',

@@ -416,9 +416,16 @@ const messages = {
   'billing.status.incomplete': 'Incomplete',
   'billing.status.incomplete_expired': 'Expired',
 
-  'billing.checkout.completeTitle': 'Payment received',
-  'billing.checkout.completeBody':
-    'Your new plan is being applied. It appears here the moment Polar confirms it — usually within a few seconds.',
+  'billing.return.pending': 'Checking your plan change',
+  'billing.return.checking': 'Checking billing status',
+  'billing.return.confirmed': 'Plan confirmed',
+  'billing.return.scheduled': 'Plan change scheduled',
+  'billing.return.delayed': 'Confirmation is taking longer',
+  'billing.return.body':
+    'Refresh to check again. If the change remains unconfirmed, contact support.',
+  'billing.return.scheduledBody':
+    'Your change takes effect on {date}. Your current plan stays in force until then. This does not confirm changes to the number of seats.',
+
   'billing.checkout.cancelledTitle': 'Checkout cancelled',
   'billing.checkout.cancelledBody':
     'Nothing was charged and your plan has not changed.',
@@ -599,9 +606,6 @@ const messages = {
     'Billing is not connected on this deployment yet, so nothing was changed. Contact support.',
   'billing.failure.orderNotInvoiceable':
     'Polar cannot issue an invoice for this order. If it has no billing name or address, add them in the billing portal and try again; otherwise contact support.',
-  'billing.planChanged.title': 'Plan updated',
-  'billing.planChanged.body':
-    'The change is already in force with Polar, who will invoice the difference. The summary below catches up within a minute.',
   'billing.discount.toggle': 'Have a promotion code?',
   'billing.discount.label': 'Promotion code',
   'billing.discount.hint': 'Applied to the plan you choose next.',

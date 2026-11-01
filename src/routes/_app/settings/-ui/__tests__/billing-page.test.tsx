@@ -7,7 +7,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -15,8 +15,11 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Settings from '#/lib/i18n/messages/en/settings'
 import Ui from '#/lib/i18n/messages/en/ui'
+import { setWorkspaceClaim } from '#/lib/workspace-claim-store'
 import { PLANS } from '#/lib/plans'
 import { Route } from '../../billing'
+import { rememberBillingSelection } from '../../-lib/billing-return'
+import { loadLocalBilling } from '../../../-server/local-billing'
 
 import type { PublicFailure } from '#/lib/errors'
 import type { Catalogue } from '#/lib/i18n'
@@ -55,11 +58,14 @@ vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ invalidate: vi.fn() }),
 }))
 vi.mock('../../../-server/billing', () => server)
+vi.mock('../../../-server/local-billing', () => ({ loadLocalBilling: vi.fn() }))
 
 const assign = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
+  sessionStorage.clear()
+  setWorkspaceClaim('org_test')
   Object.defineProperty(window, 'location', {
     configurable: true,
     value: { ...window.location, assign },
@@ -106,6 +112,7 @@ function crewWorkspace(overrides: Partial<Entitlements> = {}): Entitlements {
 
 function payload(overrides: Partial<BillingPayload> = {}): BillingPayload {
   return {
+    viewerId: 'viewer',
     entitlements: crewWorkspace(),
     places: { used: 0, limit: null },
     invoices: [],
@@ -428,4 +435,85 @@ describe('a failed billing action on the billing page', () => {
     expect(message.textContent).toContain(REFERENCE)
     expect(message.textContent).not.toMatch(NEVER_SHOWN)
   })
+})
+
+describe('billing return handoff', () => {
+  it.each(['checkout', 'applied', 'unchanged', 'discount_applied'])(
+    'retains display selection only for a real %s handoff',
+    async (surface) => {
+      server.startPlanChange.mockResolvedValue({
+        surface,
+        url: '/billing-return',
+      })
+      renderPage(
+        payload({
+          entitlements: crewWorkspace({
+            planId: 'free',
+            status: 'none',
+            interval: null,
+          }),
+        }),
+      )
+      const user = userEvent.setup()
+      await user.click(
+        screen.getAllByRole('button', {
+          name: /^Upgrade to /,
+        })[0] as HTMLElement,
+      )
+      expect(assign).toHaveBeenCalledWith('/billing-return')
+      const stored = sessionStorage.getItem('billing-selection')
+      if (surface === 'checkout' || surface === 'applied') {
+        expect(JSON.parse(stored ?? 'null')).toMatchObject({
+          organizationId: 'org_test',
+          viewerId: 'viewer',
+          planId: 'solo',
+          interval: 'monthly',
+          operation: surface === 'checkout' ? 'checkout' : 'plan',
+        })
+        expect(stored).not.toContain('checkout_id')
+      } else expect(stored).toBeNull()
+    },
+  )
+  it('renders forged checkout returns as an accessible generic status', () => {
+    renderPage(payload(), {
+      checkout: 'complete',
+      checkout_id: 'foreign-checkout',
+    })
+    const notice = screen
+      .getByText('Checking billing status')
+      .closest('[role="status"]')
+    expect(notice?.getAttribute('aria-live')).toBe('polite')
+    expect(screen.queryByText('Payment received')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
+    expect(document.body.textContent).not.toContain('foreign-checkout')
+  })
+})
+
+it('omits recovery guidance after confirmation and shows manual refresh activity', async () => {
+  const data = payload()
+  rememberBillingSelection('org_test', 'viewer', 'checkout', {
+    planId: data.entitlements.planId,
+    interval: data.entitlements.interval!,
+    seats: data.entitlements.seats,
+  })
+  renderPage(data, { checkout: 'complete' })
+  expect(screen.getByText('Plan confirmed')).toBeTruthy()
+  expect(screen.queryByText(/If the change remains unconfirmed/)).toBeNull()
+  let reject!: (reason: Error) => void
+  vi.mocked(loadLocalBilling).mockImplementationOnce(
+    () =>
+      new Promise((_, fail) => {
+        reject = fail
+      }),
+  )
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Refresh' }))
+  const busy = screen.getByRole('button', { name: /Working/ })
+  expect(busy.getAttribute('aria-busy')).toBe('true')
+  await act(async () => {
+    reject(new Error('offline'))
+  })
+  expect(
+    screen.getByRole('button', { name: 'Refresh' }).hasAttribute('disabled'),
+  ).toBe(false)
 })
