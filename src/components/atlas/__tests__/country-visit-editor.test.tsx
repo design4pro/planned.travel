@@ -305,3 +305,40 @@ it('disables refresh retry while reopening or saving the editor', async () => {
     expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
   )
 })
+
+it('blocks refresh retry during an external action and permits it after unlocking', async () => {
+  api.invalidate.mockRejectedValueOnce(new Error('offline'))
+  const ui = mount()
+  await open()
+  await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
+  const retry = await screen.findByRole('button', { name: /Reload/ })
+  ui.rerender(
+    <CountryVisitEditor
+      countryCode="FR"
+      disabled={true}
+      onPendingChange={() => {}}
+    />,
+  )
+  expect(retry.getAttribute('disabled')).not.toBeNull()
+  await userEvent.click(retry)
+  expect(api.invalidate).toHaveBeenCalledTimes(1)
+  expect(api.save).toHaveBeenCalledTimes(1)
+  ui.rerender(
+    <CountryVisitEditor
+      countryCode="FR"
+      disabled={false}
+      onPendingChange={() => {}}
+    />,
+  )
+  expect(retry.getAttribute('disabled')).toBeNull()
+  retry.focus()
+  await userEvent.keyboard('{Enter}')
+  await waitFor(() =>
+    expect(screen.queryByRole('button', { name: /Reload/ })).toBeNull(),
+  )
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Edit visit' }),
+  )
+  expect(api.invalidate).toHaveBeenCalledTimes(2)
+  expect(api.save).toHaveBeenCalledTimes(1)
+})

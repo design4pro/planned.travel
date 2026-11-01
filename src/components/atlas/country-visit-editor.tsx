@@ -253,7 +253,7 @@ export function CountryVisitEditor({
       {refreshFailed ? (
         <Button
           size="sm"
-          disabled={pending}
+          disabled={disabled || pending}
           onClick={(event) => {
             const reload = event.currentTarget
             void router
