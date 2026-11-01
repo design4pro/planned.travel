@@ -685,6 +685,41 @@ export function formatDistance(
   return `${formatNumber(Math.round(metres / 1000), locale)} km`
 }
 
+/**
+ * Millimetres of rain or snow in the traveller's unit: `5.1 mm`, `0.2 in`.
+ *
+ * A total that is above zero but below what the unit shows (under 0.1 mm, under 0.01 in) reads as
+ * a lower bound, `<0.1 mm`, never as `0`: a traveller must not see a dry day beside a rain icon.
+ * The unit is a symbol, not copy, as `formatDistance`'s `km` is.
+ */
+export function formatPrecipitation(
+  millimetres: number,
+  unit: 'metric' | 'imperial',
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const imperial = unit === 'imperial'
+  const value = imperial
+    ? Math.round((millimetres / 25.4) * 100) / 100
+    : Math.round(millimetres * 10) / 10
+  const symbol = imperial ? 'in' : 'mm'
+  if (millimetres > 0 && value === 0) {
+    return `<${formatNumber(imperial ? 0.01 : 0.1, locale)} ${symbol}`
+  }
+  return `${formatNumber(value, locale)} ${symbol}`
+}
+
+/** Metres per second as whole km/h or mph: `18 km/h`, `11 mph`. */
+export function formatSpeed(
+  metresPerSecond: number,
+  unit: 'metric' | 'imperial',
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  if (unit === 'imperial') {
+    return `${formatNumber(Math.round(metresPerSecond * 2.236_936), locale)} mph`
+  }
+  return `${formatNumber(Math.round(metresPerSecond * 3.6), locale)} km/h`
+}
+
 /** Grams into the lightest sensible unit: `840 g`, `2.4 kg`. */
 export function formatWeight(
   grams: number,

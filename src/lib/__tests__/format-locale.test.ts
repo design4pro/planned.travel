@@ -15,6 +15,8 @@ import {
   formatDateRange,
   formatDayMonth,
   formatDistance,
+  formatPrecipitation,
+  formatSpeed,
   formatList,
   formatMonthYear,
   formatMoneyMinor,
@@ -86,6 +88,25 @@ describe('the English output every existing caller depends on', () => {
     expect(formatTimeRange('10:00', null)).toBe('10:00')
     expect(formatTimeRange(null, '16:00')).toBe('until 16:00')
     expect(formatTimeRange(null, null)).toBeNull()
+  })
+
+  it('formats rain and wind in the reader’s unit, and never reads a trace of rain as zero', () => {
+    expect(formatPrecipitation(5.14, 'metric')).toBe('5.1 mm')
+    expect(formatPrecipitation(25.4, 'imperial')).toBe('1 in')
+    expect(formatPrecipitation(5.1, 'imperial')).toBe('0.2 in')
+    expect(formatPrecipitation(1, 'imperial')).toBe('0.04 in')
+    // Above zero but under what the unit shows: a lower bound, not a rounded-down zero.
+    expect(formatPrecipitation(0.04, 'metric')).toBe('<0.1 mm')
+    expect(formatPrecipitation(0.1, 'imperial')).toBe('<0.01 in')
+    expect(formatPrecipitation(0.05, 'metric')).toBe('0.1 mm')
+    expect(formatPrecipitation(0.26, 'imperial')).toBe('0.01 in')
+    expect(formatPrecipitation(0, 'metric')).toBe('0 mm')
+    expect(formatPrecipitation(0, 'imperial')).toBe('0 in')
+    expect(formatPrecipitation(0.04, 'metric', 'de')).toBe('<0,1 mm')
+    expect(formatSpeed(5, 'metric')).toBe('18 km/h')
+    expect(formatSpeed(0.4, 'metric')).toBe('1 km/h')
+    expect(formatSpeed(5, 'imperial')).toBe('11 mph')
+    expect(formatSpeed(10, 'imperial')).toBe('22 mph')
   })
 
   it('formats numbers, money, distance, weight and percentages', () => {
