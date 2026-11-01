@@ -12,6 +12,8 @@ import { createLogger, createMemorySink } from '#/server/observability'
 import { rateMeterKey } from '#/server/metering/rate'
 import { createBookingImportHandler, stagedImportKey } from '../booking-import'
 
+import { consumeTaskBatch } from '../../consumer'
+import { taskDeadKey, taskDoneKey } from '../../jobs'
 import { bookingImportPayloadSchema } from '../../types'
 import type { StagedImport } from '../booking-import'
 import type {
@@ -408,4 +410,143 @@ describe('redelivery and stored shapes', () => {
     expect(staged.written).toBeUndefined()
     expect(staged.refusal).toBeUndefined()
   })
+})
+
+describe('optional room notification', () => {
+  function room(failure?: 'idFromName' | 'get' | 'fetch', status = 200) {
+    const fail = (step: string) => {
+      if (failure === step) throw new Error('private document content')
+    }
+    const fetch = vi.fn(async (_request: Request) => {
+      fail('fetch')
+      return new Response(null, { status })
+    })
+    return {
+      fetch,
+      idFromName: (name: string) => {
+        fail('idFromName')
+        return { toString: () => name } as DurableObjectId
+      },
+      get: () => {
+        fail('get')
+        return { fetch }
+      },
+    }
+  }
+
+  it.each(['idFromName', 'get', 'fetch'] as const)(
+    'completes staging when %s throws, without logging document content',
+    async (failure) => {
+      const world = harness({ source: CALENDAR })
+      const sink = createMemorySink()
+      world.context.logger = createLogger({ level: 'warn', sink })
+      world.context.env.TRIP_ROOM = room(failure)
+
+      await expect(
+        world.handler(payload({ format: 'ics' }), world.context),
+      ).resolves.toEqual({ parsed: 1, staged: 1, truncated: false })
+
+      expect(world.staged()).toMatchObject({
+        count: 1,
+        reservations: [{ title: 'Hotel Roma' }],
+      })
+      expect(sink.records).toEqual([
+        expect.objectContaining({
+          level: 'warn',
+          msg: 'trip room import notification failed',
+          tripId: 'trip_1',
+        }),
+      ])
+      expect(JSON.stringify(sink.records)).not.toContain(
+        'private document content',
+      )
+    },
+  )
+
+  it.each([200, 503])(
+    'keeps the existing notification with status %s',
+    async (status) => {
+      const world = harness({ source: CALENDAR })
+      const sink = createMemorySink()
+      world.context.logger = createLogger({ level: 'warn', sink })
+      const namespace = room(undefined, status)
+      world.context.env.TRIP_ROOM = namespace
+
+      await world.handler(payload({ format: 'ics' }), world.context)
+
+      const request = namespace.fetch.mock.calls[0][0]
+      expect(request.method).toBe('POST')
+      expect(await request.json()).toMatchObject({
+        tripId: 'trip_1',
+        authorId: 'user_1',
+        patches: [
+          {
+            fields: {
+              importJobId: TASK_ID,
+              importCount: 1,
+              importStagedAt: NOW,
+            },
+          },
+        ],
+      })
+      expect(sink.records).toEqual(
+        status === 200
+          ? []
+          : [
+              expect.objectContaining({
+                level: 'warn',
+                msg: 'trip room import notification rejected',
+                status: 503,
+              }),
+            ],
+      )
+    },
+  )
+
+  it.each([false, true])(
+    'settles the consumer according to staging success (write fails: %s)',
+    async (stagingFails) => {
+      const world = harness({ source: CALENDAR })
+      world.context.env.TRIP_ROOM = room('fetch')
+      if (stagingFails) {
+        world.context.env.KV.put = async () => {
+          throw new Error('KV unavailable')
+        }
+        await expect(
+          world.handler(payload({ format: 'ics' }), world.context),
+        ).rejects.toThrow('KV unavailable')
+      }
+      const ack = vi.fn()
+      const retry = vi.fn()
+      const result = await consumeTaskBatch(
+        {
+          messages: [
+            {
+              id: 'message-1',
+              body: {
+                id: TASK_ID,
+                orgId: ORG,
+                kind: 'booking-import',
+                enqueuedAt: NOW,
+                payload: payload({ format: 'ics' }),
+              },
+              attempts: 1,
+              ack,
+              retry,
+            },
+          ],
+        },
+        world.context.env,
+        world.context.logger,
+        { now: () => NOW },
+      )
+
+      expect(ack).toHaveBeenCalledTimes(stagingFails ? 0 : 1)
+      expect(retry).toHaveBeenCalledTimes(stagingFails ? 1 : 0)
+      expect(result.deadLettered).toBe(0)
+      expect(world.store.has(taskDoneKey(TASK_ID))).toBe(!stagingFails)
+      expect(world.store.has(taskDeadKey(TASK_ID))).toBe(false)
+      expect(world.staged()?.count).toBe(stagingFails ? undefined : 1)
+    },
+  )
 })
