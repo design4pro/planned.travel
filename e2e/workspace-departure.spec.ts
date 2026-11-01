@@ -74,6 +74,8 @@ for (const mode of ['remaining', 'personal', 'unknown'] as const)
     const suffix = `${Date.now()}-${test.info().parallelIndex}`
     const leaverName = `Leaver${suffix}`
     const recoveryTrigger = `departure_recovery_${suffix.replace(/[^a-z0-9]/gi, '_')}`
+    // Each fixture spends its own signup budget, as in trip-invite-link.spec.ts.
+    const clientAddress = `198.51.100.${Math.floor(Math.random() * 254) + 1}`
     const password = 'test-workspace-departure-1008'
     const email = provision
       ? `departure-member-${suffix}@example.test`
@@ -81,7 +83,7 @@ for (const mode of ['remaining', 'personal', 'unknown'] as const)
     const post = async (context: typeof owner, path: string, body: object) => {
       const response = await context.request.post(`/api/auth${path}`, {
         data: body,
-        headers: { origin: baseURL ?? '' },
+        headers: { origin: baseURL ?? '', 'cf-connecting-ip': clientAddress },
       })
       expect(response.ok(), `${path}: HTTP ${response.status()}`).toBe(true)
       return response.json()
