@@ -92,5 +92,11 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Visitor language** - the language remembered on a browser for signed-out pages, held for a year in a first-party cookie containing only a language code. A personal or workspace language takes precedence when signed in. Registering seeds the new account's own language from it once; signing in never does. _Avoid_: "anonymous account", "guest profile".
 
+- **Saved day route** - one day’s shared driving or walking intent: its selected mode and traveller-authored intermediate points. The calculated road line is a provider result, recomputed for the reader and never implied to be permanently saved. Distinct from a Map hand-off.
+- **Intermediate point** - a traveller-authored coordinate between two consecutive geolocated day stops that guides a calculated route without moving a place or becoming an itinerary stop. _Avoid_: "stop" for a shaping constraint.
 - **Dashboard prompt** - one passive suggestion on the dashboard based on information the current traveller may read. Dismissing it hides that suggestion locally; it neither marks a notification read nor delivers a Reminder.
 - **Nearby suggestion** - a dashboard prompt based on an explicitly requested approximate-location lookup. It is not a saved Place, a location history or a delivered Reminder.
+
+- **Public place** - a separately reviewed, free-public catalogue snapshot available to visitors without a workspace. It is never a collection visibility setting; private source changes do not change the published snapshot.
+- **Place proposal** - an explicitly submitted snapshot of selected public place fields awaiting platform-administrator review. Submission does not publish or widen access to the private source.
+- **Place origin** - the catalogue identifier and revision retained by a trip's independent place snapshot. An origin link is available only while the origin is publicly readable; withdrawal does not remove the trip copy.
