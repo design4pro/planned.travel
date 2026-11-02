@@ -28,11 +28,13 @@ Avoid model invocations for no-op implementation runs, centralize read-only PR/C
 
 ## Progress
 
+PR: #1727
+
 ### Phase 1: Pipeline helpers
 
-- [ ] 1.1 Add deterministic readiness and STOP routing with regressions.
-- [ ] 1.2 Add shared PR/CI snapshot and bounded waiting with regressions and consumers.
-- [ ] 1.3 Add shared validation execution, logs, resumption and fresh attestation integration.
+- [x] 1.1 Add deterministic readiness and STOP routing with regressions. — e34519da
+- [x] 1.2 Add shared PR/CI snapshot and bounded waiting with regressions and consumers. — e34519da
+- [x] 1.3 Add shared validation execution, logs, resumption and fresh attestation integration. — e34519da
 
 ### Phase 2: Verification and publication
 
