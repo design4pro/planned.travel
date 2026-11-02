@@ -2,7 +2,7 @@ import '#/components/ui/__tests__/test-env'
 
 import { useState } from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -86,6 +86,68 @@ function open(
 
 // Radix pointer interactions exceed five seconds on a loaded runner, as in expense-dialog.test.tsx.
 describe('departed split rows', { timeout: 20_000 }, () => {
+  it.each([
+    ['equal', null],
+    ['exact', 'Dokładna kwota dla'],
+    ['percentage', 'Procent dla'],
+    ['shares', 'Udziały dla'],
+  ] as const)(
+    'includes the visible Polish person text in %s control names',
+    (method, unit) => {
+      const people = [...PEOPLE, { ...PEOPLE[0], userId: 'bea', name: 'Bea' }]
+      const draft = draftFor(
+        people,
+        1200,
+        'EUR',
+        method,
+        people.map((person) => ({
+          userId: person.userId,
+          shareMinor: 600,
+          weight: 1,
+        })),
+      )
+      render(
+        <I18nProvider
+          locale="pl"
+          messages={{
+            ...namespaceCatalogue('costs', PlCosts),
+            ...namespaceCatalogue('ui', Ui),
+          }}
+        >
+          <SplitEditor
+            people={people}
+            viewerUserId="ada"
+            draft={draft}
+            onDraftChange={() => {}}
+            amountMinor={1200}
+            currency="EUR"
+            preview={previewFor(draft, 1200, 'EUR', 'pl')}
+          />
+        </I18nProvider>,
+      )
+      for (const name of ['Ty', 'Bea']) {
+        const visible = screen.getByText(name, { selector: 'span.font-medium' })
+        const row = visible.closest('li')
+        if (row === null) throw new Error('Missing split row')
+        const controls = within(row)
+        expect(
+          controls.getByRole('checkbox', {
+            name: `Uwzględnij ${visible.textContent} w tym podziale`,
+          }),
+        ).toBeTruthy()
+        if (unit === null) {
+          expect(controls.queryByRole('textbox')).toBeNull()
+        } else {
+          expect(
+            controls.getByRole('textbox', {
+              name: `${unit} ${visible.textContent}`,
+            }),
+          ).toBeTruthy()
+        }
+      }
+    },
+  )
+
   it('numbers unnamed rows in their visible and accessible names and avatars, leaving named rows unchanged', () => {
     open(DEPARTED)
     for (const number of [1, 2]) {
@@ -115,7 +177,7 @@ describe('departed split rows', { timeout: 20_000 }, () => {
     ).toContain('Cy')
     expect(
       screen
-        .getByRole('checkbox', { name: 'Include Ada in this split' })
+        .getByRole('checkbox', { name: 'Include You in this split' })
         .closest('li')?.textContent,
     ).toContain('You')
   })
