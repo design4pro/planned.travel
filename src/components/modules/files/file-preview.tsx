@@ -16,6 +16,7 @@ import { useTranslate } from '#/lib/i18n'
 import { fetchTripFileBytes, saveBlob } from './download'
 import type { FileData } from './types'
 import { previewImage } from './preview-image'
+import { PdfPreview } from './pdf-preview'
 
 type Preview =
   | { status: 'loading' }
@@ -216,7 +217,19 @@ export function FilePreview({
               }}
             />
           ) : null}
-          {preview.status === 'ready' && !preview.image ? (
+          {preview.status === 'ready' &&
+          preview.blob.type.split(';')[0]?.trim().toLowerCase() ===
+            'application/pdf' ? (
+            <PdfPreview
+              blob={preview.blob}
+              name={selected.filename}
+              onError={renderError}
+            />
+          ) : null}
+          {preview.status === 'ready' &&
+          !preview.image &&
+          preview.blob.type.split(';')[0]?.trim().toLowerCase() ===
+            'text/plain' ? (
             <iframe
               title={selected.filename}
               src={preview.url}

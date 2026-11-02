@@ -98,59 +98,107 @@ test('Files preview and adjacent download', async ({
   expect(console().fatal).toEqual([])
 })
 
-test('Escape closes a focused plain-text preview', async ({
-  context,
-  page,
-  baseURL,
-}) => {
-  test.setTimeout(120_000)
-  await useSession(context, page, baseURL)
-  expect(await hasSession(page)).toBe(true)
-  const route = {
-    name: 'text-preview',
-    path: '/trips/demo-trip-01-tokyo-and-kyoto/files',
-    ready: '[data-part="file-drop"]',
-  }
-  const console = watchConsole(page, route)
-  await unblockCrossOriginFonts(page)
-  await page.goto(route.path)
-  await settle(page, route)
-  const name = `preview-text-${test.info().project.name}-${Date.now()}.txt`
-  await page
-    .locator('input[type="file"]')
-    .setInputFiles({
+for (const format of ['text', 'pdf'] as const) {
+  test(`Escape closes a focused ${format} preview`, async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+    const route = {
+      name: 'text-preview',
+      path: '/trips/demo-trip-01-tokyo-and-kyoto/files',
+      ready: '[data-part="file-drop"]',
+    }
+    const console = watchConsole(page, route)
+    await unblockCrossOriginFonts(page)
+    await page.goto(route.path)
+    await settle(page, route)
+    const name = `preview-${format}-${test.info().project.name}-${Date.now()}.${format === 'pdf' ? 'pdf' : 'txt'}`
+    await page.locator('input[type="file"]').setInputFiles({
       name,
-      mimeType: 'text/plain',
-      buffer: Buffer.from('Boarding details'),
+      mimeType: format === 'pdf' ? 'application/pdf' : 'text/plain',
+      buffer:
+        format === 'pdf' ? readablePdf() : Buffer.from('Boarding details'),
     })
-  const opener = page
-    .getByRole('button', { name, exact: true })
-    .filter({ visible: true })
-  await expect(opener).toBeVisible({ timeout: 30_000 })
-  try {
-    await opener.click()
-    const dialog = page.getByRole('dialog', { name })
-    const text = dialog
-      .locator('iframe')
-      .contentFrame()
-      .getByText('Boarding details', { exact: true })
-    await text.click()
-    await page.keyboard.press('Escape')
-    await expect(dialog).toHaveCount(0)
-    await expect(opener).toBeFocused()
-  } finally {
-    await page
-      .getByRole('button', { name: `Actions for ${name}`, exact: true })
+    const opener = page
+      .getByRole('button', { name, exact: true })
       .filter({ visible: true })
-      .click()
-    await page
-      .getByRole('menuitem', { name: 'Remove file', exact: true })
-      .click()
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Remove file', exact: true })
-      .click()
-    await expect(opener).toHaveCount(0)
+    await expect(opener).toBeVisible({ timeout: 30_000 })
+    try {
+      await opener.click()
+      const dialog = page.getByRole('dialog', { name })
+      const text =
+        format === 'pdf'
+          ? dialog
+              .locator('.textLayer')
+              .getByText('Boarding details', { exact: true })
+              .first()
+          : dialog
+              .locator('iframe')
+              .contentFrame()
+              .getByText('Boarding details', { exact: true })
+      await text.click()
+      if (format === 'pdf') {
+        await expect(dialog.locator('canvas').first()).toBeVisible()
+        await text.evaluate((element) => {
+          const range = document.createRange()
+          range.selectNodeContents(element)
+          window.getSelection()?.removeAllRanges()
+          window.getSelection()?.addRange(range)
+        })
+        expect(
+          await page.evaluate(() => window.getSelection()?.toString()),
+        ).toBe('Boarding details')
+        const document = dialog.getByRole('document', { name })
+        await document.focus()
+        await page.keyboard.press('End')
+        await expect
+          .poll(() => document.evaluate((element) => element.scrollTop))
+          .toBeGreaterThan(0)
+      }
+      await page.keyboard.press('Escape')
+      await expect(dialog).toHaveCount(0)
+      await expect(opener).toBeFocused()
+    } finally {
+      await page
+        .getByRole('button', { name: `Actions for ${name}`, exact: true })
+        .filter({ visible: true })
+        .click()
+      await page
+        .getByRole('menuitem', { name: 'Remove file', exact: true })
+        .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Remove file', exact: true })
+        .click()
+      await expect(opener).toHaveCount(0)
+    }
+    expect(console().fatal).toEqual([])
+  })
+}
+
+function readablePdf() {
+  const stream = 'BT /F1 18 Tf 40 740 Td (Boarding details) Tj ET'
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R 3 0 R] /Count 2 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+  ]
+  let pdf = '%PDF-1.7\n'
+  const offsets = [0]
+  for (const [index, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(pdf))
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`
   }
-  expect(console().fatal).toEqual([])
-})
+  const xref = Buffer.byteLength(pdf)
+  pdf += `xref\n0 6\n0000000000 65535 f \n${offsets
+    .slice(1)
+    .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+    .join('')}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+  return Buffer.from(pdf)
+}

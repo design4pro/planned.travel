@@ -19,6 +19,13 @@ const { fetchBytes, save, raster } = vi.hoisted(() => ({
   save: vi.fn(),
   raster: vi.fn(),
 }))
+vi.mock('../preview-pdf', () => ({
+  previewPdf: (_blob: Blob, target: HTMLElement, ready: () => void) => {
+    target.textContent = 'Boarding PDF text'
+    ready()
+    return () => target.replaceChildren()
+  },
+}))
 vi.mock('../preview-image', () => ({ previewImage: raster }))
 vi.mock('../download', () => ({
   fetchTripFileBytes: fetchBytes,
@@ -110,18 +117,15 @@ it('shows a localized missing-copy alert for HTTP 410', async () => {
     'stored copy',
   )
 })
-it.each(['application/pdf', 'text/plain'])(
-  'embeds only allowlisted document %s',
-  async (type) => {
-    fetchBytes.mockResolvedValue(new Blob(['bytes'], { type }))
-    open()
-    await waitFor(() =>
-      expect(document.querySelector('iframe')?.getAttribute('src')).toBe(
-        'blob:preview',
-      ),
-    )
-  },
-)
+it.each(['text/plain'])('embeds only allowlisted document %s', async (type) => {
+  fetchBytes.mockResolvedValue(new Blob(['bytes'], { type }))
+  open()
+  await waitFor(() =>
+    expect(document.querySelector('iframe')?.getAttribute('src')).toBe(
+      'blob:preview',
+    ),
+  )
+})
 it('renders SVG only as a rasterized image', async () => {
   fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
   open()
@@ -269,4 +273,17 @@ it('downloads original SVG bytes while displaying rasterized pixels', async () =
   await screen.findByRole('img')
   fireEvent.click(screen.getByRole('button', { name: 'Download one.png' }))
   expect(save).toHaveBeenCalledWith(original, 'one.png')
+})
+
+it('renders PDF text in a keyboard-focusable application document, without an iframe', async () => {
+  fetchBytes.mockResolvedValue(new Blob(['pdf'], { type: 'application/pdf' }))
+  const view = open()
+  const document = await screen.findByRole('document', { name: 'one.png' })
+  await screen.findByText('Boarding PDF text')
+  expect(document.getAttribute('tabindex')).toBe('0')
+  expect(document.querySelector('iframe')).toBeNull()
+  document.focus()
+  fireEvent.keyDown(document, { key: 'Escape' })
+  await waitFor(() => expect(close).toHaveBeenCalled())
+  view.unmount()
 })
