@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NotFoundError } from '../context'
 import { createExpense, createSettlement } from '../expenses'
 import { eq } from 'drizzle-orm'
-import { userSettings } from '#/server/db/schema'
+import { expenses, settlements, userSettings } from '#/server/db/schema'
 import {
   findLatestFrozenRate,
   getDisplayCurrency,
@@ -111,6 +111,120 @@ describe('the rate lookup', () => {
       })
     }
   })
+
+  describe.each([
+    ['expense', expenses, expenseAt],
+    ['payment', settlements, paymentAt],
+  ] as const)(
+    'historical zero-source %s observations',
+    (_kind, table, write) => {
+      const pair = { from: 'GBP', to: 'EUR', on: '2026-04-20' } as const
+
+      async function seedZeroSource() {
+        await write(tripId, '2026-04-12', 1)
+        // Historical re-basing could carry a positive rate onto a zero-source row.
+        await tenant.scope.db
+          .update(table)
+          .set({ originalAmountMinor: 0, amountMinor: 0 })
+          .where(eq(table.tripId, tripId))
+      }
+
+      it('ignores a newer zero source and retains the older valid observation', async () => {
+        await seedZeroSource()
+        await write(tripId, '2026-04-10', 1.25)
+
+        expect(
+          await findLatestFrozenRate(tenant.scope, {
+            tripId,
+            from: pair.from,
+            to: pair.to,
+          }),
+        ).toEqual({ rate: 1.25, source: 'recent', observedOn: '2026-04-10' })
+        expect(await resolveRate(tenant.scope, pair)).toEqual({
+          rate: 1.25,
+          source: 'recent',
+        })
+        expect(await listAnsweringCurrencies(tenant.scope, pair.from)).toEqual([
+          'EUR',
+        ])
+        expect(
+          (
+            await resolveDisplayRates(tenant.scope, {
+              from: [pair.from],
+              to: pair.to,
+              on: pair.on,
+            })
+          ).get(pair.from),
+        ).toEqual({ rate: 1.25, source: 'recent' })
+
+        const other = await harness.seedTenant('other-rates')
+        expect(await resolveRate(other.scope, pair)).toBeNull()
+        expect(await listAnsweringCurrencies(other.scope, pair.from)).toEqual(
+          [],
+        )
+        expect(
+          (
+            await resolveDisplayRates(other.scope, {
+              from: [pair.from],
+              to: pair.to,
+              on: pair.on,
+            })
+          ).get(pair.from),
+        ).toBeNull()
+      })
+
+      it('offers no frozen observation or currency for a zero-only pair, without changing rows', async () => {
+        await seedZeroSource()
+        const before = await tenant.scope.db.select().from(table)
+
+        expect(
+          await findLatestFrozenRate(tenant.scope, {
+            tripId,
+            from: pair.from,
+            to: pair.to,
+          }),
+        ).toBeNull()
+        expect(await resolveRate(tenant.scope, pair)).toBeNull()
+        expect(await listAnsweringCurrencies(tenant.scope, pair.from)).toEqual(
+          [],
+        )
+        expect(
+          (
+            await resolveDisplayRates(tenant.scope, {
+              from: [pair.from, pair.to],
+              to: pair.to,
+              on: pair.on,
+            })
+          ).get(pair.from),
+        ).toBeNull()
+        expect(
+          await resolveRate(tenant.scope, { ...pair, manual: 1.4 }),
+        ).toEqual({ rate: 1.4, source: 'manual' })
+        const port: RateSource = {
+          lookup: vi.fn(async () => ({ rate: 1.3, source: 'provider' })),
+        }
+        expect(await resolveRate(tenant.scope, pair, port)).toEqual({
+          rate: 1.3,
+          source: 'provider',
+        })
+        const display = await resolveDisplayRates(
+          tenant.scope,
+          {
+            from: [pair.from, pair.to],
+            to: pair.to,
+            on: pair.on,
+          },
+          port,
+        )
+        expect(display.get(pair.from)).toEqual({
+          rate: 1.3,
+          source: 'provider',
+        })
+        expect(display.get(pair.to)).toEqual({ rate: 1, source: 'identity' })
+        expect(await tenant.scope.db.select().from(table)).toEqual(before)
+      })
+    },
+  )
 
   describe('findLatestFrozenRate', () => {
     const pair = { from: 'GBP', to: 'EUR' } as const
