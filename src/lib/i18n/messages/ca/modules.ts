@@ -969,9 +969,9 @@ const messages = {
   'files.places.action': 'Descarrega els llocs (.geojson)',
   'files.places.gpxAction': 'Descarrega els llocs (.gpx)',
   'files.places.gpxDone':
-    'GPX descarregat. Llocs omesos sense coordenades vàlides: {count}.',
+    'GPX descarregat. Llocs omesos sense coordenades vàlides: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX descarregat sense punts. S’han omès tots els llocs per manca de coordenades vàlides: {count}.',
+    'GPX descarregat sense punts. S’han omès tots els llocs per manca de coordenades vàlides: {formattedCount}.',
   'files.places.empty': 'Afegeix llocs a aquest viatge per descarregar-los.',
   'files.places.error':
     'No hem pogut preparar el fitxer de llocs. Torna-ho a provar.',

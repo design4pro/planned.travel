@@ -977,9 +977,9 @@ const messages = {
   'files.places.action': 'تنزيل الأماكن (.geojson)',
   'files.places.gpxAction': 'تنزيل الأماكن (.gpx)',
   'files.places.gpxDone':
-    'تم تنزيل GPX. الأماكن المستبعدة لعدم وجود إحداثيات صالحة: {count}.',
+    'تم تنزيل GPX. الأماكن المستبعدة لعدم وجود إحداثيات صالحة: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'تم تنزيل GPX دون نقاط. استُبعدت جميع الأماكن لعدم وجود إحداثيات صالحة: {count}.',
+    'تم تنزيل GPX دون نقاط. استُبعدت جميع الأماكن لعدم وجود إحداثيات صالحة: {formattedCount}.',
   'files.places.empty': 'أضف أماكن إلى هذه الرحلة لتنزيلها.',
   'files.places.error': 'تعذّر إعداد ملف الأماكن. حاول مجددًا.',
   'files.places.pending': 'جارٍ إعداد ملف الأماكن…',

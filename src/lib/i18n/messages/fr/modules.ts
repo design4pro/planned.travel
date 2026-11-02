@@ -977,9 +977,9 @@ const messages = {
   'files.places.action': 'Télécharger les lieux (.geojson)',
   'files.places.gpxAction': 'Télécharger les lieux (.gpx)',
   'files.places.gpxDone':
-    'GPX téléchargé. Lieux omis sans coordonnées valides : {count}.',
+    'GPX téléchargé. Lieux omis sans coordonnées valides : {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX téléchargé sans points de passage. Tous les lieux ont été omis faute de coordonnées valides : {count}.',
+    'GPX téléchargé sans points de passage. Tous les lieux ont été omis faute de coordonnées valides : {formattedCount}.',
   'files.places.empty': 'Ajoutez des lieux à ce voyage pour les télécharger.',
   'files.places.error':
     'Impossible de préparer le fichier des lieux. Réessayez.',

@@ -911,9 +911,9 @@ const messages = {
   'files.places.action': 'Tải địa điểm (.geojson)',
   'files.places.gpxAction': 'Tải địa điểm (.gpx)',
   'files.places.gpxDone':
-    'Đã tải GPX. Địa điểm bị bỏ qua do không có tọa độ hợp lệ: {count}.',
+    'Đã tải GPX. Địa điểm bị bỏ qua do không có tọa độ hợp lệ: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'Đã tải GPX không có điểm. Tất cả địa điểm đều bị bỏ qua do không có tọa độ hợp lệ: {count}.',
+    'Đã tải GPX không có điểm. Tất cả địa điểm đều bị bỏ qua do không có tọa độ hợp lệ: {formattedCount}.',
   'files.places.empty': 'Thêm địa điểm vào chuyến đi này để tải xuống.',
   'files.places.error': 'Không thể chuẩn bị tệp địa điểm. Hãy thử lại.',
   'files.places.pending': 'Đang chuẩn bị tệp địa điểm…',

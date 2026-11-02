@@ -1125,9 +1125,9 @@ const messages = {
   'files.places.action': 'Download places (.geojson)',
   'files.places.gpxAction': 'Download places (.gpx)',
   'files.places.gpxDone':
-    'GPX downloaded. Places without valid coordinates omitted: {count}.',
+    'GPX downloaded. Places without valid coordinates omitted: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX downloaded without waypoints. All places were omitted because they lack valid coordinates: {count}.',
+    'GPX downloaded without waypoints. All places were omitted because they lack valid coordinates: {formattedCount}.',
   'files.places.empty': 'Add places to this trip to download them.',
   'files.places.error': 'We couldn’t prepare the places file. Try again.',
   'files.places.pending': 'Preparing places file…',

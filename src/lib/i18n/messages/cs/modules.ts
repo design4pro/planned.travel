@@ -962,9 +962,9 @@ const messages = {
   'files.places.action': 'Stáhnout místa (.geojson)',
   'files.places.gpxAction': 'Stáhnout místa (.gpx)',
   'files.places.gpxDone':
-    'GPX stažen. Vynechaná místa bez platných souřadnic: {count}.',
+    'GPX stažen. Vynechaná místa bez platných souřadnic: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX stažen bez bodů. Všechna místa byla vynechána, protože nemají platné souřadnice: {count}.',
+    'GPX stažen bez bodů. Všechna místa byla vynechána, protože nemají platné souřadnice: {formattedCount}.',
   'files.places.empty':
     'Přidejte do této cesty místa, abyste je mohli stáhnout.',
   'files.places.error': 'Soubor míst se nepodařilo připravit. Zkuste to znovu.',

@@ -970,9 +970,9 @@ const messages = {
   'files.places.action': 'Скачать места (.geojson)',
   'files.places.gpxAction': 'Скачать места (.gpx)',
   'files.places.gpxDone':
-    'GPX скачан. Пропущено мест без допустимых координат: {count}.',
+    'GPX скачан. Пропущено мест без допустимых координат: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX скачан без точек. Все места пропущены из-за отсутствия допустимых координат: {count}.',
+    'GPX скачан без точек. Все места пропущены из-за отсутствия допустимых координат: {formattedCount}.',
   'files.places.empty': 'Добавьте места в эту поездку, чтобы скачать их.',
   'files.places.error': 'Не удалось подготовить файл мест. Попробуйте ещё раз.',
   'files.places.pending': 'Подготовка файла мест…',

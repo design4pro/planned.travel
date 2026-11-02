@@ -928,9 +928,9 @@ const messages = {
   'files.places.action': 'Unduh tempat (.geojson)',
   'files.places.gpxAction': 'Unduh tempat (.gpx)',
   'files.places.gpxDone':
-    'GPX diunduh. Tempat yang dilewati tanpa koordinat valid: {count}.',
+    'GPX diunduh. Tempat yang dilewati tanpa koordinat valid: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX diunduh tanpa titik. Semua tempat dilewati karena tidak memiliki koordinat valid: {count}.',
+    'GPX diunduh tanpa titik. Semua tempat dilewati karena tidak memiliki koordinat valid: {formattedCount}.',
   'files.places.empty':
     'Tambahkan tempat ke perjalanan ini untuk mengunduhnya.',
   'files.places.error': 'Berkas tempat tidak dapat disiapkan. Coba lagi.',

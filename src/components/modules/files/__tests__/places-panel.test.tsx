@@ -5,6 +5,8 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
+import GermanModules from '#/lib/i18n/messages/de/modules'
+import GermanUi from '#/lib/i18n/messages/de/ui'
 import { PlacesPanel } from '../places-panel'
 
 const stubs = vi.hoisted(() => ({ download: vi.fn() }))
@@ -168,3 +170,31 @@ it('announces that every place was omitted and the downloaded GPX has no waypoin
     ),
   )
 })
+
+it.each([2000, 1234])(
+  'formats German omission counts (%s total)',
+  async (total) => {
+    stubs.download.mockResolvedValueOnce({
+      filename: 'places.gpx',
+      omitted: 1234,
+      total,
+    })
+    render(
+      <I18nProvider
+        locale="de"
+        messages={{
+          ...namespaceCatalogue('modules', GermanModules),
+          ...namespaceCatalogue('ui', GermanUi),
+        }}
+      >
+        <PlacesPanel tripId="trip-1" hasPlaces />
+      </I18nProvider>,
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Orte herunterladen (.gpx)' }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toContain('1.234'),
+    )
+  },
+)

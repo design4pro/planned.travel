@@ -894,9 +894,9 @@ const messages = {
   'files.places.action': '장소 다운로드 (.geojson)',
   'files.places.gpxAction': '장소 다운로드 (.gpx)',
   'files.places.gpxDone':
-    'GPX를 다운로드했습니다. 유효한 좌표가 없어 제외된 장소: {count}.',
+    'GPX를 다운로드했습니다. 유효한 좌표가 없어 제외된 장소: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    '지점이 없는 GPX를 다운로드했습니다. 유효한 좌표가 없어 모든 장소가 제외되었습니다: {count}.',
+    '지점이 없는 GPX를 다운로드했습니다. 유효한 좌표가 없어 모든 장소가 제외되었습니다: {formattedCount}.',
   'files.places.empty': '다운로드하려면 이 여행에 장소를 추가하세요.',
   'files.places.error': '장소 파일을 준비하지 못했습니다. 다시 시도하세요.',
   'files.places.pending': '장소 파일 준비 중…',

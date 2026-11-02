@@ -960,9 +960,9 @@ const messages = {
   'files.places.action': 'Orte herunterladen (.geojson)',
   'files.places.gpxAction': 'Orte herunterladen (.gpx)',
   'files.places.gpxDone':
-    'GPX heruntergeladen. Ausgelassene Orte ohne gültige Koordinaten: {count}.',
+    'GPX heruntergeladen. Ausgelassene Orte ohne gültige Koordinaten: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX ohne Wegpunkte heruntergeladen. Alle Orte wurden wegen fehlender gültiger Koordinaten ausgelassen: {count}.',
+    'GPX ohne Wegpunkte heruntergeladen. Alle Orte wurden wegen fehlender gültiger Koordinaten ausgelassen: {formattedCount}.',
   'files.places.empty': 'Füge dieser Reise Orte hinzu, um sie herunterzuladen.',
   'files.places.error':
     'Die Ortedatei konnte nicht vorbereitet werden. Versuche es erneut.',

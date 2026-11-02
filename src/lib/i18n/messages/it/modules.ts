@@ -973,9 +973,9 @@ const messages = {
   'files.places.action': 'Scarica i luoghi (.geojson)',
   'files.places.gpxAction': 'Scarica i luoghi (.gpx)',
   'files.places.gpxDone':
-    'GPX scaricato. Luoghi omessi senza coordinate valide: {count}.',
+    'GPX scaricato. Luoghi omessi senza coordinate valide: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX scaricato senza punti. Tutti i luoghi sono stati omessi perché privi di coordinate valide: {count}.',
+    'GPX scaricato senza punti. Tutti i luoghi sono stati omessi perché privi di coordinate valide: {formattedCount}.',
   'files.places.empty': 'Aggiungi luoghi a questo viaggio per scaricarli.',
   'files.places.error': 'Impossibile preparare il file dei luoghi. Riprova.',
   'files.places.pending': 'Preparazione del file dei luoghi…',

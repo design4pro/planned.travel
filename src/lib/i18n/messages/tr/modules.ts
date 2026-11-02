@@ -928,9 +928,9 @@ const messages = {
   'files.places.action': 'Yerleri indir (.geojson)',
   'files.places.gpxAction': 'Yerleri indir (.gpx)',
   'files.places.gpxDone':
-    'GPX indirildi. Geçerli koordinatları olmadığı için atlanan yerler: {count}.',
+    'GPX indirildi. Geçerli koordinatları olmadığı için atlanan yerler: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX, nokta olmadan indirildi. Geçerli koordinatları olmadığı için tüm yerler atlandı: {count}.',
+    'GPX, nokta olmadan indirildi. Geçerli koordinatları olmadığı için tüm yerler atlandı: {formattedCount}.',
   'files.places.empty': 'İndirmek için bu geziye yer ekleyin.',
   'files.places.error': 'Yerler dosyası hazırlanamadı. Tekrar deneyin.',
   'files.places.pending': 'Yerler dosyası hazırlanıyor…',

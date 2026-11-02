@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { MapPin } from 'lucide-react'
 import { Alert, Button } from '#/components/ui'
-import { useTranslate } from '#/lib/i18n'
+import { formatNumber } from '#/lib/format'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { ModulePanel, useAction } from '../shared'
 import { downloadTripPlaces } from './places-download'
 
@@ -13,6 +14,7 @@ export function PlacesPanel({
   readonly hasPlaces: boolean
 }) {
   const t = useTranslate()
+  const locale = useLocale()
   const [downloaded, setDownloaded] = useState<{
     readonly omitted?: number
     readonly total?: number
@@ -34,10 +36,12 @@ export function PlacesPanel({
     downloaded.omitted === downloaded.total
   )
     status = t('modules.files.places.gpxAllOmitted', {
-      count: downloaded.omitted,
+      formattedCount: formatNumber(downloaded.omitted, locale),
     })
   else if (downloaded?.omitted !== undefined)
-    status = t('modules.files.places.gpxDone', { count: downloaded.omitted })
+    status = t('modules.files.places.gpxDone', {
+      formattedCount: formatNumber(downloaded.omitted, locale),
+    })
   else if (downloaded) status = t('modules.files.places.done')
 
   return (

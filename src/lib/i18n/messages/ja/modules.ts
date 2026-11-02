@@ -899,9 +899,9 @@ const messages = {
   'files.places.action': '場所をダウンロード (.geojson)',
   'files.places.gpxAction': '場所をダウンロード (.gpx)',
   'files.places.gpxDone':
-    'GPXをダウンロードしました。有効な座標がなく除外された場所：{count}。',
+    'GPXをダウンロードしました。有効な座標がなく除外された場所：{formattedCount}。',
   'files.places.gpxAllOmitted':
-    '地点のないGPXをダウンロードしました。有効な座標がないため、すべての場所が除外されました：{count}。',
+    '地点のないGPXをダウンロードしました。有効な座標がないため、すべての場所が除外されました：{formattedCount}。',
   'files.places.empty':
     'ダウンロードするには、この旅行に場所を追加してください。',
   'files.places.error':

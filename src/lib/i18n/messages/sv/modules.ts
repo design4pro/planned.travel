@@ -935,9 +935,9 @@ const messages = {
   'files.places.action': 'Ladda ner platser (.geojson)',
   'files.places.gpxAction': 'Ladda ner platser (.gpx)',
   'files.places.gpxDone':
-    'GPX nedladdad. Utelämnade platser utan giltiga koordinater: {count}.',
+    'GPX nedladdad. Utelämnade platser utan giltiga koordinater: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX nedladdad utan vägpunkter. Alla platser utelämnades eftersom de saknar giltiga koordinater: {count}.',
+    'GPX nedladdad utan vägpunkter. Alla platser utelämnades eftersom de saknar giltiga koordinater: {formattedCount}.',
   'files.places.empty': 'Lägg till platser i resan för att ladda ner dem.',
   'files.places.error': 'Det gick inte att förbereda platsfilen. Försök igen.',
   'files.places.pending': 'Förbereder platsfilen…',

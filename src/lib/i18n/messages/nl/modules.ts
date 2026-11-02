@@ -948,9 +948,9 @@ const messages = {
   'files.places.action': 'Plaatsen downloaden (.geojson)',
   'files.places.gpxAction': 'Plaatsen downloaden (.gpx)',
   'files.places.gpxDone':
-    'GPX gedownload. Overgeslagen plaatsen zonder geldige coördinaten: {count}.',
+    'GPX gedownload. Overgeslagen plaatsen zonder geldige coördinaten: {formattedCount}.',
   'files.places.gpxAllOmitted':
-    'GPX zonder waypoints gedownload. Alle plaatsen zijn overgeslagen omdat ze geen geldige coördinaten hebben: {count}.',
+    'GPX zonder waypoints gedownload. Alle plaatsen zijn overgeslagen omdat ze geen geldige coördinaten hebben: {formattedCount}.',
   'files.places.empty': 'Voeg plaatsen toe aan deze reis om ze te downloaden.',
   'files.places.error':
     'Het plaatsenbestand kon niet worden voorbereid. Probeer het opnieuw.',

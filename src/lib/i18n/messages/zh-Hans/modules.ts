@@ -857,9 +857,10 @@ const messages = {
     '以 GeoJSON 或 GPX 格式下载此次旅行的地点。GPX 仅包含有有效坐标的地点；GeoJSON 保留所有地点。',
   'files.places.action': '下载地点 (.geojson)',
   'files.places.gpxAction': '下载地点 (.gpx)',
-  'files.places.gpxDone': 'GPX 已下载。因无有效坐标而省略的地点：{count}。',
+  'files.places.gpxDone':
+    'GPX 已下载。因无有效坐标而省略的地点：{formattedCount}。',
   'files.places.gpxAllOmitted':
-    '已下载不含航点的 GPX。因无有效坐标，所有地点均被省略：{count}。',
+    '已下载不含航点的 GPX。因无有效坐标，所有地点均被省略：{formattedCount}。',
   'files.places.empty': '请先为此次旅行添加地点，再下载。',
   'files.places.error': '无法准备地点文件。请重试。',
   'files.places.pending': '正在准备地点文件…',
