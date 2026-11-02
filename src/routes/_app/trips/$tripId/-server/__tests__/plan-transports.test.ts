@@ -182,6 +182,11 @@ beforeEach(async () => {
     departureName: 'Haneda',
     arrivalName: 'Itami',
     departureTime: '14:05',
+    departureDate: '2026-10-05',
+    arrivalDate: '2026-10-05',
+    arrivalTime: '15:05',
+    departureTimezone: 'Asia/Tokyo',
+    arrivalTimezone: 'Asia/Tokyo',
   })
 
   fixture = {
@@ -204,9 +209,19 @@ describe('the journeys a day can draw', () => {
       status: 'confirmed',
     })
     await replaceChain(scope, fixture.tripId, chained.id, {
-      stations: [{ name: 'Shin-Osaka' }, { name: 'Nagoya' }, { name: 'Tokyo' }],
+      stations: [
+        { name: 'Shin-Osaka', timezone: 'Asia/Tokyo' },
+        { name: 'Nagoya', timezone: 'Asia/Tokyo' },
+        { name: 'Tokyo', timezone: 'Asia/Tokyo' },
+      ],
       legs: [
-        { departureDayId: fixture.dayId, departureTime: '09:00' },
+        {
+          departureDayId: fixture.dayId,
+          departureTime: '09:00',
+          departureDate: '2026-10-05',
+          arrivalDate: '2026-10-05',
+          arrivalTime: '10:00',
+        },
         { departureDayId: fixture.secondDayId },
       ],
     })
@@ -216,6 +231,20 @@ describe('the journeys a day can draw', () => {
 
     expect(payload.transports.map((row) => row.id)).not.toContain(chained.id)
     expect(legs).toHaveLength(2)
+    expect(legs[0]).toMatchObject({
+      departureDate: '2026-10-05',
+      arrivalDate: '2026-10-05',
+      departureTimezone: 'Asia/Tokyo',
+      arrivalTimezone: 'Asia/Tokyo',
+    })
+    expect(
+      payload.transports.find((row) => row.id === fixture.flightId),
+    ).toMatchObject({
+      departureDate: '2026-10-05',
+      arrivalDate: '2026-10-05',
+      departureTimezone: 'Asia/Tokyo',
+      arrivalTimezone: 'Asia/Tokyo',
+    })
     // The mode and the status belong to the parent: a leg of a train is still a train.
     expect(legs.every((leg) => leg.mode === 'train')).toBe(true)
     expect(legs.every((leg) => leg.status === 'confirmed')).toBe(true)

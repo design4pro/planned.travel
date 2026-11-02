@@ -1,12 +1,12 @@
 /**
  * A stored wall-clock time and an IANA zone, turned into the instant it names.
  *
- * Used for legs and transports only, the two records that carry their own zone. A stop or a
- * reservation sits at a place, a place has no zone, and the calendar writes it floating instead.
+ * Shared by calendar endpoint serialization and planner chronology. The calendar keeps stops and
+ * reservations floating; the planner explicitly interprets stop/note clocks in the trip zone.
  *
  * The offset comes from `Intl.DateTimeFormat` with `timeZoneName: 'longOffset'`, which prints a
  * number (`GMT+09:00`) and never a name, so workerd and WebKit cannot disagree about what a zone is
- * called (docs/SPEC.md §9). This module runs only in the Worker.
+ * called (docs/SPEC.md §9). Pure and isomorphic; no Worker or browser binding.
  */
 
 const MINUTE_MS = 60_000

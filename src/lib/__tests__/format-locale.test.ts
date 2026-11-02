@@ -629,7 +629,7 @@ describe('the shipped source under src/lib', () => {
   })
 
   /**
-   * The three literals in `src/lib` that no reader ever sees.
+   * The four literals in `src/lib` that no reader ever sees.
    *
    * `time.ts` hands `en-GB` to `Intl` to find out whether a time-zone name is
    * one the runtime knows, and throws the formatter away without formatting
@@ -638,14 +638,16 @@ describe('the shipped source under src/lib', () => {
    * parts. `timezones.ts` picks `en-CA` for the same reason and for a stronger
    * one: it reads *numeric* parts to derive a zone's offset arithmetically,
    * because `timeZoneName: 'shortOffset'` resolves its names from the engine's
-   * own ICU build and workerd and WebKit do not always agree. None of the three
-   * reaches a screen; all three would be wrong as a reader's locale, and that
-   * is the point.
+   * own ICU build and workerd and WebKit do not always agree. `zoned-time.ts`
+   * pins `en-US` to parse numeric `longOffset` parts, preserving the calendar's
+   * conversion after sharing it with the planner. None reaches a screen; each
+   * would be wrong as a reader's locale.
    */
   const PINNED_BY_DESIGN: ReadonlyArray<string> = [
     'time.ts: en-GB',
     'time.ts: en-CA',
     'timezones.ts: en-CA',
+    'zoned-time.ts: en-US',
   ]
 
   it('never pins a locale tag as a literal', () => {

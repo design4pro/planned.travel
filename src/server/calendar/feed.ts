@@ -17,7 +17,7 @@
  * its ends are floating (an event never mixes the two forms).
  */
 import { writeCalendar } from './ics'
-import { zonedToUtc } from './zone'
+import { zonedToUtc } from '#/lib/zoned-time'
 import type { IcsEventInput, IcsMoment, IcsStatus } from './ics'
 
 /* -------------------------------------------------------------------------------------------------

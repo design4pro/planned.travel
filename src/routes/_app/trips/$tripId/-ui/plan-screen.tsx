@@ -333,6 +333,7 @@ export function PlanScreen({
     notesByItem: noteIndex,
     journeysByItem: journeyIndex,
     timeOfItem,
+    compareItemTimes,
   } = board
   const [order, setOrder] = React.useState<PlanOrder>(serverOrder)
 
@@ -675,6 +676,7 @@ export function PlanScreen({
       const outcome = planMoveOutcome(order, itemId, target, {
         placeOfItem,
         timeOfItem,
+        compareItemTimes,
         dropTime: drop,
       })
 
@@ -793,6 +795,7 @@ export function PlanScreen({
       router,
       t,
       timeOfItem,
+      compareItemTimes,
     ],
   )
 
