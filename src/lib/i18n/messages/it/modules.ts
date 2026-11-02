@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} di {total}',
+  'files.preview.download': 'Scarica {name}',
+  'files.preview.loading': 'Caricamento dell’anteprima',
+  'files.preview.missing': 'La copia salvata non è disponibile.',
+  'files.preview.failed':
+    'Impossibile caricare l’anteprima. Riprova o scarica il file.',
+  'files.preview.previous': 'Immagine precedente',
+  'files.preview.next': 'Immagine successiva',
   'vacay.page.eyebrow': 'Tempo libero',
   'vacay.page.title': 'Ferie',
   'vacay.page.description':

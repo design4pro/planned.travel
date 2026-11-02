@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{total}件中{current}件目',
+  'files.preview.download': '{name}をダウンロード',
+  'files.preview.loading': 'プレビューを読み込み中',
+  'files.preview.missing': '保存されたコピーが見つかりません。',
+  'files.preview.failed':
+    'プレビューを読み込めませんでした。再試行するか、ファイルをダウンロードしてください。',
+  'files.preview.previous': '前の画像',
+  'files.preview.next': '次の画像',
   'vacay.page.eyebrow': '休暇',
   'vacay.page.title': '休暇プラン',
   'vacay.page.description':

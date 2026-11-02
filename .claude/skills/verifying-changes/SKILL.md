@@ -22,6 +22,8 @@ so a checkout that is already provisioned costs milliseconds. Flags and profiles
 
 ## The ladder
 
+The configured gate has one executor: `node scripts/ci/validation.mjs`. It preserves command order, runs every Vitest project with bounded shard fallback, and returns log paths rather than full output. `--resume` is local-only interruption recovery; after ignored fixtures, services or installed code change, run fresh. Attestation always runs fresh through this executor. The fast, targeted loop below remains useful while editing.
+
 1. Fast loop while working: `pnpm typecheck`, `pnpm lint`, single vitest files.
 2. Before committing: full `pnpm test`.
 3. Before a PR: `pnpm build`, then `pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts` (CI rejects a stale route tree). A build leaves that file alone: `tsr.config.json` mirrors the Start `Register` footer the vite plugin appends, so the plugin and `tsr generate` write the same bytes (issue #82). If a build or a dev server ever does dirty it, the config has drifted from the plugin — fix the config rather than committing the rewrite; CI re-asserts this after `pnpm build`, and the cezar ladder in `check-generated.sh`.

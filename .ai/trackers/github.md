@@ -368,6 +368,17 @@ gh pr ready {prNumber}
 ```
 
 #### get-pr-checks
+Prefer `node .ai/scripts/pr-state.mjs {prNumber}` for the shared read-only JSON snapshot:
+paginated app checks, commit statuses, workflow runs still registering jobs, required contexts,
+current head, labels and review state. `ci.state` is `green`, `red`, `pending` or `unknown`.
+Unknown/missing evidence is never green. This is evidence, not merge approval: QA head freshness,
+security verdicts, claims and blocking labels retain their existing gates. For one bounded wait
+use `node .ai/scripts/pr-state.mjs {prNumber} --wait`. It observes head changes and emits only
+the final JSON. With `--wait`, exit 0 means an open PR's CI is green; 1 means red, closed or timed
+out; 3 means unknown/unreadable. Snapshot mode exits 0 after a successful read; always inspect
+`ci.state`. Never interpret unreadable external app checks as passed. The low-level
+operations below remain for diagnostics.
+
 `{prNumber}` → CI check runs with name, state, and link.
 ```bash
 gh pr checks {prNumber} --json name,state,link
@@ -412,6 +423,10 @@ jobs it is, and say that the App-published checks were out of reach, the same wa
 **list-review-comments** states its own gap.
 
 #### get-required-checks
+The shared `pr-state.mjs` snapshot already incorporates this requirement set and checks the
+producing app when the requirement pins one. Reuse that snapshot for the same read; do not
+repeat these calls unless diagnosing a warning or refreshing evidence before a guarded write.
+
 Base branch → the set of required status checks, one context per line. Two sources, in order:
 
 1. **The branch's effective ruleset rules.** `rules/branches/{branch}` needs only `Metadata: read`,
@@ -508,6 +523,10 @@ gh run rerun {runId} --failed
 ```
 
 #### watch-run
+When waiting for the PR rather than diagnosing a single run, prefer the shared
+`node .ai/scripts/pr-state.mjs {prNumber} --wait` operation above. It covers workflow runs and
+external checks together, and rechecks the PR head before reporting green.
+
 Run id → block until the run completes, exiting non-zero on failure. Prefer this over sleep-polling; fall back to periodic **get-run** when watching is unavailable.
 ```bash
 gh run watch {runId} --exit-status

@@ -45,6 +45,12 @@ Such a spec is `ready` the moment its pull request merges and has no issue yet, 
 `afk-to-tickets` files the parent issue when it slices it, so the stage stands in for the `Issue` the
 guard asks of a `ready` spec. Older specs have no `Plan` row and need none.
 
+A design-only spec written by `implement-ticket` for a brief marked
+`<!-- agent-deliverable: spec -->` carries `<!-- agent-brief-sha256: <64 lowercase hex digits> -->`
+after the metadata table. Use the digest from deterministic preflight, not a digest of a paraphrase.
+This optional comment proves which exact brief the merged spec delivered; it is not another table row
+and does not mark runtime implementation complete. Legacy specs need no backfill.
+
 An **archived** spec carries a `Superseded by` row, last, and only an archived spec may:
 
 ```markdown

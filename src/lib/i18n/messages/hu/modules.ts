@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} / {total}',
+  'files.preview.download': '{name} letöltése',
+  'files.preview.loading': 'Előnézet betöltése',
+  'files.preview.missing': 'A tárolt példány hiányzik.',
+  'files.preview.failed':
+    'Az előnézet nem tölthető be. Próbálja újra, vagy töltse le a fájlt.',
+  'files.preview.previous': 'Előző kép',
+  'files.preview.next': 'Következő kép',
   'vacay.page.eyebrow': 'Szabadidő',
   'vacay.page.title': 'Szabadság',
   'vacay.page.description':

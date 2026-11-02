@@ -96,13 +96,7 @@ nodes:
   - id: gate
     name: 'Validation gate'
     type: check
-    command: |-
-      bash .ai/scripts/bootstrap.sh && node -e '
-      const c = (require("./.ai/agentic.config.json").validation || {}).commands || [];
-      if (!c.length) { console.log("FAIL: no validation commands configured - a gate that ran nothing is not evidence"); process.exit(1); }
-      const { spawnSync } = require("child_process");
-      for (const x of c) { console.log("$ " + x); if (spawnSync(x, { shell: true, stdio: "inherit" }).status !== 0) process.exit(1); }
-      '
+    command: bash .ai/scripts/bootstrap.sh && node scripts/ci/validation.mjs
 
   # Deterministic guard: the agent must not make the gate pass by weakening tests.
   - id: testguard

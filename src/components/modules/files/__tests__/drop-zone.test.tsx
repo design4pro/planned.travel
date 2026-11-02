@@ -3,6 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderToString } from 'react-dom/server'
 import {
   cleanup,
   fireEvent,
@@ -39,6 +40,7 @@ const stubs = vi.hoisted(() => ({
   router: { invalidate: vi.fn() },
   upload: vi.fn(),
   download: vi.fn(),
+  fetchBytes: vi.fn(),
   remove: vi.fn(),
   update: vi.fn(),
 }))
@@ -48,7 +50,11 @@ vi.mock('#/server/fns/files', () => ({
   deleteTripFileFn: stubs.remove,
   updateTripFileFn: stubs.update,
 }))
-vi.mock('../download', () => ({ downloadTripFile: stubs.download }))
+vi.mock('../download', () => ({
+  downloadTripFile: stubs.download,
+  fetchTripFileBytes: stubs.fetchBytes,
+  saveBlob: vi.fn(),
+}))
 vi.mock('../upload', () => ({ uploadFile: stubs.upload }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => stubs.router,
@@ -398,5 +404,71 @@ it('uploads an in-zone file exactly once without stopping propagation', async ()
     expect(bubbled).toHaveBeenCalledTimes(1)
   } finally {
     window.removeEventListener('drop', bubbled)
+  }
+})
+
+it.each(['list', 'table'] as const)(
+  'opens a preview for a viewer and returns focus on %s',
+  async (surface) => {
+    stubs.fetchBytes.mockResolvedValue(
+      new Blob(['image'], { type: 'image/png' }),
+    )
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: () => 'blob:test',
+    })
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    renderLibrary(false, [BOOKING], true)
+    const trigger = librarySurface(surface).getByRole('button', {
+      name: BOOKING.filename,
+    })
+    trigger.focus()
+    fireEvent.click(trigger)
+    await screen.findByRole('img', { name: BOOKING.filename })
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    fireEvent.click(
+      librarySurface(surface).getByRole('button', {
+        name: `Download ${BOOKING.filename}`,
+      }),
+    )
+    await waitFor(() =>
+      expect(stubs.download).toHaveBeenCalledWith({
+        tripId: 'trip-1',
+        fileId: BOOKING.id,
+        filename: BOOKING.filename,
+      }),
+    )
+  },
+)
+
+it('keeps the initial file timestamp stable when hydration crosses a minute boundary', () => {
+  const now = vi
+    .spyOn(Date, 'now')
+    .mockReturnValue(Date.parse('2026-11-02T12:05:00Z'))
+  try {
+    const view = (
+      <I18nProvider locale="en" messages={EN}>
+        <FileLibrary
+          canWrite={false}
+          archived={false}
+          tripId="trip-1"
+          files={[{ ...BOOKING, createdAt: '2026-11-02T12:00:00Z' }]}
+          people={[]}
+          workspaceBytes={0}
+          limitBytes={1_000_000_000}
+          pickRequestedAt={0}
+        />
+      </I18nProvider>
+    )
+    const server = renderToString(view)
+    now.mockReturnValue(Date.parse('2026-11-02T12:06:00Z'))
+    expect(renderToString(view)).toBe(server)
+  } finally {
+    now.mockRestore()
   }
 })

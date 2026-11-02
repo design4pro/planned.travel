@@ -8,6 +8,28 @@ the events in docs/agents/cezar-automations.json, and runs the workflow the even
 label, comment and pull request comes from a skill acting through `.ai/trackers/github.md` under
 the rules of `SDLC.md`.
 
+## Deterministic pipeline helpers
+
+- `implement-ticket` is a native v2 graph. Its first check calls `pipeline-control.mjs preflight`,
+  reusing `backlog-status.mjs --issue N`. Only the current run is excluded from the active-run
+  lookup; every other claim, trust restriction and WIP limit remains. A missing or malformed run
+  context fails closed. `STOP:` branches to an end node before validation, PR or merge, without
+  starting another model. Bounded gate retries still return to implementation.
+- A trusted spec-only brief declares `<!-- agent-deliverable: spec -->`. The resulting ready spec
+  carries the exact brief's SHA256 comment. Only that match on `origin/<baseBranch>` is completed
+  work; metadata alone, a covering spec and `Refs #n` are not. The issue stays open for slicing.
+  Legacy briefs/specs are not inferred or rewritten.
+- `node .ai/scripts/pr-state.mjs N [--wait]` owns paginated PR/CI reads and bounded polling. It
+  includes external check runs, commit statuses, current-head identity and incomplete workflow
+  runs. Unknown data is never green. QA freshness, security approval and blocking-label checks
+  still belong to the existing merge skills. No model is needed between polling attempts.
+- `node scripts/ci/validation.mjs [--resume]` owns the configured ordered gate, bounded projects,
+  shard fallback and compact reports. Full logs stay in `.ai/tmp/validation/`. Resume is local-only;
+  `attestation.mjs attest` always runs fresh. Full gate nodes use this executor; the scheduled scan's
+  initial diagnostic sweep still gathers independent findings and the plan-to-spec gate remains
+  intentionally scoped to spec checks.
+
+
 ## Install and configure
 
 - Version: the cockpit runs the [design4pro/cezar](https://github.com/design4pro/cezar/tree/design4pro)

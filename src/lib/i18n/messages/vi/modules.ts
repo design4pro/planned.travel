@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} trên {total}',
+  'files.preview.download': 'Tải xuống {name}',
+  'files.preview.loading': 'Đang tải bản xem trước',
+  'files.preview.missing': 'Không tìm thấy bản sao đã lưu.',
+  'files.preview.failed':
+    'Không thể tải bản xem trước. Hãy thử lại hoặc tải tệp xuống.',
+  'files.preview.previous': 'Ảnh trước',
+  'files.preview.next': 'Ảnh tiếp theo',
   'vacay.page.eyebrow': 'Thời gian nghỉ',
   'vacay.page.title': 'Ngày nghỉ',
   'vacay.page.description':

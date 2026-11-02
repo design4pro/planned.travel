@@ -27,3 +27,12 @@ Six rules for the whole run:
 One addition to the UI verification stage:
 
 - **QA runs through the unattended sign-off.** Where the chain reaches the QA stage of a PR that touches a user-facing surface, run `om-auto-qa-pr {prNumber} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how the sign-off is decided) instead of the evidence-only call. The installed "evidence-only" call and "never adds `qa-approved`" rule bind this orchestrator, not the QA skill it dispatches; `risk-high` and `security` PRs go through it too (ADR 0035). After a fix for a `qa-failed` the QA panel set (a `🤖 QA-PANEL: FAIL head=<sha>` comment for the PR's current head marks it) is pushed, remove that label so QA runs again on the new head; a `qa-failed` without that comment is a person's and is left alone.
+
+
+## Shared PR and CI evidence
+
+Use `node .ai/scripts/pr-state.mjs <pr>` for the read-only state snapshot and add `--wait` for
+one bounded CI wait. Reuse its required-check and workflow-run evidence instead of rebuilding
+API/polling loops in the agent. `unknown` is never green; inspect the warning rather than treating
+unreadable external checks as passed. This helper does not replace fresh-head checks before
+mutations, claims, unresolved-thread handling, security verdicts or current-head QA approval.
