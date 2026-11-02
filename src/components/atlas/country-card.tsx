@@ -1,8 +1,7 @@
 import * as React from 'react'
-import { CircleDashed, MapPin, Route, TriangleAlert } from 'lucide-react'
+import { CircleDashed, MapPin, Route } from 'lucide-react'
 
 import {
-  Button,
   SectionLabel,
   Skeleton,
   focusRing,
@@ -68,8 +67,7 @@ import type {
  * same over `--color-country-land` and `--color-country-visited` because the
  * face is opaque and the ground beneath it cannot reach the type — light, then
  * dark: name and numerals 18.29:1 / 15.42:1, months 10.71:1 / 11.37:1, unit
- * labels and the em dash 7.02:1 / 7.18:1, the error sentence 10.71:1 / 11.37:1,
- * its icon 6.33:1 / 7.43:1, and the hairline 4.55:1 / 4.65:1. The floor across
+ * labels and the em dash 7.02:1 / 7.18:1, and the hairline 4.55:1 / 4.65:1. The floor across
  * the whole card is the 11px label tier, and it clears AA by better than half
  * again in both themes. The placeholder bars are the one non-text figure the
  * card owns, and they sit on `--color-map-card-inset` at 1.19:1 light and
@@ -107,8 +105,8 @@ import type {
  *
  * **Every state this surface can be in ships here.** Rest and the zero state
  * are `CountryCard`; the name-only pill is its `compact` variant; loading is
- * `CountryCardSkeleton` and degraded is `CountryCardError`, both struck from
- * the same `layout` strings so all four measure identically and the swap
+ * `CountryCardSkeleton`, struck from
+ * the same `layout` strings so the full cards measure identically and the swap
  * between them moves nothing. Focus is the product's own ring, drawn on the
  * card itself for a host that pins it and focuses it. There is deliberately no
  * hover and no pressed treatment: this is a fact surface, and a card that lit
@@ -139,9 +137,9 @@ const POINTERS = {
 } as const
 
 /**
- * The card's layout, held as class strings rather than typed out four times.
+ * The card's layout, shared with its skeleton.
  *
- * The rest card, its strut, its skeleton and its error state are all assembled
+ * The rest card and its skeleton are assembled
  * from these exact strings. That is the only way the placeholder can honestly
  * claim the dimensions of the thing it stands in for: a copied class list drifts
  * on the first edit, and a placeholder that has drifted moves the page under the
@@ -159,8 +157,7 @@ const layout = {
    * without this the reader would be somewhere with no ring at all. The card
    * carries no hover or pressed treatment on purpose: it is a fact surface, not
    * a control, and lighting it up under the pointer would promise an action it
-   * does not have. Every control it *contains* — the error state's retry — is a
-   * `Button`, and brings its own five states with it.
+   * does not have.
    */
   surface: cn(
     'relative z-map-surface border border-map-card-edge bg-map-card shadow-popover',
@@ -179,7 +176,7 @@ const layout = {
    * object placed on the map and starts reading as a sticker left on it. Width
    * and padding step together so the type block keeps its proportions, and the
    * step lands on every variant at once because they all take this string —
-   * so the skeleton and the error state resize with the card rather than
+   * so the skeleton resizes with the card rather than
    * against it, at every viewport.
    *
    * Nothing here scrolls and nothing here clips: the card is exactly as tall as
@@ -255,8 +252,8 @@ const layout = {
    * promise to whatever anchored it: a trip heading on three lines against a
    * visit heading on one would move the figures as the pointer crossed a
    * border. `lh` is the label's own line height, so the reservation follows
-   * Arabic's taller leading without a second number. The skeleton and the error
-   * strut take these same strings. A translation that needs a further line
+   * Arabic's taller leading without a second number. The skeleton
+   * takes these same strings. A translation that needs a further line
    * outgrows the card in that one state, so re-measure before lengthening one.
    */
   labelSlotFigure: 'flex min-h-[3lh] flex-col justify-end text-micro',
@@ -420,46 +417,6 @@ function MonthValue({
 
 /** A non-breaking space: an empty line box that still has a real height. */
 const STRUT = '\u00A0'
-
-/**
- * The card's body, rendered as pure line boxes.
- *
- * Used by the error state, which has to occupy the card's rest height exactly
- * and has nothing of its own to fill it with. Letting the browser measure the
- * real grid, in the real type styles, removes every guess — and it keeps
- * working when the type scale is retuned, which a hand-picked `h-32` would not.
- * Marked `aria-hidden` and `invisible` rather than `hidden`, because an element
- * with no box has no height to lend.
- */
-function BodyStrut() {
-  return (
-    <div aria-hidden="true" data-part="strut" className="invisible">
-      <div className={layout.grid}>
-        {[0, 1, 2, 3].map((index) => (
-          <div
-            key={index}
-            className={cn(
-              layout.cell,
-              index % 2 === 0 && layout.cellRule,
-              index > 1 && layout.rowRule,
-            )}
-          >
-            <span
-              className={
-                index > 1 ? layout.labelSlotMonth : layout.labelSlotFigure
-              }
-            >
-              <span className={layout.label}>{STRUT}</span>
-            </span>
-            <span className={index > 1 ? layout.month : layout.figure}>
-              {STRUT}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /**
  * A placeholder bar struck inside a real line box of the real type style.
@@ -836,107 +793,3 @@ export const CountryCardSkeleton = React.forwardRef<
   )
 })
 CountryCardSkeleton.displayName = 'CountryCardSkeleton'
-
-export type CountryCardErrorProps = Omit<
-  React.ComponentPropsWithoutRef<'div'>,
-  'children'
-> & {
-  /** The card still names its country: only the figures went missing. */
-  readonly countryCode: string
-  readonly pointer?: CountryCardPointer
-  /** Omit it and no button is offered — an action that cannot run is worse
-      than none. A card that only exists while the pointer is over it should
-      omit it; a card pinned by a click should not. */
-  readonly onRetry?: () => void
-  /** Holds the button in its pending state while the refetch is in air. */
-  readonly retrying?: boolean
-}
-
-/**
- * The degraded card.
- *
- * Deliberately not a zero state: `0 trips` is a fact about a country, and
- * printing it because a read failed would be a lie the reader has no way to
- * detect. The header still names the country, so the card that opened is still
- * the card you are looking at, and the body says plainly that the figures did
- * not arrive.
- *
- * It occupies the rest card's exact height by rendering the real body as an
- * invisible strut and floating the message over it, so a retry that succeeds
- * swaps content without moving the card off the country it is anchored to.
- *
- * `role="status"` rather than `role="alert"`: a figure that failed to arrive is
- * worth telling the reader about, and it is not worth interrupting them
- * mid-sentence to do it. The whole card is the live region, so the one polite
- * announcement carries the country, the sentence and the fact that there is a
- * retry — the reader never has to hunt for which card went wrong.
- */
-export const CountryCardError = React.forwardRef<
-  HTMLDivElement,
-  CountryCardErrorProps
->(
-  (
-    {
-      countryCode,
-      pointer = 'none',
-      onRetry,
-      retrying = false,
-      className,
-      ...props
-    },
-    ref,
-  ) => {
-    const t = useAtlasCopy()
-    const code = countryCode.trim().toUpperCase()
-    return (
-      <div
-        ref={ref}
-        role="status"
-        aria-live="polite"
-        data-variant="error"
-        data-country={code}
-        className={cn(layout.surface, layout.card, transitionBase, className)}
-        {...props}
-      >
-        <div data-part="header" className={layout.header}>
-          <span aria-hidden="true" className={layout.flag}>
-            {countryFlag(code)}
-          </span>
-          <p className={layout.name}>{countryName(code)}</p>
-        </div>
-
-        <div className="relative overflow-hidden">
-          <BodyStrut />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center 2xl:px-5">
-            <TriangleAlert
-              size={16}
-              aria-hidden="true"
-              className="shrink-0 text-warning"
-            />
-            {/* Balanced rather than ragged: two sentences in a 288px column
-                otherwise break with `lost.` alone on the last line, and a
-                one-word last line in a card this small reads as a truncation
-                the reader is meant to do something about. */}
-            <p className="text-balance text-caption text-ink-2">
-              {t('atlas.card.error.body')}
-            </p>
-            {onRetry === undefined ? null : (
-              <Button
-                variant="secondary"
-                size="sm"
-                loading={retrying}
-                loadingLabel={t('atlas.card.loading')}
-                onClick={onRetry}
-              >
-                {t('atlas.card.error.retry')}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        <Pointer side={pointer} />
-      </div>
-    )
-  },
-)
-CountryCardError.displayName = 'CountryCardError'

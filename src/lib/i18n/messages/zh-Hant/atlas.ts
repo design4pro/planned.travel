@@ -312,8 +312,6 @@ const messages = {
   'card.absent': '未記錄',
   'card.loading': '正在載入這個國家',
   'card.loadingNamed': '正在載入 {name}',
-  'card.error.body': '這些數字沒有載入。什麼都沒有遺失。',
-  'card.error.retry': '再試一次',
   'overlay.close': '關閉 {name}',
   'regions.label': '地區',
   'regions.hint': '新增地區也會將{country}標記為已造訪。',

@@ -396,8 +396,6 @@ const messages = {
   'card.absent': 'Niezapisane',
   'card.loading': 'Wczytywanie kraju',
   'card.loadingNamed': 'Wczytywanie: {name}',
-  'card.error.body': 'Te liczby się nie wczytały. Nic nie przepadło.',
-  'card.error.retry': 'Spróbuj ponownie',
   'overlay.close': 'Zamknij {name}',
   'regions.label': 'Regiony',
   'regions.hint': 'Dodanie regionu oznacza też {country} jako odwiedzony kraj.',

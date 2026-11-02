@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useRouter, useRouterState } from '@tanstack/react-router'
+import { useRouterState } from '@tanstack/react-router'
 
 import {
   AtlasPanel,
@@ -734,41 +734,15 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
     [open],
   )
 
-  /**
-   * Whether the figures on screen are the ones the server currently holds.
-   *
-   * Every write on this screen ends in `router.invalidate()`, which re-reads the
-   * atlas: for that window the trip count, the places count and both trip months
-   * beside a country are the ones from before the press. The map's panel says so
-   * with the card's own skeleton, at the card's own dimensions, so the swap moves
-   * nothing — and says so again if the re-read never comes back, with a retry
-   * that runs the very same invalidation.
-   *
-   * Read off *this route's own match* rather than off the router's global
-   * `isLoading`. The global flag is true for any pending navigation, so pressing
-   * a link to the trip planner put the card into its skeleton and held it there
-   * for the length of a page load that had nothing to do with the atlas — a
-   * loading state answering a question nobody asked. `matches.at(-1)` is the leaf,
-   * which on this screen is `/_app/atlas` by construction, and `isFetching` is
-   * true for exactly the re-read.
-   *
-   * A rejected initial read or re-read is caught by the route's errorComponent,
-   * which replaces this screen (atlas-reload.test.tsx). The country card's
-   * in-screen failed recovery is tracked separately in #1456.
-   */
-  const router = useRouter()
+  // Observe this route's read, not unrelated navigation. A rejection replaces
+  // Atlas with its route recovery surface.
   const status = useRouterState({
     select: (state): CountryOverlayStatus => {
       const match = state.matches.at(-1)
       if (match === undefined) return 'ready'
-      if (match.status === 'error') return 'failed'
       return match.isFetching === false ? 'ready' : 'loading'
     },
   })
-  const retry = React.useCallback(() => {
-    void router.invalidate()
-  }, [router])
-
   const worldLabel =
     atlas.countryCount === 0
       ? t('atlas.screen.world.empty')
@@ -869,7 +843,6 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
             padding={padding}
             container={surfaceHost}
             status={status}
-            onRetry={retry}
           />
 
           <AtlasCamera
@@ -1014,6 +987,10 @@ export interface AtlasScreenErrorProps {
  */
 export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
   const t = useTranslate()
+  const recovery = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    recovery.current?.focus()
+  }, [error])
 
   return (
     <div className={SLICE}>
@@ -1026,7 +1003,13 @@ export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
         />
       </div>
       <div className="absolute inset-0 grid place-items-center p-4">
-        <div className="w-full max-w-md">
+        <div
+          ref={recovery}
+          role="region"
+          aria-label={t('atlas.screen.error.title')}
+          tabIndex={-1}
+          className="w-full max-w-md focus-ring"
+        >
           <ErrorPanel error={error} title={t('atlas.screen.error.title')} />
         </div>
       </div>

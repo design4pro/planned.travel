@@ -3,14 +3,10 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 
-import {
-  CountryCard,
-  CountryCardError,
-  CountryCardSkeleton,
-} from '../country-card'
+import { CountryCard, CountryCardSkeleton } from '../country-card'
 import { countryFactColumns } from '#/lib/atlas/country-facts'
 
 /**
@@ -721,89 +717,6 @@ describe('CountryCardSkeleton', () => {
   })
 })
 
-describe('CountryCardError', () => {
-  it('still names the country whose figures went missing', () => {
-    render(<CountryCardError countryCode="FR" />)
-    expect(cardFor('FR').textContent).toContain('France')
-  })
-
-  it('tells the reader politely rather than interrupting them', () => {
-    render(<CountryCardError countryCode="FR" />)
-    const card = cardFor('FR')
-    expect(card.getAttribute('role')).toBe('status')
-    expect(card.getAttribute('aria-live')).toBe('polite')
-  })
-
-  it('says what happened without claiming the country is empty', () => {
-    render(<CountryCardError countryCode="FR" />)
-    const card = cardFor('FR')
-    expect(card.textContent).toContain('These figures did not load')
-    // The claim is that no figure is shown, not that one particular word is
-    // absent: the zero-record card says `0` under every heading, and a reader
-    // who sees that believes the country is empty rather than unread. Asserted
-    // as the absence of the fact cells, because a word is copy — this one was
-    // `Trips` until the workspace qualifier landed, and matching on it left a
-    // guard that the zero-record card walked straight through.
-    expect(card.querySelectorAll('dt')).toHaveLength(0)
-    expect(card.querySelectorAll('dd')).toHaveLength(0)
-  })
-
-  it('occupies exactly the card the retry will land in', () => {
-    render(<CountryCard {...FRANCE} />)
-    render(<CountryCardError countryCode="IT" />)
-    expect(cardFor('IT').className).toBe(cardFor('FR').className)
-  })
-
-  it('holds the rest card’s height with an invisible strut', () => {
-    render(<CountryCardError countryCode="FR" />)
-    const strut = cardFor('FR').querySelector('[data-part="strut"]')
-    expect(strut?.className).toContain('invisible')
-    expect(strut?.getAttribute('aria-hidden')).toBe('true')
-  })
-
-  it('reserves the rest card’s label lines in that strut', () => {
-    render(<CountryCard {...FRANCE} />)
-    render(<CountryCardError countryCode="IT" />)
-    const slots = [...cardFor('FR').querySelectorAll('dt')].map(
-      (dt) => dt.className,
-    )
-    const grid = cardFor('IT').querySelector(
-      '[data-part="strut"]',
-    )?.firstElementChild
-    expect(
-      [...(grid?.children ?? [])].map(
-        (cell) => cell.firstElementChild?.className,
-      ),
-    ).toEqual(slots)
-  })
-
-  it('offers no action when there is none to run', () => {
-    render(<CountryCardError countryCode="FR" />)
-    expect(within(cardFor('FR')).queryByRole('button')).toBeNull()
-  })
-
-  it('runs the retry it was given', () => {
-    const onRetry = vi.fn()
-    render(<CountryCardError countryCode="FR" onRetry={onRetry} />)
-    fireEvent.click(
-      within(cardFor('FR')).getByRole('button', { name: 'Try again' }),
-    )
-    expect(onRetry).toHaveBeenCalledTimes(1)
-  })
-
-  it('holds the retry in its pending state while the read is in air', () => {
-    const onRetry = vi.fn()
-    render(<CountryCardError countryCode="FR" onRetry={onRetry} retrying />)
-    const button = within(cardFor('FR')).getByRole('button')
-    expect(button.hasAttribute('disabled')).toBe(false)
-    expect(button.getAttribute('aria-disabled')).toBe('true')
-    expect(button.getAttribute('aria-busy')).toBe('true')
-    fireEvent.click(button)
-    expect(onRetry).not.toHaveBeenCalled()
-    expect(button.textContent).toContain('Loading this country')
-  })
-})
-
 /**
  * The card lands on whatever country the reader pointed at, so its ground, its
  * hairline, its elevation and its stacking layer are the four things that
@@ -836,12 +749,10 @@ describe('the surface every variant stands on', () => {
     }
   })
 
-  it('gives the loading and degraded states that same ground', () => {
+  it('gives the loading state the same surface tokens', () => {
     const { container } = render(<CountryCardSkeleton />)
-    render(<CountryCardError countryCode="FR" />)
     for (const token of SURFACE) {
       expect(container.firstElementChild?.className).toContain(token)
-      expect(cardFor('FR').className).toContain(token)
     }
   })
 
@@ -883,11 +794,10 @@ describe('the surface every variant stands on', () => {
         <CountryCard {...FRANCE} />
         <CountryCard variant="compact" countryCode="MR" />
         <CountryCardSkeleton />
-        <CountryCardError countryCode="IT" />
       </>,
     )
     const roots = [...container.children]
-    expect(roots).toHaveLength(4)
+    expect(roots).toHaveLength(3)
     for (const root of roots) {
       expect(root.className).toContain('focus-visible:outline-ring')
       expect(root.className).toContain('focus-visible:outline-2')
@@ -904,7 +814,6 @@ describe('the surface every variant stands on', () => {
       <>
         <CountryCard {...FRANCE} />
         <CountryCardSkeleton />
-        <CountryCardError countryCode="IT" />
       </>,
     )
     for (const root of container.children) {
@@ -936,7 +845,6 @@ describe('the surface every variant stands on', () => {
         <CountryCard {...ALGERIA} />
         <CountryCard variant="compact" countryCode="MR" pointer="top" />
         <CountryCardSkeleton pointer="left" />
-        <CountryCardError countryCode="IT" onRetry={() => undefined} />
       </>,
     )
     expect(container.innerHTML).not.toMatch(
@@ -1077,7 +985,7 @@ describe('the card’s colours, measured from the tokens themselves', () => {
   it('clears AA for every text tier it prints, in both themes', () => {
     const TEXT = [
       ['--color-ink', 'the name and the figures'],
-      ['--color-ink-2', 'the months and the error sentence'],
+      ['--color-ink-2', 'the months'],
       ['--color-ink-3', 'the unit labels, the dash and a set-back nought'],
     ] as const
     for (const theme of ['light', 'dark'] as const) {
@@ -1091,15 +999,15 @@ describe('the card’s colours, measured from the tokens themselves', () => {
   })
 
   /**
-   * The record mark and the error icon are non-text graphics, which owe 3:1
-   * under WCAG 2.2 1.4.11 rather than 4.5:1 — and both clear the text bar
+   * The record mark is a non-text graphic, which owes 3:1
+   * under WCAG 2.2 1.4.11 rather than 4.5:1 — and clears the text bar
    * anyway, which is why the mark can be read at a glance at 16px.
    */
-  it('clears the graphic bar for the record mark and the error icon', () => {
+  it('clears the graphic bar for the record mark', () => {
     for (const theme of ['light', 'dark'] as const) {
       const tokens = palette(theme)
       const face = tokens['--color-map-card'] ?? ''
-      for (const token of ['--color-brand', '--color-warning']) {
+      for (const token of ['--color-brand']) {
         expect(
           contrast(tokens[token] ?? '', face),
           `${theme}: ${token}`,

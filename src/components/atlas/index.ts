@@ -53,14 +53,9 @@ export type {
   CountryActionsVisit,
 } from './country-actions'
 
-export {
-  CountryCard,
-  CountryCardError,
-  CountryCardSkeleton,
-} from './country-card'
+export { CountryCard, CountryCardSkeleton } from './country-card'
 export type {
   CountryCardCompactProps,
-  CountryCardErrorProps,
   CountryCardFactsProps,
   CountryCardPointer,
   CountryCardProps,

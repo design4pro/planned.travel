@@ -345,8 +345,6 @@ const messages = {
   'card.absent': 'Inte registrerat',
   'card.loading': 'Landet läses in',
   'card.loadingNamed': '{name} läses in',
-  'card.error.body': 'Siffrorna lästes inte in. Inget har gått förlorat.',
-  'card.error.retry': 'Försök igen',
   'overlay.close': 'Stäng {name}',
   'regions.label': 'Regioner',
   'regions.hint':

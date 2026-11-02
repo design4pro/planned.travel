@@ -1,6 +1,8 @@
+import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 
 import { AppFrame } from '#/components/layout/app-frame'
+import { useTranslate } from '#/lib/i18n'
 import { loadAtlas } from './-server/library'
 import {
   AtlasScreen,
@@ -37,10 +39,23 @@ export const Route = createFileRoute('/_app/atlas')({
 
 function AtlasRoute() {
   const atlas = Route.useLoaderData()
+  const t = useTranslate()
+  const content = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    content.current?.focus()
+  }, [])
 
   return (
     <AppFrame bleed>
-      <AtlasScreen atlas={atlas} />
+      <div
+        ref={content}
+        role="region"
+        aria-label={t('shell.nav.atlas')}
+        tabIndex={-1}
+        className="focus-ring"
+      >
+        <AtlasScreen atlas={atlas} />
+      </div>
     </AppFrame>
   )
 }
