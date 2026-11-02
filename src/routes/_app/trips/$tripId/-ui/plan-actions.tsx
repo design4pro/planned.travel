@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLinkItem,
   DropdownMenuSeparator,
@@ -193,8 +194,9 @@ export interface StopMenuProps {
  * Everything a row can have done to it, in one menu.
  *
  * A real `DropdownMenu`, so it is keyboard-reachable from the row it belongs to and
- * the day submenu is arrow-navigable — the reference offers a pencil that opens a
- * form and nothing else, which leaves "move this to Thursday" as a drag or nothing.
+ * the desktop day submenu is arrow-navigable; phones expand the choices inline.
+ * The reference offers a pencil that opens a form and nothing else, which leaves
+ * "move this to Thursday" as a drag or nothing.
  * A drag is not available to every reader, so every drag on this screen has a menu
  * equivalent.
  */
@@ -210,10 +212,34 @@ export function StopMenu({
   onDelete,
 }: StopMenuProps) {
   const t = useTranslate()
+  const [choosingDay, setChoosingDay] = React.useState(false)
+  const [submenuOpen, setSubmenuOpen] = React.useState(false)
+  const desktopMoveTrigger = React.useRef<HTMLDivElement>(null)
+  const moveTrigger = React.useRef<HTMLDivElement>(null)
+  const firstDay = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    if (choosingDay) firstDay.current?.focus()
+  }, [choosingDay])
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
 
+  const destinations = elsewhere.map((day, index) => (
+    <DropdownMenuItem
+      key={day.dayId}
+      ref={index === 0 ? firstDay : undefined}
+      onSelect={() => onMoveToDay(day.dayId)}
+      className="[&>span]:whitespace-normal [&>span]:break-words"
+      icon={
+        <span className="text-micro font-bold tabular-nums">
+          {day.dayNumber}
+        </span>
+      }
+    >
+      {day.title ?? t('trips.plan.editor.dayNumber', { day: day.dayNumber })}
+    </DropdownMenuItem>
+  ))
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={() => setChoosingDay(false)}>
       <DropdownMenuTrigger asChild>
         <IconButton
           icon={<MoreHorizontal />}
@@ -226,6 +252,12 @@ export function StopMenu({
       {/* Sized by its longest label, not a fixed width: translations run longer than English. */}
       <DropdownMenuContent
         align="end"
+        onEscapeKeyDown={(event) => {
+          if (!choosingDay) return
+          event.preventDefault()
+          setChoosingDay(false)
+          moveTrigger.current?.focus()
+        }}
         className="max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-56"
       >
         <DropdownMenuItem icon={<PencilLine />} onSelect={onEditPlace}>
@@ -249,25 +281,40 @@ export function StopMenu({
         {elsewhere.length === 0 ? null : (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger icon={<ArrowRightLeft />}>
+            <DropdownMenuItem
+              ref={moveTrigger}
+              className="sm:hidden"
+              icon={<ArrowRightLeft />}
+              aria-expanded={choosingDay}
+              onSelect={(event) => {
+                event.preventDefault()
+                setChoosingDay((current) => !current)
+              }}
+            >
+              {t('trips.plan.stop.menu.moveToDay')}
+            </DropdownMenuItem>
+            {choosingDay ? (
+              <DropdownMenuGroup className="max-h-72 overflow-y-auto overscroll-contain sm:hidden">
+                {destinations}
+              </DropdownMenuGroup>
+            ) : null}
+            <DropdownMenuSub open={submenuOpen} onOpenChange={setSubmenuOpen}>
+              <DropdownMenuSubTrigger
+                ref={desktopMoveTrigger}
+                className="hidden sm:flex"
+                icon={<ArrowRightLeft />}
+              >
                 {t('trips.plan.stop.menu.moveToDay')}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="max-h-72 w-48 overflow-y-auto">
-                {elsewhere.map((day) => (
-                  <DropdownMenuItem
-                    key={day.dayId}
-                    onSelect={() => onMoveToDay(day.dayId)}
-                    icon={
-                      <span className="text-micro font-bold tabular-nums">
-                        {day.dayNumber}
-                      </span>
-                    }
-                  >
-                    {day.title ??
-                      t('trips.plan.editor.dayNumber', { day: day.dayNumber })}
-                  </DropdownMenuItem>
-                ))}
+              <DropdownMenuSubContent
+                className="max-h-72 w-48 overflow-y-auto"
+                onEscapeKeyDown={(event) => {
+                  event.preventDefault()
+                  setSubmenuOpen(false)
+                  desktopMoveTrigger.current?.focus()
+                }}
+              >
+                {destinations}
               </DropdownMenuSubContent>
             </DropdownMenuSub>
           </>
