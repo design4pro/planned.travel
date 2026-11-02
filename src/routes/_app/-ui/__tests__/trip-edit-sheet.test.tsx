@@ -366,3 +366,56 @@ describe('the trip edit sheet when the server refuses the save', () => {
     expect(router.invalidate).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('an edit sheet left open on an archived trip', () => {
+  it.each(['en', 'pl'] as const)(
+    'localizes the refusal without Retry in %s',
+    async (locale) => {
+      server.update.mockRejectedValue(
+        refusedWith('shell.trips.card.archivedReason'),
+      )
+      router.invalidate.mockRejectedValue(new Error('offline'))
+      await save(locale, locale === 'en' ? EN : PL)
+      const alert = await screen.findByRole('alert')
+      expect(alert.textContent).toContain(
+        (locale === 'en' ? Shell : Pl)['trips.card.archivedReason'],
+      )
+      expect(alert.textContent).not.toContain('shell.trips.card.archivedReason')
+      expect(alert.textContent).not.toContain('This trip is archived.')
+      expect(
+        screen.queryByRole('button', {
+          name: (locale === 'en' ? Shell : Pl)['editTrip.retry'],
+        }),
+      ).toBeNull()
+      expect(router.invalidate).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('keeps Retry for a transient failure', async () => {
+    server.update.mockRejectedValue(
+      new Error(encodePublicFailure({ kind: 'unexpected' })),
+    )
+    await save('en', EN)
+    expect(
+      await screen.findByRole('button', { name: Shell['editTrip.retry'] }),
+    ).toBeTruthy()
+  })
+})
+
+it('moves focus to the archived refusal when Retry disappears', async () => {
+  server.update
+    .mockRejectedValueOnce(
+      new Error(encodePublicFailure({ kind: 'unexpected' })),
+    )
+    .mockRejectedValueOnce(refusedWith('shell.trips.card.archivedReason'))
+  await save('en', EN)
+  await userEvent.click(
+    await screen.findByRole('button', { name: Shell['editTrip.retry'] }),
+  )
+  await waitFor(() => {
+    expect(
+      screen.queryByRole('button', { name: Shell['editTrip.retry'] }),
+    ).toBeNull()
+    expect(document.activeElement).toBe(screen.getByRole('alert').parentElement)
+  })
+})

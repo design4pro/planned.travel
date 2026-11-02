@@ -43,6 +43,8 @@ import {
   MAX_PURGE_KEYS,
   taskEnvelopeSchema,
 } from '#/server/queue/types'
+import { readPublicFailure } from '#/lib/errors'
+import { failureRedactionMiddleware } from '#/server/errors/middleware'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import { travelStatsTaskId } from '#/server/queue/handlers/travel-stats'
 import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
@@ -57,6 +59,8 @@ import type { TaskEnvelope, TaskEnvelopeOf } from '#/server/queue/types'
 import type { ExportStore } from '#/server/storage/export-artifacts'
 
 /* ------------------------------------------------------------------ mocking */
+
+vi.mock('cloudflare:workers', () => ({ env: {} }))
 
 const stubs = vi.hoisted(() => ({
   /** The scope `appScope()` resolves to. */
@@ -524,14 +528,62 @@ describe('the travel-statistics fan-out', () => {
     await archiveTrip({ tripId })
     stubs.batches = []
 
-    await expect(
-      updateTrip({ tripId, startDate: '2027-04-10', endDate: '2027-04-12' }),
-    ).rejects.toMatchObject({ code: 'TRIP_ARCHIVED' })
+    const boundary = failureRedactionMiddleware.options.server as (ctx: {
+      next: () => Promise<unknown>
+    }) => Promise<unknown>
+    let failure: unknown
+    try {
+      await boundary({
+        next: () =>
+          updateTrip({
+            tripId,
+            startDate: '2027-04-10',
+            endDate: '2027-04-12',
+          }),
+      })
+    } catch (cause) {
+      failure = cause
+    }
+    expect(readPublicFailure(failure)).toEqual({
+      kind: 'refusal',
+      message: 'shell.trips.card.archivedReason',
+    })
+    expect((await requireTrip(tenant.scope, tripId)).isArchived).toBe(true)
 
     expect(sent()).toEqual([])
     expect((await requireTrip(tenant.scope, tripId)).startDate).toBe(
       '2026-04-10',
     )
+  })
+
+  it('does not reveal the archived edit refusal to another tenant or a non-owner', async () => {
+    await createTrip({
+      title: 'Lisbon',
+      destination: '',
+      startDate: '',
+      endDate: '',
+      currency: 'EUR',
+    })
+    const tripId = await newestTripId()
+    await archiveTrip({ tripId })
+    const before = await requireTrip(tenant.scope, tripId)
+    const editor = await tenant.addUser('Editor')
+    await addTripMember(tenant.scope, {
+      tripId,
+      userId: editor,
+      role: 'editor',
+    })
+    const foreign = await harness.seedTenant('elsewhere')
+    for (const [scope, code] of [
+      [tenant.scopeFor(editor), 'FORBIDDEN'],
+      [foreign.scope, 'NOT_FOUND'],
+    ] as const) {
+      stubs.scope = scope
+      await expect(
+        updateTrip({ tripId, title: 'Changed' }),
+      ).rejects.toMatchObject({ code })
+    }
+    expect(await requireTrip(tenant.scope, tripId)).toEqual(before)
   })
 
   it('never fails the write when the queue refuses', async () => {

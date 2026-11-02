@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -195,6 +196,24 @@ describe('NewTripDialog', () => {
         })
       })
       expect(server.create).toHaveBeenCalledOnce()
+    })
+
+    it('localizes an archived refusal from the shared edit-trip operation', async () => {
+      upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+      server.update.mockRejectedValue(
+        new Error(
+          encodePublicFailure({
+            kind: 'refusal',
+            message: 'shell.trips.card.archivedReason',
+          }),
+        ),
+      )
+      const user = await createWithCover()
+      await user.click(screen.getByRole('button', { name: 'Create trip' }))
+      expect(
+        await screen.findByText(Shell['trips.card.archivedReason']),
+      ).toBeTruthy()
+      expect(screen.queryByText('shell.trips.card.archivedReason')).toBeNull()
     })
 
     it('does not upload a stored image twice when only the cover write failed', async () => {

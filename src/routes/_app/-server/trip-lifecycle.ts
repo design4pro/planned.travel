@@ -47,6 +47,7 @@ import {
   updateTrip,
   NotFoundError,
   RepositoryError,
+  TripArchivedError,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
 import { enqueueTask } from '#/server/queue/jobs'
@@ -59,6 +60,7 @@ import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
 import { listExportKeys } from '#/server/storage/export-artifacts'
 import { deleteObjects } from '#/server/storage/objects'
+import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import {
   coverUrlFor,
@@ -752,7 +754,14 @@ export const updateTripFn = createServerFn({ method: 'POST' })
             // module's static graph must not (see `taskQueue` above).
             (await import('#/server/auth/env')).appUrl(),
           )
-    const trip = await updateTrip(scope, tripId, { ...patch, ...cover })
+    const trip = await updateTrip(scope, tripId, { ...patch, ...cover }).catch(
+      (cause: unknown) => {
+        // Localize only this operation; the repository's authorization and archive guards stay first.
+        if (cause instanceof TripArchivedError)
+          throw new Error(TRIP_ARCHIVED_KEY)
+        throw cause
+      },
+    )
     if (coverFileId !== undefined) {
       await reclaimReplacedCover(
         scope,
