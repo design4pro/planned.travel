@@ -123,6 +123,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} 没有移动。行程留在自己的那一天。',
   'plan.move.spoken.journeyTimed': '{name} 没有移动。它于 {time} 出发。',
+  'plan.move.spoken.accepted': '已将{name}移至{destination}。正在保存。',
   'plan.move.error.save': '这次移动未能保存',
   'plan.move.error.retry': '请稍后再试一次。',
   'plan.move.dropTime.title': '移动 {name} 并放弃 {time} 吗？',

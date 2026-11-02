@@ -137,6 +137,8 @@ const messages = {
     '{name} wurde nicht verschoben. Ein Transfer bleibt an seinem Tag.',
   'plan.move.spoken.journeyTimed':
     '{name} wurde nicht verschoben. Abfahrt um {time}.',
+  'plan.move.spoken.accepted':
+    '{name} nach {destination} verschoben. Wird gespeichert.',
   'plan.move.error.save': 'Das Verschieben wurde nicht gespeichert',
   'plan.move.error.retry': 'Versuch es gleich noch einmal.',
   'plan.move.dropTime.title': '{name} verschieben und {time} entfernen?',
