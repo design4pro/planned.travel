@@ -6,6 +6,9 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { format } from 'date-fns/format'
 
+import { I18nProvider } from '#/lib/i18n'
+import plUi from '#/lib/i18n/messages/pl/ui'
+import { Field } from '../field'
 import { DatePicker } from '../date-picker'
 import { DateRangePicker } from '../date-range-picker'
 
@@ -16,6 +19,97 @@ const dayLabel = (day: number) =>
   format(new Date(2026, 2, day), 'EEEE d MMMM yyyy')
 
 describe('DatePicker', () => {
+  const messages = Object.fromEntries(
+    Object.entries(plUi).map(([key, text]) => [`ui.${key}`, text]),
+  )
+
+  it.each(['field', 'standalone'] as const)(
+    'describes localized values through selection and clearing with %s naming',
+    async (mode) => {
+      const user = userEvent.setup()
+      const picker = (
+        <DatePicker
+          ariaLabel={mode === 'standalone' ? 'Wyjazd' : undefined}
+          defaultMonth={march}
+          clearable
+        />
+      )
+      render(
+        <I18nProvider locale="pl" messages={messages}>
+          {mode === 'field' ? <Field label="Wyjazd">{picker}</Field> : picker}
+        </I18nProvider>,
+      )
+      const trigger = screen.getByRole('button', {
+        name: 'Wyjazd',
+        description: 'Wskaż datę',
+      })
+      await user.click(trigger)
+      await user.click(
+        screen.getByRole('button', { name: 'środa, 18, marzec 2026' }),
+      )
+      expect(
+        screen.getByRole('button', {
+          name: 'Wyjazd',
+          description: '18 mar 2026',
+        }),
+      ).toBe(trigger)
+      await user.click(screen.getByRole('button', { name: 'Usuń datę' }))
+      expect(
+        screen.getByRole('button', {
+          name: 'Wyjazd',
+          description: 'Wskaż datę',
+        }),
+      ).toBe(trigger)
+    },
+  )
+
+  it.each(['field', 'standalone'] as const)(
+    'updates controlled descriptions and preserves Field descriptions per instance with %s naming',
+    (mode) => {
+      const form = (value: Date | null, error?: string) => (
+        <I18nProvider locale="pl" messages={messages}>
+          <Field label="Wyjazd" hint="Data podróży" error={error}>
+            <DatePicker
+              ariaLabel={mode === 'standalone' ? 'Wyjazd' : undefined}
+              value={value}
+              placeholder="Wybierz wyjazd"
+            />
+          </Field>
+          <Field label="Powrót">
+            <DatePicker defaultValue={new Date(2026, 2, 20)} />
+          </Field>
+        </I18nProvider>
+      )
+      const { rerender } = render(form(new Date(2026, 2, 3)))
+      expect(
+        screen.getByRole('button', {
+          name: 'Wyjazd',
+          description: '3 mar 2026 Data podróży',
+        }),
+      ).toBeTruthy()
+      rerender(form(new Date(2026, 2, 18), 'Nieprawidłowa data'))
+      expect(
+        screen.getByRole('button', {
+          name: 'Wyjazd',
+          description: '18 mar 2026 Nieprawidłowa data',
+        }),
+      ).toBeTruthy()
+      rerender(form(null))
+      expect(
+        screen.getByRole('button', {
+          name: 'Wyjazd',
+          description: 'Wybierz wyjazd Data podróży',
+        }),
+      ).toBeTruthy()
+      expect(
+        screen.getByRole('button', {
+          name: 'Powrót',
+          description: '20 mar 2026',
+        }),
+      ).toBeTruthy()
+    },
+  )
+
   it('shows the placeholder while empty', () => {
     render(
       <DatePicker ariaLabel="Departure" placeholder="Pick a departure date" />,

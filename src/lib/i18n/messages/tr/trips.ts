@@ -131,6 +131,8 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} taşınmadı. Yolculuk kendi gününde kalır.',
   'plan.move.spoken.journeyTimed': '{name} taşınmadı. {time} kalkıyor.',
+  'plan.move.spoken.accepted':
+    '{name}, {destination} hedefine taşındı. Kaydediliyor.',
   'plan.move.error.save': 'Bu taşıma kaydedilmedi',
   'plan.move.error.retry': 'Birazdan tekrar deneyin.',
   'plan.move.dropTime.title': '{name} taşınsın ve {time} kaldırılsın mı?',

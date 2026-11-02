@@ -135,6 +135,7 @@ const messages = {
     '{name} nem lett áthelyezve. Az út a saját napján marad.',
   'plan.move.spoken.journeyTimed':
     '{name} nem lett áthelyezve. Indulás: {time}.',
+  'plan.move.spoken.accepted': '{name} áthelyezve ide: {destination}. Mentés.',
   'plan.move.error.save': 'A mozgatást nem sikerült menteni',
   'plan.move.error.retry': 'Próbálja meg újra egy pillanat múlva.',
   'plan.move.dropTime.title':
