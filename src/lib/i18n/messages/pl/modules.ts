@@ -974,8 +974,13 @@ const messages = {
   'files.action.upload': 'Wyślij pliki',
   'files.places.title': 'Plik miejsc',
   'files.places.description':
-    'Pobierz miejsca z tej podróży jako GeoJSON, również te bez współrzędnych.',
+    'Pobierz miejsca z tej podróży jako GeoJSON lub GPX. GPX zawiera tylko miejsca z prawidłowymi współrzędnymi; GeoJSON zachowuje wszystkie miejsca.',
   'files.places.action': 'Pobierz miejsca (.geojson)',
+  'files.places.gpxAction': 'Pobierz miejsca (.gpx)',
+  'files.places.gpxDone':
+    'Pobrano GPX. Pominięte miejsca bez prawidłowych współrzędnych: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'Pobrano GPX bez punktów. Pominięto wszystkie miejsca z powodu braku prawidłowych współrzędnych: {formattedCount}.',
   'files.places.empty': 'Dodaj miejsca do tej podróży, aby je pobrać.',
   'files.places.error':
     'Nie udało się przygotować pliku miejsc. Spróbuj ponownie.',
