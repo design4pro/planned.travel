@@ -3,8 +3,8 @@
 //
 // Reports where every open issue sits in the SDLC flow and the single next step that moves it,
 // with `--next` names the one issue the Reconciler's implement-ticket run takes next, and with `--plan`
-// prints everything the Reconciler (docs/agents/cezar.md, ADR 0033) may start right now, up to
-// `PLAN_CANDIDATES` ranked candidates per issue kind.
+// prints every ready implementation and up to `PLAN_CANDIDATES` ranked unblock/triage candidates
+// the Reconciler (docs/agents/cezar.md, ADR 0033) may start right now.
 // Read-only: it never applies a label. No label marks an issue ready (ADR 0032); readiness is the
 // rule in `classify`, so the report a person reads and the pick a run makes cannot disagree.
 //
@@ -616,13 +616,13 @@ export const PLAN_WORKFLOWS = {
   "write-spec": "plan-to-spec",
 };
 
-/** How many candidates `--plan` ranks for an issue kind (implement, unblock, triage). */
+/** How many candidates `--plan` ranks for unblock and triage. */
 export const PLAN_CANDIDATES = 3;
 
 /**
  * What the Reconciler may start right now, in `PLAN_WORKFLOWS` order, a kind with no candidate left
- * out. An issue kind ranks up to `PLAN_CANDIDATES` candidates, best first, so the Reconciler can fall
- * back to the next when one cannot start (a cooldown); slice and write-spec keep one at a time.
+ * out. Every ready implementation is ranked so cooling-down targets cannot hide later work.
+ * Unblock and triage rank up to `PLAN_CANDIDATES`; slice and write-spec keep one at a time.
  * Pure, and the only place the five candidate rules live:
  *
  * - implement: `readyIssues`, the first being `pickNext`, so the plan and `--next` cannot disagree;
@@ -655,7 +655,7 @@ export function buildPlan({
     actions.push({ kind, target: `#${number}`, workflow: PLAN_WORKFLOWS[kind], task });
   const idle = (issue) => !runs.has(issue.number);
 
-  for (const number of readyIssues(issues, wip).slice(0, PLAN_CANDIDATES))
+  for (const number of readyIssues(issues, wip))
     onIssue("implement", number, `Implement issue #${number}.`);
 
   const candidates = (keep) => issues.filter((issue) => keep(issue) && idle(issue)).slice(0, PLAN_CANDIDATES);

@@ -41,6 +41,7 @@ const IGNORED = [
   '.ai/cezar/worktrees/lint-ignores-probe/src/routes/index.tsx',
   // Agent tooling, not application source. Hypothetical: the hooks themselves are shell today.
   '.claude/hooks/probe.ts',
+  '.agents/skills/lint-ignores-probe/template.ts',
 ] as const
 
 /** Not tracked either, but not gitignored: the shared config the QA browser descriptor writes. */
