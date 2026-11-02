@@ -135,7 +135,7 @@ vi.mock('#/server/auth/env', () => ({
       }
       expect(
         new TextEncoder().encode(JSON.stringify(body)).length,
-      ).toBeLessThanOrEqual(128 * 1024)
+      ).toBeLessThanOrEqual(127_900)
       stubs.batches.push([body])
       return undefined
     },
@@ -147,10 +147,10 @@ vi.mock('#/server/auth/env', () => ({
       const sizes = messages.map(
         ({ body }) => new TextEncoder().encode(JSON.stringify(body)).length,
       )
-      expect(sizes.every((size) => size <= 128 * 1024)).toBe(true)
-      expect(sizes.reduce((sum, size) => sum + size, 0)).toBeLessThanOrEqual(
-        256 * 1024,
-      )
+      expect(sizes.every((size) => size <= 127_900)).toBe(true)
+      expect(
+        sizes.reduce((sum, size) => sum + size + 100, 0),
+      ).toBeLessThanOrEqual(256_000)
       stubs.batches.push(messages.map((message) => message.body))
       return undefined
     },
