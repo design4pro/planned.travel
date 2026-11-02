@@ -86,9 +86,9 @@ function open(selected = files[0]) {
 }
 it('loads an image, navigates with keys, respects ends and revokes on replacement and unmount', async () => {
   const view = open()
-  await screen.findByRole('img', { name: 'one.png' })
+  await loadedImage('one.png')
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'End' })
-  await screen.findByRole('img', { name: 'three.png' })
+  await loadedImage('three.png')
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' })
   expect(fetchBytes).toHaveBeenCalledTimes(2)
   expect(revoke).toHaveBeenCalledTimes(1)
@@ -129,7 +129,7 @@ it.each(['text/plain'])('embeds only allowlisted document %s', async (type) => {
 it('renders SVG only as a rasterized image', async () => {
   fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
   open()
-  await screen.findByRole('img')
+  await loadedImage()
   expect(document.querySelector('iframe')).toBeNull()
   expect(raster).toHaveBeenCalledWith(expect.any(Blob))
   expect(URL.createObjectURL).toHaveBeenCalledWith(
@@ -148,13 +148,13 @@ it.each(['text/html', 'application/zip'])(
 )
 it('offers recovery after an image rendering error', async () => {
   open()
-  fireEvent.error(await screen.findByRole('img'))
+  fireEvent.error(await loadedImage())
   expect(screen.getByRole('alert')).toBeTruthy()
 })
 
 it('locks navigation while fetching the next image and recovers after a failure', async () => {
   open()
-  await screen.findByRole('img', { name: 'one.png' })
+  await loadedImage('one.png')
   let fail: (error: Error) => void = () => {}
   fetchBytes.mockReturnValueOnce(
     new Promise<Blob>((_resolve, reject) => {
@@ -177,21 +177,21 @@ it('locks navigation while fetching the next image and recovers after a failure'
   expect(document.activeElement).toBe(
     screen.getByRole('heading', { name: 'two.png' }),
   )
-  await screen.findByRole('img', { name: 'two.png' })
+  await loadedImage('two.png')
 })
 
 it('navigates back and home using the gallery controls', async () => {
   open(files[2])
-  await screen.findByRole('img', { name: 'three.png' })
+  await loadedImage('three.png')
   fireEvent.click(screen.getByRole('button', { name: 'Previous image' }))
-  await screen.findByRole('img', { name: 'two.png' })
+  await loadedImage('two.png')
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Home' })
-  await screen.findByRole('img', { name: 'one.png' })
+  await loadedImage('one.png')
 })
 
 it('uses a horizontal touch swipe, ignoring vertical gestures', async () => {
   open()
-  const image = await screen.findByRole('img', { name: 'one.png' })
+  const image = await loadedImage('one.png')
   function pointer(type: string, x: number, y: number) {
     const event = new Event(type, { bubbles: true })
     Object.assign(event, {
@@ -207,12 +207,12 @@ it('uses a horizontal touch swipe, ignoring vertical gestures', async () => {
   expect(fetchBytes).toHaveBeenCalledTimes(1)
   pointer('pointerdown', 200, 100)
   pointer('pointerup', 80, 110)
-  await screen.findByRole('img', { name: 'two.png' })
+  await loadedImage('two.png')
 })
 
 it('downloads the displayed bytes from the header under the real filename', async () => {
   open()
-  await screen.findByRole('img', { name: 'one.png' })
+  await loadedImage('one.png')
   fireEvent.click(screen.getByRole('button', { name: 'Download one.png' }))
   expect(save).toHaveBeenCalledWith(expect.any(Blob), 'one.png')
   expect(fetchBytes).toHaveBeenCalledTimes(1)
@@ -234,7 +234,7 @@ it('closes when Escape is pressed inside the plain-text document', async () => {
 
 it('moves focus to the filename before navigation disables its control', async () => {
   open()
-  await screen.findByRole('img', { name: 'one.png' })
+  await loadedImage('one.png')
   const next = screen.getByRole('button', { name: 'Next image' })
   next.focus()
   fireEvent.click(next)
@@ -270,7 +270,7 @@ it('downloads original SVG bytes while displaying rasterized pixels', async () =
   const original = new Blob(['<svg/>'], { type: 'image/svg+xml' })
   fetchBytes.mockResolvedValue(original)
   open()
-  await screen.findByRole('img')
+  await loadedImage()
   fireEvent.click(screen.getByRole('button', { name: 'Download one.png' }))
   expect(save).toHaveBeenCalledWith(original, 'one.png')
 })
@@ -286,4 +286,28 @@ it('renders PDF text in a keyboard-focusable application document, without an if
   fireEvent.keyDown(document, { key: 'Escape' })
   await waitFor(() => expect(close).toHaveBeenCalled())
   view.unmount()
+})
+
+async function loadedImage(name?: string) {
+  const image = await screen.findByRole('img', name ? { name } : undefined)
+  fireEvent.load(image)
+  return image
+}
+
+it('keeps gallery navigation disabled until the image has loaded', async () => {
+  open()
+  const image = await screen.findByRole('img', { name: 'one.png' })
+  expect(
+    screen
+      .getByRole('button', { name: 'Next image' })
+      .getAttribute('aria-disabled'),
+  ).toBe('true')
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'End' })
+  expect(fetchBytes).toHaveBeenCalledTimes(1)
+  fireEvent.load(image)
+  expect(
+    screen
+      .getByRole('button', { name: 'Next image' })
+      .getAttribute('aria-disabled'),
+  ).not.toBe('true')
 })

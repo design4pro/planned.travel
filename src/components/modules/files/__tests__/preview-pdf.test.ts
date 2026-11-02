@@ -84,3 +84,40 @@ it('reports invalid PDFs and ignores a document that finishes loading after clos
   expect(ready).not.toHaveBeenCalled()
   expect(failed).toHaveBeenCalledOnce()
 })
+
+it('does not create a text layer when text extraction finishes after close', async () => {
+  let finish: (value: { items: [] }) => void = () => {}
+  const text = new Promise((resolve) => {
+    finish = resolve
+  })
+  const getTextContent = vi.fn().mockReturnValue(text)
+  render.mockReturnValue({ promise: Promise.resolve(), cancel })
+  load.mockReturnValue({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: async () => ({
+        getViewport: () => ({ width: 600, height: 800 }),
+        render,
+        getTextContent,
+        cleanup: vi.fn(),
+      }),
+    }),
+    destroy,
+  })
+  const ready = vi.fn()
+  const failure = vi.fn()
+  const dispose = previewPdf(
+    { arrayBuffer: async () => new ArrayBuffer(8) } as Blob,
+    document.createElement('div'),
+    ready,
+    failure,
+  )
+  await vi.waitFor(() => expect(getTextContent).toHaveBeenCalledOnce())
+  dispose()
+  finish({ items: [] })
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(textRender).not.toHaveBeenCalled()
+  expect(ready).not.toHaveBeenCalled()
+  expect(failure).not.toHaveBeenCalled()
+})

@@ -73,10 +73,12 @@ export function previewPdf(
         renders.push(render)
         await render.promise
         if (!live) return
+        const textContent = await page.getTextContent()
+        if (!live) return
         const layer = new TextLayer({
           container: text,
           viewport,
-          textContentSource: await page.getTextContent(),
+          textContentSource: textContent,
         })
         layers.push(layer)
         await layer.render()

@@ -21,7 +21,13 @@ import { PdfPreview } from './pdf-preview'
 type Preview =
   | { status: 'loading' }
   | { status: 'error'; missing: boolean }
-  | { status: 'ready'; blob: Blob; url: string; image: boolean }
+  | {
+      status: 'ready'
+      blob: Blob
+      url: string
+      image: boolean
+      loaded: boolean
+    }
 
 export function FilePreview({
   tripId,
@@ -47,7 +53,8 @@ export function FilePreview({
     entry.contentType.toLowerCase().startsWith('image/'),
   )
   const index = images.findIndex((entry) => entry.id === selected.id)
-  const gallery = preview.status === 'ready' && preview.image && index >= 0
+  const gallery =
+    preview.status === 'ready' && preview.image && preview.loaded && index >= 0
 
   useEffect(() => {
     let live = true
@@ -68,8 +75,8 @@ export function FilePreview({
           type === 'image/svg+xml' ? await previewImage(blob) : blob
         if (!live) return
         url = URL.createObjectURL(rendered)
-        busy.current = false
-        setPreview({ status: 'ready', blob, url, image })
+        busy.current = image
+        setPreview({ status: 'ready', blob, url, image, loaded: !image })
       })
       .catch((error: unknown) => {
         if (!live) return
@@ -166,7 +173,8 @@ export function FilePreview({
           </div>
         </DialogHeader>
         <DialogBody>
-          {preview.status === 'loading' ? (
+          {preview.status === 'loading' ||
+          (preview.status === 'ready' && preview.image && !preview.loaded) ? (
             <div role="status" aria-label={t('modules.files.preview.loading')}>
               <Skeleton className="h-[55dvh] w-full" />
             </div>
@@ -198,6 +206,14 @@ export function FilePreview({
               alt={selected.filename}
               className="mx-auto max-h-[60dvh] max-w-full touch-pan-y object-contain"
               onError={renderError}
+              onLoad={() => {
+                setPreview((current) => {
+                  if (current.status !== 'ready' || current.url !== preview.url)
+                    return current
+                  busy.current = false
+                  return { ...current, loaded: true }
+                })
+              }}
               onPointerDown={(event) => {
                 if (event.pointerType !== 'touch') return
                 event.currentTarget.setPointerCapture(event.pointerId)
