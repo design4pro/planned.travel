@@ -52,6 +52,11 @@ export interface PlanTransport {
   readonly toName: string | null
   readonly departureDayId: string | null
   readonly arrivalDayId: string | null
+  /** Additive metadata; older read payloads fall back to endpoint-local clocks. */
+  readonly departureDate?: string | null
+  readonly arrivalDate?: string | null
+  readonly departureTimezone?: string | null
+  readonly arrivalTimezone?: string | null
   /** `HH:MM` at the endpoint's own zone, as stored. */
   readonly departureTime: string | null
   readonly arrivalTime: string | null
@@ -94,6 +99,10 @@ function legRow(leg: TransportLeg, parent: Transport): PlanTransport {
     toName: leg.toName,
     departureDayId: leg.departureDayId,
     arrivalDayId: leg.arrivalDayId,
+    departureDate: leg.departureDate,
+    arrivalDate: leg.arrivalDate,
+    departureTimezone: leg.fromTimezone,
+    arrivalTimezone: leg.toTimezone,
     departureTime: leg.departureTime,
     arrivalTime: leg.arrivalTime,
     priceMinor: null,
@@ -113,6 +122,10 @@ function recordRow(record: Transport): PlanTransport {
     toName: record.arrivalName,
     departureDayId: record.dayId,
     arrivalDayId: record.arrivalDayId,
+    departureDate: record.departureDate,
+    arrivalDate: record.arrivalDate,
+    departureTimezone: record.departureTimezone,
+    arrivalTimezone: record.arrivalTimezone,
     departureTime: record.departureTime,
     arrivalTime: record.arrivalTime,
     priceMinor: record.priceMinor,

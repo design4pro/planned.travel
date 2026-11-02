@@ -32,6 +32,7 @@ import type {
   PlanTarget,
   PlannerTransport,
   TimeOfItem,
+  CompareItemTimes,
 } from '#/components/planner'
 import type { reorderPlanInputSchema } from '../-server/plan'
 
@@ -68,6 +69,7 @@ export type PlanMoveOutcome =
     }
 
 export interface PlanMoveOptions {
+  readonly compareItemTimes?: CompareItemTimes
   readonly placeOfItem?: PlaceOfItem
   readonly timeOfItem?: TimeOfItem
   /** The reader answered the question: run the move as if this item had no time. */
@@ -109,6 +111,7 @@ export function planMoveOutcome(
 
   const result = movePlanItem(order, itemId, target, {
     placeOfItem: options.placeOfItem,
+    compareItemTimes: options.compareItemTimes,
     timeOfItem,
   })
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { zonedToUtc } from '../zone'
+import { zonedToUtc } from '#/lib/zoned-time'
 
 const iso = (instant: Date | null): string | null =>
   instant === null ? null : instant.toISOString()

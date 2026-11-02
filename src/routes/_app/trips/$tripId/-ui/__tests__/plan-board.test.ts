@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { legItemId } from '#/components/planner'
+import { dayHandoffs } from '#/lib/geo/handoff'
 import { planBoard } from '../plan-board'
 import {
   board,
@@ -358,4 +359,235 @@ describe('planBoard — the model of an arrangement', () => {
     expect(model.days[0].rows.map((row) => row.itemId)).toEqual(['a2', 'a1'])
     expect(model.days[0].items[0].kind).toBe('transport')
   })
+})
+
+describe('planBoard — endpoint chronology', () => {
+  it('orders the preceding-date London departure before Tokyo stops and shares the move policy', async () => {
+    const { planMoveOutcome } = await import('../plan-move')
+    const payload = {
+      ...board([
+        {
+          ...day('d1', 1, [
+            stop('airport', 'p1', 0, '09:35'),
+            stop('garden', 'p2', 1, '13:30'),
+          ]),
+          date: '2026-04-17',
+        },
+      ]),
+      timezone: 'Asia/Tokyo',
+    }
+    const result = planBoard(
+      payload,
+      notes([]),
+      transports([
+        journey('flight', {
+          mode: 'flight',
+          departureDate: '2026-04-16',
+          departureTime: '13:20',
+          departureTimezone: 'Europe/London',
+          arrivalDate: '2026-04-17',
+          arrivalTime: '09:35',
+          arrivalTimezone: 'Asia/Tokyo',
+        }),
+      ]),
+    )
+    expect(dayOf(result, 'd1')).toEqual([leg('flight'), 'airport', 'garden'])
+    expect(
+      planMoveOutcome(
+        result.serverOrder,
+        'airport',
+        { container: 'd1', index: 0 },
+        result,
+      ),
+    ).toMatchObject({ kind: 'ask-drop-time', time: '09:35' })
+    expect(result.transportRows[0].time).toBe('13:20')
+    const model = result.model(
+      result.serverOrder,
+      ((key: string) => key) as never,
+    )
+    expect(dayHandoffs(model.days[0].items)).toMatchObject([
+      { kind: 'directions', total: 2 },
+    ])
+    expect(model.days[0].items.map((item) => item.kind)).toEqual([
+      'transport',
+      'stop',
+      'stop',
+    ])
+  })
+
+  it('puts an arriving journey before an equal-minute stop and refuses the inverse move', async () => {
+    const { planMoveOutcome } = await import('../plan-move')
+    const result = read({ d2: [stop('airport', 'p1', 0, '09:35')] }, [
+      journey('flight', { arrivalDayId: 'd2', arrivalTime: '09:35' }),
+    ])
+    expect(dayOf(result, 'd2')).toEqual([leg('flight', 'd2'), 'airport'])
+    expect(
+      planMoveOutcome(
+        result.serverOrder,
+        'airport',
+        { container: 'd2', index: 0 },
+        result,
+      ),
+    ).toMatchObject({ kind: 'ask-drop-time' })
+  })
+})
+
+describe('planBoard — date offsets and fallback', () => {
+  const readDated = (
+    extra: Partial<PlanTransport>,
+    timezone: string | null = 'Asia/Tokyo',
+    date: string | null = '2026-04-17',
+  ) =>
+    planBoard(
+      {
+        ...board([
+          {
+            ...day('d1', 1, [
+              stop('early', 'p1', 0, '08:00'),
+              stop('late', 'p2', 2, '23:00'),
+            ]),
+            date,
+          },
+        ]),
+        timezone,
+      },
+      notes([note('attached', 'd1', 1)]),
+      transports([
+        journey('j1', {
+          position: 0.5,
+          departureTime: '16:30',
+          departureDate: '2026-04-17',
+          departureTimezone: 'America/Los_Angeles',
+          ...extra,
+        }),
+      ]),
+    )
+
+  it('retains the next-date offset instead of sorting by the converted early-morning clock', () => {
+    const result = readDated({})
+    expect(dayOf(result, 'd1')).toEqual([
+      'early',
+      'late',
+      leg('j1'),
+      'note:attached',
+    ])
+  })
+
+  it.each([
+    { departureDate: null },
+    { departureDate: '2026-02-30' },
+    { departureDate: 'bad-date' },
+    { departureTimezone: null },
+    { departureTimezone: 'Invalid/Zone' },
+  ])(
+    'falls back to wall clocks for incomplete endpoint metadata %j',
+    (extra) => {
+      expect(dayOf(readDated(extra), 'd1')).toEqual([
+        'early',
+        leg('j1'),
+        'note:attached',
+        'late',
+      ])
+    },
+  )
+
+  it.each([null, 'Invalid/Zone'])(
+    'does not invent a trip zone for %s',
+    (zone) => {
+      expect(dayOf(readDated({}, zone), 'd1')).toEqual([
+        'early',
+        leg('j1'),
+        'note:attached',
+        'late',
+      ])
+    },
+  )
+
+  it.each([null, '2026-02-30'])(
+    'supports undated or invalid day dates %s',
+    (date) => {
+      expect(dayOf(readDated({}, 'Asia/Tokyo', date), 'd1')).toEqual([
+        'early',
+        leg('j1'),
+        'note:attached',
+        'late',
+      ])
+    },
+  )
+
+  it('preserves departure ties and stop/note order', () => {
+    const result = read(
+      { d1: [stop('a', 'p1', 0, '09:35')] },
+      [journey('j1', { departureTime: '09:35' })],
+      [note('n', 'd1', 0.5, { time: '09:35' })],
+    )
+    expect(dayOf(result, 'd1')).toEqual(['a', leg('j1'), 'note:n'])
+  })
+})
+
+it('compares each multi-day endpoint in its own date and zone while leaving the crossed day untimed', () => {
+  const payload = {
+    ...board([
+      { ...day('d1', 1, [stop('a', 'p1', 0, '23:00')]), date: '2026-04-16' },
+      { ...day('d2', 2, [stop('b', 'p2', 0)]), date: '2026-04-17' },
+      { ...day('d3', 3, [stop('c', 'p3', 0, '09:35')]), date: '2026-04-18' },
+    ]),
+    timezone: 'Asia/Tokyo',
+  }
+  const result = planBoard(
+    payload,
+    notes([]),
+    transports([
+      journey('j1', {
+        kind: 'leg',
+        arrivalDayId: 'd3',
+        departureDate: '2026-04-16',
+        departureTime: '13:20',
+        departureTimezone: 'Europe/London',
+        arrivalDate: '2026-04-18',
+        arrivalTime: '09:35',
+        arrivalTimezone: 'Asia/Tokyo',
+        position: 0.5,
+      }),
+    ]),
+  )
+  expect(dayOf(result, 'd1')).toEqual([legItemId('leg', 'd1', 'j1'), 'a'])
+  expect(dayOf(result, 'd2')).toEqual([legItemId('leg', 'd2', 'j1'), 'b'])
+  expect(dayOf(result, 'd3')).toEqual([legItemId('leg', 'd3', 'j1'), 'c'])
+  expect(result.timeOfItem(legItemId('leg', 'd2', 'j1'))).toBeNull()
+})
+
+it('compares a valid endpoint before the DST switch at its real instant', async () => {
+  const { planMoveOutcome } = await import('../plan-move')
+  const result = planBoard(
+    {
+      ...board([
+        {
+          ...day('d1', 1, [
+            stop('a', 'p1', 0, '00:00'),
+            stop('b', 'p2', 1, '01:00'),
+          ]),
+          date: '2026-03-29',
+        },
+      ]),
+      timezone: 'UTC',
+    },
+    notes([]),
+    transports([
+      journey('j1', {
+        departureDate: '2026-03-29',
+        departureTime: '01:30',
+        departureTimezone: 'Europe/Berlin',
+      }),
+    ]),
+  )
+  expect(dayOf(result, 'd1')).toEqual(['a', leg('j1'), 'b'])
+  expect(
+    planMoveOutcome(
+      result.serverOrder,
+      leg('j1'),
+      { container: 'd1', index: 0 },
+      result,
+    ),
+  ).toEqual({ kind: 'refused', reason: 'timed' })
 })
