@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest'
+import { previewPdf } from '../preview-pdf'
 
 const { load, destroy, render, cancel, textCancel, textRender } = vi.hoisted(
   () => ({
@@ -21,7 +22,6 @@ vi.mock('pdfjs-dist', () => ({
     cancel = textCancel
   },
 }))
-import { previewPdf } from '../preview-pdf'
 
 afterEach(() => vi.resetAllMocks())
 
