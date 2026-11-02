@@ -735,7 +735,13 @@ export function PlanScreen({
       markPending(itemId, true)
 
       void applyChange(outcome.change, outcome.order, drop ? itemId : null)
-        .then(() => router.invalidate())
+        .then(async () => {
+          try {
+            await router.invalidate()
+          } catch {
+            // The write committed; a failed refresh must not undo it or report a save failure.
+          }
+        })
         .catch(async (cause: unknown) => {
           const focusedRow = document.activeElement?.closest(
             '[data-planner-item], [data-planner-note]',

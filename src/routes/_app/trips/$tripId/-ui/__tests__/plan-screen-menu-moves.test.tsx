@@ -58,6 +58,7 @@ beforeEach(() => {
   window.sessionStorage.clear()
   mocks.write.mockReset().mockReturnValue(new Promise(() => {}))
   mocks.error.mockClear()
+  mocks.invalidate.mockReset().mockResolvedValue(undefined)
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query: string) => ({
@@ -271,3 +272,20 @@ it('restores the source when rollback removes a different control of the moved s
     expect(row('stop', 'd1').contains(document.activeElement)).toBe(true),
   )
 })
+
+it.each(['stop', 'note'] as const)(
+  '%s keeps the saved move and focus when refreshing the board fails',
+  async (kind) => {
+    mocks.write.mockResolvedValue(undefined)
+    mocks.invalidate.mockRejectedValue(new Error('Refresh failed'))
+    mount()
+    await move(kind)
+    await waitFor(() => expect(mocks.invalidate).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(row(kind, 'd2').contains(document.activeElement)).toBe(true),
+    )
+    expect(announcement().textContent).toContain('Moved ')
+    expect(announcement().textContent).not.toContain('did not save')
+    expect(mocks.error).not.toHaveBeenCalled()
+  },
+)
