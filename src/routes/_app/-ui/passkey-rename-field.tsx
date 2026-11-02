@@ -25,6 +25,7 @@ const MAX_NAME_LENGTH = 64
  *   control pressed, or a failed save started by a key).
  */
 export function PasskeyRenameField({
+  inputId,
   initial,
   saving,
   error,
@@ -32,6 +33,7 @@ export function PasskeyRenameField({
   onSubmit,
   onCancel,
 }: {
+  inputId?: string
   /** The stored name, or an empty string for a passkey that has none. */
   initial: string
   saving: boolean
@@ -88,6 +90,7 @@ export function PasskeyRenameField({
   return (
     <Field
       data-part="passkey-rename-field"
+      htmlFor={inputId}
       label={t('settings.passkeys.rename.fieldLabel')}
       error={error}
       className="mt-2"
