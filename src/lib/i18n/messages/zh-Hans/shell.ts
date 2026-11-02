@@ -81,6 +81,8 @@ const messages = {
   'language.trigger': '语言：{language}。更改语言',
   'language.hint': '已记在此设备上。登录后将使用你账户中设置的语言，你可以在设置中更改。',
   'language.announce': '语言已更改为{language}',
+  'language.signedIn':
+    '你已登录。现在使用你的个人语言或工作空间语言。请在设置中更改。',
   'language.notApplied': '此浏览器没有保存你的选择。请允许此网站使用 Cookie，然后重新选择。',
   'bell.none': '通知，没有未读',
   'bell.unread': { other: '通知，{unread} 条未读' },

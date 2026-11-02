@@ -105,7 +105,7 @@ export function LanguageSwitcher({
   save,
   className,
 }: {
-  /** The visitor write; resolves to the language that was stored. */
+  /** The visitor write; a signed-in request leaves preferences untouched. */
   readonly save: (locale: Locale) => Promise<{ readonly locale: Locale }>
   readonly className?: string
 }) {
@@ -166,7 +166,20 @@ export function LanguageSwitcher({
         save: async () => save(next),
         // `forcePending` runs the load in the foreground, so what the checks
         // below read is the outcome and not the page before it.
-        refresh: () => router.invalidate({ forcePending: true }),
+        refresh: async () => {
+          await router.invalidate({ forcePending: true })
+          // The signed-in refresh removes both picker and trigger.
+          if (
+            rootData(router.state.matches)?.signedIn === true &&
+            focusIsFree()
+          ) {
+            const main = document.querySelector<HTMLElement>('main')
+            if (main) {
+              main.tabIndex = -1
+              main.focus()
+            }
+          }
+        },
         // The root loader never rejects: when negotiating or loading the
         // catalogue fails it answers with no messages. Recovery copy is supplied
         // only to the document provider. This is a failed refresh,
@@ -174,10 +187,11 @@ export function LanguageSwitcher({
         refreshed: () =>
           !router.state.matches.some((match) => match.status === 'error') &&
           hasMessages(rootData(router.state.matches)?.messages),
-        // The root loader answers with the language the request negotiated: a
-        // browser that dropped the cookie, or a caller who is signed in, leaves
-        // it where it was.
-        applied: () => rootData(router.state.matches)?.locale === next,
+        // A matching account locale is still a visitor no-op; only an anonymous
+        // refresh can confirm that the visitor choice took effect.
+        applied: () =>
+          rootData(router.state.matches)?.signedIn !== true &&
+          rootData(router.state.matches)?.locale === next,
         translatorFor: async (target) =>
           createTranslator(target, await loadCatalogue(target)),
       },
@@ -200,7 +214,13 @@ export function LanguageSwitcher({
         return
       }
       case 'unapplied':
-        toast.warning((await translatorOnScreen())('shell.language.notApplied'))
+        toast.warning(
+          (await translatorOnScreen())(
+            rootData(router.state.matches)?.signedIn === true
+              ? 'shell.language.signedIn'
+              : 'shell.language.notApplied',
+          ),
+        )
         return
       case 'switched':
         // Focus goes back only if nobody has moved it since: a person who

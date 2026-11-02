@@ -145,14 +145,17 @@ this request speaks"):
 export const saveVisitorLanguage = createServerFn({ method: 'POST' })
   .validator(z.object({ locale: localeSchema })) // the 23-tag z.enum; no '' here, there is nothing to clear
   .handler(async ({ data }) => {
-    writeVisitorLocaleCookie(data.locale)
+    if ((await getSession()) === null) writeVisitorLocaleCookie(data.locale)
     return { locale: data.locale }
   })
 ```
 
-- It needs no session and writes no row. It is a POST, so the CSRF middleware in `src/start.ts` applies unchanged (it covers every
-  server function, signed in or not, so another site cannot set the cookie). The `z.enum` rules out response splitting. With no
-  database call it needs no rate limit.
+- It permits anonymous requests and writes no row. Each write resolves the server session; signed-in requests leave all
+  preferences untouched, and lookup failures write nothing (#1496). A stale picker refreshes and explains that personal/workspace
+  language applies and is changed in Settings, including when the attempted language already matches. It is a POST, so the CSRF
+  middleware in `src/start.ts` applies unchanged (it covers every
+  server function, signed in or not, so another site cannot set the cookie). The `z.enum` rules out response splitting. The anonymous
+  path makes no application database call and needs no rate limit.
 - `saveLanguagePreference` (`src/routes/_app/-server/settings.ts`) additionally sets the same cookie to the language now **in
   force** after its write (the stored override, or the workspace default when the override was cleared), by calling the exported
   `writeVisitorLocaleCookie(locale)`; the language in force is read with `getEffectiveSettings(scope).locale` after the write (one
@@ -203,9 +206,9 @@ takes its save as a prop, like `LanguagePicker`; the route-level wrappers decide
   and `stale` (the cookie was written but the catalogue chunk failed; the existing `settings.language.reload.title` /
   `reload.body`). It gains one optional dependency, `applied: () => boolean`, and one outcome, **`unapplied`**: when the caller
   supplies `applied` and it answers `false` after the refresh, the status is `unapplied` instead of `switched`. The visitor path
-  supplies `applied` = "the root loader's `locale` now equals the language asked for". The settings path does not supply it and is
+  supplies `applied` = "the root loader remains signed out and its `locale` equals the language asked for". The settings path does not supply it and is
   unchanged. `unapplied` covers a browser that did not keep the cookie and a caller who turned out to be signed in; it never claims
-  success: no announcement, and a toast with `shell.language.notApplied` in the language **still on screen**.
+  success: no announcement, and a toast in the language **still on screen**. Anonymous cookie rejection uses `shell.language.notApplied`; a signed-in no-op uses `shell.language.signedIn` with Settings guidance.
 - **After a successful switch** the popover closes, focus returns to the trigger (whose name now carries the new language), and a
   polite live region announces `shell.language.announce`. The live region lives in `LanguageSwitcher` **outside** the portalled
   popover (it must outlive the popover and be in the DOM before its text is set), the pending state and the result are held in the
@@ -316,7 +319,7 @@ the organization created in this sign-up and the user created in this sign-up.
 
 | Function / hook                                           | Input                                                                            | Output                                                    | Auth                     |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------ |
-| `saveVisitorLanguage` (new, POST)                         | `{ locale }`, the 23-tag `z.enum`; anything else is a validation error           | `{ locale }`; sets `planned.locale`                       | none (anonymous allowed) |
+| `saveVisitorLanguage` (new, POST)                         | `{ locale }`, the 23-tag `z.enum`; anything else is a validation error           | `{ locale }`; sets `planned.locale` only when anonymous                       | none (anonymous allowed) |
 | `saveLanguagePreference` (existing)                       | unchanged                                                                        | unchanged; also sets the cookie to the language in force  | session, as today        |
 | `negotiateRequestLocale` (existing, GET)                  | none                                                                             | `{ locale, dir, signedIn }`; reads the cookie as step 3   | reads the session cookie |
 | `negotiate({ user, workspace, visitor, acceptLanguage })` | `visitor` new, optional                                                          | a shipped tag                                             | pure                     |

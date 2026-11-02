@@ -111,6 +111,8 @@ const messages = {
   'language.hint':
     'Zapamiętany na tym urządzeniu. Po zalogowaniu obowiązuje język ustawiony w Twoim koncie; możesz go zmienić w Ustawieniach.',
   'language.announce': 'Zmieniono język na {language}',
+  'language.signedIn':
+    'Jesteś zalogowany. Obowiązuje teraz język osobisty lub przestrzeni roboczej. Zmienisz go w Ustawieniach.',
   'language.notApplied':
     'Ta przeglądarka nie zachowała Twojego wyboru. Zezwól na pliki cookie dla tej witryny i wybierz ponownie.',
 
