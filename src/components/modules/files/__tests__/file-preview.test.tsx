@@ -14,10 +14,12 @@ import Ui from '#/lib/i18n/messages/en/ui'
 import { FilePreview } from '../file-preview'
 import type { FileData } from '../types'
 
-const { fetchBytes, save } = vi.hoisted(() => ({
+const { fetchBytes, save, raster } = vi.hoisted(() => ({
   fetchBytes: vi.fn(),
   save: vi.fn(),
+  raster: vi.fn(),
 }))
+vi.mock('../preview-image', () => ({ previewImage: raster }))
 vi.mock('../download', () => ({
   fetchTripFileBytes: fetchBytes,
   saveBlob: save,
@@ -38,6 +40,9 @@ beforeEach(() => {
   fetchBytes
     .mockReset()
     .mockResolvedValue(new Blob(['bytes'], { type: 'image/png' }))
+  raster
+    .mockReset()
+    .mockResolvedValue(new Blob(['pixels'], { type: 'image/png' }))
   save.mockReset()
   revoke.mockReset()
   close.mockReset()
@@ -117,11 +122,15 @@ it.each(['application/pdf', 'text/plain'])(
     )
   },
 )
-it('renders SVG only as an image', async () => {
+it('renders SVG only as a rasterized image', async () => {
   fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
   open()
   await screen.findByRole('img')
   expect(document.querySelector('iframe')).toBeNull()
+  expect(raster).toHaveBeenCalledWith(expect.any(Blob))
+  expect(URL.createObjectURL).toHaveBeenCalledWith(
+    expect.objectContaining({ type: 'image/png' }),
+  )
 })
 it.each(['text/html', 'application/zip'])(
   'downloads unsupported %s without a preview URL',
@@ -228,4 +237,36 @@ it('moves focus to the filename before navigation disables its control', async (
   expect(document.activeElement).toBe(
     screen.getByRole('heading', { name: 'two.png' }),
   )
+})
+
+it('discards rasterization that completes after the preview closes', async () => {
+  let finish: (blob: Blob) => void = () => {}
+  raster.mockReturnValue(
+    new Promise<Blob>((resolve) => {
+      finish = resolve
+    }),
+  )
+  fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
+  const view = open()
+  await waitFor(() => expect(raster).toHaveBeenCalledOnce())
+  view.unmount()
+  finish(new Blob(['pixels'], { type: 'image/png' }))
+  await waitFor(() => expect(URL.createObjectURL).not.toHaveBeenCalled())
+})
+
+it('recovers from failed SVG rasterization without exposing the markup', async () => {
+  raster.mockRejectedValue(new Error('Invalid SVG'))
+  fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
+  open()
+  await screen.findByRole('alert')
+  expect(URL.createObjectURL).not.toHaveBeenCalled()
+})
+
+it('downloads original SVG bytes while displaying rasterized pixels', async () => {
+  const original = new Blob(['<svg/>'], { type: 'image/svg+xml' })
+  fetchBytes.mockResolvedValue(original)
+  open()
+  await screen.findByRole('img')
+  fireEvent.click(screen.getByRole('button', { name: 'Download one.png' }))
+  expect(save).toHaveBeenCalledWith(original, 'one.png')
 })
