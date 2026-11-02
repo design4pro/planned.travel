@@ -100,6 +100,8 @@ const messages = {
   'language.hint':
     'Ricordata su questo dispositivo. Dopo l’accesso vale la lingua impostata nel tuo account; puoi cambiarla in Impostazioni.',
   'language.announce': 'Lingua cambiata in {language}',
+  'language.signedIn':
+    'Hai effettuato l’accesso. Ora si applica la tua lingua personale o quella dello spazio di lavoro. Cambiala nelle Impostazioni.',
   'language.notApplied':
     'Questo browser non ha conservato la tua scelta. Consenti i cookie per questo sito, poi scegli di nuovo.',
 

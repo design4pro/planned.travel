@@ -105,6 +105,8 @@ const messages = {
   'language.hint':
     'Es recorda en aquest dispositiu. Quan inicieu la sessió, s’aplica l’idioma definit al vostre compte; el podeu canviar a Configuració.',
   'language.announce': 'S’ha canviat l’idioma a {language}',
+  'language.signedIn':
+    'Has iniciat la sessió. Ara s’aplica la teva llengua personal o la de l’espai de treball. Canvia-la a Configuració.',
   'language.notApplied':
     'Aquest navegador no ha conservat la vostra tria. Permeteu les galetes d’aquest lloc i torneu a triar.',
 

@@ -108,6 +108,8 @@ const messages = {
   'language.hint':
     'Pamatuje se na tomto zařízení. Po přihlášení platí jazyk nastavený ve vašem účtu; změnit jej můžete v Nastavení.',
   'language.announce': 'Jazyk byl změněn na {language}',
+  'language.signedIn':
+    'Jste přihlášeni. Nyní platí váš osobní jazyk nebo jazyk pracovního prostoru. Změníte ho v Nastavení.',
   'language.notApplied':
     'Tento prohlížeč vaši volbu nezachoval. Povolte pro tento web cookies a vyberte jazyk znovu.',
 

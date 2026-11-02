@@ -85,6 +85,8 @@ const messages = {
   'language.trigger': '言語: {language}。言語を変更',
   'language.hint': 'この端末に保存されます。ログインすると、アカウントで設定した言語が適用されます。設定で変更できます。',
   'language.announce': '言語を{language}に変更しました',
+  'language.signedIn':
+    'ログインしています。個人またはワークスペースの言語が適用されます。設定で変更できます。',
   'language.notApplied':
     'このブラウザーは選択を保存しませんでした。このサイトのCookieを許可してから、もう一度選択してください。',
   'bell.none': '通知、未読はありません',

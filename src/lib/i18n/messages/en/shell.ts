@@ -152,6 +152,8 @@ const messages = {
   'language.hint':
     'Remembered on this device. Once you sign in, the language set in your account applies; you can change it in Settings.',
   'language.announce': 'Language changed to {language}',
+  'language.signedIn':
+    'You are signed in. Your personal or workspace language now applies. Change it in Settings.',
   'language.notApplied':
     'This browser did not keep your choice. Allow cookies for this site, then choose again.',
 

@@ -77,11 +77,37 @@ describe('visitor save', () => {
       expect(response.headers.get('set-cookie')).toBe(
         `planned.locale=${locale}; Max-Age=31536000; Path=/; HttpOnly; Secure; SameSite=Lax`,
       )
-      expect(state.session).not.toHaveBeenCalled()
+      expect(state.session).toHaveBeenCalledTimes(1)
       expect(state.update).not.toHaveBeenCalled()
       expect(state.effective).not.toHaveBeenCalled()
     },
   )
+
+  it('leaves every preference untouched for a signed-in request', async () => {
+    state.session.mockResolvedValue({ user: { id: 'member' } })
+    const { response } = await request(
+      'https://planned.travel/_serverFn/language',
+      () => saveVisitorLanguage({ data: { locale: 'pl' } }),
+      { cookie: 'planned.locale=de' },
+    )
+    expect(response.status).toBe(204)
+    expect(response.headers.get('set-cookie')).toBeNull()
+    expect(state.session).toHaveBeenCalledTimes(1)
+    expect(state.update).not.toHaveBeenCalled()
+    expect(state.effective).not.toHaveBeenCalled()
+  })
+
+  it('does not mutate preferences when session lookup fails', async () => {
+    state.session.mockRejectedValue(new Error('session unavailable'))
+    const { response } = await request(
+      'https://planned.travel/_serverFn/language',
+      () => saveVisitorLanguage({ data: { locale: 'pl' } }),
+    )
+    expect(response.status).toBe(500)
+    expect(response.headers.get('set-cookie')).toBeNull()
+    expect(state.update).not.toHaveBeenCalled()
+    expect(state.effective).not.toHaveBeenCalled()
+  })
 
   it.each(['', 'is', 'constructor', '__proto__', 'pl\r\nX-Test: injected'])(
     'rejects %s before writing',

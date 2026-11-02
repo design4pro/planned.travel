@@ -116,6 +116,8 @@ const messages = {
   'language.hint':
     'Diingat di perangkat ini. Setelah Anda masuk, bahasa yang diatur di akun Anda berlaku; Anda bisa mengubahnya di Pengaturan.',
   'language.announce': 'Bahasa diubah ke {language}',
+  'language.signedIn':
+    'Anda sudah masuk. Bahasa pribadi atau ruang kerja Anda kini berlaku. Ubah di Pengaturan.',
   'language.notApplied':
     'Peramban ini tidak menyimpan pilihan Anda. Izinkan cookie untuk situs ini, lalu pilih lagi.',
 

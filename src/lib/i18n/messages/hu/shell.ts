@@ -106,6 +106,8 @@ const messages = {
   'language.hint':
     'Ezen az eszközön megjegyezzük. Bejelentkezés után a fiókodban beállított nyelv érvényes; a Beállításokban módosíthatod.',
   'language.announce': 'A nyelv módosítva: {language}',
+  'language.signedIn':
+    'Be vagy jelentkezve. Most a személyes nyelved vagy a munkaterület nyelve érvényes. A Beállításokban módosíthatod.',
   'language.notApplied':
     'Ez a böngésző nem tartotta meg a választásodat. Engedélyezd a sütiket ezen az oldalon, majd válassz újra.',
 

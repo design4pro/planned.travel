@@ -106,6 +106,8 @@ const messages = {
   'language.hint':
     'Bu cihazda hatırlanır. Giriş yaptığınızda hesabınızda ayarlanan dil geçerli olur; bunu Ayarlar’dan değiştirebilirsiniz.',
   'language.announce': 'Dil {language} olarak değiştirildi',
+  'language.signedIn':
+    'Oturum açtınız. Artık kişisel diliniz veya çalışma alanınızın dili geçerli. Ayarlar’dan değiştirebilirsiniz.',
   'language.notApplied':
     'Bu tarayıcı seçiminizi saklamadı. Bu site için çerezlere izin verin, ardından yeniden seçin.',
 
