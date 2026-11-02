@@ -1,5 +1,5 @@
 {
-  "defaultRunner": "claude",
+  "defaultRunner": "codex",
   "reviewGate": false,
   "baseBranch": "develop",
   "worktreeRetention": 10,
@@ -7,6 +7,7 @@
   "skillsRepos": [],
   "systemPrompt": "Talk to the developer in Polish: every message of this session, progress notes, every question (CEZ:ASK - the question, the option labels and their descriptions) and the final report. Everything that leaves the session stays in English: code and code comments, commit messages, branch names and pull request titles, file names and file contents (docs, ADRs, CONTEXT.md, skills, drafts under .agent/), and everything that reaches GitHub (issue bodies, comments, the grilling log). Identifiers, technical terms and quoted output stay as they are. In Polish prose write \"-\", never the long dash.",
   "defaultModels": {
-    "claude": "claude-sonnet-5-5"
+    "claude": "claude-sonnet-5-5",
+    "codex": "gpt-6.1-sol"
   }
 }

@@ -932,8 +932,13 @@ const messages = {
   'files.action.upload': 'Unggah berkas',
   'files.places.title': 'Berkas tempat',
   'files.places.description':
-    'Unduh tempat dalam perjalanan ini sebagai GeoJSON, termasuk tempat tanpa koordinat.',
+    'Unduh tempat perjalanan ini sebagai GeoJSON atau GPX. GPX hanya menyertakan tempat dengan koordinat yang valid; GeoJSON menyimpan semua tempat.',
   'files.places.action': 'Unduh tempat (.geojson)',
+  'files.places.gpxAction': 'Unduh tempat (.gpx)',
+  'files.places.gpxDone':
+    'GPX diunduh. Tempat yang dilewati tanpa koordinat valid: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'GPX diunduh tanpa titik. Semua tempat dilewati karena tidak memiliki koordinat valid: {formattedCount}.',
   'files.places.empty':
     'Tambahkan tempat ke perjalanan ini untuk mengunduhnya.',
   'files.places.error': 'Berkas tempat tidak dapat disiapkan. Coba lagi.',

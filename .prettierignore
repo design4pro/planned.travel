@@ -3,6 +3,8 @@ pnpm-lock.yaml
 yarn.lock
 # Claude Code orchestration scripts and run state.
 .claude/
+# Installed skills and their template assets stay byte-identical to upstream.
+.agents/skills/
 # om-* pipeline descriptors, installed verbatim from the om-setup-agent-pipeline
 # skill's references; kept byte-identical so upgrades diff cleanly.
 .ai/trackers

@@ -18,6 +18,7 @@
   "ignorePatterns": [
     "prettier.config.js",
     ".claude/**",
+    ".agents/skills/**",
     // Agent tooling that GitHub's own surfaces read - skills, agent definitions, hooks. Same
     // reason `.claude/**` is here: vendored configuration for tools around the project, not
     // application source.

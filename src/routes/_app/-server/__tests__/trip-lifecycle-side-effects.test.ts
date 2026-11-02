@@ -127,12 +127,15 @@ vi.mock('#/server/observability', async (importOriginal) => {
  */
 vi.mock('#/server/auth/env', () => ({
   taskQueue: () => ({
-    // Recorded like a batch of one: a single-envelope producer — the `trip-copy` message — goes
-    // through `send`, and the assertions read every envelope the same way whichever verb sent it.
+    // Recorded like a batch of one: copy and byte-bounded purge envelopes go through `send`.
+    // Assertions read every envelope the same way whichever verb sent it.
     send: async (body: unknown) => {
       if (stubs.queueRejects) {
         throw new Error('TASKS binding is unreachable')
       }
+      expect(
+        new TextEncoder().encode(JSON.stringify(body)).length,
+      ).toBeLessThanOrEqual(127_900)
       stubs.batches.push([body])
       return undefined
     },
@@ -140,6 +143,14 @@ vi.mock('#/server/auth/env', () => ({
       if (stubs.queueRejects) {
         throw new Error('TASKS binding is unreachable')
       }
+      expect(messages.length).toBeLessThanOrEqual(100)
+      const sizes = messages.map(
+        ({ body }) => new TextEncoder().encode(JSON.stringify(body)).length,
+      )
+      expect(sizes.every((size) => size <= 127_900)).toBe(true)
+      expect(
+        sizes.reduce((sum, size) => sum + size + 100, 0),
+      ).toBeLessThanOrEqual(256_000)
       stubs.batches.push(messages.map((message) => message.body))
       return undefined
     },
@@ -1011,14 +1022,14 @@ describe('the storage purge a delete leaves behind', () => {
       const keys = Array.from(
         { length: QUEUE_BATCH_MAX * MAX_PURGE_KEYS + 1 },
         (_unused, index) =>
-          `exports/${tenant.organizationId}/${tripId}/task_${String(index).padStart(6, '0')}.pdf`,
+          `exports/${tenant.organizationId}/${tripId}/${'旅'.repeat(100)}_${String(index).padStart(6, '0')}.pdf`,
       )
       stubs.bucket = fakeBucket(keys)
       stubs.batches = []
 
       await deleteTrip({ tripId })
 
-      // The delete's own statistics envelope travels in a batch of its own; the purge is cut at the bound.
+      // Inspect delivery rather than packing: both the byte and count bounds apply.
       const purgeBatches = stubs.batches
         .map((batch) =>
           batch.filter(
@@ -1026,20 +1037,60 @@ describe('the storage purge a delete leaves behind', () => {
           ),
         )
         .filter((batch) => batch.length > 0)
-      expect(purgeBatches.map((batch) => batch.length)).toEqual([
-        QUEUE_BATCH_MAX,
-        1,
-      ])
+      expect(purgeBatches.length).toBeGreaterThan(1)
+      expect(
+        purgeBatches.every((batch) => batch.length <= QUEUE_BATCH_MAX),
+      ).toBe(true)
       const enqueued = purges()
-      expect(enqueued).toHaveLength(QUEUE_BATCH_MAX + 1)
+      expect(enqueued.length).toBeGreaterThan(QUEUE_BATCH_MAX)
+      expect(
+        enqueued.every((envelope) => envelope.orgId === tenant.organizationId),
+      ).toBe(true)
       expect(new Set(enqueued.map((envelope) => envelope.id)).size).toBe(
-        QUEUE_BATCH_MAX + 1,
+        enqueued.length,
       )
       expect(
         enqueued.flatMap((envelope) => envelope.payload.keys).sort(),
       ).toEqual(keys)
       expect(stubs.warnings).toEqual([])
     }, 60_000)
+
+    it('fits near-maximum multibyte and JSON-escaped keys inside complete envelopes', async () => {
+      const tripId = await bareTrip('Long export keys')
+      const keys = Array.from(
+        { length: MAX_PURGE_KEYS + 1 },
+        (_, index) =>
+          `exports/${tenant.organizationId}/${tripId}/${String(index).padStart(6, '0')}_${(index % 2 === 0 ? '旅' : '"').repeat(900)}.pdf`,
+      )
+      stubs.bucket = fakeBucket(keys)
+      stubs.batches = []
+
+      await deleteTrip({ tripId })
+
+      const enqueued = purges()
+      expect(enqueued.length).toBeGreaterThan(2)
+      expect(
+        enqueued.flatMap((envelope) => envelope.payload.keys).sort(),
+      ).toEqual(keys)
+      expect(stubs.warnings).toEqual([])
+    })
+
+    it('logs one warning and preserves deletion when a purge envelope is invalid', async () => {
+      const tripId = await bareTrip('Invalid export key')
+      stubs.bucket = fakeBucket([
+        `exports/${tenant.organizationId}/${tripId}/${'a'.repeat(1024)}.pdf`,
+      ])
+      stubs.batches = []
+
+      await expect(deleteTrip({ tripId })).resolves.toBeUndefined()
+
+      expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+      expect(purges()).toEqual([])
+      expect(stubs.warnings).toHaveLength(1)
+      expect(stubs.warnings[0]?.message).toBe(
+        'the storage purge for a deleted trip was not enqueued',
+      )
+    })
 
     it('carries the exports beside the attachments and the cover in one envelope', async () => {
       const { tripId, fileKey, coverKey } = await tripWithObjects()
@@ -1139,6 +1190,12 @@ describe('the storage purge a delete leaves behind', () => {
       deleteTrip({ tripId, confirmTitle: 'Lisbon in April' }),
     ).resolves.toBeUndefined()
     expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
+    expect(
+      stubs.warnings.filter(
+        ({ message }) =>
+          message === 'the storage purge for a deleted trip was not enqueued',
+      ),
+    ).toHaveLength(1)
   })
 
   it('fans the statistics out to the members the trip had, read before the cascade', async () => {
