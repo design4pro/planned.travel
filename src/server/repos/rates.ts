@@ -128,6 +128,7 @@ function readableTripIds(scope: TenantScope) {
  * both do.
  */
 interface FrozenRateColumns {
+  readonly originalAmountMinor: SQLiteColumn
   readonly originalCurrency: SQLiteColumn
   readonly currency: SQLiteColumn
   readonly exchangeRate: SQLiteColumn
@@ -136,8 +137,9 @@ interface FrozenRateColumns {
 
 /**
  * What makes a row an observation of a frozen rate, in one place: it records a source currency
- * different from its own and a positive rate, on a trip the caller can read. `pair` narrows it to
- * one ordered pair; without it every pair qualifies, which is what lists the codes a rate answers for.
+ * different from its own, a nonzero source amount and a positive rate, on a trip the caller can read.
+ * `pair` narrows it to one ordered pair; without it every pair qualifies, which lists the codes
+ * a rate answers for.
  */
 function frozenRatePredicates(
   scope: TenantScope,
@@ -148,6 +150,7 @@ function frozenRatePredicates(
     pair === undefined ? undefined : eq(table.originalCurrency, pair.from),
     pair?.to === undefined ? undefined : eq(table.currency, pair.to),
     ne(table.originalCurrency, table.currency),
+    ne(table.originalAmountMinor, 0),
     isNotNull(table.exchangeRate),
     gt(table.exchangeRate, 0),
     inArray(table.tripId, readableTripIds(scope)),
@@ -156,8 +159,8 @@ function frozenRatePredicates(
 
 /**
  * The newest expense that froze a rate for the ordered pair, or `null`. A row is an observation
- * only when it records a source currency different from its own and a rate: the all-null row of a
- * payment made in the accounting currency is not one.
+ * only when it records a nonzero source amount, a source currency different from its own and a rate:
+ * the all-null row of a payment made in the accounting currency is not one.
  */
 async function newestExpenseObservation(
   scope: TenantScope,

@@ -139,6 +139,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} не переміщено. Переїзд лишається у своєму дні.',
   'plan.move.spoken.journeyTimed': '{name} не переміщено. Вирушає о {time}.',
+  'plan.move.spoken.accepted': 'Переміщено {name}: {destination}. Збереження.',
   'plan.move.error.save': 'Переміщення не збереглося',
   'plan.move.error.retry': 'Спробуйте ще раз за хвилину.',
   'plan.move.dropTime.title': 'Перемістити {name} і прибрати {time}?',

@@ -135,6 +135,8 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} no se ha movido. Un trayecto se queda en su día.',
   'plan.move.spoken.journeyTimed': '{name} no se ha movido. Sale a las {time}.',
+  'plan.move.spoken.accepted':
+    '{name} se ha movido a {destination}. Guardando.',
   'plan.move.error.save': 'Ese movimiento no se ha guardado',
   'plan.move.error.retry': 'Inténtalo de nuevo en un momento.',
   'plan.move.dropTime.title': '¿Mover {name} y quitar las {time}?',

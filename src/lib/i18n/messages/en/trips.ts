@@ -171,6 +171,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} was not moved. A journey stays on its own day.',
   'plan.move.spoken.journeyTimed': '{name} was not moved. It leaves at {time}.',
+  'plan.move.spoken.accepted': 'Moved {name} to {destination}. Saving.',
   'plan.move.error.save': 'That move did not save',
   'plan.move.error.retry': 'Try it again in a moment.',
   /**

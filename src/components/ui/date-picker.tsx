@@ -89,7 +89,13 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
       onChange,
     })
 
-    const field = useFieldControl({ id, 'aria-invalid': invalid, disabled })
+    const valueId = React.useId()
+    const field = useFieldControl({
+      id,
+      'aria-describedby': valueId,
+      'aria-invalid': invalid,
+      disabled,
+    })
     const hasValue = selected !== null && isValid(selected)
 
     return (
@@ -114,6 +120,7 @@ export const DatePicker = React.forwardRef<HTMLButtonElement, DatePickerProps>(
                 aria-hidden="true"
               />
               <span
+                id={valueId}
                 className={cn(
                   'min-w-0 flex-1 truncate',
                   !hasValue && 'text-ink-4',

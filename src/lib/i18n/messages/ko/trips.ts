@@ -133,6 +133,8 @@ const messages = {
     '{name}은(는) 이동하지 않았습니다. 이동은 자기 날에 남습니다.',
   'plan.move.spoken.journeyTimed':
     '{name}은(는) 이동하지 않았습니다. {time}에 출발합니다.',
+  'plan.move.spoken.accepted':
+    '{name} 항목을 {destination}(으)로 이동했습니다. 저장 중입니다.',
   'plan.move.error.save': '이동을 저장하지 못했습니다',
   'plan.move.error.retry': '잠시 후 다시 시도해 주세요.',
   'plan.move.dropTime.title': '{name}을(를) 옮기고 {time}을(를) 지울까요?',

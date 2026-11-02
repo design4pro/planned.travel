@@ -210,6 +210,7 @@ export function StopMenu({
   onDelete,
 }: StopMenuProps) {
   const t = useTranslate()
+  const moving = React.useRef(false)
   const elsewhere = days.filter((day) => day.dayNumber !== row.dayNumber)
 
   return (
@@ -227,6 +228,10 @@ export function StopMenu({
       <DropdownMenuContent
         align="end"
         className="max-w-[min(20rem,var(--radix-dropdown-menu-content-available-width))] min-w-56"
+        onCloseAutoFocus={(event) => {
+          if (moving.current) event.preventDefault()
+          moving.current = false
+        }}
       >
         <DropdownMenuItem icon={<PencilLine />} onSelect={onEditPlace}>
           {t('trips.plan.stop.menu.editPlace')}
@@ -257,15 +262,17 @@ export function StopMenu({
                 {elsewhere.map((day) => (
                   <DropdownMenuItem
                     key={day.dayId}
-                    onSelect={() => onMoveToDay(day.dayId)}
-                    icon={
-                      <span className="text-micro font-bold tabular-nums">
-                        {day.dayNumber}
-                      </span>
-                    }
+                    onSelect={() => {
+                      moving.current = true
+                      onMoveToDay(day.dayId)
+                    }}
                   >
-                    {day.title ??
-                      t('trips.plan.editor.dayNumber', { day: day.dayNumber })}
+                    {day.title === null
+                      ? t('trips.plan.editor.dayNumber', { day: day.dayNumber })
+                      : t('trips.plan.editor.dayNamed', {
+                          day: day.dayNumber,
+                          title: day.title,
+                        })}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuSubContent>
@@ -1016,6 +1023,7 @@ export function DeleteDialog({
  * ---------------------------------------------------------------------------------------------- */
 
 export interface DropTimeDialogProps {
+  readonly onCloseAutoFocus?: (event: Event) => void
   readonly open: boolean
   /** The place's name, or the note's headline — whatever the item is called. */
   readonly name: string
@@ -1040,6 +1048,7 @@ export interface DropTimeDialogProps {
  * performed go through, not to talk them out of it. Escape still declines.
  */
 export function DropTimeDialog({
+  onCloseAutoFocus,
   open,
   name,
   time,
@@ -1058,6 +1067,7 @@ export function DropTimeDialog({
     >
       <DialogContent
         size="sm"
+        onCloseAutoFocus={onCloseAutoFocus}
         onOpenAutoFocus={(event) => {
           event.preventDefault()
           confirmRef.current?.focus()

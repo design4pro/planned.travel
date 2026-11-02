@@ -138,6 +138,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} не перемещён. Переезд остаётся в своём дне.',
   'plan.move.spoken.journeyTimed': '{name} не перемещён. Отправление в {time}.',
+  'plan.move.spoken.accepted': '{name} перемещено в {destination}. Сохранение.',
   'plan.move.error.save': 'Перемещение не сохранилось',
   'plan.move.error.retry': 'Попробуйте ещё раз через минуту.',
   'plan.move.dropTime.title': 'Переместить {name} и убрать {time}?',
