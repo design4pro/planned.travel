@@ -944,8 +944,13 @@ const messages = {
   'files.action.upload': 'Bestanden uploaden',
   'files.places.title': 'Plaatsenbestand',
   'files.places.description':
-    'Download de plaatsen van deze reis als GeoJSON, ook plaatsen zonder coördinaten.',
+    'Download de plaatsen van deze reis als GeoJSON of GPX. GPX bevat alleen plaatsen met geldige coördinaten; GeoJSON behoudt alle plaatsen.',
   'files.places.action': 'Plaatsen downloaden (.geojson)',
+  'files.places.gpxAction': 'Plaatsen downloaden (.gpx)',
+  'files.places.gpxDone':
+    'GPX gedownload. Overgeslagen plaatsen zonder geldige coördinaten: {count}.',
+  'files.places.gpxAllOmitted':
+    'GPX zonder waypoints gedownload. Alle plaatsen zijn overgeslagen omdat ze geen geldige coördinaten hebben: {count}.',
   'files.places.empty': 'Voeg plaatsen toe aan deze reis om ze te downloaden.',
   'files.places.error':
     'Het plaatsenbestand kon niet worden voorbereid. Probeer het opnieuw.',

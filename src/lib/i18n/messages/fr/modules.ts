@@ -973,8 +973,13 @@ const messages = {
   'files.action.upload': 'Envoyer les fichiers',
   'files.places.title': 'Fichier des lieux',
   'files.places.description':
-    'Téléchargez les lieux de ce voyage au format GeoJSON, y compris ceux sans coordonnées.',
+    'Téléchargez les lieux de ce voyage en GeoJSON ou GPX. Le GPX contient uniquement les lieux avec des coordonnées valides ; le GeoJSON conserve tous les lieux.',
   'files.places.action': 'Télécharger les lieux (.geojson)',
+  'files.places.gpxAction': 'Télécharger les lieux (.gpx)',
+  'files.places.gpxDone':
+    'GPX téléchargé. Lieux omis sans coordonnées valides : {count}.',
+  'files.places.gpxAllOmitted':
+    'GPX téléchargé sans points de passage. Tous les lieux ont été omis faute de coordonnées valides : {count}.',
   'files.places.empty': 'Ajoutez des lieux à ce voyage pour les télécharger.',
   'files.places.error':
     'Impossible de préparer le fichier des lieux. Réessayez.',

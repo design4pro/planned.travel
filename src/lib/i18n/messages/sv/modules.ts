@@ -931,8 +931,13 @@ const messages = {
   'files.action.upload': 'Ladda upp filer',
   'files.places.title': 'Platsfil',
   'files.places.description':
-    'Ladda ner resans platser som GeoJSON, även platser utan koordinater.',
+    'Ladda ner resans platser som GeoJSON eller GPX. GPX innehåller bara platser med giltiga koordinater; GeoJSON behåller alla platser.',
   'files.places.action': 'Ladda ner platser (.geojson)',
+  'files.places.gpxAction': 'Ladda ner platser (.gpx)',
+  'files.places.gpxDone':
+    'GPX nedladdad. Utelämnade platser utan giltiga koordinater: {count}.',
+  'files.places.gpxAllOmitted':
+    'GPX nedladdad utan vägpunkter. Alla platser utelämnades eftersom de saknar giltiga koordinater: {count}.',
   'files.places.empty': 'Lägg till platser i resan för att ladda ner dem.',
   'files.places.error': 'Det gick inte att förbereda platsfilen. Försök igen.',
   'files.places.pending': 'Förbereder platsfilen…',

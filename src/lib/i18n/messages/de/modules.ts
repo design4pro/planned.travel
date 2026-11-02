@@ -956,8 +956,13 @@ const messages = {
   'files.action.upload': 'Dateien hochladen',
   'files.places.title': 'Ortedatei',
   'files.places.description':
-    'Lade die Orte dieser Reise als GeoJSON herunter, auch Orte ohne Koordinaten.',
+    'Lade die Orte dieser Reise als GeoJSON oder GPX herunter. GPX enthält nur Orte mit gültigen Koordinaten; GeoJSON behält alle Orte.',
   'files.places.action': 'Orte herunterladen (.geojson)',
+  'files.places.gpxAction': 'Orte herunterladen (.gpx)',
+  'files.places.gpxDone':
+    'GPX heruntergeladen. Ausgelassene Orte ohne gültige Koordinaten: {count}.',
+  'files.places.gpxAllOmitted':
+    'GPX ohne Wegpunkte heruntergeladen. Alle Orte wurden wegen fehlender gültiger Koordinaten ausgelassen: {count}.',
   'files.places.empty': 'Füge dieser Reise Orte hinzu, um sie herunterzuladen.',
   'files.places.error':
     'Die Ortedatei konnte nicht vorbereitet werden. Versuche es erneut.',

@@ -939,8 +939,13 @@ const messages = {
   'files.action.upload': 'Fájlok feltöltése',
   'files.places.title': 'Helyek fájlja',
   'files.places.description':
-    'Töltsd le az utazás helyeit GeoJSON formátumban, a koordináták nélküli helyekkel együtt.',
+    'Töltsd le az utazás helyeit GeoJSON vagy GPX formátumban. A GPX csak az érvényes koordinátájú helyeket tartalmazza; a GeoJSON minden helyet megőriz.',
   'files.places.action': 'Helyek letöltése (.geojson)',
+  'files.places.gpxAction': 'Helyek letöltése (.gpx)',
+  'files.places.gpxDone':
+    'GPX letöltve. Érvényes koordináták nélkül kihagyott helyek: {count}.',
+  'files.places.gpxAllOmitted':
+    'GPX letöltve útpontok nélkül. Érvényes koordináták hiányában minden hely kimaradt: {count}.',
   'files.places.empty': 'Adj helyeket az utazáshoz a letöltéshez.',
   'files.places.error':
     'Nem sikerült előkészíteni a helyek fájlját. Próbáld újra.',
