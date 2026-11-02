@@ -909,6 +909,5 @@ and in rules 1, 4 and 5 above, which now state them in place:
 Not decided here, and tracked as #1521: who clears a triple when an amount is edited (booking
 re-price, planned-item update), so the writers stop producing stale rows. Rows already stale in
 production are not migrated: the planner guard covers a stale triple at the next re-basing without a
-backfill, but zero-source rows an earlier re-basing wrote with a carried-over rate (other than the
-constant 1 above) still sit in the frozen-rate pool until their trip is re-based again, and
-`frozenRatePredicates` still reads them. Tracked as #1526.
+backfill, and historical zero-source rows remain unchanged. The read-side fix for #1526 excludes them from
+the frozen-rate pool through `frozenRatePredicates`, for expenses and payments alike.
