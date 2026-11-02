@@ -716,8 +716,8 @@ The real-router test `src/routes/_app/-ui/__tests__/atlas-reload.test.tsx` uses 
 route's loader and rendering options. A successful initial read followed by a rejected invalidation
 unmounts the atlas and renders the route error component. Per the conditional scope in #1121, the
 Stats failed alert, its four keys and its focus rules are therefore not built. The same unreachable
-country-card retry is tracked by #1456. The earlier failed-state descriptions above are design
-history, superseded by this measured branch.
+country-card retry was retired by #1456: Atlas owns retry and focus at the route error surface.
+The earlier failed-state descriptions above are design history, superseded by this measured branch.
 
 `ADD-06` is **done** with this final slice. The original gap matrix is no longer present (see
 `docs/plans/README.md`); this disposition records the historical row's completion. The implementation

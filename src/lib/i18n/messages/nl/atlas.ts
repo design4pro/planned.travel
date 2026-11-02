@@ -354,8 +354,6 @@ const messages = {
   'card.absent': 'Niet vastgelegd',
   'card.loading': 'Land laden',
   'card.loadingNamed': '{name} laden',
-  'card.error.body': 'Deze cijfers zijn niet geladen. Er is niets verloren.',
-  'card.error.retry': 'Opnieuw proberen',
   'overlay.close': '{name} sluiten',
   'regions.label': 'Regio’s',
   'regions.hint': 'Een regio toevoegen markeert ook {country} als bezocht.',

@@ -311,8 +311,6 @@ const messages = {
   'card.absent': '未记录',
   'card.loading': '正在加载这个国家',
   'card.loadingNamed': '正在加载 {name}',
-  'card.error.body': '这些数字没有加载出来。什么都没有丢。',
-  'card.error.retry': '再试一次',
   'overlay.close': '关闭 {name}',
   'regions.label': '地区',
   'regions.hint': '添加地区也会将{country}标记为已到访。',

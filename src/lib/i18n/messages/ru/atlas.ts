@@ -389,8 +389,6 @@ const messages = {
   'card.absent': 'Не записано',
   'card.loading': 'Загрузка этой страны',
   'card.loadingNamed': 'Загрузка: {name}',
-  'card.error.body': 'Эти цифры не загрузились. Ничего не потеряно.',
-  'card.error.retry': 'Попробовать ещё раз',
   'overlay.close': 'Закрыть {name}',
   'regions.label': 'Регионы',
   'regions.hint':

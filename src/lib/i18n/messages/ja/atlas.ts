@@ -322,9 +322,6 @@ const messages = {
   'card.absent': '未記録',
   'card.loading': 'この国を読み込んでいます',
   'card.loadingNamed': '{name}を読み込んでいます',
-  'card.error.body':
-    'この数字は読み込めませんでした。失われたものはありません。',
-  'card.error.retry': 'もう一度試す',
   'overlay.close': '{name}を閉じる',
   'regions.label': '地域',
   'regions.hint': '地域を追加すると、{country}も訪問済みになります。',

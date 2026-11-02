@@ -351,8 +351,6 @@ const messages = {
   'card.absent': 'Kaydedilmemiş',
   'card.loading': 'Ülke yükleniyor',
   'card.loadingNamed': '{name} yükleniyor',
-  'card.error.body': 'Bu sayılar yüklenmedi. Hiçbir şey kaybolmadı.',
-  'card.error.retry': 'Yeniden dene',
   'overlay.close': '{name} kartını kapat',
   'regions.label': 'Bölgeler',
   'regions.hint':

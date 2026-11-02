@@ -357,8 +357,6 @@ const messages = {
   'card.absent': 'Nincs rögzítve',
   'card.loading': 'Az ország betöltése',
   'card.loadingNamed': '{name} betöltése',
-  'card.error.body': 'Ezek a számok nem töltődtek be. Semmi sem veszett el.',
-  'card.error.retry': 'Újrapróbálkozás',
   'overlay.close': '{name} bezárása',
   'regions.label': 'Régiók',
   'regions.hint':

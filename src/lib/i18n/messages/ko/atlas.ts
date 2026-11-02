@@ -325,8 +325,6 @@ const messages = {
   'card.absent': '기록 없음',
   'card.loading': '이 나라를 불러오는 중',
   'card.loadingNamed': '{name}을(를) 불러오는 중',
-  'card.error.body': '이 수치를 불러오지 못했습니다. 잃어버린 것은 없습니다.',
-  'card.error.retry': '다시 시도',
   'overlay.close': '{name} 닫기',
   'regions.label': '지역',
   'regions.hint': '지역을 추가하면 {country}도 방문한 국가로 표시됩니다.',

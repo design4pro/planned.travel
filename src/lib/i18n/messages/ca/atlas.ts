@@ -375,8 +375,6 @@ const messages = {
   'card.absent': 'No registrat',
   'card.loading': 'S’està carregant aquest país',
   'card.loadingNamed': 'S’està carregant {name}',
-  'card.error.body': 'Aquestes xifres no s’han carregat. No s’ha perdut res.',
-  'card.error.retry': 'Torna-ho a provar',
   'overlay.close': 'Tanca {name}',
   'regions.label': 'Regions visitades',
   'regions.hint': 'Afegir una regió també marca {country} com a visitat.',

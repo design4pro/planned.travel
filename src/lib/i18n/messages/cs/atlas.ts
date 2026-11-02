@@ -394,8 +394,6 @@ const messages = {
   'card.absent': 'Nezaznamenáno',
   'card.loading': 'Načítání země',
   'card.loadingNamed': 'Načítání: {name}',
-  'card.error.body': 'Tyto údaje se nenačetly. Nic se neztratilo.',
-  'card.error.retry': 'Zkusit znovu',
   'overlay.close': 'Zavřít {name}',
   'regions.label': 'Regiony',
   'regions.hint':
