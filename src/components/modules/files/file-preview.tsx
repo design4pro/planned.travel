@@ -36,6 +36,7 @@ export function FilePreview({
   const [selected, setSelected] = useState(file)
   const [preview, setPreview] = useState<Preview>({ status: 'loading' })
   const [attempt, setAttempt] = useState(0)
+  const title = useRef<HTMLHeadingElement>(null)
   const busy = useRef(true)
   const touch = useRef<{ x: number; y: number } | null>(null)
   const close = useRef(onClose)
@@ -87,12 +88,14 @@ export function FilePreview({
     if (busy.current || !gallery || next === index) return
     const target = images[next]
     if (target === undefined) return
+    title.current?.focus({ preventScroll: true })
     busy.current = true
     setPreview({ status: 'loading' })
     setSelected(target)
   }
 
   function renderError() {
+    title.current?.focus({ preventScroll: true })
     setPreview({ status: 'error', missing: false })
   }
 
@@ -125,7 +128,13 @@ export function FilePreview({
         }}
       >
         <DialogHeader>
-          <DialogTitle className="break-words">{selected.filename}</DialogTitle>
+          <DialogTitle
+            ref={title}
+            tabIndex={-1}
+            className="break-words outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            {selected.filename}
+          </DialogTitle>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             {index >= 0 ? (
               <>
@@ -166,7 +175,12 @@ export function FilePreview({
                   : 'modules.files.preview.failed',
               )}
               actions={
-                <Button onClick={() => setAttempt((value) => value + 1)}>
+                <Button
+                  onClick={() => {
+                    title.current?.focus({ preventScroll: true })
+                    setAttempt((value) => value + 1)
+                  }}
+                >
                   {t('modules.files.calendar.retry')}
                 </Button>
               }
@@ -175,6 +189,7 @@ export function FilePreview({
           {preview.status === 'ready' && preview.image ? (
             <img
               src={preview.url}
+              loading="eager"
               alt={selected.filename}
               className="mx-auto max-h-[60dvh] max-w-full touch-pan-y object-contain"
               onError={renderError}
@@ -203,6 +218,15 @@ export function FilePreview({
               src={preview.url}
               className="h-[60dvh] w-full border-0"
               onError={renderError}
+              onLoad={(event) => {
+                // Keyboard events inside a document do not bubble to the dialog.
+                event.currentTarget.contentDocument?.addEventListener(
+                  'keydown',
+                  (key) => {
+                    if (key.key === 'Escape') close.current()
+                  },
+                )
+              }}
             />
           ) : null}
           {index >= 0 && images.length > 1 ? (

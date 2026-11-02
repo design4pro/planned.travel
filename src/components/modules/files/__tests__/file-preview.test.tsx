@@ -33,12 +33,14 @@ const files: FileData[] = ['one', 'two', 'three'].map((id) => ({
   createdAt: '2026-01-01',
 }))
 const revoke = vi.fn()
+const close = vi.fn()
 beforeEach(() => {
   fetchBytes
     .mockReset()
     .mockResolvedValue(new Blob(['bytes'], { type: 'image/png' }))
   save.mockReset()
   revoke.mockReset()
+  close.mockReset()
   vi.stubGlobal(
     'URL',
     Object.assign(class extends URL {}, {
@@ -65,7 +67,7 @@ function open(selected = files[0]) {
         tripId="trip"
         file={selected}
         files={files}
-        onClose={vi.fn()}
+        onClose={close}
       />
     </I18nProvider>,
   )
@@ -156,7 +158,12 @@ it('locks navigation while fetching the next image and recovers after a failure'
   expect(fetchBytes).toHaveBeenCalledTimes(2)
   fail(new Error('offline'))
   await screen.findByRole('alert')
-  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  retry.focus()
+  fireEvent.click(retry)
+  expect(document.activeElement).toBe(
+    screen.getByRole('heading', { name: 'two.png' }),
+  )
   await screen.findByRole('img', { name: 'two.png' })
 })
 
@@ -188,4 +195,37 @@ it('uses a horizontal touch swipe, ignoring vertical gestures', async () => {
   pointer('pointerdown', 200, 100)
   pointer('pointerup', 80, 110)
   await screen.findByRole('img', { name: 'two.png' })
+})
+
+it('downloads the displayed bytes from the header under the real filename', async () => {
+  open()
+  await screen.findByRole('img', { name: 'one.png' })
+  fireEvent.click(screen.getByRole('button', { name: 'Download one.png' }))
+  expect(save).toHaveBeenCalledWith(expect.any(Blob), 'one.png')
+  expect(fetchBytes).toHaveBeenCalledTimes(1)
+})
+
+it('closes when Escape is pressed inside the plain-text document', async () => {
+  fetchBytes.mockResolvedValue(
+    new Blob(['boarding details'], { type: 'text/plain' }),
+  )
+  open()
+  await waitFor(() => expect(document.querySelector('iframe')).not.toBeNull())
+  const frame = document.querySelector('iframe')
+  if (frame === null || frame.contentDocument === null)
+    throw new Error('Missing document frame')
+  fireEvent.load(frame)
+  fireEvent.keyDown(frame.contentDocument, { key: 'Escape' })
+  expect(close).toHaveBeenCalledTimes(1)
+})
+
+it('moves focus to the filename before navigation disables its control', async () => {
+  open()
+  await screen.findByRole('img', { name: 'one.png' })
+  const next = screen.getByRole('button', { name: 'Next image' })
+  next.focus()
+  fireEvent.click(next)
+  expect(document.activeElement).toBe(
+    screen.getByRole('heading', { name: 'two.png' }),
+  )
 })

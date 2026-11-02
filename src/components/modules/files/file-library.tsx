@@ -454,14 +454,17 @@ export function FileLibrary({
       <button
         type="button"
         aria-label={file.filename}
-        onClick={() => setPreviewing(file)}
+        onClick={(event) => {
+          event.currentTarget.focus({ preventScroll: true })
+          setPreviewing(file)
+        }}
         className="min-h-11 min-w-0 flex-1 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        <span className="block truncate font-medium text-ink">
+        <span className="block font-medium text-ink [overflow-wrap:anywhere] sm:truncate">
           {file.filename}
         </span>
         {file.description === null ? null : (
-          <span className="block truncate text-caption text-ink-3">
+          <span className="block text-caption text-ink-3 [overflow-wrap:anywhere] sm:truncate">
             {file.description}
           </span>
         )}
