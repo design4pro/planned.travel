@@ -1,11 +1,9 @@
 import { useEffect } from 'react'
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
+import { readWorkspaceShell, roomRefreshToken } from '#/lib/room-refresh'
 import { publishBasemap } from '#/lib/map/basemap'
-import {
-  resumeWorkspaceClaim,
-  setWorkspaceClaim,
-} from '#/lib/workspace-claim-store'
+import { setWorkspaceClaim } from '#/lib/workspace-claim-store'
 import { AppFrame } from '#/components/layout/app-frame'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { ImpersonationBar } from '#/components/layout/impersonation-bar'
@@ -26,11 +24,12 @@ import { loadShell } from './-server/shell'
  * every navigation component reads the current user without re-fetching.
  */
 export const Route = createFileRoute('/_app')({
-  beforeLoad: async ({ location, preload }) => {
-    // A navigation re-reads the shell, so a tab that was refused may call again; a preload
-    // must not change what the tab believes, only the navigation that commits does.
-    if (!preload) resumeWorkspaceClaim()
-    const shell = await loadShell()
+  beforeLoad: async ({ location, preload, abortController }) => {
+    const shell = await readWorkspaceShell(
+      abortController,
+      preload,
+      (preserveWorkspace) => loadShell({ data: { preserveWorkspace } }),
+    )
 
     if (shell === null) {
       throw redirect({
@@ -40,11 +39,7 @@ export const Route = createFileRoute('/_app')({
       })
     }
 
-    // Set here, before the loaders of this navigation run, so a switch navigation's own loaders
-    // carry the workspace they are about to show and not the one being left.
-    if (!preload) setWorkspaceClaim(shell.session.organization?.id ?? null)
-
-    return { shell }
+    return { shell, roomRefresh: roomRefreshToken(abortController) }
   },
   onLeave: () => setWorkspaceClaim(null),
   errorComponent: RootErrorBoundary,

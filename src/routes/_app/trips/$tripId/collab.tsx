@@ -1,3 +1,4 @@
+import { readRoomRefresh } from '#/lib/room-refresh'
 import { useEffect, useRef, useState } from 'react'
 import {
   createFileRoute,
@@ -19,8 +20,14 @@ import { HeaderSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
 export const Route = createFileRoute('/_app/trips/$tripId/collab')({
-  loader: async ({ params }) =>
-    requireFound(await loadTripCollab({ data: { tripId: params.tripId } })),
+  loader: async ({ params, abortController, context }) =>
+    readRoomRefresh(
+      abortController,
+      '/_app/trips/$tripId/collab',
+      async () =>
+        requireFound(await loadTripCollab({ data: { tripId: params.tripId } })),
+      context.roomRefresh,
+    ),
   pendingComponent: CollabPending,
   errorComponent: CollabError,
   component: CollabPage,

@@ -359,7 +359,10 @@ read wrongly on the already-checked item.
   tab shows a notice that reloads into the current workspace. A call with no claim (MCP, `/api/*`, a
   call before the shell loaded) behaves as before. The trip room's WebSocket door reads the claim from
   `?workspace=` and answers a mismatch with an accepted-then-closed socket (code 4001), which the
-  presence pill shows as `workspace-changed` (#979).
+  presence pill shows as `workspace-changed` (#979). Room-triggered commit, catch-up and access-change
+  refreshes retain the displayed claim (#1570). The shell checks it before tenant reads; only a
+  verified workspace mismatch retains the mounted route snapshot and unsent text. Genuine access
+  loss still replaces the screen. Explicit guarded recovery opens the current workspace.
 - **KV session cache.** Sessions live in `SESSIONS` KV (`src/server/auth/secondary-storage.ts`), and
   `getSession()` passes `disableCookieCache: true` **as a query parameter**
   (`src/server/auth/session.ts:70`) - the file warns at `:51-52` that the sibling-option spelling is
