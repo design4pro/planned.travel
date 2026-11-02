@@ -3075,7 +3075,15 @@ test.describe('the visitor language after a signed-in choice', () => {
     await useSession(context, page, baseURL)
     test.skip(!(await hasSession(page)), 'no demo session; seed the database')
 
+    await context.clearCookies({ name: /planned\.session/ })
+    const stale = await context.newPage()
+    await stale.goto('/pricing', { waitUntil: 'networkidle' })
+    await expect(
+      stale.getByRole('button', { name: /^Language: / }),
+    ).toBeVisible()
+
     try {
+      expect(await signIn(page, baseURL)).toBe(true)
       await page.goto('/pricing')
       await expect(page.getByRole('main')).toBeVisible()
       await expect(
@@ -3094,10 +3102,30 @@ test.describe('the visitor language after a signed-in choice', () => {
       await written
       await expect(page.locator('html')).toHaveAttribute('lang', 'de')
 
+      const before = (await context.cookies()).find(
+        (cookie) => cookie.name === 'planned.locale',
+      )
+      expect(before?.value).toBe('de')
+      await stale.getByRole('button', { name: /^Language: / }).click()
+      await stale.getByTestId('locale-chip-pl').click()
+      await expect(stale.locator('html')).toHaveAttribute('lang', 'de')
+      await expect(
+        stale.getByRole('button', { name: /^Language: / }),
+      ).toHaveCount(0)
+      await expect(stale.locator('[data-sonner-toast]')).toContainText(
+        'Du bist angemeldet. Jetzt gilt deine persönliche Sprache oder die deines Arbeitsbereichs. Ändere sie in den Einstellungen.',
+      )
+      expect(
+        (await context.cookies()).find(
+          (cookie) => cookie.name === 'planned.locale',
+        ),
+      ).toEqual(before)
+
       await context.clearCookies({ name: /planned\.session/ })
       await page.goto('/login')
       await expect(page.locator('html')).toHaveAttribute('lang', 'de')
     } finally {
+      await stale.close()
       await useSession(context, page, baseURL)
       // A fixture left speaking German would red-line every journey behind it.
       expect(await pinDemoLanguage(page)).toBe(true)

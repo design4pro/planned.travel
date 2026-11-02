@@ -125,10 +125,10 @@ export const negotiateRequestLocale = createServerFn({ method: 'GET' }).handler(
   async (): Promise<NegotiatedLocale> => negotiateLocaleFrom(requestSource),
 )
 
-/** Anonymous, same-origin preference write. Global CSRF middleware covers this POST. */
+/** Only anonymous requests write; stale signed-out tabs cannot change preferences after sign-in. */
 export const saveVisitorLanguage = createServerFn({ method: 'POST' })
   .validator(z.object({ locale: z.enum(LOCALE_TAGS) }))
   .handler(async ({ data }) => {
-    writeVisitorLocaleCookie(data.locale)
+    if ((await getSession()) === null) writeVisitorLocaleCookie(data.locale)
     return { locale: data.locale }
   })

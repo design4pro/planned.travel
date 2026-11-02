@@ -106,6 +106,8 @@ const messages = {
   'language.hint':
     'Se recuerda en este dispositivo. Al iniciar sesión se aplica el idioma definido en tu cuenta; puedes cambiarlo en Ajustes.',
   'language.announce': 'Idioma cambiado a {language}',
+  'language.signedIn':
+    'Has iniciado sesión. Ahora se aplica tu idioma personal o el del espacio de trabajo. Cámbialo en Ajustes.',
   'language.notApplied':
     'Este navegador no ha guardado tu elección. Permite las cookies de este sitio y vuelve a elegir.',
 

@@ -123,6 +123,8 @@ const messages = {
   'language.hint':
     'Được ghi nhớ trên thiết bị này. Sau khi bạn đăng nhập, ngôn ngữ đặt trong tài khoản sẽ được áp dụng; bạn có thể đổi trong Cài đặt.',
   'language.announce': 'Đã đổi ngôn ngữ sang {language}',
+  'language.signedIn':
+    'Bạn đã đăng nhập. Ngôn ngữ cá nhân hoặc ngôn ngữ không gian làm việc hiện được áp dụng. Hãy thay đổi trong Cài đặt.',
   'language.notApplied':
     'Trình duyệt này không lưu lựa chọn của bạn. Hãy cho phép cookie cho trang này rồi chọn lại.',
 

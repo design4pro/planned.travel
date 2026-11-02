@@ -111,6 +111,8 @@ const messages = {
   'language.hint':
     'Wird auf diesem Gerät gespeichert. Nach der Anmeldung gilt die Sprache aus Ihrem Konto; Sie können sie in den Einstellungen ändern.',
   'language.announce': 'Sprache auf {language} geändert',
+  'language.signedIn':
+    'Du bist angemeldet. Jetzt gilt deine persönliche Sprache oder die deines Arbeitsbereichs. Ändere sie in den Einstellungen.',
   'language.notApplied':
     'Dieser Browser hat Ihre Auswahl nicht gespeichert. Erlauben Sie Cookies für diese Website und wählen Sie erneut.',
 

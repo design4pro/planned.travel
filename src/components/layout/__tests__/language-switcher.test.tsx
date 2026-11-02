@@ -329,19 +329,26 @@ describe('LanguageSwitcher — choosing a language', () => {
     expect(document.activeElement).toBe(elsewhere)
   })
 
-  it('is unapplied, with the switcher gone, when the refresh shows the person is signed in', async () => {
-    router.invalidate.mockImplementation(async () => {
-      setRoot(true, 'en')
-    })
-    const { user } = mount()
-    await open(user)
-    await user.click(chip('pl'))
+  it.each(['en', 'pl'] as const)(
+    'explains account language and hides the stale picker when signed in with %s',
+    async (effective) => {
+      router.invalidate.mockImplementation(async () => {
+        setRoot(true, effective)
+      })
+      const { user } = mount()
+      await open(user)
+      await user.click(chip('pl'))
 
-    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
-    expect(notify.warning).toHaveBeenCalledWith(Shell['language.notApplied'])
-    expect(screen.queryByRole('button', { name: /Language/ })).toBeNull()
-    expect(notify.success).not.toHaveBeenCalled()
-  })
+      await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+      expect(notify.warning).toHaveBeenCalledWith(
+        (await import(`#/lib/i18n/messages/${effective}/shell.ts`)).default[
+          'language.signedIn'
+        ],
+      )
+      expect(screen.queryByRole('button', { name: /Language/ })).toBeNull()
+      expect(notify.success).not.toHaveBeenCalled()
+    },
+  )
 
   it('is rejected quietly: the existing toast, the popover stays, nothing is announced', async () => {
     const { user } = mount(async () => {
