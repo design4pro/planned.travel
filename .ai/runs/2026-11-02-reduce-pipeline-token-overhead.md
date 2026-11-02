@@ -19,6 +19,17 @@ Avoid model invocations for no-op implementation runs, centralize read-only PR/C
 - Resume receipts are local convenience; attestation always runs fresh and verifies the checkout remained unchanged.
 - The host's `/tmp` inode quota is exhausted; worktree and task artifacts use the project disk.
 
+## Verification
+
+- Typecheck and lint passed.
+- Server: 287 files, 6,254 tests passed.
+- Tooling: full 43-file suite covered; new read-only override registration corrected and rechecked, then the additional UI-shard regression passed (780 tests total).
+- UI: all four shards passed, covering 318 files and 6,633 tests. The whole-project attempt timed out at 540 seconds; the executor now starts UI as complete shards.
+- Generated route tree, migrations and spec index are current; production build passed.
+- Native Cezar graph validation passed for all four modified workflows; PR/CI reader exercised against live PR and required-check data.
+- Independent configuration/security review: ship after fixing same-SHA base retargeting, snapshot exit documentation and HUMAN-ONLY-first STOP comment ordering. Shard calibration independently reviewed without waiving coverage.
+- Finalization runs a fresh attestation after the last push. Local resume receipts are never used for it.
+
 ## Resolved assumptions
 
 | # | Question | Applied default | Why |
@@ -38,4 +49,4 @@ PR: #1727
 
 ### Phase 2: Verification and publication
 
-- [ ] 2.1 Run the configured gate, docs search and independent review; publish the PR.
+- [x] 2.1 Run the configured gate, docs search and independent review; publish the PR. — verified locally and published on PR #1727
