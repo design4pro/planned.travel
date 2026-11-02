@@ -480,6 +480,8 @@ export function SplitEditor({
           if (row === undefined) {
             return null
           }
+          const visibleName =
+            person.userId === viewerUserId ? t('costs.person.you') : person.name
           const share = row.included ? (shareOf.get(person.userId) ?? 0) : 0
           return (
             // The unit field and the computed share travel together in their own
@@ -496,7 +498,11 @@ export function SplitEditor({
                 onCheckedChange={(next) =>
                   setRow(person.userId, { included: next === true })
                 }
-                aria-label={person.includeLabel}
+                aria-label={
+                  person.userId === viewerUserId
+                    ? t('costs.split.includeFor', { name: visibleName })
+                    : person.includeLabel
+                }
                 aria-describedby={person.departed ? departedHintId : undefined}
               />
               <Avatar
@@ -506,9 +512,7 @@ export function SplitEditor({
                 initials={person.initials}
               />
               <span className="min-w-0 flex-1 basis-32 truncate text-caption font-medium text-ink">
-                {person.userId === viewerUserId
-                  ? t('costs.person.you')
-                  : person.name}
+                {visibleName}
               </span>
               {person.departed ? (
                 <Badge tone="outline" size="md">
@@ -524,7 +528,7 @@ export function SplitEditor({
                     inputMode="decimal"
                     autoComplete="off"
                     disabled={disabled}
-                    aria-label={unitLabel(t, draft.method, person.name)}
+                    aria-label={unitLabel(t, draft.method, visibleName)}
                     trailing={draft.method === 'percentage' ? '%' : undefined}
                     value={fieldValue(draft.method, row)}
                     onChange={(event) =>

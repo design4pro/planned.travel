@@ -663,7 +663,7 @@ describe('the split of an expense that names someone who has left the trip', () 
     expect(cyBox().getAttribute('aria-describedby')).toBe(hint.id)
     expect(
       screen
-        .getByRole('checkbox', { name: /Include Ada/ })
+        .getByRole('checkbox', { name: /Include You/ })
         .getAttribute('aria-describedby'),
     ).toBeNull()
   })
