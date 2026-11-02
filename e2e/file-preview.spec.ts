@@ -152,11 +152,11 @@ for (const format of ['text', 'pdf'] as const) {
         expect(
           await page.evaluate(() => window.getSelection()?.toString()),
         ).toBe('Boarding details')
-        const document = dialog.getByRole('document', { name })
-        await document.focus()
+        const reader = dialog.getByRole('document', { name })
+        await reader.focus()
         await page.keyboard.press('End')
         await expect
-          .poll(() => document.evaluate((element) => element.scrollTop))
+          .poll(() => reader.evaluate((element) => element.scrollTop))
           .toBeGreaterThan(0)
       }
       await page.keyboard.press('Escape')
