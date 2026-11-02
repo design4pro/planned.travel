@@ -75,6 +75,7 @@ import {
   useAction,
 } from '../shared'
 import { downloadTripFile } from './download'
+import { FilePreview } from './file-preview'
 import { FileDetailsDialog } from './file-dialogs'
 import { filesFromClipboard, nameForPaste, shouldTakePaste } from './paste'
 import { describeRejection, kindForFile, screenFiles } from './screening'
@@ -172,6 +173,7 @@ export function FileLibrary({
    */
   const dragDepth = useRef(0)
   const [kindFilter, setKindFilter] = useState<string>('all')
+  const [previewing, setPreviewing] = useState<FileData | null>(null)
   const [editing, setEditing] = useState<FileData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
   /** Bumped by each paste that brought files; the queue is scrolled to once it has rendered. */
@@ -280,7 +282,12 @@ export function FileLibrary({
    * the browser's default only when it found files, so pasting text behaves as it always did.
    */
   useEffect(() => {
-    if (!canWrite || editing !== null || confirm !== null) {
+    if (
+      !canWrite ||
+      editing !== null ||
+      confirm !== null ||
+      previewing !== null
+    ) {
       return
     }
     const onPaste = (event: ClipboardEvent): void => {
@@ -297,7 +304,7 @@ export function FileLibrary({
     }
     document.addEventListener('paste', onPaste)
     return () => document.removeEventListener('paste', onPaste)
-  }, [canWrite, add, editing, confirm])
+  }, [canWrite, add, editing, confirm, previewing])
 
   // After the render that shows the pasted rows: the list only exists once the queue holds a task,
   // so the handler itself has nothing to scroll to on a first paste. On a long library this is what
@@ -441,6 +448,39 @@ export function FileLibrary({
   const failed = failedTasks(queue)
   const ratio = limitBytes <= 0 ? 0 : workspaceBytes / limitBytes
   const full = Number.isFinite(limitBytes) && ratio >= 1
+
+  const fileControl = (file: FileData) => (
+    <span className="flex min-w-0 items-center gap-2">
+      <button
+        type="button"
+        aria-label={file.filename}
+        onClick={() => setPreviewing(file)}
+        className="min-h-11 min-w-0 flex-1 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        <span className="block truncate font-medium text-ink">
+          {file.filename}
+        </span>
+        {file.description === null ? null : (
+          <span className="block truncate text-caption text-ink-3">
+            {file.description}
+          </span>
+        )}
+      </button>
+      <IconButton
+        icon={<Download />}
+        label={t('modules.files.preview.download', { name: file.filename })}
+        disabled={download.pending}
+        className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100"
+        onClick={() => {
+          void download.run({
+            tripId,
+            fileId: file.id,
+            filename: file.filename,
+          })
+        }}
+      />
+    </span>
+  )
 
   const fileMenu = (file: FileData) => (
     <RowMenu
@@ -796,27 +836,20 @@ export function FileLibrary({
               return (
                 <li
                   key={file.id}
-                  className="flex min-w-0 items-start gap-3 p-4"
+                  className="group flex min-w-0 items-start gap-3 p-4"
                 >
                   <Icon
                     aria-hidden
                     className="mt-1 size-4 shrink-0 text-ink-4"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-ink [overflow-wrap:anywhere]">
-                      {file.filename}
-                    </p>
+                    {fileControl(file)}
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-caption text-ink-3">
                       <Badge tone="neutral" size="sm">
                         {t(kindLabel(file.kind))}
                       </Badge>
                       <span>{formatStorage(file.sizeBytes)}</span>
                     </div>
-                    {file.description === null ? null : (
-                      <p className="mt-1 text-caption text-ink-3 [overflow-wrap:anywhere]">
-                        {file.description}
-                      </p>
-                    )}
                   </div>
                   <div className="shrink-0">{fileMenu(file)}</div>
                 </li>
@@ -854,22 +887,15 @@ export function FileLibrary({
               {visible.map((file) => {
                 const Icon = iconFor(file.kind)
                 return (
-                  <TableRow key={file.id}>
+                  <TableRow key={file.id} className="group">
                     <TableCell truncate>
                       <span className="flex min-w-0 items-center gap-2.5">
                         <Icon
                           aria-hidden
                           className="size-4 shrink-0 text-ink-4"
                         />
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-ink">
-                            {file.filename}
-                          </span>
-                          {file.description === null ? null : (
-                            <span className="block truncate text-caption text-ink-3">
-                              {file.description}
-                            </span>
-                          )}
+                        <span className="min-w-0 flex-1">
+                          {fileControl(file)}
                         </span>
                       </span>
                     </TableCell>
@@ -894,6 +920,15 @@ export function FileLibrary({
             </TableBody>
           </Table>
         </ModulePanel>
+      )}
+
+      {previewing === null ? null : (
+        <FilePreview
+          tripId={tripId}
+          file={previewing}
+          files={visible}
+          onClose={() => setPreviewing(null)}
+        />
       )}
 
       {!canWrite || editing === null ? null : (

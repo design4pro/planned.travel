@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} dari {total}',
+  'files.preview.download': 'Unduh {name}',
+  'files.preview.loading': 'Memuat pratinjau',
+  'files.preview.missing': 'Salinan tersimpan tidak ditemukan.',
+  'files.preview.failed':
+    'Pratinjau tidak dapat dimuat. Coba lagi atau unduh berkas.',
+  'files.preview.previous': 'Gambar sebelumnya',
+  'files.preview.next': 'Gambar berikutnya',
   'vacay.page.eyebrow': 'Waktu libur',
   'vacay.page.title': 'Cuti',
   'vacay.page.description':

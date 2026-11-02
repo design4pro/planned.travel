@@ -1,0 +1,191 @@
+import '#/components/ui/__tests__/test-env'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
+import { I18nProvider } from '#/lib/i18n'
+import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import Modules from '#/lib/i18n/messages/en/modules'
+import Ui from '#/lib/i18n/messages/en/ui'
+import { FilePreview } from '../file-preview'
+import type { FileData } from '../types'
+
+const { fetchBytes, save } = vi.hoisted(() => ({
+  fetchBytes: vi.fn(),
+  save: vi.fn(),
+}))
+vi.mock('../download', () => ({
+  fetchTripFileBytes: fetchBytes,
+  saveBlob: save,
+}))
+const files: FileData[] = ['one', 'two', 'three'].map((id) => ({
+  id,
+  filename: `${id}.png`,
+  contentType: 'image/png',
+  kind: 'image',
+  sizeBytes: 10,
+  description: null,
+  uploadedBy: 'user',
+  createdAt: '2026-01-01',
+}))
+const revoke = vi.fn()
+beforeEach(() => {
+  fetchBytes
+    .mockReset()
+    .mockResolvedValue(new Blob(['bytes'], { type: 'image/png' }))
+  save.mockReset()
+  revoke.mockReset()
+  vi.stubGlobal(
+    'URL',
+    Object.assign(class extends URL {}, {
+      createObjectURL: vi.fn(() => 'blob:preview'),
+      revokeObjectURL: revoke,
+    }),
+  )
+})
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+function open(selected = files[0]) {
+  if (!selected) throw new Error('Missing fixture')
+  return render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('modules', Modules),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <FilePreview
+        tripId="trip"
+        file={selected}
+        files={files}
+        onClose={vi.fn()}
+      />
+    </I18nProvider>,
+  )
+}
+it('loads an image, navigates with keys, respects ends and revokes on replacement and unmount', async () => {
+  const view = open()
+  await screen.findByRole('img', { name: 'one.png' })
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'End' })
+  await screen.findByRole('img', { name: 'three.png' })
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowRight' })
+  expect(fetchBytes).toHaveBeenCalledTimes(2)
+  expect(revoke).toHaveBeenCalledTimes(1)
+  view.unmount()
+  expect(revoke).toHaveBeenCalledTimes(2)
+})
+it('shows loading, discards a completion after close without creating an object URL', async () => {
+  let finish: (blob: Blob) => void = () => {}
+  fetchBytes.mockReturnValue(
+    new Promise<Blob>((resolve) => {
+      finish = resolve
+    }),
+  )
+  const view = open()
+  expect(screen.getByRole('status')).toBeTruthy()
+  view.unmount()
+  finish(new Blob(['late'], { type: 'image/png' }))
+  await waitFor(() => expect(URL.createObjectURL).not.toHaveBeenCalled())
+})
+it('shows a localized missing-copy alert for HTTP 410', async () => {
+  fetchBytes.mockRejectedValue(
+    Object.assign(new Error('gone'), { status: 410 }),
+  )
+  open()
+  expect((await screen.findByRole('alert')).textContent).toContain(
+    'stored copy',
+  )
+})
+it.each(['application/pdf', 'text/plain'])(
+  'embeds only allowlisted document %s',
+  async (type) => {
+    fetchBytes.mockResolvedValue(new Blob(['bytes'], { type }))
+    open()
+    await waitFor(() =>
+      expect(document.querySelector('iframe')?.getAttribute('src')).toBe(
+        'blob:preview',
+      ),
+    )
+  },
+)
+it('renders SVG only as an image', async () => {
+  fetchBytes.mockResolvedValue(new Blob(['<svg/>'], { type: 'image/svg+xml' }))
+  open()
+  await screen.findByRole('img')
+  expect(document.querySelector('iframe')).toBeNull()
+})
+it.each(['text/html', 'application/zip'])(
+  'downloads unsupported %s without a preview URL',
+  async (type) => {
+    fetchBytes.mockResolvedValue(new Blob(['bytes'], { type }))
+    open()
+    await waitFor(() => expect(save).toHaveBeenCalled())
+    expect(document.querySelector('iframe')).toBeNull()
+    expect(URL.createObjectURL).not.toHaveBeenCalled()
+  },
+)
+it('offers recovery after an image rendering error', async () => {
+  open()
+  fireEvent.error(await screen.findByRole('img'))
+  expect(screen.getByRole('alert')).toBeTruthy()
+})
+
+it('locks navigation while fetching the next image and recovers after a failure', async () => {
+  open()
+  await screen.findByRole('img', { name: 'one.png' })
+  let fail: (error: Error) => void = () => {}
+  fetchBytes.mockReturnValueOnce(
+    new Promise<Blob>((_resolve, reject) => {
+      fail = reject
+    }),
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Next image' }))
+  expect(
+    screen
+      .getByRole('button', { name: 'Next image' })
+      .getAttribute('aria-disabled'),
+  ).toBe('true')
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'End' })
+  expect(fetchBytes).toHaveBeenCalledTimes(2)
+  fail(new Error('offline'))
+  await screen.findByRole('alert')
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  await screen.findByRole('img', { name: 'two.png' })
+})
+
+it('navigates back and home using the gallery controls', async () => {
+  open(files[2])
+  await screen.findByRole('img', { name: 'three.png' })
+  fireEvent.click(screen.getByRole('button', { name: 'Previous image' }))
+  await screen.findByRole('img', { name: 'two.png' })
+  fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Home' })
+  await screen.findByRole('img', { name: 'one.png' })
+})
+
+it('uses a horizontal touch swipe, ignoring vertical gestures', async () => {
+  open()
+  const image = await screen.findByRole('img', { name: 'one.png' })
+  function pointer(type: string, x: number, y: number) {
+    const event = new Event(type, { bubbles: true })
+    Object.assign(event, {
+      pointerType: 'touch',
+      pointerId: 1,
+      clientX: x,
+      clientY: y,
+    })
+    fireEvent(image, event)
+  }
+  pointer('pointerdown', 200, 100)
+  pointer('pointerup', 190, 200)
+  expect(fetchBytes).toHaveBeenCalledTimes(1)
+  pointer('pointerdown', 200, 100)
+  pointer('pointerup', 80, 110)
+  await screen.findByRole('img', { name: 'two.png' })
+})

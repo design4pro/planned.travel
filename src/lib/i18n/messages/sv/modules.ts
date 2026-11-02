@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} av {total}',
+  'files.preview.download': 'Hämta {name}',
+  'files.preview.loading': 'Laddar förhandsvisning',
+  'files.preview.missing': 'Den sparade kopian saknas.',
+  'files.preview.failed':
+    'Förhandsvisningen kunde inte laddas. Försök igen eller hämta filen.',
+  'files.preview.previous': 'Föregående bild',
+  'files.preview.next': 'Nästa bild',
   'vacay.page.eyebrow': 'Ledig tid',
   'vacay.page.title': 'Ledighet',
   'vacay.page.description':

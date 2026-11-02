@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} de {total}',
+  'files.preview.download': 'Baixa {name}',
+  'files.preview.loading': 'S’està carregant la previsualització',
+  'files.preview.missing': 'Falta la còpia desada.',
+  'files.preview.failed':
+    'No s’ha pogut carregar la previsualització. Torna-ho a provar o baixa el fitxer.',
+  'files.preview.previous': 'Imatge anterior',
+  'files.preview.next': 'Imatge següent',
   'vacay.page.eyebrow': 'Temps lliure',
   'vacay.page.title': 'Vacances',
   'vacay.page.description':

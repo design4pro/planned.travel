@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} van {total}',
+  'files.preview.download': '{name} downloaden',
+  'files.preview.loading': 'Voorbeeld laden',
+  'files.preview.missing': 'De opgeslagen kopie ontbreekt.',
+  'files.preview.failed':
+    'Het voorbeeld kon niet worden geladen. Probeer opnieuw of download het bestand.',
+  'files.preview.previous': 'Vorige afbeelding',
+  'files.preview.next': 'Volgende afbeelding',
   'vacay.page.eyebrow': 'Vrije tijd',
   'vacay.page.title': 'Verlof',
   'vacay.page.description':

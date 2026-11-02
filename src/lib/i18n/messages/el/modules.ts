@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} από {total}',
+  'files.preview.download': 'Λήψη {name}',
+  'files.preview.loading': 'Φόρτωση προεπισκόπησης',
+  'files.preview.missing': 'Το αποθηκευμένο αντίγραφο λείπει.',
+  'files.preview.failed':
+    'Δεν ήταν δυνατή η φόρτωση της προεπισκόπησης. Δοκιμάστε ξανά ή κατεβάστε το αρχείο.',
+  'files.preview.previous': 'Προηγούμενη εικόνα',
+  'files.preview.next': 'Επόμενη εικόνα',
   'vacay.page.eyebrow': 'Ελεύθερος χρόνος',
   'vacay.page.title': 'Άδειες',
   'vacay.page.description':

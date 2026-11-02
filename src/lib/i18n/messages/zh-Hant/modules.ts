@@ -14,6 +14,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '第{current}張，共{total}張',
+  'files.preview.download': '下載{name}',
+  'files.preview.loading': '正在載入預覽',
+  'files.preview.missing': '找不到已儲存的副本。',
+  'files.preview.failed': '無法載入預覽。請重試或下載檔案。',
+  'files.preview.previous': '上一張圖片',
+  'files.preview.next': '下一張圖片',
   'vacay.page.eyebrow': '休息時間',
   'vacay.page.title': '休假',
   'vacay.page.description': '規劃你不在的日子，並與其他人的安排對照',

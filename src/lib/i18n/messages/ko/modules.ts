@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{total}개 중 {current}번째',
+  'files.preview.download': '{name} 다운로드',
+  'files.preview.loading': '미리보기 불러오는 중',
+  'files.preview.missing': '저장된 사본이 없습니다.',
+  'files.preview.failed':
+    '미리보기를 불러오지 못했습니다. 다시 시도하거나 파일을 다운로드하세요.',
+  'files.preview.previous': '이전 이미지',
+  'files.preview.next': '다음 이미지',
   'vacay.page.eyebrow': '쉬는 날',
   'vacay.page.title': '휴가',
   'vacay.page.description':

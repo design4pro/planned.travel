@@ -72,28 +72,31 @@ export function saveBlob(stored: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
 }
 
-/**
- * Saves one attachment to the reader's machine.
- *
- * Throws with a message worth showing, so the caller's `useAction` can toast it.
- */
+/** Fetches authenticated bytes without saving or changing their MIME type. */
+export async function fetchTripFileBytes(input: {
+  readonly tripId: string
+  readonly fileId: string
+}): Promise<Blob> {
+  const response = await downloadTripFileFn({
+    data: { tripId: input.tripId, fileId: input.fileId },
+  })
+  if (!(response instanceof Response)) {
+    throw new Error('The download did not come back in a form we could save.')
+  }
+  if (!response.ok) {
+    throw Object.assign(new Error(await reasonFor(response)), {
+      status: response.status,
+    })
+  }
+  return response.blob()
+}
+
+/** Saves one attachment under its real name; failures go through the caller's useAction. */
 export async function downloadTripFile(input: {
   readonly tripId: string
   readonly fileId: string
   readonly filename: string
 }): Promise<{ readonly filename: string }> {
-  const response = await downloadTripFileFn({
-    data: { tripId: input.tripId, fileId: input.fileId },
-  })
-
-  if (!(response instanceof Response)) {
-    throw new Error('The download did not come back in a form we could save.')
-  }
-  if (!response.ok) {
-    throw new Error(await reasonFor(response))
-  }
-
-  saveBlob(await response.blob(), input.filename)
-
+  saveBlob(await fetchTripFileBytes(input), input.filename)
   return { filename: input.filename }
 }

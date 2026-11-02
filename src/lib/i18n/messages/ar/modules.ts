@@ -14,6 +14,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} من {total}',
+  'files.preview.download': 'تنزيل {name}',
+  'files.preview.loading': 'جارٍ تحميل المعاينة',
+  'files.preview.missing': 'النسخة المخزنة مفقودة.',
+  'files.preview.failed': 'تعذر تحميل المعاينة. حاول مجددًا أو نزّل الملف.',
+  'files.preview.previous': 'الصورة السابقة',
+  'files.preview.next': 'الصورة التالية',
   'vacay.page.eyebrow': 'وقت الراحة',
   'vacay.page.title': 'الإجازات',
   'vacay.page.description': 'خطط لأيام غيابك وقارنها بأيام غياب الآخرين',

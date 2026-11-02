@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} z {total}',
+  'files.preview.download': 'Stáhnout {name}',
+  'files.preview.loading': 'Načítání náhledu',
+  'files.preview.missing': 'Uložená kopie chybí.',
+  'files.preview.failed':
+    'Náhled se nepodařilo načíst. Zkuste to znovu nebo soubor stáhněte.',
+  'files.preview.previous': 'Předchozí obrázek',
+  'files.preview.next': 'Další obrázek',
   'vacay.page.eyebrow': 'Volno',
   'vacay.page.title': 'Dovolená',
   'vacay.page.description':
