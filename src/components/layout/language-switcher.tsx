@@ -166,7 +166,20 @@ export function LanguageSwitcher({
         save: async () => save(next),
         // `forcePending` runs the load in the foreground, so what the checks
         // below read is the outcome and not the page before it.
-        refresh: () => router.invalidate({ forcePending: true }),
+        refresh: async () => {
+          await router.invalidate({ forcePending: true })
+          // The signed-in refresh removes both picker and trigger.
+          if (
+            rootData(router.state.matches)?.signedIn === true &&
+            focusIsFree()
+          ) {
+            const main = document.querySelector<HTMLElement>('main')
+            if (main) {
+              main.tabIndex = -1
+              main.focus()
+            }
+          }
+        },
         // The root loader never rejects: when negotiating or loading the
         // catalogue fails it answers with no messages. Recovery copy is supplied
         // only to the document provider. This is a failed refresh,

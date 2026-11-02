@@ -135,6 +135,7 @@ function mount(save: Save = async (locale) => ({ locale })) {
   const saveSpy = vi.fn(save)
   render(
     <I18nProvider locale="en" messages={EN}>
+      <main aria-label="Page content" />
       <button type="button">before</button>
       <LanguageSwitcher save={saveSpy} />
     </I18nProvider>,
@@ -347,8 +348,23 @@ describe('LanguageSwitcher — choosing a language', () => {
       )
       expect(screen.queryByRole('button', { name: /Language/ })).toBeNull()
       expect(notify.success).not.toHaveBeenCalled()
+      expect(document.activeElement).toBe(screen.getByRole('main'))
     },
   )
+
+  it('preserves focus moved outside the picker before signed-in recovery', async () => {
+    const write = deferred<{ locale: Locale }>()
+    router.invalidate.mockImplementation(async () => setRoot(true))
+    const { user } = mount(() => write.promise)
+    await open(user)
+    await user.click(chip('pl'))
+    await user.keyboard('{Escape}')
+    const elsewhere = screen.getByRole('button', { name: 'before' })
+    elsewhere.focus()
+    write.resolve({ locale: 'pl' })
+    await waitFor(() => expect(notify.warning).toHaveBeenCalled())
+    expect(document.activeElement).toBe(elsewhere)
+  })
 
   it('is rejected quietly: the existing toast, the popover stays, nothing is announced', async () => {
     const { user } = mount(async () => {
