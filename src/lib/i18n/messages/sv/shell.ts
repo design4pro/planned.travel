@@ -102,6 +102,8 @@ const messages = {
   'language.hint':
     'Sparas på den här enheten. När du har loggat in gäller språket som är inställt i ditt konto; du kan ändra det under Inställningar.',
   'language.announce': 'Språket ändrades till {language}',
+  'language.signedIn':
+    'Du är inloggad. Nu gäller ditt personliga språk eller arbetsytans språk. Ändra det i Inställningar.',
   'language.notApplied':
     'Den här webbläsaren behöll inte ditt val. Tillåt cookies för den här webbplatsen och välj igen.',
 

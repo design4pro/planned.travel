@@ -103,6 +103,8 @@ const messages = {
   'language.hint':
     'Mémorisée sur cet appareil. Une fois connecté, la langue définie dans votre compte s’applique ; vous pouvez la modifier dans les Réglages.',
   'language.announce': 'Langue changée en {language}',
+  'language.signedIn':
+    'Vous êtes connecté. Votre langue personnelle ou celle de votre espace de travail s’applique désormais. Modifiez-la dans les paramètres.',
   'language.notApplied':
     'Ce navigateur n’a pas conservé votre choix. Autorisez les cookies pour ce site, puis choisissez à nouveau.',
 

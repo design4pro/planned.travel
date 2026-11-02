@@ -106,6 +106,8 @@ const messages = {
   'language.hint':
     'Wordt onthouden op dit apparaat. Zodra je inlogt, geldt de taal die in je account is ingesteld; je kunt die wijzigen in Instellingen.',
   'language.announce': 'Taal gewijzigd naar {language}',
+  'language.signedIn':
+    'Je bent ingelogd. Je persoonlijke taal of de taal van je werkruimte geldt nu. Wijzig deze in Instellingen.',
   'language.notApplied':
     'Deze browser heeft je keuze niet bewaard. Sta cookies toe voor deze site en kies opnieuw.',
 

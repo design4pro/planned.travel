@@ -84,6 +84,8 @@ const messages = {
   'language.trigger': '언어: {language}. 언어 변경',
   'language.hint': '이 기기에 기억됩니다. 로그인하면 계정에 설정된 언어가 적용되며, 설정에서 변경할 수 있습니다.',
   'language.announce': '언어가 {language}(으)로 변경되었습니다',
+  'language.signedIn':
+    '로그인되어 있습니다. 이제 개인 언어 또는 워크스페이스 언어가 적용됩니다. 설정에서 변경하세요.',
   'language.notApplied': '이 브라우저가 선택을 저장하지 않았습니다. 이 사이트의 쿠키를 허용한 다음 다시 선택하세요.',
   'bell.none': '알림, 읽지 않은 것 없음',
   'bell.unread': { other: '알림, 읽지 않음 {unread}개' },

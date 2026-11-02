@@ -976,7 +976,10 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    English string sitting in a non-English catalogue.
 7. **One language picker** lists every locale in its native name and script, shows the active one,
    and persists through a reload. Settings saves a personal override (or follows the workspace);
-   signed-out controls reuse this picker and save only the visitor cookie. The visitor cookie
+   signed-out controls reuse this picker and save only the visitor cookie. Each visitor write checks
+   the server session: signed-in requests change no preference, and a failed session lookup writes
+   nothing. A stale signed-out tab refreshes to the negotiated account language, hides the picker
+   and explains that personal/workspace language is controlled in Settings. The visitor cookie
    holds only a language tag for 365 days, is HttpOnly, SameSite=Lax, Path=/ and Secure on HTTPS.
    Registering is the one moment the visitor language reaches an account: a self-registration seeds
    the new account's own `user_settings.locale` with the language the request resolved (cookie, else
