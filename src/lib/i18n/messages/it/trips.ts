@@ -137,6 +137,8 @@ const messages = {
     '{name} non è stato spostato. Uno spostamento resta nel suo giorno.',
   'plan.move.spoken.journeyTimed':
     '{name} non è stato spostato. Parte alle {time}.',
+  'plan.move.spoken.accepted':
+    '{name} spostato a {destination}. Salvataggio in corso.',
   'plan.move.error.save': 'Questo spostamento non è stato salvato',
   'plan.move.error.retry': 'Riprova tra un momento.',
   'plan.move.dropTime.title': 'Spostare {name} e rimuovere le {time}?',

@@ -222,15 +222,15 @@ describe('NoteRow', () => {
     const onMoveToDay = vi.fn()
     renderRow({
       otherDays: [
-        { dayId: 'd2', title: 'Day 2 — Kyoto by train' },
-        { dayId: 'd3', title: 'Day 3 — Nara' },
+        { dayId: 'd2', dayNumber: 2, title: 'Kyoto by train' },
+        { dayId: 'd3', dayNumber: 3, title: 'Nara' },
       ],
       onMoveToDay,
     })
 
     await user.click(screen.getByRole('button', { name: 'Move to day' }))
     await user.click(
-      await screen.findByRole('menuitem', { name: 'Day 3 — Nara' }),
+      await screen.findByRole('menuitem', { name: 'Day 3 · Nara' }),
     )
 
     expect(onMoveToDay.mock.calls).toEqual([['d3']])
@@ -245,7 +245,7 @@ describe('NoteRow', () => {
   it('holds the day menu still while the row’s own write is in flight', () => {
     renderRow({
       pending: true,
-      otherDays: [{ dayId: 'd2', title: 'Day 2' }],
+      otherDays: [{ dayId: 'd2', dayNumber: 2, title: 'Day 2' }],
       onMoveToDay: vi.fn(),
     })
 
@@ -277,7 +277,7 @@ describe('NoteRow', () => {
     renderRow({
       canWrite: false,
       note: note({ id: 'n1', detail: 'More' }),
-      otherDays: [{ dayId: 'd2', title: 'Day 2' }],
+      otherDays: [{ dayId: 'd2', dayNumber: 2, title: 'Day 2' }],
       onMoveToDay: vi.fn(),
     })
 
@@ -392,8 +392,8 @@ describe('DaySection notes', () => {
     renderDay([noteItem(here)], {
       canWriteNotes: true,
       moveTargets: [
-        { dayId: 'd1', title: 'Asakusa and the river' },
-        { dayId: 'd2', title: 'Kyoto by train' },
+        { dayId: 'd1', dayNumber: 1, title: 'Asakusa and the river' },
+        { dayId: 'd2', dayNumber: 2, title: 'Kyoto by train' },
       ],
       onMoveNoteToDay,
     })
@@ -404,7 +404,7 @@ describe('DaySection notes', () => {
       screen.queryByRole('menuitem', { name: 'Asakusa and the river' }),
     ).toBeNull()
     await user.click(
-      await screen.findByRole('menuitem', { name: 'Kyoto by train' }),
+      await screen.findByRole('menuitem', { name: 'Day 2 · Kyoto by train' }),
     )
     expect(onMoveNoteToDay.mock.calls).toEqual([[here, 'd2']])
   })

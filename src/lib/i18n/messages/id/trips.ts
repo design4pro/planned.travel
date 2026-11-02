@@ -134,6 +134,8 @@ const messages = {
     '{name} tidak dipindahkan. Perjalanan tetap di harinya sendiri.',
   'plan.move.spoken.journeyTimed':
     '{name} tidak dipindahkan. Berangkat pukul {time}.',
+  'plan.move.spoken.accepted':
+    '{name} dipindahkan ke {destination}. Menyimpan.',
   'plan.move.error.save': 'Pemindahan itu gagal disimpan',
   'plan.move.error.retry': 'Coba lagi sebentar lagi.',
   'plan.move.dropTime.title': 'Pindahkan {name} dan lepas waktu {time}?',

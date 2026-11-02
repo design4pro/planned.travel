@@ -137,7 +137,8 @@ export function dayNoteIconLabel(name: string): MessageKey {
 /** A day a note can be moved to: its id, and the title the day carries in the plan. */
 export interface NoteDayTarget {
   readonly dayId: string
-  readonly title: string
+  readonly title: string | null
+  readonly dayNumber: number
 }
 
 export interface NoteRowProps {
@@ -197,6 +198,7 @@ export function NoteRow({
   const t = useTranslate()
   const [open, setOpen] = React.useState(false)
   const detailId = React.useId()
+  const moving = React.useRef(false)
 
   const {
     attributes,
@@ -354,13 +356,30 @@ export function NoteRow({
                     disabled={pending}
                   />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="max-h-72 w-56">
+                <DropdownMenuContent
+                  align="end"
+                  className="max-h-72 w-56"
+                  onCloseAutoFocus={(event) => {
+                    if (moving.current) event.preventDefault()
+                    moving.current = false
+                  }}
+                >
                   {otherDays.map((target) => (
                     <DropdownMenuItem
                       key={target.dayId}
-                      onSelect={() => onMoveToDay?.(target.dayId)}
+                      onSelect={() => {
+                        moving.current = onMoveToDay !== undefined
+                        onMoveToDay?.(target.dayId)
+                      }}
                     >
-                      {target.title}
+                      {target.title === null
+                        ? t('trips.plan.editor.dayNumber', {
+                            day: target.dayNumber,
+                          })
+                        : t('trips.plan.editor.dayNamed', {
+                            day: target.dayNumber,
+                            title: target.title,
+                          })}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

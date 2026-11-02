@@ -134,6 +134,8 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} flyttades inte. En färd stannar på sin egen dag.',
   'plan.move.spoken.journeyTimed': '{name} flyttades inte. Den avgår {time}.',
+  'plan.move.spoken.accepted':
+    '{name} har flyttats till {destination}. Sparar.',
   'plan.move.error.save': 'Flytten sparades inte',
   'plan.move.error.retry': 'Försök igen om en stund.',
   'plan.move.dropTime.title': 'Flytta {name} och ta bort {time}?',

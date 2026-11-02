@@ -136,6 +136,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} se nepřesunul. Přesun zůstává u svého dne.',
   'plan.move.spoken.journeyTimed': '{name} se nepřesunul. Odjíždí v {time}.',
+  'plan.move.spoken.accepted': '{name}: přesun na {destination}. Ukládání.',
   'plan.move.error.save': 'Přesunutí se nepodařilo uložit',
   'plan.move.error.retry': 'Zkuste to za chvíli znovu.',
   'plan.move.dropTime.title': 'Přesunout {name} a zahodit čas {time}?',

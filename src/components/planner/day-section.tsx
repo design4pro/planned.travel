@@ -157,6 +157,7 @@ export function DaySection({
 
   return (
     <section
+      data-planner-day={day.dayId}
       ref={expanded ? undefined : setNodeRef}
       aria-label={`${day.title}${day.dateLabel === null ? '' : `, ${day.dateLabel}`}`}
       className={cn(
@@ -193,6 +194,7 @@ export function DaySection({
           </button>
         )}
         <button
+          data-planner-day-header=""
           ref={headerRef}
           type="button"
           onClick={onFocusDay}

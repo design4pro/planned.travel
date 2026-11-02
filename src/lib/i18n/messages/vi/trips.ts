@@ -131,6 +131,7 @@ const messages = {
     '{name} chưa được chuyển. Chuyến đi ở lại ngày của nó.',
   'plan.move.spoken.journeyTimed':
     '{name} chưa được chuyển. Khởi hành lúc {time}.',
+  'plan.move.spoken.accepted': 'Đã chuyển {name} đến {destination}. Đang lưu.',
   'plan.move.error.save': 'Thay đổi thứ tự chưa được lưu',
   'plan.move.error.retry': 'Hãy thử lại sau giây lát.',
   'plan.move.dropTime.title': 'Chuyển {name} và bỏ giờ {time}?',
