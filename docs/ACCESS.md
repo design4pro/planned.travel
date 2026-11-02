@@ -464,8 +464,21 @@ itself, including composite roles; role demotion uses the same owner predicate. 
 conditional `member.removed` or `member.left` audit entry share one D1 batch. Auth still runs the
 session cleanup and offboarding hooks; it never deletes the row a second time. Public HTTP
 `organization/leave` is closed too, so it cannot bypass these guards (overlapping #1402).
-Pending workspace invitations issued by a departed member remain pending and can still be accepted;
-an owner or admin must revoke them from Invitations when they should no longer be usable.
+Pending workspace invitations are workspace authorizations: successful self-departure or removal of
+an issuer leaves them pending and usable, including member, admin and owner invitations and issuers
+who left before deployment. Acceptance grants exactly the stored, originally authorized role; it
+neither restores the issuer's membership nor grants the issuer authority. Expiry, verified recipient
+matching, rejection, tenant isolation, duplicate-membership protection and the 100-member ceiling
+still apply. A pending invitation keeps its reserved seat, even when expired; acceptance transfers
+that reservation without a new plan-quota check.
+A current owner or admin can revoke these invitations from Invitations within the existing lifecycle.
+Acceptance and revocation have one terminal winner. Resend only renews a pending row; departure,
+resend and issuer return never revive accepted, rejected or canceled invitations.
+Acceptance and issuer departure commit independently: membership, participation anchor and accepted
+status are atomic, while the departure audit records only a committed removal. Refused or rolled-back
+departure leaves invitations unchanged and writes no successful-departure audit.
+Workspace departure is distinct from account erasure: this policy does not override erasure cleanup
+or the invitation foreign-key cascade when the issuer's account is deleted.
 After removing another member, the client announces success and focuses the stable members table
 after refreshing the list, so removal of the row and its dialog does not lose keyboard focus.
 Closing a definite refusal resets its confirmation for a new intent; an uncertain result still
