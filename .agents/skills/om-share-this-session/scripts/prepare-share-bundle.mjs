@@ -164,6 +164,13 @@ function sanitizeString(input, key, state) {
   value = replaceMatches(value, /\b(Bearer|Basic)\s+[A-Za-z0-9+/_=.-]{8,}\b/gi, (_match, scheme) => `${scheme} «redacted:authorization»`, state, 'secrets')
   value = replaceMatches(value, /\b(Authorization\s*:\s*)[^\s,;]+/gi, (_match, prefix) => `${prefix}«redacted:authorization»`, state, 'secrets')
   value = replaceMatches(value, /([a-z][a-z0-9+.-]*:\/\/)[^/\s:@]+:[^/\s@]+@/gi, (_match, prefix) => `${prefix}«redacted:credential»@`, state, 'secrets')
+  // Quoted assignments also occur inside tool-output strings and generated JSON.
+  value = replaceMatches(value, /(["'])(api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|pwd|secret|client[_-]?secret|token|authorization|cookie|set[_-]?cookie|private[_-]?key)\1\s*[:=]\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi, (_match, quote, name, secret) => {
+    const delimiter = secret[0] === '"' || secret[0] === "'" ? secret[0] : ''
+    const content = delimiter ? secret.slice(1, -1) : secret
+    if (completeRedactionMarkerPattern.test(content)) return _match
+    return `${quote}${name}${quote}: ${delimiter}«redacted:secret-value»${delimiter}`
+  }, state, 'secrets')
   value = replaceMatches(value, /\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret|client[_-]?secret)\s*[:=]\s*)[^\s,;"']+/gi, (_match, prefix) => `${prefix}«redacted:secret»`, state, 'secrets')
   if (key !== 'generated-file-path') value = redactHighEntropy(value, state)
 

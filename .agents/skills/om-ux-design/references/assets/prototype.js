@@ -48,7 +48,14 @@
     }
   }
 
+  function mergePersistedOperations() {
+    var persisted = normalizeDocument(load(threadsStorageKey, { version: 2, operations: [] })).operations;
+    localOperations = normalizeOperations(persisted.concat(localOperations))
+      .filter(function (operation) { return !committedOperationIds.has(operation.id); });
+  }
+
   function save() {
+    mergePersistedOperations();
     try {
       localStorage.setItem(threadsStorageKey, JSON.stringify({ version: 2, operations: localOperations }));
       localStorage.setItem(authorStorageKey, JSON.stringify(author));
@@ -215,6 +222,9 @@
     }
     screens().forEach(function (screen) { screen.classList.remove('is-current'); });
     target.classList.add('is-current');
+    var destination = target.querySelector('.screen-meta h2, h1, h2, [role="heading"]') || target;
+    destination.setAttribute('tabindex', '-1');
+    destination.focus({ preventScroll: true });
     if (focusMode) {
       window.scrollTo(0, 0);
     } else {
@@ -599,6 +609,7 @@
   }
 
   function exportRepository() {
+    mergePersistedOperations();
     var exported = { version: 2, prototypeId: prototypeId, operations: allOperations() };
     var header = [
       '/* Committed prototype review operations.',
@@ -611,6 +622,8 @@
   }
 
   function exportMarkdown() {
+    mergePersistedOperations();
+    applyOperations();
     var title = (document.querySelector('.doc-head h1') || {}).textContent || 'Prototype';
     var lines = ['# Prototype feedback — ' + title, ''];
     var byScreen = Object.create(null);
@@ -761,6 +774,13 @@
     prepareHotspots();
     renderPins();
     document.addEventListener('click', onDocumentClick, true);
+    window.addEventListener('storage', function (event) {
+      if (event.key !== threadsStorageKey && event.key !== null) return;
+      mergePersistedOperations();
+      applyOperations();
+      renderPins();
+      renderPanel();
+    });
     window.addEventListener('resize', renderPins);
     window.addEventListener('scroll', renderPins, true);
     window.addEventListener('keydown', function (event) {

@@ -307,6 +307,14 @@ N_GAP=${GAP_ROWS:-0}
 N_ROWS=$((N_COV + N_GAP))
 [ "$N_ROWS" -ge 1 ] || fail "**Criteria coverage** block has no parseable rows (expected 'C<i>: covered \`path\`' or 'C<i>: gap: <text>')"
 
+# Identity matters as well as count: duplicate C1 rows cannot cover C2.
+CRITERION_IDS="$(grep -E '^[[:space:]]*- C[0-9]+: (covered `[^`]+`|gap: .+)' <<<"$BLOCK" | sed -E 's/^[[:space:]]*- (C[0-9]+):.*/\1/')"
+EXPECTED_ID=1
+while IFS= read -r criterion_id; do
+  [ "$criterion_id" = "C$EXPECTED_ID" ] || fail "expected C$EXPECTED_ID, got $criterion_id — criteria IDs must be unique and consecutive in story order"
+  EXPECTED_ID=$((EXPECTED_ID + 1))
+done <<<"$CRITERION_IDS"
+
 # One row per criterion: when the story context carries countable criteria
 # (bullet lines below the title — the orchestrator writes title + criteria),
 # the row count must match. A story file without bullets skips this count
