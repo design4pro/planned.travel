@@ -12,9 +12,11 @@ import type { Ref } from 'react'
  */
 export function SignInAgain({
   buttonRef,
+  describedBy,
   onFailed,
 }: {
   buttonRef?: Ref<HTMLButtonElement>
+  describedBy?: string
   onFailed: () => void
 }) {
   const { t } = useI18n()
@@ -42,6 +44,7 @@ export function SignInAgain({
   return (
     <Button
       ref={buttonRef}
+      aria-describedby={describedBy}
       variant="secondary"
       size="sm"
       shape="pill"
