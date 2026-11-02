@@ -401,7 +401,7 @@ describe('DaySection notes', () => {
     await user.click(screen.getByRole('button', { name: 'Move to day' }))
 
     expect(
-      screen.queryByRole('menuitem', { name: 'Asakusa and the river' }),
+      screen.queryByRole('menuitem', { name: 'Day 1 · Asakusa and the river' }),
     ).toBeNull()
     await user.click(
       await screen.findByRole('menuitem', { name: 'Day 2 · Kyoto by train' }),
