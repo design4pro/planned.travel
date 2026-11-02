@@ -139,6 +139,8 @@ const messages = {
     '{name} nie został przeniesiony. Przejazd zostaje w swoim dniu.',
   'plan.move.spoken.journeyTimed':
     '{name} nie został przeniesiony. Odjeżdża o {time}.',
+  'plan.move.spoken.accepted':
+    'Przeniesiono {name} na {destination}. Zapisywanie.',
   'plan.move.error.save': 'Nie udało się zapisać tego przeniesienia',
   'plan.move.error.retry': 'Spróbuj ponownie za chwilę.',
   'plan.move.dropTime.title': 'Przenieść {name} i usunąć godzinę {time}?',

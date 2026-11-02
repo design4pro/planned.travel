@@ -59,11 +59,14 @@ import {
 } from '#/lib/map'
 import {
   DaySection,
+  containerOf,
   DragPreview,
   IDEAS_CONTAINER,
   IdeasList,
   initialSelection,
   itemsIn,
+  isNoteItemId,
+  noteIdOfNoteItem,
   journeyName,
   noteItemId,
   selectionReducer,
@@ -382,7 +385,17 @@ export function PlanScreen({
     readonly target: PlanTarget
     readonly name: string
     readonly time: string
+    readonly fromMenu: boolean
+    readonly sourceDay: string | null
   } | null>(null)
+  const [moveStatus, setMoveStatus] = React.useState({ text: '', sequence: 0 })
+  const [moveFocus, setMoveFocus] = React.useState<{
+    itemId: string
+    dayId: string | null
+  } | null>(null)
+  const announceMove = React.useCallback((text: string) => {
+    setMoveStatus((previous) => ({ text, sequence: previous.sequence + 1 }))
+  }, [])
   const [coverageHidden, setCoverageHidden] = React.useState(false)
   /**
    * Which slice the places rail lists.
@@ -652,7 +665,12 @@ export function PlanScreen({
    * two drags overlap.
    */
   const runMove = React.useCallback(
-    (itemId: string, target: PlanTarget, drop: boolean): string | null => {
+    (
+      itemId: string,
+      target: PlanTarget,
+      drop: boolean,
+      fromMenu = false,
+    ): string | null => {
       if (!editable) return null
 
       const outcome = planMoveOutcome(order, itemId, target, {
@@ -662,7 +680,9 @@ export function PlanScreen({
         dropTime: drop,
       })
 
+      const sourceDay = containerOf(order, itemId)
       if (outcome.kind === 'refused') {
+        if (fromMenu) setMoveFocus({ itemId, dayId: sourceDay })
         const copy = refusalCopy(outcome.reason, itemId)
         const name = nameOfItem(itemId)
         if (copy === null || name === null) return null
@@ -672,24 +692,79 @@ export function PlanScreen({
         const time = timeOfItem(itemId)
         const said = time === null ? { name } : { name, time }
         toast.error(t(copy.title, said), { description: t(copy.body) })
-        return t(copy.spoken, said)
+        const spoken = t(copy.spoken, said)
+        if (fromMenu) announceMove(spoken)
+        return spoken
       }
 
       if (outcome.kind === 'ask-drop-time') {
         const name = nameOfItem(itemId)
         if (name === null) return null
-        setDropTime({ open: true, itemId, target, name, time: outcome.time })
+        setDropTime({
+          open: true,
+          itemId,
+          target,
+          name,
+          time: outcome.time,
+          fromMenu,
+          sourceDay,
+        })
         return t('trips.plan.move.spoken.timed', { name, time: outcome.time })
       }
 
       const previous = order
+      const initiatingControl = document.activeElement
+      if (fromMenu) {
+        const day = payload.days.find(
+          (entry) => entry.dayId === target.container,
+        )
+        const name = nameOfItem(itemId)
+        if (day !== undefined && name !== null) {
+          const destination =
+            day.title === null
+              ? t('trips.plan.editor.dayNumber', { day: day.dayNumber })
+              : t('trips.plan.editor.dayNamed', {
+                  day: day.dayNumber,
+                  title: day.title,
+                })
+          announceMove(
+            t('trips.plan.move.spoken.accepted', { name, destination }),
+          )
+        }
+        setMoveFocus({ itemId, dayId: target.container })
+      }
       setOrder(outcome.order)
       markPending(itemId, true)
 
       void applyChange(outcome.change, outcome.order, drop ? itemId : null)
-        .then(() => router.invalidate())
+        .then(async () => {
+          try {
+            await router.invalidate()
+          } catch {
+            // The write committed; a failed refresh must not undo it or report a save failure.
+          }
+        })
         .catch(async (cause: unknown) => {
+          const focusedRow = document.activeElement?.closest(
+            '[data-planner-item], [data-planner-note]',
+          )
+          if (
+            fromMenu &&
+            (document.activeElement === document.body ||
+              document.activeElement === initiatingControl ||
+              (document.activeElement?.matches('[data-planner-day-header]') &&
+                document.activeElement
+                  .closest('[data-planner-day]')
+                  ?.getAttribute('data-planner-day') === target.container) ||
+              (focusedRow?.matches(plannerRowSelector(itemId)) &&
+                focusedRow
+                  .closest('[data-planner-day]')
+                  ?.getAttribute('data-planner-day') === target.container))
+          ) {
+            setMoveFocus({ itemId, dayId: sourceDay })
+          }
           setOrder(previous)
+          if (fromMenu) announceMove(t('trips.plan.move.error.save'))
           toast.error(t('trips.plan.move.error.save'), {
             description: messageOf(cause, t('trips.plan.move.error.retry')),
           })
@@ -709,7 +784,9 @@ export function PlanScreen({
       return null
     },
     [
+      announceMove,
       applyChange,
+      payload.days,
       editable,
       markPending,
       nameOfItem,
@@ -725,6 +802,12 @@ export function PlanScreen({
   const commitMove = React.useCallback(
     (itemId: string, target: PlanTarget): string | null =>
       runMove(itemId, target, false),
+    [runMove],
+  )
+
+  const moveFromMenu = React.useCallback(
+    (itemId: string, target: PlanTarget) =>
+      runMove(itemId, target, false, true),
     [runMove],
   )
 
@@ -840,6 +923,33 @@ export function PlanScreen({
   // registry: one selector against the rail beats forty refs that all have to be
   // kept in step with an optimistic reorder.
   const railRef = React.useRef<HTMLDivElement | null>(null)
+  React.useEffect(() => {
+    if (moveFocus === null || dropTime?.open === true) return
+    // Radix closes its focus scope after the optimistic row has remounted.
+    const timer = window.setTimeout(() => {
+      const rail = railRef.current
+      const day = rail?.querySelector<HTMLElement>(
+        `[data-planner-day=${JSON.stringify(moveFocus.dayId)}]`,
+      )
+      const row = day?.querySelector<HTMLElement>(
+        plannerRowSelector(moveFocus.itemId),
+      )
+      const header = day?.querySelector<HTMLElement>(
+        '[data-planner-day-header]',
+      )
+      const expanded =
+        moveFocus.dayId !== null && isDayExpanded(unfolded, moveFocus.dayId)
+      const control =
+        (expanded
+          ? row?.querySelector<HTMLElement>('button:not([disabled])')
+          : null) ??
+        header ??
+        rail
+      control?.focus()
+      setMoveFocus(null)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [moveFocus, dropTime?.open, unfolded])
   React.useEffect(() => {
     const placeId = selection.placeId
     if (placeId === null) return
@@ -1163,16 +1273,16 @@ export function PlanScreen({
 
   /**
    * Moves a note to the end of another day: the menu's way to do what a drag to that day
-   * does, through the same `commitMove`, so the two cannot disagree.
+   * does, through the same `runMove` policy, with menu feedback and focus handoff.
    */
   const moveNoteToDay = React.useCallback(
     (note: PlannerNote, dayId: string): void => {
-      commitMove(noteItemId(note.id), {
+      moveFromMenu(noteItemId(note.id), {
         container: dayId,
         index: (itemsIn(order, dayId) ?? []).length,
       })
     },
-    [commitMove, order],
+    [moveFromMenu, order],
   )
 
   const savePosition = React.useCallback(
@@ -1251,7 +1361,7 @@ export function PlanScreen({
           onMoveToDay={(dayId) =>
             // The same code path a drag takes, so the menu and the pointer cannot
             // disagree about what "move to day 4" means.
-            commitMove(row.itemId, {
+            moveFromMenu(row.itemId, {
               container: dayId,
               index: (itemsIn(order, dayId) ?? []).length,
             })
@@ -1266,7 +1376,16 @@ export function PlanScreen({
         />
       )
     },
-    [commitMove, editable, order, payload, pending, placeById, placeOfItem],
+    [
+      commitMove,
+      moveFromMenu,
+      editable,
+      order,
+      payload,
+      pending,
+      placeById,
+      placeOfItem,
+    ],
   )
 
   /* ------------------------------------------------------------------ panels */
@@ -1326,7 +1445,7 @@ export function PlanScreen({
               setDialog({ kind: 'note-delete', noteId: note.id })
             }
             onMoveNote={moveNote}
-            moveTargets={model.days}
+            moveTargets={payload.days}
             onMoveNoteToDay={moveNoteToDay}
             weather={weather.viewOf(day.dayId)}
             weatherUnit={weather.unit}
@@ -1432,6 +1551,14 @@ export function PlanScreen({
         screenReaderInstructions: dnd.screenReaderInstructions,
       }}
     >
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        <span key={moveStatus.sequence}>{moveStatus.text}</span>
+      </div>
       <PlanWorkspace
         key={payload.tripId}
         layout={workspace}
@@ -1658,11 +1785,18 @@ export function PlanScreen({
         open={dropTime?.open === true}
         name={dropTime?.name ?? ''}
         time={dropTime?.time ?? ''}
-        onDecline={() => setDropTime(closed)}
+        onCloseAutoFocus={(event) => {
+          if (dropTime?.fromMenu) event.preventDefault()
+        }}
+        onDecline={() => {
+          if (dropTime?.fromMenu)
+            setMoveFocus({ itemId: dropTime.itemId, dayId: dropTime.sourceDay })
+          setDropTime(closed)
+        }}
         onConfirm={() => {
           if (dropTime === null) return
           setDropTime(closed)
-          runMove(dropTime.itemId, dropTime.target, true)
+          runMove(dropTime.itemId, dropTime.target, true, dropTime.fromMenu)
         }}
       />
     </DndContext>
@@ -1743,4 +1877,11 @@ function PlanCoverage({
       )}
     </>
   )
+}
+
+/** Notes retain their own row attribute, which the timeline readers also use. */
+function plannerRowSelector(itemId: string): string {
+  return isNoteItemId(itemId)
+    ? `[data-planner-note=${JSON.stringify(noteIdOfNoteItem(itemId))}]`
+    : `[data-planner-item=${JSON.stringify(itemId)}]`
 }

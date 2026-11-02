@@ -134,6 +134,7 @@ const messages = {
     '{name} は移動しませんでした。移動は自分の日にとどまります。',
   'plan.move.spoken.journeyTimed':
     '{name} は移動しませんでした。出発は {time} です。',
+  'plan.move.spoken.accepted': '{name}を{destination}に移動しました。保存中。',
   'plan.move.error.save': '移動を保存できませんでした',
   'plan.move.error.retry': '少し時間をおいてもう一度お試しください。',
   'plan.move.dropTime.title': '{name} を移動して {time} を外しますか？',

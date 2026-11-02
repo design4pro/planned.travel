@@ -136,6 +136,8 @@ const messages = {
     '{name} is niet verplaatst. Een traject blijft op zijn eigen dag.',
   'plan.move.spoken.journeyTimed':
     '{name} is niet verplaatst. Het vertrekt om {time}.',
+  'plan.move.spoken.accepted':
+    '{name} verplaatst naar {destination}. Bezig met opslaan.',
   'plan.move.error.save': 'Die verplaatsing is niet opgeslagen',
   'plan.move.error.retry': 'Probeer het zo meteen opnieuw.',
   'plan.move.dropTime.title': '{name} verplaatsen en {time} laten vervallen?',

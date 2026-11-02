@@ -135,6 +135,8 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     '{name} no s’ha mogut. Un trajecte es queda al seu dia.',
   'plan.move.spoken.journeyTimed': '{name} no s’ha mogut. Surt a les {time}.',
+  'plan.move.spoken.accepted':
+    '{name} s’ha mogut a {destination}. S’està desant.',
   'plan.move.error.save': 'Aquest moviment no s’ha desat',
   'plan.move.error.retry': 'Torneu-ho a provar d’aquí a un moment.',
   'plan.move.dropTime.title': 'Voleu moure {name} i deixar anar les {time}?',

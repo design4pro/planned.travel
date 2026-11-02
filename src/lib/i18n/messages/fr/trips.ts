@@ -138,6 +138,8 @@ const messages = {
     '{name} n’a pas été déplacé. Un trajet reste dans sa journée.',
   'plan.move.spoken.journeyTimed':
     '{name} n’a pas été déplacé. Départ à {time}.',
+  'plan.move.spoken.accepted':
+    '{name} déplacé vers {destination}. Enregistrement en cours.',
   'plan.move.error.save': 'Ce déplacement n’a pas été enregistré',
   'plan.move.error.retry': 'Réessayez dans un instant.',
   'plan.move.dropTime.title': 'Déplacer {name} et abandonner {time} ?',

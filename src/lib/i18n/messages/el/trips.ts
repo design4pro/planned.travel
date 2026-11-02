@@ -137,6 +137,8 @@ const messages = {
     'Το {name} δεν μετακινήθηκε. Η μετακίνηση μένει στη δική της ημέρα.',
   'plan.move.spoken.journeyTimed':
     'Το {name} δεν μετακινήθηκε. Αναχωρεί στις {time}.',
+  'plan.move.spoken.accepted':
+    'Το {name} μετακινήθηκε στο {destination}. Αποθήκευση.',
   'plan.move.error.save': 'Η μετακίνηση δεν αποθηκεύτηκε',
   'plan.move.error.retry': 'Δοκιμάστε ξανά σε λίγο.',
   'plan.move.dropTime.title':

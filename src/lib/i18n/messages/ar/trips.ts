@@ -137,6 +137,7 @@ const messages = {
   'plan.move.spoken.journeyNotInAnotherDay':
     'لم تُنقل {name}. الرحلة تبقى في يومها.',
   'plan.move.spoken.journeyTimed': 'لم تُنقل {name}. تنطلق في {time}.',
+  'plan.move.spoken.accepted': 'تم نقل {name} إلى {destination}. جارٍ الحفظ.',
   'plan.move.error.save': 'لم يُحفظ هذا النقل',
   'plan.move.error.retry': 'حاول مرة أخرى بعد قليل.',
   'plan.move.dropTime.title': 'هل ننقل {name} ونُسقط الساعة {time}؟',
