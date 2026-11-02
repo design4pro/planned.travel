@@ -37,6 +37,7 @@ const LABELS: Record<string, string> = {
 
 function mount(
   options: {
+    isSelf?: boolean
     role?: string
     assignable?: ReadonlyArray<MemberRole>
     onChange?: (role: MemberRole) => Promise<MemberRoleOutcome>
@@ -49,6 +50,7 @@ function mount(
   render(
     <I18nProvider locale="en" messages={EN}>
       <MemberRoleControl
+        isSelf={options.isSelf ?? false}
         memberName="Kasia Nowak"
         role={options.role ?? 'member'}
         assignable={options.assignable ?? ['owner', 'admin', 'member']}
@@ -120,15 +122,15 @@ describe('changing a role', () => {
   it.each([
     [
       'last-owner',
-      'This is the only owner of the workspace. Make someone else an owner first.',
+      'The workspace must keep an owner. Make another member an owner first.',
     ],
     [
       'not-permitted',
-      'You cannot make that change. Only an owner can grant the owner role or change an owner.',
+      'You cannot make that change. Ask a workspace owner to grant the owner role or change an owner.',
     ],
     [
       'impersonated',
-      'A role cannot be changed while you are acting as another account.',
+      'Roles cannot be changed in this session. Sign in again, or stop impersonating the account before changing roles.',
     ],
   ] as const)(
     'says why in plain words when the answer is %s',
@@ -222,6 +224,72 @@ describe('making someone an owner', () => {
 
       await waitFor(() => expect(document.activeElement).toBe(trigger()))
       expect(onChange).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe('lowering your own authority', () => {
+  it.each([
+    ['owner', 'Admin', 'manage workspace owners'],
+    ['owner', 'Member', 'Workspace console'],
+    ['admin', 'Member', 'Workspace console'],
+  ])('confirms %s to %s with Cancel focused', async (role, next, lost) => {
+    const { user, onChange } = mount({ role, isSelf: true })
+    await choose(user, next)
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.textContent).toContain(lost)
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Cancel' }),
+      ),
+    )
+    expect(onChange).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Change my role' }))
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(next.toLowerCase())
+    await waitFor(() => expect(document.activeElement).toBe(trigger()))
+  })
+
+  it.each(['Cancel', 'Escape', 'Close'])(
+    'sends nothing on %s and restores focus',
+    async (action) => {
+      const { user, onChange } = mount({ role: 'owner', isSelf: true })
+      await choose(user, 'Admin')
+      await screen.findByRole('dialog')
+      if (action === 'Escape') await user.keyboard('{Escape}')
+      else await user.click(screen.getByRole('button', { name: action }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(onChange).not.toHaveBeenCalled()
+      await waitFor(() => expect(document.activeElement).toBe(trigger()))
+    },
+  )
+
+  it.each([false, true])(
+    'announces pending work and blocks duplicate submissions (self: %s)',
+    async (isSelf) => {
+      let finish: (outcome: MemberRoleOutcome) => void = () => {
+        throw new Error('request not started')
+      }
+      const { user, onChange } = mount({
+        role: 'admin',
+        isSelf,
+        onChange: () =>
+          new Promise((resolve) => {
+            finish = resolve
+          }),
+      })
+      await choose(user, 'Member')
+      if (isSelf)
+        await user.dblClick(
+          await screen.findByRole('button', { name: 'Change my role' }),
+        )
+      expect(screen.getByRole('status').textContent).toBe('Changing role…')
+      expect(trigger().hasAttribute('disabled')).toBe(true)
+      await user.click(trigger())
+      expect(screen.queryByRole('option')).toBeNull()
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('member')
+      finish({ ok: true })
+      await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+      await waitFor(() => expect(document.activeElement).toBe(trigger()))
     },
   )
 })

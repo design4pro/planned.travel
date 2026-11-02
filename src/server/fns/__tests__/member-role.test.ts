@@ -211,23 +211,26 @@ describe('an impersonated or missing session', () => {
     expect(isImpersonated({ session: { impersonatedBy: null } })).toBe(false)
   })
 
-  it('throws before the scope is built, and changes and writes nothing', async () => {
-    const { memberId } = await seat('owner', 'member')
-    const scope = vi.fn(async () => tenant.scope)
+  it.each([null, { session: { impersonatedBy: 'operator' } }])(
+    'refuses session %j before scope construction and writes nothing',
+    async (session) => {
+      const { memberId } = await seat('owner', 'member')
+      const scope = vi.fn(async () => tenant.scope)
 
-    const refusal: unknown = await changeRole(
-      { impersonated: true, scope },
-      { memberId, role: 'owner' },
-    ).catch((cause: unknown) => cause)
+      const refusal: unknown = await changeRole(
+        { impersonated: isImpersonated(session), scope },
+        { memberId, role: 'owner' },
+      ).catch((cause: unknown) => cause)
 
-    expect(refusal).toBeInstanceOf(AuthRequirementError)
-    expect(refusal).toMatchObject({
-      reason: 'impersonated',
-      status: 403,
-      message: MEMBER_ROLE_IMPERSONATED_KEY,
-    })
-    expect(scope).not.toHaveBeenCalled()
-    expect(await roleOf(memberId)).toBe('member')
-    expect(await entries()).toHaveLength(0)
-  })
+      expect(refusal).toBeInstanceOf(AuthRequirementError)
+      expect(refusal).toMatchObject({
+        reason: 'impersonated',
+        status: 403,
+        message: MEMBER_ROLE_IMPERSONATED_KEY,
+      })
+      expect(scope).not.toHaveBeenCalled()
+      expect(await roleOf(memberId)).toBe('member')
+      expect(await entries()).toHaveLength(0)
+    },
+  )
 })

@@ -59,7 +59,12 @@ export async function readParticipantBackfillMarker(
 ): Promise<ParticipantBackfillMarker | null> {
   const raw = await kv.get(PARTICIPANT_BACKFILL_MARKER_KEY)
   if (raw === null) return null
-  const parsed: unknown = JSON.parse(raw)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
   if (
     typeof parsed === 'object' &&
     parsed !== null &&

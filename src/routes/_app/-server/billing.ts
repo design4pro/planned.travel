@@ -89,6 +89,7 @@ async function billingSession(): Promise<{
 /* --------------------------------------------------------------------- read */
 
 export interface BillingPayload {
+  readonly viewerId: string
   readonly places: { readonly used: number; readonly limit: number | null }
   readonly entitlements: Entitlements
   readonly invoices: ReadonlyArray<InvoiceSummary>
@@ -124,6 +125,7 @@ export const loadBilling = createServerFn({ method: 'GET' }).handler(
     ])
 
     return {
+      viewerId: identity.userId,
       entitlements: state,
       places,
       invoices: invoices ?? [],

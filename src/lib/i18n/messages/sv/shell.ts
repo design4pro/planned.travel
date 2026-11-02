@@ -331,7 +331,7 @@ const messages = {
   'admin.denied.body':
     'Be en ägare eller administratör i arbetsytan att ändra din roll om du behöver det.',
   'admin.denied.action': 'Tillbaka till översikten',
-  'admin.eyebrow': 'Administrera arbetsytan',
+  'admin.eyebrow': 'Arbetsytans konsol',
   'admin.description': 'Abonnemanget {plan} · skapad {date}',
   'admin.createdUnknown': 'nyligen',
   'admin.workspaceSettings': 'Arbetsytans inställningar',
@@ -376,14 +376,21 @@ const messages = {
   'admin.members.role.label': 'Roll för {name}',
   'admin.members.role.saved': '{name} är nu {role}.',
   'admin.members.role.impersonated':
-    'En roll kan inte ändras medan du agerar som ett annat konto.',
+    'Roller kan inte ändras i den här sessionen. Logga in igen eller sluta agera som kontot innan du ändrar roller.',
   'admin.members.role.notPermitted':
-    'Du kan inte göra den ändringen. Bara en ägare kan ge ägarrollen eller ändra en ägare.',
+    'Du kan inte göra den ändringen. Be en ägare av arbetsytan att tilldela ägarrollen eller ändra en ägare.',
   'admin.members.role.lastOwner':
-    'Det här är arbetsytans enda ägare. Gör först någon annan till ägare.',
+    'Arbetsytan måste ha en ägare kvar. Gör först en annan medlem till ägare.',
   'admin.members.role.notFound':
     'Personen finns inte längre i arbetsytan. Listan har uppdaterats.',
   'admin.members.role.failed': 'Rollen kunde inte ändras. Försök igen.',
+  'admin.members.role.demote.title': 'Ändra din roll?',
+  'admin.members.role.demote.admin':
+    'Du kan inte längre hantera arbetsytans ägare. Bara en annan ägare kan återställa din roll.',
+  'admin.members.role.demote.member':
+    'Du förlorar åtkomst till arbetsytans konsol och dess fakturering, medlemmar och inställningar. Be en ägare av arbetsytan återställa din roll.',
+  'admin.members.role.demote.confirm': 'Ändra min roll',
+  'admin.members.role.pending': 'Ändrar roll…',
   'admin.members.role.promote.title': 'Göra {name} till ägare?',
   'admin.members.role.promote.body':
     '{name} får samma makt som du: fakturering, medlemmar och inställningar. En ägare kan degradera eller ta bort alla andra ägare, även dig.',

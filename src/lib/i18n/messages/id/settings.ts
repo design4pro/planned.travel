@@ -358,9 +358,16 @@ const messages = {
   'billing.status.incomplete': 'Belum tuntas',
   'billing.status.incomplete_expired': 'Kedaluwarsa',
 
-  'billing.checkout.completeTitle': 'Pembayaran diterima',
-  'billing.checkout.completeBody':
-    'Paket baru Anda sedang diterapkan. Ia muncul di sini begitu Polar mengonfirmasinya — biasanya dalam beberapa detik.',
+  'billing.return.pending': 'Memeriksa perubahan paket',
+  'billing.return.checking': 'Memeriksa status tagihan',
+  'billing.return.confirmed': 'Paket dikonfirmasi',
+  'billing.return.scheduled': 'Perubahan paket dijadwalkan',
+  'billing.return.delayed': 'Konfirmasi memerlukan waktu lebih lama',
+  'billing.return.body':
+    'Muat ulang untuk memeriksa lagi. Jika perubahan belum dikonfirmasi, hubungi dukungan.',
+  'billing.return.scheduledBody':
+    'Perubahan berlaku pada {date}. Paket saat ini tetap berlaku hingga saat itu. Ini tidak mengonfirmasi perubahan jumlah kursi.',
+
   'billing.checkout.cancelledTitle': 'Pembayaran dibatalkan',
   'billing.checkout.cancelledBody':
     'Tidak ada yang ditagih dan paket Anda tidak berubah.',
@@ -510,9 +517,6 @@ const messages = {
     'Penagihan belum terhubung pada penerapan ini, jadi tidak ada yang berubah. Hubungi dukungan.',
   'billing.failure.orderNotInvoiceable':
     'Polar tidak dapat menerbitkan faktur untuk pesanan ini. Jika nama atau alamat penagihan belum ada, tambahkan di portal penagihan lalu coba lagi; jika tidak, hubungi dukungan.',
-  'billing.planChanged.title': 'Paket diperbarui',
-  'billing.planChanged.body':
-    'Perubahannya sudah berlaku di Polar, yang akan menagih selisihnya. Ringkasan di bawah menyusul dalam satu menit.',
   'billing.discount.toggle': 'Punya kode promo?',
   'billing.discount.label': 'Kode promo',
   'billing.discount.hint': 'Diterapkan ke paket yang Anda pilih berikutnya.',

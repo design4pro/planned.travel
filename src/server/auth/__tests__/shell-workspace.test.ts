@@ -65,7 +65,7 @@ it('the shell uses the surviving membership and its role', async () => {
   })
 })
 
-it('the shell preserves membershipRemoved and noWorkspace without provisioning', async () => {
+it('the shell recovers a stale or empty workspace and reuses the personal membership', async () => {
   const harness = await createHarness()
   shared.db = harness.db as unknown as AuthDb
   const a = await harness.seedTenant('removed')
@@ -79,10 +79,10 @@ it('the shell preserves membershipRemoved and noWorkspace without provisioning',
       activeOrganizationId: a.organizationId,
     },
   })
-  await expect(loadShell()).rejects.toThrow('shell.session.membershipRemoved')
+  await expect(loadShell()).resolves.toMatchObject({ role: 'owner' })
   if (!shared.session) throw new Error('Missing fixture session')
   shared.session.session.activeOrganizationId = null
-  await expect(loadShell()).rejects.toThrow('shell.session.noWorkspace')
-  expect(await shared.db.select().from(member)).toEqual([])
-  expect(shared.createScope).not.toHaveBeenCalled()
+  await expect(loadShell()).resolves.toMatchObject({ role: 'owner' })
+  expect(await shared.db.select().from(member)).toHaveLength(1)
+  expect(shared.createScope).toHaveBeenCalledTimes(2)
 })

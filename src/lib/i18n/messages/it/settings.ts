@@ -369,9 +369,16 @@ const messages = {
   'billing.status.incomplete': 'Incompleto',
   'billing.status.incomplete_expired': 'Scaduto',
 
-  'billing.checkout.completeTitle': 'Pagamento ricevuto',
-  'billing.checkout.completeBody':
-    'Il piano nuovo si sta applicando. Compare qui appena Polar lo conferma — di solito in pochi secondi.',
+  'billing.return.pending': 'Verifica della modifica del piano',
+  'billing.return.checking': 'Verifica dello stato di fatturazione',
+  'billing.return.confirmed': 'Piano confermato',
+  'billing.return.scheduled': 'Modifica del piano programmata',
+  'billing.return.delayed': 'La conferma richiede più tempo',
+  'billing.return.body':
+    'Aggiorna per verificare di nuovo. Se la modifica resta senza conferma, contatta l’assistenza.',
+  'billing.return.scheduledBody':
+    'La modifica sarà effettiva dal {date}. Fino ad allora resta attivo il piano attuale. Questo non conferma le modifiche al numero di posti.',
+
   'billing.checkout.cancelledTitle': 'Pagamento annullato',
   'billing.checkout.cancelledBody':
     'Non è stato addebitato niente e il tuo piano non è cambiato.',
@@ -530,9 +537,6 @@ const messages = {
     'La fatturazione non è ancora collegata in questa distribuzione, quindi non è stato modificato nulla. Contatta l’assistenza.',
   'billing.failure.orderNotInvoiceable':
     'Polar non può emettere una fattura per questo ordine. Se mancano il nome o l’indirizzo di fatturazione, aggiungili nel portale di fatturazione e riprova; altrimenti contatta l’assistenza.',
-  'billing.planChanged.title': 'Piano aggiornato',
-  'billing.planChanged.body':
-    'La modifica è già in vigore su Polar, che fatturerà la differenza. Il riepilogo qui sotto si aggiorna entro un minuto.',
   'billing.discount.toggle': 'Hai un codice promozionale?',
   'billing.discount.label': 'Codice promozionale',
   'billing.discount.hint': 'Verrà applicato al piano che sceglierai.',

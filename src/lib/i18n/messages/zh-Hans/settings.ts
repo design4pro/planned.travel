@@ -295,9 +295,15 @@ const messages = {
   'billing.status.canceled': '已取消',
   'billing.status.incomplete': '未完成',
   'billing.status.incomplete_expired': '已过期',
-  'billing.checkout.completeTitle': '已收到付款',
-  'billing.checkout.completeBody':
-    '新方案正在生效。Polar 一确认，这里就会显示出来——通常几秒钟。',
+  'billing.return.pending': '正在检查套餐变更',
+  'billing.return.checking': '正在检查账单状态',
+  'billing.return.confirmed': '套餐已确认',
+  'billing.return.scheduled': '套餐变更已安排',
+  'billing.return.delayed': '确认所需时间较长',
+  'billing.return.body': '请刷新以再次检查。如果变更仍未确认，请联系支持团队。',
+  'billing.return.scheduledBody':
+    '变更将于{date}生效。在此之前，当前套餐保持有效。 这并不确认席位数量的变更。',
+
   'billing.checkout.cancelledTitle': '结账已取消',
   'billing.checkout.cancelledBody': '没有扣款，方案也没有变。',
   'billing.portal.backTitle': '从 Polar 回来了',
@@ -426,9 +432,6 @@ const messages = {
     '此部署尚未连接账单服务，因此未做任何更改。请联系支持团队。',
   'billing.failure.orderNotInvoiceable':
     'Polar 无法为此订单开具发票。如果缺少账单姓名或地址，请在账单门户中补充后重试；否则请联系支持团队。',
-  'billing.planChanged.title': '套餐已更新',
-  'billing.planChanged.body':
-    '变更已在 Polar 生效，差额由 Polar 开票。下面的摘要会在一分钟内跟上。',
   'billing.discount.toggle': '有促销码吗？',
   'billing.discount.label': '促销码',
   'billing.discount.hint': '将应用于你接下来选择的套餐。',

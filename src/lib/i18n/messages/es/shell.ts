@@ -355,7 +355,7 @@ const messages = {
   'admin.denied.body':
     'Si lo necesitas, pide a un propietario o a un administrador de este espacio que cambie tu rol.',
   'admin.denied.action': 'Volver al panel',
-  'admin.eyebrow': 'Administración del espacio',
+  'admin.eyebrow': 'Consola del espacio',
   'admin.description': 'Plan {plan} · creado el {date}',
   'admin.createdUnknown': 'hace poco',
   'admin.workspaceSettings': 'Ajustes del espacio',
@@ -402,14 +402,21 @@ const messages = {
   'admin.members.role.label': 'Rol de {name}',
   'admin.members.role.saved': '{name} ahora es {role}.',
   'admin.members.role.impersonated':
-    'No se puede cambiar un rol mientras actúas como otra cuenta.',
+    'No se pueden cambiar roles en esta sesión. Vuelve a iniciar sesión o deja de actuar como esa cuenta antes de cambiar roles.',
   'admin.members.role.notPermitted':
-    'No puedes hacer ese cambio. Solo una persona propietaria puede conceder el rol de propietario o cambiar a un propietario.',
+    'No puedes realizar ese cambio. Pide a un propietario del espacio que otorgue el rol de propietario o cambie a un propietario.',
   'admin.members.role.lastOwner':
-    'Es el único propietario del espacio de trabajo. Nombra antes a otra persona propietaria.',
+    'El espacio debe conservar un propietario. Primero convierte a otro miembro en propietario.',
   'admin.members.role.notFound':
     'Esta persona ya no está en el espacio de trabajo. La lista se ha actualizado.',
   'admin.members.role.failed': 'No se pudo cambiar el rol. Inténtalo de nuevo.',
+  'admin.members.role.demote.title': '¿Cambiar tu rol?',
+  'admin.members.role.demote.admin':
+    'Ya no podrás gestionar propietarios del espacio. Solo otro propietario podrá restaurar tu rol.',
+  'admin.members.role.demote.member':
+    'Perderás el acceso a la consola del espacio y a sus controles de facturación, miembros y ajustes. Pide a un propietario del espacio que restaure tu rol.',
+  'admin.members.role.demote.confirm': 'Cambiar mi rol',
+  'admin.members.role.pending': 'Cambiando rol…',
   'admin.members.role.promote.title': '¿Hacer propietario a {name}?',
   'admin.members.role.promote.body':
     '{name} tendrá el mismo poder que tú: facturación, miembros y ajustes. Un propietario puede bajar de rol o quitar a cualquier otro propietario, incluido tú.',

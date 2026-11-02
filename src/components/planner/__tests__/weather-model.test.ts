@@ -4,10 +4,8 @@ import {
   badgeModel,
   conditionOf,
   panelModel,
-  precipitationIn,
   temperatureIn,
   unitSymbol,
-  windIn,
 } from '../weather-model'
 
 import type { DayReading, DayWeather } from '#/lib/weather'
@@ -31,6 +29,12 @@ const OK = (
     slots: null,
   },
 })
+
+/** The reading inside an `ok` answer, which the model hands on to the panel unchanged. */
+function readingOf(weather: DayWeather): DayReading {
+  if (weather.status !== 'ok') throw new Error('Not an ok answer.')
+  return weather.reading
+}
 
 const READING: DayReading = {
   kind: 'forecast',
@@ -126,52 +130,38 @@ describe('badgeModel', () => {
   })
 
   it('carries the high, the low and the condition in the reader’s unit', () => {
-    expect(badgeModel(OK(4.2, 11.6, 'rainshowers'), 'metric')).toMatchObject({
+    const weather = OK(4.2, 11.6, 'rainshowers')
+    expect(badgeModel(weather, 'metric')).toEqual({
       kind: 'forecast',
       condition: 'rain',
       max: 12,
       min: 4,
       unit: 'C',
+      reading: readingOf(weather),
+      sun: null,
     })
-    expect(badgeModel(OK(4.2, 11.6, 'rainshowers'), 'imperial')).toMatchObject({
+    expect(badgeModel(weather, 'imperial')).toEqual({
       kind: 'forecast',
       condition: 'rain',
       max: 53,
       min: 40,
       unit: 'F',
+      reading: readingOf(weather),
+      sun: null,
     })
   })
 
   it('keeps the temperatures for a day whose symbol is unknown, with no condition', () => {
-    expect(badgeModel(OK(1, 2, null), 'metric')).toMatchObject({
+    const weather = OK(1, 2, null)
+    expect(badgeModel(weather, 'metric')).toEqual({
       kind: 'forecast',
       condition: null,
+      max: 2,
+      min: 1,
+      unit: 'C',
+      reading: readingOf(weather),
+      sun: null,
     })
-  })
-})
-
-describe('precipitationIn', () => {
-  it('keeps millimetres to one decimal for a metric reader', () => {
-    expect(precipitationIn(5.14, 'metric')).toEqual({ value: 5.1, unit: 'mm' })
-    expect(precipitationIn(0, 'metric')).toEqual({ value: 0, unit: 'mm' })
-  })
-
-  it('converts to inches, to two decimals, for an imperial reader', () => {
-    expect(precipitationIn(25.4, 'imperial')).toEqual({ value: 1, unit: 'in' })
-    expect(precipitationIn(5.1, 'imperial')).toEqual({ value: 0.2, unit: 'in' })
-    expect(precipitationIn(1, 'imperial')).toEqual({ value: 0.04, unit: 'in' })
-  })
-})
-
-describe('windIn', () => {
-  it('turns metres per second into whole kilometres per hour', () => {
-    expect(windIn(5, 'metric')).toEqual({ value: 18, unit: 'km/h' })
-    expect(windIn(0.4, 'metric')).toEqual({ value: 1, unit: 'km/h' })
-  })
-
-  it('turns metres per second into whole miles per hour', () => {
-    expect(windIn(5, 'imperial')).toEqual({ value: 11, unit: 'mph' })
-    expect(windIn(10, 'imperial')).toEqual({ value: 22, unit: 'mph' })
   })
 })
 
@@ -183,9 +173,9 @@ describe('panelModel', () => {
       max: 12,
       min: 4,
       unit: 'C',
-      precipitation: { value: 5.1, unit: 'mm' },
+      precipitationMm: 5.1,
       probability: 70,
-      wind: { value: 18, unit: 'km/h' },
+      windMs: 5,
       slots: [
         { name: 'night', condition: 'cloudy', temp: 5 },
         { name: 'morning', condition: 'rain', temp: 6 },
@@ -195,14 +185,22 @@ describe('panelModel', () => {
     })
   })
 
-  it('draws the same reading in Fahrenheit, inches and miles per hour', () => {
-    expect(panelModel(READING, 'imperial')).toMatchObject({
+  it('draws the same reading in Fahrenheit, with the other figures left metric for the formatters', () => {
+    expect(panelModel(READING, 'imperial')).toEqual({
+      kind: 'forecast',
+      condition: 'rain',
       max: 53,
       min: 40,
       unit: 'F',
-      precipitation: { value: 0.2, unit: 'in' },
-      wind: { value: 11, unit: 'mph' },
-      slots: [{ temp: 42 }, { temp: 43 }, { temp: 53 }, { temp: 47 }],
+      precipitationMm: 5.1,
+      probability: 70,
+      windMs: 5,
+      slots: [
+        { name: 'night', condition: 'cloudy', temp: 42 },
+        { name: 'morning', condition: 'rain', temp: 43 },
+        { name: 'afternoon', condition: 'partlyCloudy', temp: 53 },
+        { name: 'evening', condition: 'clear', temp: 47 },
+      ],
     })
   })
 
@@ -217,9 +215,9 @@ describe('panelModel', () => {
       'metric',
     )
 
-    expect(model.precipitation).toBeNull()
+    expect(model.precipitationMm).toBeNull()
     expect(model.probability).toBeNull()
-    expect(model.wind).toBeNull()
+    expect(model.windMs).toBeNull()
   })
 
   it('has no slots region when the reading has no slots', () => {
@@ -244,6 +242,29 @@ describe('panelModel', () => {
       { name: 'evening', condition: null, temp: 8 },
     ])
   })
+
+  it('skips a slot that starts at a time it has no name for, and has no strip when none is left', () => {
+    const model = panelModel(
+      {
+        ...READING,
+        slots: [
+          { from: '03:00', symbol: 'cloudy', tempC: 5 },
+          { from: '12:00', symbol: 'cloudy', tempC: 10 },
+        ],
+      },
+      'metric',
+    )
+    expect(model.slots).toEqual([
+      { name: 'afternoon', condition: 'cloudy', temp: 10 },
+    ])
+
+    expect(
+      panelModel(
+        { ...READING, slots: [{ from: '03:00', symbol: 'cloudy', tempC: 5 }] },
+        'metric',
+      ).slots,
+    ).toBeNull()
+  })
 })
 
 describe('a recorded day', () => {
@@ -261,46 +282,59 @@ describe('a recorded day', () => {
   }
 
   it('is a recorded badge in the reader’s unit, with no condition to claim', () => {
-    expect(badgeModel(RECORDED, 'metric')).toMatchObject({
+    expect(badgeModel(RECORDED, 'metric')).toEqual({
       kind: 'recorded',
       max: 8,
       min: 2,
       unit: 'C',
+      reading: readingOf(RECORDED),
+      sun: null,
     })
-    expect(badgeModel(RECORDED, 'imperial')).toMatchObject({
+    expect(badgeModel(RECORDED, 'imperial')).toEqual({
+      kind: 'recorded',
       max: 47,
       min: 35,
       unit: 'F',
+      reading: readingOf(RECORDED),
+      sun: null,
     })
   })
 
   it('keeps an absent temperature absent, never a zero', () => {
-    const model = badgeModel(
-      {
-        ...RECORDED,
-        reading: {
-          kind: 'recorded',
-          source: 'nasa-power',
-          tempMinC: null,
-          tempMaxC: 8.4,
-          precipitationMm: null,
-          windMs: null,
-        },
+    const weather: DayWeather = {
+      ...RECORDED,
+      reading: {
+        kind: 'recorded',
+        source: 'nasa-power',
+        tempMinC: null,
+        tempMaxC: 8.4,
+        precipitationMm: null,
+        windMs: null,
       },
-      'metric',
-    )
+    }
 
-    expect(model).toMatchObject({ kind: 'recorded', max: 8, min: null })
+    expect(badgeModel(weather, 'metric')).toEqual({
+      kind: 'recorded',
+      max: 8,
+      min: null,
+      unit: 'C',
+      reading: readingOf(weather),
+      sun: null,
+    })
   })
 
   it('has a panel with no sky, no chance of rain and no slots', () => {
     if (RECORDED.status !== 'ok') throw new Error('unreachable')
-    expect(panelModel(RECORDED.reading, 'metric')).toMatchObject({
+    expect(panelModel(RECORDED.reading, 'metric')).toEqual({
       kind: 'recorded',
       condition: null,
+      max: 8,
+      min: 2,
+      unit: 'C',
+      precipitationMm: 0.2,
       probability: null,
+      windMs: 0.9,
       slots: null,
-      precipitation: { value: 0.2, unit: 'mm' },
     })
   })
 
@@ -331,48 +365,59 @@ describe('an estimated day', () => {
   }
 
   it('is an estimate badge in the reader’s unit, with no condition to claim', () => {
-    expect(badgeModel(ESTIMATE, 'metric')).toMatchObject({
+    expect(badgeModel(ESTIMATE, 'metric')).toEqual({
       kind: 'estimate',
       max: 8,
       min: 2,
       unit: 'C',
+      reading: readingOf(ESTIMATE),
+      sun: null,
     })
-    expect(badgeModel(ESTIMATE, 'imperial')).toMatchObject({
+    expect(badgeModel(ESTIMATE, 'imperial')).toEqual({
       kind: 'estimate',
       max: 47,
       min: 35,
       unit: 'F',
+      reading: readingOf(ESTIMATE),
+      sun: null,
     })
   })
 
   it('keeps an absent temperature absent, never a zero', () => {
-    const model = badgeModel(
-      {
-        ...ESTIMATE,
-        reading: {
-          kind: 'estimate',
-          source: 'nasa-power',
-          tempMinC: null,
-          tempMaxC: 8.4,
-          precipitationMm: null,
-          windMs: null,
-        },
+    const weather: DayWeather = {
+      ...ESTIMATE,
+      reading: {
+        kind: 'estimate',
+        source: 'nasa-power',
+        tempMinC: null,
+        tempMaxC: 8.4,
+        precipitationMm: null,
+        windMs: null,
       },
-      'metric',
-    )
+    }
 
-    expect(model).toMatchObject({ kind: 'estimate', max: 8, min: null })
+    expect(badgeModel(weather, 'metric')).toEqual({
+      kind: 'estimate',
+      max: 8,
+      min: null,
+      unit: 'C',
+      reading: readingOf(weather),
+      sun: null,
+    })
   })
 
   it('has a panel with no sky, no chance of rain, no wind and no slots', () => {
     if (ESTIMATE.status !== 'ok') throw new Error('unreachable')
-    expect(panelModel(ESTIMATE.reading, 'metric')).toMatchObject({
+    expect(panelModel(ESTIMATE.reading, 'metric')).toEqual({
       kind: 'estimate',
       condition: null,
+      max: 8,
+      min: 2,
+      unit: 'C',
+      precipitationMm: 2.5,
       probability: null,
-      wind: null,
+      windMs: null,
       slots: null,
-      precipitation: { value: 2.5, unit: 'mm' },
     })
   })
 })
