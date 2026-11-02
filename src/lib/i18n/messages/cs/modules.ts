@@ -958,8 +958,13 @@ const messages = {
   'files.action.upload': 'Nahrát soubory',
   'files.places.title': 'Soubor míst',
   'files.places.description':
-    'Stáhněte místa této cesty jako GeoJSON, včetně míst bez souřadnic.',
+    'Stáhněte si místa této cesty jako GeoJSON nebo GPX. GPX obsahuje pouze místa s platnými souřadnicemi; GeoJSON zachovává všechna místa.',
   'files.places.action': 'Stáhnout místa (.geojson)',
+  'files.places.gpxAction': 'Stáhnout místa (.gpx)',
+  'files.places.gpxDone':
+    'GPX stažen. Vynechaná místa bez platných souřadnic: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'GPX stažen bez bodů. Všechna místa byla vynechána, protože nemají platné souřadnice: {formattedCount}.',
   'files.places.empty':
     'Přidejte do této cesty místa, abyste je mohli stáhnout.',
   'files.places.error': 'Soubor míst se nepodařilo připravit. Zkuste to znovu.',

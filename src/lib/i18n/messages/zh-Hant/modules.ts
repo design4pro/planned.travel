@@ -854,8 +854,13 @@ const messages = {
   'files.action.upload': '上傳檔案',
   'files.places.title': '地點檔案',
   'files.places.description':
-    '將此次旅行的地點下載為 GeoJSON，包括沒有座標的地點。',
+    '以 GeoJSON 或 GPX 格式下載此次旅行的地點。GPX 僅包含有有效座標的地點；GeoJSON 保留所有地點。',
   'files.places.action': '下載地點 (.geojson)',
+  'files.places.gpxAction': '下載地點 (.gpx)',
+  'files.places.gpxDone':
+    'GPX 已下載。因無有效座標而省略的地點：{formattedCount}。',
+  'files.places.gpxAllOmitted':
+    '已下載不含航點的 GPX。因無有效座標，所有地點均被省略：{formattedCount}。',
   'files.places.empty': '請先為此次旅行新增地點，再下載。',
   'files.places.error': '無法準備地點檔案。請重試。',
   'files.places.pending': '正在準備地點檔案…',

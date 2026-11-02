@@ -924,8 +924,13 @@ const messages = {
   'files.action.upload': 'Dosyaları yükle',
   'files.places.title': 'Yerler dosyası',
   'files.places.description':
-    'Koordinatı olmayan yerler dahil bu gezinin yerlerini GeoJSON olarak indirin.',
+    'Bu gezinin yerlerini GeoJSON veya GPX olarak indirin. GPX yalnızca geçerli koordinatları olan yerleri içerir; GeoJSON tüm yerleri korur.',
   'files.places.action': 'Yerleri indir (.geojson)',
+  'files.places.gpxAction': 'Yerleri indir (.gpx)',
+  'files.places.gpxDone':
+    'GPX indirildi. Geçerli koordinatları olmadığı için atlanan yerler: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'GPX, nokta olmadan indirildi. Geçerli koordinatları olmadığı için tüm yerler atlandı: {formattedCount}.',
   'files.places.empty': 'İndirmek için bu geziye yer ekleyin.',
   'files.places.error': 'Yerler dosyası hazırlanamadı. Tekrar deneyin.',
   'files.places.pending': 'Yerler dosyası hazırlanıyor…',
