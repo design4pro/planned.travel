@@ -907,6 +907,110 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   })
 
+  test('1442 - closed collection draft survives Stay and is discarded by a workspace switch', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    const routeCase: RouteCase = {
+      name: 'collection-workspace-exit',
+      path: '/collections',
+      ready: 'main',
+    }
+    await visit(page, routeCase, 'light')
+    const session = async () => {
+      const response = await page.request.get('/api/auth/get-session')
+      expect(response.ok()).toBe(true)
+      return response.json()
+    }
+    const originalSession = await session()
+    const originalId = originalSession.session.activeOrganizationId
+    const response = await page.request.get('/api/auth/organization/list')
+    expect(response.ok()).toBe(true)
+    const organizations: Array<{ id: string; name: string }> =
+      await response.json()
+    const originalWorkspace = organizations.find(
+      (row) => row.id === originalId,
+    )!
+    const destination = organizations.find((row) => row.id !== originalId)!
+    expect(destination, 'seed provides a second workspace').toBeTruthy()
+    let activations = 0
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname === '/api/auth/organization/set-active'
+      )
+        activations++
+    })
+    async function choose(name: string) {
+      await page.getByRole('button', { name: /account menu/i }).click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+    }
+    async function openEditor() {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    }
+    try {
+      await page.locator('main a[href^="/collections/"]').first().click()
+      await expect(
+        page.getByRole('button', { name: /^Actions for / }),
+      ).toBeVisible()
+      const detail = new URL(page.url()).pathname
+      const original = await page.getByRole('heading', { level: 1 }).innerText()
+      await openEditor()
+      await page
+        .getByRole('textbox', { name: 'Name', exact: true })
+        .fill(original + ' workspace draft')
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await choose(destination.name)
+      const warning = page.getByRole('dialog', {
+        name: 'Leave without saving?',
+      })
+      await expect(warning).toBeVisible()
+      expect(activations).toBe(0)
+      await warning.getByRole('button', { name: 'Stay', exact: true }).click()
+      expect(activations).toBe(0)
+      const stayed = await session()
+      expect(stayed.session.activeOrganizationId).toBe(originalId)
+      expect(stayed.user.id).toBe(originalSession.user.id)
+      await expect(page).toHaveURL(new RegExp(detail + '$'))
+      await page.keyboard.press('Escape')
+      await openEditor()
+      await expect(
+        page.getByRole('textbox', { name: 'Name', exact: true }),
+      ).toHaveValue(original + ' workspace draft')
+      await page.keyboard.press('Escape')
+      await choose(destination.name)
+      await warning.getByRole('button', { name: 'Discard and leave' }).click()
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await expect
+        .poll(async () => (await session()).session.activeOrganizationId)
+        .toBe(destination.id)
+      expect(activations).toBe(1)
+      await choose(originalWorkspace.name)
+      await expect
+        .poll(async () => (await session()).session.activeOrganizationId)
+        .toBe(originalId)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await page.goto(detail)
+      await settle(page, { ...routeCase, path: detail })
+      await openEditor()
+      await expect(
+        page.getByRole('textbox', { name: 'Name', exact: true }),
+      ).toHaveValue(original)
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    } finally {
+      // Restore the shared fixture's active workspace even if an assertion fails mid-switch.
+      const restored = await page.request.post(
+        '/api/auth/organization/set-active',
+        {
+          data: { organizationId: originalId },
+          headers: { origin: new URL(page.url()).origin },
+        },
+      )
+      expect(restored.ok()).toBe(true)
+    }
+  })
+
   test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
     page,
   }) => {
