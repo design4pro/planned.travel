@@ -357,9 +357,16 @@ const messages = {
   'billing.status.incomplete': 'Tamamlanmadı',
   'billing.status.incomplete_expired': 'Süresi doldu',
 
-  'billing.checkout.completeTitle': 'Ödeme alındı',
-  'billing.checkout.completeBody':
-    'Yeni paketiniz uygulanıyor. Polar onayladığı anda burada görünür — genelde birkaç saniye içinde.',
+  'billing.return.pending': 'Plan değişikliği kontrol ediliyor',
+  'billing.return.checking': 'Faturalandırma durumu kontrol ediliyor',
+  'billing.return.confirmed': 'Plan onaylandı',
+  'billing.return.scheduled': 'Plan değişikliği zamanlandı',
+  'billing.return.delayed': 'Onay daha uzun sürüyor',
+  'billing.return.body':
+    'Tekrar kontrol etmek için yenileyin. Değişiklik hâlâ onaylanmadıysa destek ile iletişime geçin.',
+  'billing.return.scheduledBody':
+    'Değişiklik {date} tarihinde yürürlüğe girer. O zamana kadar mevcut planınız geçerlidir. Bu, koltuk sayısındaki değişiklikleri onaylamaz.',
+
   'billing.checkout.cancelledTitle': 'Ödeme iptal edildi',
   'billing.checkout.cancelledBody':
     'Hiçbir tahsilat yapılmadı ve paketiniz değişmedi.',
@@ -510,9 +517,6 @@ const messages = {
     'Faturalandırma bu dağıtımda henüz bağlı değil, bu yüzden hiçbir şey değişmedi. Destekle iletişime geçin.',
   'billing.failure.orderNotInvoiceable':
     'Polar bu sipariş için fatura düzenleyemiyor. Fatura adı veya adresi eksikse bunları faturalandırma portalında ekleyip tekrar deneyin; aksi halde destekle iletişime geçin.',
-  'billing.planChanged.title': 'Plan güncellendi',
-  'billing.planChanged.body':
-    'Değişiklik Polar tarafında zaten geçerli; farkı o faturalandıracak. Aşağıdaki özet bir dakika içinde yetişir.',
   'billing.discount.toggle': 'Promosyon kodunuz var mı?',
   'billing.discount.label': 'Promosyon kodu',
   'billing.discount.hint': 'Bir sonraki seçtiğiniz plana uygulanır.',

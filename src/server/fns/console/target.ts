@@ -93,7 +93,7 @@ export async function refuseSoleOwner(
     )
     throw new ConsoleActionError(
       'target-beyond-cap',
-      'The console could not confirm that this account is not the only owner of a workspace other people belong to. An owner of each of those workspaces can promote another owner from its Workspace console first, or the account can be suspended instead of deleting it.',
+      'The console could not confirm that this account is not the only owner of a workspace other people belong to. An owner of each of those workspaces can promote another member to owner from its Workspace console first, or the account can be suspended instead of deleting it.',
     )
   }
 
@@ -106,6 +106,6 @@ export async function refuseSoleOwner(
 
   throw new ConsoleActionError(
     'target-sole-owner',
-    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. An owner of ${stranded.length === 1 ? 'that workspace' : 'those workspaces'} can promote another owner from ${stranded.length === 1 ? 'its' : 'their'} Workspace console first, or the account can be suspended instead of deleting it.`,
+    `This account is the only owner of ${where}, and other people still belong to ${stranded.length === 1 ? 'it' : 'them'}. An owner of ${stranded.length === 1 ? 'that workspace' : 'those workspaces'} can promote another member to owner from ${stranded.length === 1 ? 'its' : 'their'} Workspace console first, or the account can be suspended instead of deleting it.`,
   )
 }

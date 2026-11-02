@@ -367,9 +367,16 @@ const messages = {
   'billing.status.incomplete': 'Onvolledig',
   'billing.status.incomplete_expired': 'Verlopen',
 
-  'billing.checkout.completeTitle': 'Betaling ontvangen',
-  'billing.checkout.completeBody':
-    'Je nieuwe abonnement wordt toegepast. Het verschijnt hier zodra Polar het bevestigt — meestal binnen een paar seconden.',
+  'billing.return.pending': 'Planwijziging controleren',
+  'billing.return.checking': 'Factureringsstatus controleren',
+  'billing.return.confirmed': 'Plan bevestigd',
+  'billing.return.scheduled': 'Planwijziging ingepland',
+  'billing.return.delayed': 'De bevestiging duurt langer',
+  'billing.return.body':
+    'Vernieuw om opnieuw te controleren. Neem contact op met ondersteuning als de wijziging onbevestigd blijft.',
+  'billing.return.scheduledBody':
+    'De wijziging gaat in op {date}. Tot die tijd blijft je huidige plan gelden. Dit bevestigt geen wijzigingen in het aantal plaatsen.',
+
   'billing.checkout.cancelledTitle': 'Afrekenen afgebroken',
   'billing.checkout.cancelledBody':
     'Er is niets afgeschreven en je abonnement is niet veranderd.',
@@ -524,9 +531,6 @@ const messages = {
     'Facturering is op deze implementatie nog niet gekoppeld, dus er is niets gewijzigd. Neem contact op met de ondersteuning.',
   'billing.failure.orderNotInvoiceable':
     'Polar kan voor deze bestelling geen factuur uitgeven. Ontbreken de factuurnaam of het factuuradres, voeg ze dan toe in het factureringsportaal en probeer het opnieuw; neem anders contact op met de ondersteuning.',
-  'billing.planChanged.title': 'Abonnement bijgewerkt',
-  'billing.planChanged.body':
-    'De wijziging geldt al bij Polar, dat het verschil factureert. Het overzicht hieronder loopt binnen een minuut bij.',
   'billing.discount.toggle': 'Heb je een promotiecode?',
   'billing.discount.label': 'Promotiecode',
   'billing.discount.hint': 'Geldt voor het abonnement dat je hierna kiest.',

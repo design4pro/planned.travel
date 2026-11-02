@@ -20,6 +20,10 @@ import { SwatchPicker } from '#/components/modules/shared/swatch-picker'
 import { REQUIRED_SWATCHES } from '#/lib/swatches'
 import type { ReactNode } from 'react'
 
+vi.mock('@tanstack/react-router', () => ({
+  useBlocker: () => undefined,
+}))
+
 const messages = {
   ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('ui', Ui),

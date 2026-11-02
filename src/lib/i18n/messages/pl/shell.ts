@@ -372,7 +372,7 @@ const messages = {
   'admin.denied.body':
     'Jeśli potrzebujesz tu wejść, poproś właściciela lub administratora tej przestrzeni o zmianę Twojej roli.',
   'admin.denied.action': 'Powrót do pulpitu',
-  'admin.eyebrow': 'Administracja przestrzeni',
+  'admin.eyebrow': 'Konsola przestrzeni',
   'admin.description': 'Abonament {plan} · utworzono {date}',
   'admin.createdUnknown': 'niedawno',
   'admin.workspaceSettings': 'Ustawienia przestrzeni',
@@ -421,13 +421,21 @@ const messages = {
   'admin.members.joined': 'Data dołączenia',
   'admin.members.role.label': 'Rola: {name}',
   'admin.members.role.saved': '{name} ma teraz rolę: {role}.',
-  'admin.members.role.impersonated': 'Nie można zmienić roli, gdy działasz jako inne konto.',
+  'admin.members.role.impersonated':
+    'Nie można zmieniać ról w tej sesji. Zaloguj się ponownie lub zakończ działanie jako inne konto, zanim zmienisz role.',
   'admin.members.role.notPermitted':
-    'Nie możesz wprowadzić tej zmiany. Rolę właściciela może nadać lub zmienić tylko właściciel.',
+    'Nie możesz wykonać tej zmiany. Poproś właściciela przestrzeni o nadanie roli właściciela lub zmianę właściciela.',
   'admin.members.role.lastOwner':
-    'To jedyny właściciel przestrzeni. Najpierw ustanów kogoś innego właścicielem.',
+    'Przestrzeń musi mieć właściciela. Najpierw nadaj tę rolę innemu członkowi.',
   'admin.members.role.notFound': 'Tej osoby nie ma już w przestrzeni. Lista została odświeżona.',
   'admin.members.role.failed': 'Nie udało się zmienić roli. Spróbuj ponownie.',
+  'admin.members.role.demote.title': 'Zmienić swoją rolę?',
+  'admin.members.role.demote.admin':
+    'Nie będziesz już zarządzać właścicielami przestrzeni. Twoją rolę może przywrócić tylko inny właściciel.',
+  'admin.members.role.demote.member':
+    'Utracisz dostęp do konsoli przestrzeni oraz zarządzania rozliczeniami, członkami i ustawieniami. Poproś właściciela przestrzeni o przywrócenie roli.',
+  'admin.members.role.demote.confirm': 'Zmień moją rolę',
+  'admin.members.role.pending': 'Zmienianie roli…',
   'admin.members.role.promote.title': 'Nadać osobie {name} rolę właściciela?',
   'admin.members.role.promote.body':
     '{name} dostanie takie same uprawnienia jak Ty: rozliczenia, członkowie i ustawienia. Właściciel może obniżyć rolę lub usunąć każdego innego właściciela, także Ciebie.',

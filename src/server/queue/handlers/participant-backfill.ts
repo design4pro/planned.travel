@@ -15,9 +15,9 @@
  * `TenantScope` bound to that one workspace with a reserved id that is not a user, so a forged
  * envelope can start a chain but cannot aim it at a person or a workspace, and the scope it builds
  * reads only the registered user columns of the workspace the catalog named. A run's progress is
- * kept in KV (`participant-backfill-marker.ts`), and a message that does not continue it does
- * nothing, so a stray or forged message cannot write the completion marker for a chain that did
- * not visit every workspace.
+ * kept in KV (`participant-backfill-marker.ts`), and a message ahead of its run fails and retries.
+ * A message the run has passed does nothing, so a stray or forged message cannot write the
+ * completion marker for a chain that did not visit every workspace.
  *
  * Shipped inert: nothing enqueues this kind in this release (`BACKWARD_COMPATIBILITY.md` section 6);
  * the producer comes in a later one, once every Worker can decode the kind.
@@ -110,7 +110,7 @@ export function createParticipantBackfillHandler(
           { retryAfterSeconds: OUT_OF_SEQUENCE_RETRY_SECONDS },
         )
       }
-      context.logger.info('participation backfill message already handled', {
+      context.logger.warn('participation backfill message already handled', {
         runId: payload.runId,
       })
       return { organizations: 0, participants: 0, complete: 0 }

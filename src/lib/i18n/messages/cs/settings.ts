@@ -367,9 +367,16 @@ const messages = {
   'billing.status.incomplete': 'Nedokončeno',
   'billing.status.incomplete_expired': 'Vypršelo',
 
-  'billing.checkout.completeTitle': 'Platba přijata',
-  'billing.checkout.completeBody':
-    'Nový tarif se právě nasazuje. Objeví se tady v okamžiku, kdy ho Polar potvrdí — obvykle za pár sekund.',
+  'billing.return.pending': 'Ověřujeme změnu tarifu',
+  'billing.return.checking': 'Ověřujeme stav fakturace',
+  'billing.return.confirmed': 'Tarif potvrzen',
+  'billing.return.scheduled': 'Změna tarifu naplánována',
+  'billing.return.delayed': 'Potvrzení trvá déle',
+  'billing.return.body':
+    'Obnovte stránku a ověřte stav znovu. Pokud změna zůstane nepotvrzená, kontaktujte podporu.',
+  'billing.return.scheduledBody':
+    'Změna začne platit {date}. Do té doby platí současný tarif. Tím se nepotvrzuje změna počtu míst.',
+
   'billing.checkout.cancelledTitle': 'Platba přerušena',
   'billing.checkout.cancelledBody':
     'Nic jsme neúčtovali a váš tarif se nezměnil.',
@@ -528,9 +535,6 @@ const messages = {
     'Fakturace v tomto nasazení ještě není propojená, takže se nic nezměnilo. Obraťte se na podporu.',
   'billing.failure.orderNotInvoiceable':
     'Polar nemůže k této objednávce vystavit fakturu. Chybí-li fakturační jméno nebo adresa, doplňte je ve fakturačním portálu a zkuste to znovu; jinak se obraťte na podporu.',
-  'billing.planChanged.title': 'Tarif aktualizován',
-  'billing.planChanged.body':
-    'Změna už u Polaru platí a rozdíl vyfakturuje. Přehled níže se doplní do minuty.',
   'billing.discount.toggle': 'Máte promo kód?',
   'billing.discount.label': 'Promo kód',
   'billing.discount.hint': 'Použije se u tarifu, který zvolíte příště.',

@@ -323,8 +323,6 @@ const messages = {
   'card.absent': 'Tidak tercatat',
   'card.loading': 'Memuat negara ini',
   'card.loadingNamed': 'Memuat {name}',
-  'card.error.body': 'Angka-angka ini gagal dimuat. Tidak ada yang hilang.',
-  'card.error.retry': 'Coba lagi',
   'overlay.close': 'Tutup {name}',
   'regions.label': 'Wilayah',
   'regions.hint':

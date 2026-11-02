@@ -89,29 +89,6 @@ export function unitSymbol(unit: WeatherUnit): 'C' | 'F' {
   return unit === 'imperial' ? 'F' : 'C'
 }
 
-/**
- * What a reader's unit does to the other figures of a reading; metric in, theirs out. The unit is
- * a symbol (`mm`, `km/h`), not copy: it is written the same in every locale, as `formatDistance`
- * writes `km`.
- */
-export function precipitationIn(
-  millimetres: number,
-  unit: WeatherUnit,
-): { readonly value: number; readonly unit: 'mm' | 'in' } {
-  return unit === 'imperial'
-    ? { value: Math.round((millimetres / 25.4) * 100) / 100, unit: 'in' }
-    : { value: Math.round(millimetres * 10) / 10, unit: 'mm' }
-}
-
-export function windIn(
-  metresPerSecond: number,
-  unit: WeatherUnit,
-): { readonly value: number; readonly unit: 'km/h' | 'mph' } {
-  return unit === 'imperial'
-    ? { value: Math.round(metresPerSecond * 2.236_936), unit: 'mph' }
-    : { value: Math.round(metresPerSecond * 3.6), unit: 'km/h' }
-}
-
 export type WeatherSlotName = 'night' | 'morning' | 'afternoon' | 'evening'
 
 export const SLOT_LABEL: { readonly [K in WeatherSlotName]: MessageKey } = {
@@ -137,11 +114,12 @@ export interface WeatherPanelModel {
   readonly max: number | null
   readonly min: number | null
   readonly unit: 'C' | 'F'
-  /** `null` when the provider gave no amount: the row is left out, never a zero. */
-  readonly precipitation: ReturnType<typeof precipitationIn> | null
+  /** Millimetres; `null` when the provider gave no amount: the row is left out, never a zero. */
+  readonly precipitationMm: number | null
   /** The chance of it, 0 to 100, or `null` when none was given. */
   readonly probability: number | null
-  readonly wind: ReturnType<typeof windIn> | null
+  /** Metres per second, or `null` when none was given. */
+  readonly windMs: number | null
   /** `null` when the reading has no slots: the region is omitted, never empty columns. */
   readonly slots: ReadonlyArray<{
     readonly name: WeatherSlotName
@@ -192,13 +170,10 @@ export function panelModel(
     max: optionalTemperatureIn(reading.tempMaxC, unit),
     min: optionalTemperatureIn(reading.tempMinC, unit),
     unit: unitSymbol(unit),
-    precipitation:
-      reading.precipitationMm == null
-        ? null
-        : precipitationIn(reading.precipitationMm, unit),
+    precipitationMm: reading.precipitationMm ?? null,
     probability:
       reading.kind === 'forecast' ? reading.precipitationProbability : null,
-    wind: reading.windMs == null ? null : windIn(reading.windMs, unit),
+    windMs: reading.windMs ?? null,
     slots: slotsOf(reading, unit),
   }
 }

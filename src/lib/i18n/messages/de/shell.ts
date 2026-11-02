@@ -351,7 +351,7 @@ const messages = {
   'admin.denied.body':
     'Bitte einen Inhaber oder einen Administrator dieses Arbeitsbereichs, deine Rolle zu ändern, wenn du das brauchst.',
   'admin.denied.action': 'Zurück zur Übersicht',
-  'admin.eyebrow': 'Arbeitsbereich verwalten',
+  'admin.eyebrow': 'Workspace-Konsole',
   'admin.description': 'Tarif {plan} · angelegt {date}',
   'admin.createdUnknown': 'kürzlich',
   'admin.workspaceSettings': 'Einstellungen des Arbeitsbereichs',
@@ -396,14 +396,21 @@ const messages = {
   'admin.members.role.label': 'Rolle von {name}',
   'admin.members.role.saved': '{name} ist jetzt {role}.',
   'admin.members.role.impersonated':
-    'Eine Rolle lässt sich nicht ändern, solange du als ein anderes Konto handelst.',
+    'In dieser Sitzung können keine Rollen geändert werden. Melde dich erneut an oder beende die Identitätsübernahme, bevor du Rollen änderst.',
   'admin.members.role.notPermitted':
-    'Diese Änderung ist dir nicht erlaubt. Nur Inhaber können die Inhaber-Rolle vergeben oder einen Inhaber ändern.',
+    'Du kannst diese Änderung nicht vornehmen. Bitte einen Workspace-Eigentümer, die Eigentümerrolle zu vergeben oder einen Eigentümer zu ändern.',
   'admin.members.role.lastOwner':
-    'Das ist der einzige Inhaber des Arbeitsbereichs. Mach zuerst jemand anderen zum Inhaber.',
+    'Der Workspace muss einen Eigentümer behalten. Mache zuerst ein anderes Mitglied zum Eigentümer.',
   'admin.members.role.notFound':
     'Diese Person gehört nicht mehr zum Arbeitsbereich. Die Liste wurde aktualisiert.',
   'admin.members.role.failed': 'Die Rolle konnte nicht geändert werden. Versuche es noch einmal.',
+  'admin.members.role.demote.title': 'Eigene Rolle ändern?',
+  'admin.members.role.demote.admin':
+    'Du kannst keine Workspace-Eigentümer mehr verwalten. Nur ein anderer Eigentümer kann deine Rolle wiederherstellen.',
+  'admin.members.role.demote.member':
+    'Du verlierst den Zugriff auf die Workspace-Konsole und deren Abrechnung, Mitglieder und Einstellungen. Bitte einen Workspace-Eigentümer, deine Rolle wiederherzustellen.',
+  'admin.members.role.demote.confirm': 'Meine Rolle ändern',
+  'admin.members.role.pending': 'Rolle wird geändert…',
   'admin.members.role.promote.title': '{name} zum Inhaber machen?',
   'admin.members.role.promote.body':
     '{name} hat dann dieselbe Macht wie du: Abrechnung, Mitglieder und Einstellungen. Ein Inhaber kann jeden anderen Inhaber herabstufen oder entfernen, auch dich.',

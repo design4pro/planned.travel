@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { MoreHorizontal } from 'lucide-react'
 import { useTranslate } from '#/lib/i18n'
 import {
@@ -8,6 +9,8 @@ import {
   DropdownMenuTrigger,
   IconButton,
 } from '#/components/ui'
+import { useWorkspaceClaim } from '#/lib/workspace-claim-store'
+import { CollectionExitGuard } from './collection-exit-guard'
 import { CollectionEditDialog } from './collection-edit-dialog'
 import { CollectionDeleteDialog } from './collection-delete-dialog'
 import type {
@@ -27,7 +30,9 @@ export function CollectionActions({
   onDeleted,
   exists,
   readCurrent,
+  expiresAt,
 }: {
+  expiresAt?: string
   readCurrent: CollectionEditProps['readCurrent']
   canManage: boolean
   collection: CollectionEditProps['collection']
@@ -45,10 +50,52 @@ export function CollectionActions({
     values: CollectionDraft
     baseline: EditableCollection
   }>()
-  if (!canManage) return null
+  const [busy, setBusy] = useState(false)
+  const { stale } = useWorkspaceClaim()
+  useEffect(() => {
+    if (!canManage || stale) {
+      setDraft(undefined)
+      setDialog(null)
+      setBusy(false)
+    }
+  }, [canManage, stale])
+  useEffect(() => {
+    if (!expiresAt) return
+    let timer: ReturnType<typeof setTimeout>
+    function checkExpiry() {
+      const remaining = Date.parse(expiresAt ?? '') - Date.now()
+      if (remaining <= 0) {
+        setDraft(undefined)
+        setDialog(null)
+        setBusy(false)
+      } else if (Number.isFinite(remaining)) {
+        timer = setTimeout(checkExpiry, Math.min(remaining, 2_147_483_647))
+      }
+    }
+    checkExpiry()
+    return () => clearTimeout(timer)
+  }, [expiresAt])
+  if (!canManage || stale) return null
+  const dirty = Boolean(
+    draft &&
+    (draft.values.name !== draft.baseline.name ||
+      (draft.values.description ?? '') !== (draft.baseline.description ?? '') ||
+      draft.values.colour !== draft.baseline.colour),
+  )
   const returnFocus = () => trigger.current?.focus()
   return (
     <>
+      <CollectionExitGuard
+        collectionId={collection.id}
+        expiresAt={expiresAt}
+        returnFocus={returnFocus}
+        dirty={dirty}
+        busy={busy}
+        onDiscard={() => {
+          setDraft(undefined)
+          setDialog(null)
+        }}
+      />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <IconButton
@@ -75,14 +122,10 @@ export function CollectionActions({
       {dialog === 'edit' ? (
         <CollectionEditDialog
           collection={collection}
+          onBusyChange={setBusy}
           initialDraft={draft?.values}
           initialBaseline={draft?.baseline}
-          onDraftChange={(values) =>
-            setDraft((previous) => ({
-              values,
-              baseline: previous?.baseline ?? collection,
-            }))
-          }
+          onDraftChange={(values, baseline) => setDraft({ values, baseline })}
           onDiscard={() => setDraft(undefined)}
           readCurrent={readCurrent}
           update={update}
@@ -98,7 +141,10 @@ export function CollectionActions({
           exists={exists}
           remove={remove}
           onClose={() => setDialog(null)}
-          onDeleted={onDeleted}
+          onDeleted={async () => {
+            flushSync(() => setDraft(undefined))
+            await onDeleted()
+          }}
           returnFocus={returnFocus}
         />
       ) : null}

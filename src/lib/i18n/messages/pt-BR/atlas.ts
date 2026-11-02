@@ -370,8 +370,6 @@ const messages = {
   'card.absent': 'Não registrado',
   'card.loading': 'Carregando este país',
   'card.loadingNamed': 'Carregando {name}',
-  'card.error.body': 'Esses números não carregaram. Nada foi perdido.',
-  'card.error.retry': 'Tentar de novo',
   'overlay.close': 'Fechar {name}',
   'regions.label': 'Regiões',
   'regions.hint': 'Adicionar uma região também marca {country} como visitado.',

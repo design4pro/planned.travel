@@ -420,8 +420,6 @@ const messages = {
   'card.absent': 'غير مسجَّل',
   'card.loading': 'جارٍ تحميل هذه الدولة',
   'card.loadingNamed': 'جارٍ تحميل {name}',
-  'card.error.body': 'لم تُحمَّل هذه الأرقام. لم يُفقد شيء.',
-  'card.error.retry': 'حاول مجددًا',
   'overlay.close': 'إغلاق {name}',
   'regions.label': 'المناطق',
   'regions.hint': 'تؤدي إضافة منطقة أيضًا إلى تحديد {country} كبلد تمت زيارته.',

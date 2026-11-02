@@ -1643,26 +1643,6 @@ describe('CountryOverlay panel', () => {
     ).toBeTruthy()
   })
 
-  it('says the figures did not arrive rather than printing zeroes', () => {
-    const map = new FakeMap()
-    const onRetry = vi.fn()
-    mount(map, {
-      selectedCode: 'FR',
-      selectionToken: 1,
-      status: 'failed',
-      onRetry,
-    })
-
-    const panel = screen.getByRole('dialog', { name: 'France' })
-    expect(panel.querySelector('[data-variant="error"]')).not.toBeNull()
-    expect(panel.textContent).toContain('These figures did not load')
-    // Activated rather than pointed at: the retry is a real control, and this
-    // is the event a keyboard press produces on one.
-    const retry = within(panel).getByRole('button', { name: 'Try again' })
-    fireEvent.click(retry)
-    expect(onRetry).toHaveBeenCalledTimes(1)
-  })
-
   /**
    * The map's own controls are not "outside".
    *

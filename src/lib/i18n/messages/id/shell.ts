@@ -310,7 +310,7 @@ const messages = {
   'admin.denied.body':
     'Minta pemilik atau admin ruang kerja ini mengubah peran Anda kalau memang perlu.',
   'admin.denied.action': 'Kembali ke dasbor',
-  'admin.eyebrow': 'Admin ruang kerja',
+  'admin.eyebrow': 'Konsol ruang kerja',
   'admin.description': 'Paket {plan} · dibuat {date}',
   'admin.createdUnknown': 'baru-baru ini',
   'admin.workspaceSettings': 'Pengaturan ruang kerja',
@@ -347,14 +347,21 @@ const messages = {
   'admin.members.role.label': 'Peran {name}',
   'admin.members.role.saved': '{name} sekarang menjadi {role}.',
   'admin.members.role.impersonated':
-    'Peran tidak bisa diubah saat Anda bertindak sebagai akun lain.',
+    'Peran tidak dapat diubah dalam sesi ini. Masuk kembali atau berhenti bertindak sebagai akun lain sebelum mengubah peran.',
   'admin.members.role.notPermitted':
-    'Anda tidak bisa membuat perubahan itu. Hanya pemilik yang dapat memberikan peran pemilik atau mengubah seorang pemilik.',
+    'Anda tidak dapat melakukan perubahan itu. Minta pemilik ruang kerja memberikan peran pemilik atau mengubah pemilik.',
   'admin.members.role.lastOwner':
-    'Ini satu-satunya pemilik ruang kerja. Jadikan orang lain pemilik lebih dulu.',
+    'Ruang kerja harus tetap memiliki pemilik. Jadikan anggota lain sebagai pemilik terlebih dahulu.',
   'admin.members.role.notFound':
     'Orang ini tidak lagi berada di ruang kerja. Daftar telah dimuat ulang.',
   'admin.members.role.failed': 'Peran tidak bisa diubah. Coba lagi.',
+  'admin.members.role.demote.title': 'Ubah peran Anda sendiri?',
+  'admin.members.role.demote.admin':
+    'Anda tidak lagi dapat mengelola pemilik ruang kerja. Hanya pemilik lain yang dapat memulihkan peran Anda.',
+  'admin.members.role.demote.member':
+    'Anda akan kehilangan akses ke konsol ruang kerja serta pengelolaan penagihan, anggota, dan pengaturan. Minta pemilik ruang kerja memulihkan peran Anda.',
+  'admin.members.role.demote.confirm': 'Ubah peran saya',
+  'admin.members.role.pending': 'Mengubah peran…',
   'admin.members.role.promote.title': 'Jadikan {name} pemilik?',
   'admin.members.role.promote.body':
     '{name} akan memiliki kekuasaan yang sama dengan Anda: penagihan, anggota, dan pengaturan. Seorang pemilik dapat menurunkan peran atau mengeluarkan pemilik lain, termasuk Anda.',

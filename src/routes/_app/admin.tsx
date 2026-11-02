@@ -462,6 +462,7 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                       </TableCell>
                       <TableCell>
                         <MemberRoleControl
+                          isSelf={member.userId === data.viewerUserId}
                           memberName={member.name}
                           role={member.role}
                           assignable={member.assignableRoles}

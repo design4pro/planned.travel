@@ -1,3 +1,4 @@
+import { requestCollectionExit } from '#/lib/collection-exit'
 import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import {
@@ -59,6 +60,7 @@ function SecurityPage() {
   const [signingOut, setSigningOut] = useState(false)
 
   async function signOut(): Promise<void> {
+    if (!(await requestCollectionExit())) return
     setSigningOut(true)
     try {
       const response = await fetch(SIGN_OUT_ENDPOINT, {

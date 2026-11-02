@@ -1387,6 +1387,10 @@ const messages = {
   'vacay.legend.company': 'Företagsledig dag',
   'vacay.legend.other': 'Någon annan är borta',
   'vacay.legend.weekend': 'Helg',
+  'collections.leave.title': 'Lämna utan att spara?',
+  'collections.leave.body': 'Dina ändringar i samlingen går förlorade.',
+  'collections.leave.stay': 'Stanna',
+  'collections.leave.discard': 'Kasta ändringar och lämna',
 } satisfies TranslationOf<typeof En>
 
 export default messages

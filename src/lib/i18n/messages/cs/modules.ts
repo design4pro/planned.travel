@@ -1471,6 +1471,10 @@ const messages = {
   'vacay.legend.company': 'Firemní svátek',
   'vacay.legend.other': 'Někdo jiný je pryč',
   'vacay.legend.weekend': 'Víkend',
+  'collections.leave.title': 'Odejít bez uložení?',
+  'collections.leave.body': 'Změny kolekce budou ztraceny.',
+  'collections.leave.stay': 'Zůstat',
+  'collections.leave.discard': 'Zahodit a odejít',
 } satisfies TranslationOf<typeof En>
 
 export default messages

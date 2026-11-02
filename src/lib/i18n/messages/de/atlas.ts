@@ -355,8 +355,6 @@ const messages = {
   'card.absent': 'Nicht erfasst',
   'card.loading': 'Land wird geladen',
   'card.loadingNamed': '{name} wird geladen',
-  'card.error.body': 'Diese Zahlen wurden nicht geladen. Nichts ist verloren.',
-  'card.error.retry': 'Noch einmal versuchen',
   'overlay.close': '{name} schließen',
   'regions.label': 'Regionen',
   'regions.hint':

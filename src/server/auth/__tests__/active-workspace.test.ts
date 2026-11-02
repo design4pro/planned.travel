@@ -1,11 +1,17 @@
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { guardMemberDeletion } from '../member-deletion'
+import { departMember } from '#/server/fns/member-departure-writes'
+import { auditLogRepository } from '#/server/repos/audit'
+import { listAuditLog, listMembers } from '#/server/repos'
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
-import { member, organization } from '#/server/db/auth-schema'
+import { authSchema, member, organization } from '#/server/db/auth-schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { resolveActiveWorkspace } from '../active-workspace'
 import { requireOrg } from '../session'
 import { normaliseSession, requireOrgFrom } from '../tenant'
+import type { BatchStatement } from '#/server/repos/batch'
 import type { AuthDb } from '../db'
 import type { Harness } from '#/server/repos/__tests__/harness'
 
@@ -19,7 +25,11 @@ const shared = vi.hoisted(() => ({
 }))
 vi.mock('../db', () => ({ authDb: () => shared.db }))
 vi.mock('../index', () => ({
-  getAuth: () => ({ api: { getSession: async () => shared.session } }),
+  getAuth: () => ({
+    api: {
+      getSession: async () => (shared.session.user ? shared.session : null),
+    },
+  }),
 }))
 vi.mock('@tanstack/react-start/server', () => ({
   getRequest: () =>
@@ -169,13 +179,14 @@ describe('requireOrg request resolution', () => {
     })
   })
 
-  it('refuses a removed only membership without provisioning, but still provisions for null active workspace', async () => {
+  it('recovers a removed only membership and reuses the personal workspace on reload', async () => {
     const { b } = await fixture()
     await db.delete(member).where(eq(member.userId, b.ownerUserId))
     const organizations = await db.select().from(organization)
     requestSession(b.ownerUserId, b.organizationId)
-    await expect(requireOrg()).rejects.toMatchObject({ reason: 'not-a-member' })
-    expect(await db.select().from(organization)).toEqual(organizations)
+    const recovered = await requireOrg()
+    expect(recovered.organizationId).not.toBe(b.organizationId)
+    expect(await requireOrg()).toEqual(recovered)
     requestSession(b.ownerUserId, null)
     await expect(requireOrg()).resolves.toMatchObject({
       userId: b.ownerUserId,
@@ -295,5 +306,143 @@ describe('requireOrg with the workspace claim header', () => {
     await expect(requireOrg()).rejects.toMatchObject({
       reason: 'workspace-changed',
     })
+  })
+})
+
+describe('final departure followed by authenticated reload', () => {
+  it.each([false, true])(
+    'recovers authoritative state after unknown commit, committed=%s',
+    async (committed) => {
+      const tenant = await harness.seedTenant('departure-reload')
+      const self = await tenant.addUser('Leaver', 'member')
+      const scope = tenant.scopeFor(self, 'member')
+      requestSession(self, tenant.organizationId)
+      const adapter = guardMemberDeletion(
+        drizzleAdapter(harness.db, { provider: 'sqlite', schema: authSchema })(
+          {},
+        ),
+      )
+      const batchDb = harness.db as typeof harness.db & {
+        batch: (
+          statements: readonly [BatchStatement, ...Array<BatchStatement>],
+        ) => Promise<Array<unknown>>
+      }
+      const original = batchDb.batch.bind(batchDb)
+      const batch = vi
+        .spyOn(batchDb, 'batch')
+        .mockImplementation(async (...args) => {
+          if (committed) await original(...args)
+          throw new Error('batch response unavailable')
+        })
+      const lookup = vi
+        .spyOn(auditLogRepository, 'findById')
+        .mockRejectedValue(new Error('audit unavailable'))
+      const repair = vi.fn(async () => {})
+      const activate = vi.fn(async () => {})
+      const remove = vi.fn(async (_organizationId: string, id: string) =>
+        adapter.delete({
+          model: 'member',
+          where: [{ field: 'id', value: id }],
+        }),
+      )
+      try {
+        await expect(
+          departMember(
+            {
+              impersonated: false,
+              scope: async () => scope,
+              remove,
+              repairOffboarding: repair,
+              activateRemaining: activate,
+            },
+            {},
+          ),
+        ).rejects.toMatchObject({ code: 'MEMBERSHIP_COMMIT_UNKNOWN' })
+      } finally {
+        batch.mockRestore()
+        lookup.mockRestore()
+      }
+      expect(remove).toHaveBeenCalledTimes(1)
+      expect(activate).not.toHaveBeenCalled()
+      expect(repair).toHaveBeenCalledExactlyOnceWith(
+        self,
+        tenant.organizationId,
+      )
+      const count = (await db.select().from(organization)).length
+      const recovered = await requireOrg()
+      expect(recovered).toMatchObject({
+        userId: self,
+        role: committed ? 'owner' : 'member',
+      })
+      expect(recovered.organizationId === tenant.organizationId).toBe(
+        !committed,
+      )
+      expect(await requireOrg()).toEqual(recovered)
+      expect(await db.select().from(organization)).toHaveLength(
+        count + Number(committed),
+      )
+      expect((await listAuditLog(tenant.scope)).items).toHaveLength(
+        Number(committed),
+      )
+      expect(
+        (await listMembers(tenant.scope)).some((row) => row.userId === self),
+      ).toBe(!committed)
+      expect(remove).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it.each(['claim', 'malformed', 'pin', 'impersonated', 'banned'] as const)(
+    'does not provision on %s',
+    async (refusal) => {
+      const { b } = await fixture()
+      await db.delete(member).where(eq(member.userId, b.ownerUserId))
+      requestSession(b.ownerUserId, b.organizationId)
+      const count = (await db.select().from(organization)).length
+      if (refusal === 'claim') shared.claim = b.organizationId
+      if (refusal === 'malformed') shared.claim = 'a b'
+      if (refusal === 'impersonated' && shared.session.session) {
+        shared.session.session.impersonatedBy = 'operator'
+        shared.session.session.createdAt = new Date()
+      }
+      if (refusal === 'banned' && shared.session.user)
+        shared.session.user.banned = true
+      await expect(
+        requireOrg(
+          refusal === 'pin' ? { organizationId: b.organizationId } : {},
+        ),
+      ).rejects.toMatchObject({
+        reason:
+          refusal === 'claim' || refusal === 'malformed'
+            ? 'workspace-changed'
+            : 'not-a-member',
+      })
+      expect(await db.select().from(organization)).toHaveLength(count)
+    },
+  )
+
+  it('propagates an unavailable membership read without provisioning', async () => {
+    const { b } = await fixture()
+    await db.delete(member).where(eq(member.userId, b.ownerUserId))
+    requestSession(b.ownerUserId, b.organizationId)
+    const count = (await db.select().from(organization)).length
+    const read = vi.spyOn(db, 'select').mockImplementationOnce(() => {
+      throw new Error('membership read unavailable')
+    })
+    await expect(requireOrg()).rejects.toThrow('membership read unavailable')
+    read.mockRestore()
+    expect(await db.select().from(organization)).toHaveLength(count)
+  })
+
+  it('refuses an anonymous reload without reading or provisioning', async () => {
+    shared.session = {}
+    const read = vi.spyOn(db, 'select')
+    try {
+      await expect(requireOrg()).rejects.toMatchObject({
+        reason: 'unauthenticated',
+      })
+      expect(read).not.toHaveBeenCalled()
+    } finally {
+      read.mockRestore()
+    }
   })
 })

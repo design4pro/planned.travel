@@ -13,11 +13,7 @@ import {
 } from '#/lib/workspace-claim'
 import { authDb } from './db'
 import { getAuth } from './index'
-import {
-  firstOrganizationIdFor,
-  resolveOrProvisionOrganization,
-} from './provisioning'
-import { resolveActiveWorkspace } from './active-workspace'
+import { resolveSessionWorkspace } from './active-workspace'
 import {
   AuthRequirementError,
   normaliseSession,
@@ -97,46 +93,30 @@ export async function requireOrg(
   options: RequireOrgOptions = {},
 ): Promise<TenantContext> {
   const session = await getSession()
-  const user = requireUserFrom(session)
   let organizationId = session?.session.activeOrganizationId ?? null
   const claim = getRequest().headers.get(WORKSPACE_CLAIM_HEADER)
 
-  if (!organizationId) {
-    // Sessions issued before the active organization could be resolved (and any
-    // whose cookie cache predates it) would otherwise be stranded on every
-    // authenticated screen. Adopt the user's own oldest membership for this
-    // request instead of failing; `session.create.before` is what makes new
-    // sessions carry it durably.
-    //
-    // A call that states the workspace its tab shows never provisions: a tab showing a workspace
-    // for a user who has none left is refused, because the refusal below could not be avoided
-    // and a refused call writes nothing.
-    if (parseWorkspaceClaim(claim).status === 'absent') {
-      organizationId = await resolveOrProvisionOrganization(authDb(), user.id)
-    } else {
-      organizationId = await firstOrganizationIdFor(authDb(), user.id)
-      if (!organizationId) {
-        throw new AuthRequirementError('workspace-changed', WORKSPACE_CHANGED_KEY)
-      }
-    }
-  }
-
-  if (!organizationId) {
+  if (!session)
     throw new AuthRequirementError(
-      'no-active-organization',
-      'Choose a workspace before continuing.',
+      'unauthenticated',
+      'You need to sign in to continue.',
     )
+  const resolved = await resolveSessionWorkspace(authDb(), session, {
+    ...options,
+    claim,
+  })
+  if (!resolved && parseWorkspaceClaim(claim).status !== 'absent') {
+    throw new AuthRequirementError('workspace-changed', WORKSPACE_CHANGED_KEY)
   }
-
-  const resolved = await resolveActiveWorkspace(authDb(), user.id, organizationId)
   const role = resolved?.role ?? null
   organizationId = resolved?.organizationId ?? organizationId
 
   // `requireOrgFrom` is deliberately pure and reads the active organization off
   // the session, so hand it the organization this request actually resolved.
-  const effective: AuthSession | null = session
-    ? { ...session, session: { ...session.session, activeOrganizationId: organizationId } }
-    : session
+  const effective: AuthSession = {
+    ...session,
+    session: { ...session.session, activeOrganizationId: organizationId },
+  }
 
   // The header is spread last: a caller's options cannot switch the comparison off.
   return requireOrgFrom(effective, role, { ...options, claim })

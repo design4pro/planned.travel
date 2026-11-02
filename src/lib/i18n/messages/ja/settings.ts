@@ -338,9 +338,16 @@ const messages = {
   'billing.status.canceled': '解約済み',
   'billing.status.incomplete': '未完了',
   'billing.status.incomplete_expired': '期限切れ',
-  'billing.checkout.completeTitle': '支払いを受け取りました',
-  'billing.checkout.completeBody':
-    '新しいプランを適用しています。Polar が確認した時点でここに表示されます。ふつうは数秒です。',
+  'billing.return.pending': 'プラン変更を確認中',
+  'billing.return.checking': '請求状況を確認中',
+  'billing.return.confirmed': 'プランを確認しました',
+  'billing.return.scheduled': 'プラン変更を予約しました',
+  'billing.return.delayed': '確認に時間がかかっています',
+  'billing.return.body':
+    '更新して再度ご確認ください。変更が確認されない場合は、サポートにお問い合わせください。',
+  'billing.return.scheduledBody':
+    '変更は{date}に適用されます。それまでは現在のプランが有効です。 利用人数の変更を確認するものではありません。',
+
   'billing.checkout.cancelledTitle': '支払いを中止しました',
   'billing.checkout.cancelledBody':
     '請求は発生しておらず、プランも変わっていません。',
@@ -481,9 +488,6 @@ const messages = {
     'この環境ではまだ請求が接続されていないため、何も変更されていません。サポートにお問い合わせください。',
   'billing.failure.orderNotInvoiceable':
     'Polar はこの注文の請求書を発行できません。請求先の名前や住所が未入力の場合は、請求ポータルで追加してからもう一度お試しください。それ以外の場合はサポートにお問い合わせください。',
-  'billing.planChanged.title': 'プランを更新しました',
-  'billing.planChanged.body':
-    '変更はすでに Polar 側で有効です。差額は Polar が請求します。下の概要は1分以内に追いつきます。',
   'billing.discount.toggle': 'プロモーションコードをお持ちですか？',
   'billing.discount.label': 'プロモーションコード',
   'billing.discount.hint': '次に選ぶプランに適用されます。',

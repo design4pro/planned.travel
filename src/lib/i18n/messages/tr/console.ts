@@ -397,7 +397,7 @@ const messages = {
   'action.delete.note':
     'Bu kişinin oluşturduğu çalışma alanı içeriği, sahibi olan çalışma alanında kalır. Silmek yerine hesabı askıya almak kaydı korur, erişimi alır.',
   'action.delete.owners':
-    'Başka kişilerin de bulunduğu bir çalışma alanının tek sahibi olan hesap silinemez. O çalışma alanının bir sahibi önce çalışma alanı konsolundan başka bir sahip atayabilir ya da hesap bunun yerine askıya alınabilir.',
+    'Bu hesap, başka üyeleri olan bir çalışma alanının tek sahibidir. Önce bir çalışma alanı sahibinden konsolda başka bir üyeyi sahip yapmasını isteyin veya hesabı askıya alın.',
   'action.delete.done': 'Hesap silindi',
   'action.delete.done.body': '{name} ve hesaba bağlı olan her şey gitti.',
 

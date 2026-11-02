@@ -809,6 +809,208 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(settingsDialog(page)).toHaveCount(0)
   })
   // Reuses the Chromium-only serial fixture harness above.
+  test('1442 - protects collection drafts across Back, reload and logout', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000)
+    const routeCase: RouteCase = {
+      name: 'collection-exits',
+      path: '/collections',
+      ready: 'main',
+    }
+    await visit(page, routeCase, 'light')
+    await page.locator('main a[href^="/collections/"]').first().click()
+    await expect(
+      page.getByRole('button', { name: /^Actions for / }),
+    ).toBeVisible()
+    const detail = new URL(page.url()).pathname
+    const original = await page.getByRole('heading', { level: 1 }).innerText()
+    async function openEditor() {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    }
+    await openEditor()
+    await page
+      .getByRole('textbox', { name: 'Name', exact: true })
+      .fill(original + ' draft')
+    await page.keyboard.press('Escape')
+    const filter = page.locator('main a[href*="status="]').first()
+    await filter.click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await page.evaluate(() => history.back())
+    // Back across a filter preserves the mounted draft; the next Back leaves the collection.
+    await expect(page).toHaveURL(new RegExp(detail + '$'))
+    await page.evaluate(() => history.back())
+    const warning = page.getByRole('dialog', { name: 'Leave without saving?' })
+    await expect(warning).toBeVisible()
+    await expect(
+      warning.getByRole('button', { name: 'Stay', exact: true }),
+    ).toBeFocused()
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.evaluate(() => {
+      document.documentElement.dir = 'rtl'
+    })
+    await page.screenshot({
+      path: testInfo.outputPath('collection-warning-rtl-mobile.png'),
+    })
+    await page.keyboard.press('Escape')
+    await expect(warning).toHaveCount(0)
+    await expect(page).toHaveURL(new RegExp(detail + '$'))
+    page.once('dialog', (dialog) => {
+      expect(dialog.type()).toBe('beforeunload')
+      void dialog.dismiss()
+    })
+    await page.reload().catch(() => undefined)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original + ' draft')
+    await page.keyboard.press('Escape')
+    let signOuts = 0
+    await page.route('**/api/auth/sign-out', async (route) => {
+      signOuts++
+      await route.fulfill({ status: 500, body: '{}' })
+    })
+    await page.getByRole('button', { name: /account menu/i }).click()
+    await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click()
+    await expect(warning).toBeVisible()
+    expect(signOuts).toBe(0)
+    await warning.getByRole('button', { name: 'Stay', exact: true }).click()
+    expect(signOuts).toBe(0)
+    await page.keyboard.press('Escape')
+    await page.evaluate(() => {
+      document.documentElement.dir = 'ltr'
+    })
+    await page.getByRole('link', { name: 'All collections' }).click()
+    await warning.getByRole('button', { name: 'Discard and leave' }).click()
+    await expect(page).toHaveURL(/\/collections$/)
+    await page.goto(detail)
+    await settle(page, routeCase)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await openEditor()
+    await page
+      .getByRole('textbox', { name: 'Name', exact: true })
+      .fill(original + ' reload draft')
+    page.once('dialog', (dialog) => {
+      void dialog.accept()
+    })
+    await page.reload()
+    await settle(page, routeCase)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  })
+
+  test('1442 - closed collection draft survives Stay and is discarded by a workspace switch', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    const routeCase: RouteCase = {
+      name: 'collection-workspace-exit',
+      path: '/collections',
+      ready: 'main',
+    }
+    await visit(page, routeCase, 'light')
+    const session = async () => {
+      const response = await page.request.get('/api/auth/get-session')
+      expect(response.ok()).toBe(true)
+      return response.json()
+    }
+    const originalSession = await session()
+    const originalId = originalSession.session.activeOrganizationId
+    const response = await page.request.get('/api/auth/organization/list')
+    expect(response.ok()).toBe(true)
+    const organizations: Array<{ id: string; name: string }> =
+      await response.json()
+    const originalWorkspace = organizations.find(
+      (row) => row.id === originalId,
+    )!
+    const destination = organizations.find((row) => row.id !== originalId)!
+    expect(destination, 'seed provides a second workspace').toBeTruthy()
+    let activations = 0
+    page.on('request', (request) => {
+      if (
+        new URL(request.url()).pathname === '/api/auth/organization/set-active'
+      )
+        activations++
+    })
+    async function choose(name: string) {
+      await page.getByRole('button', { name: /account menu/i }).click()
+      await page.getByRole('menuitemradio', { name, exact: true }).click()
+    }
+    async function openEditor() {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    }
+    try {
+      await page.locator('main a[href^="/collections/"]').first().click()
+      await expect(
+        page.getByRole('button', { name: /^Actions for / }),
+      ).toBeVisible()
+      const detail = new URL(page.url()).pathname
+      const original = await page.getByRole('heading', { level: 1 }).innerText()
+      await openEditor()
+      await page
+        .getByRole('textbox', { name: 'Name', exact: true })
+        .fill(original + ' workspace draft')
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await choose(destination.name)
+      const warning = page.getByRole('dialog', {
+        name: 'Leave without saving?',
+      })
+      await expect(warning).toBeVisible()
+      expect(activations).toBe(0)
+      await warning.getByRole('button', { name: 'Stay', exact: true }).click()
+      expect(activations).toBe(0)
+      const stayed = await session()
+      expect(stayed.session.activeOrganizationId).toBe(originalId)
+      expect(stayed.user.id).toBe(originalSession.user.id)
+      await expect(page).toHaveURL(new RegExp(detail + '$'))
+      await page.keyboard.press('Escape')
+      await openEditor()
+      await expect(
+        page.getByRole('textbox', { name: 'Name', exact: true }),
+      ).toHaveValue(original + ' workspace draft')
+      await page.keyboard.press('Escape')
+      await choose(destination.name)
+      await warning.getByRole('button', { name: 'Discard and leave' }).click()
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await expect
+        .poll(async () => (await session()).session.activeOrganizationId)
+        .toBe(destination.id)
+      expect(activations).toBe(1)
+      await choose(originalWorkspace.name)
+      await expect
+        .poll(async () => (await session()).session.activeOrganizationId)
+        .toBe(originalId)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await page.goto(detail)
+      await settle(page, { ...routeCase, path: detail })
+      await openEditor()
+      await expect(
+        page.getByRole('textbox', { name: 'Name', exact: true }),
+      ).toHaveValue(original)
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    } finally {
+      // Restore the shared fixture's active workspace even if an assertion fails mid-switch.
+      const restored = await page.request.post(
+        '/api/auth/organization/set-active',
+        {
+          data: { organizationId: originalId },
+          headers: { origin: new URL(page.url()).origin },
+        },
+      )
+      expect(restored.ok()).toBe(true)
+    }
+  })
+
   test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
     page,
   }) => {

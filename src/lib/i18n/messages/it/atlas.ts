@@ -376,9 +376,6 @@ const messages = {
   'card.absent': 'Non registrato',
   'card.loading': 'Caricamento del paese',
   'card.loadingNamed': 'Caricamento di {name}',
-  'card.error.body':
-    'Questi numeri non si sono caricati. Non è andato perso nulla.',
-  'card.error.retry': 'Riprova',
   'overlay.close': 'Chiudi {name}',
   'regions.label': 'Regioni',
   'regions.hint': 'Aggiungere una regione segna anche {country} come visitato.',

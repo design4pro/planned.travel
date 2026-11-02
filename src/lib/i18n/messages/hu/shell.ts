@@ -343,7 +343,7 @@ const messages = {
   'admin.denied.body':
     'Ha szükséges, kérje meg a munkaterület tulajdonosát vagy egy adminját, hogy módosítsa a szerepkörét.',
   'admin.denied.action': 'Vissza az irányítópultra',
-  'admin.eyebrow': 'Munkaterület adminisztrációja',
+  'admin.eyebrow': 'Munkaterület-konzol',
   'admin.description': '{plan} csomag · létrehozva {date}',
   'admin.createdUnknown': 'nemrég',
   'admin.workspaceSettings': 'Munkaterület beállításai',
@@ -386,13 +386,21 @@ const messages = {
   'admin.members.joined': 'Csatlakozott',
   'admin.members.role.label': '{name} szerepköre',
   'admin.members.role.saved': '{name} mostantól: {role}.',
-  'admin.members.role.impersonated': 'A szerepkör nem módosítható, amíg másik fiókként jár el.',
+  'admin.members.role.impersonated':
+    'Ebben a munkamenetben nem módosíthatók szerepkörök. Jelentkezz be újra, vagy hagyd abba a másik fiók nevében való eljárást a módosítás előtt.',
   'admin.members.role.notPermitted':
-    'Ezt a módosítást nem végezheti el. A tulajdonosi szerepkört csak tulajdonos adhatja, és csak tulajdonos módosíthatja.',
+    'Ezt a módosítást nem végezheted el. Kérj meg egy munkaterület-tulajdonost a tulajdonosi szerepkör kiosztására vagy egy tulajdonos módosítására.',
   'admin.members.role.lastOwner':
-    'Ez a munkaterület egyetlen tulajdonosa. Előbb jelöljön ki másik tulajdonost.',
+    'A munkaterületnek maradnia kell tulajdonosának. Előbb tegyél egy másik tagot tulajdonossá.',
   'admin.members.role.notFound': 'Ez a személy már nincs a munkaterületen. A lista frissült.',
   'admin.members.role.failed': 'A szerepkört nem sikerült módosítani. Próbálja újra.',
+  'admin.members.role.demote.title': 'Módosítod a saját szerepköröd?',
+  'admin.members.role.demote.admin':
+    'Többé nem kezelheted a munkaterület tulajdonosait. Csak egy másik tulajdonos állíthatja vissza a szerepköröd.',
+  'admin.members.role.demote.member':
+    'Elveszíted a hozzáférést a munkaterület konzoljához és a számlázás, tagok és beállítások kezeléséhez. Kérj meg egy tulajdonost a szerepköröd visszaállítására.',
+  'admin.members.role.demote.confirm': 'Saját szerepkör módosítása',
+  'admin.members.role.pending': 'Szerepkör módosítása…',
   'admin.members.role.promote.title': '{name} legyen tulajdonos?',
   'admin.members.role.promote.body':
     '{name} ugyanakkora hatalmat kap, mint Ön: számlázás, tagok és beállítások. Egy tulajdonos lefokozhat vagy eltávolíthat bármely másik tulajdonost, Önt is.',

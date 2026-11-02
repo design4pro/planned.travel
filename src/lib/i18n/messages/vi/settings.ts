@@ -360,9 +360,16 @@ const messages = {
   'billing.status.incomplete': 'Chưa xong',
   'billing.status.incomplete_expired': 'Đã hết hạn',
 
-  'billing.checkout.completeTitle': 'Đã nhận thanh toán',
-  'billing.checkout.completeBody':
-    'Gói mới của bạn đang được áp. Nó hiện ở đây ngay khi Polar xác nhận — thường trong vài giây.',
+  'billing.return.pending': 'Đang kiểm tra thay đổi gói',
+  'billing.return.checking': 'Đang kiểm tra trạng thái thanh toán',
+  'billing.return.confirmed': 'Đã xác nhận gói',
+  'billing.return.scheduled': 'Đã lên lịch thay đổi gói',
+  'billing.return.delayed': 'Việc xác nhận đang mất nhiều thời gian hơn',
+  'billing.return.body':
+    'Làm mới để kiểm tra lại. Nếu thay đổi vẫn chưa được xác nhận, hãy liên hệ hỗ trợ.',
+  'billing.return.scheduledBody':
+    'Thay đổi có hiệu lực vào {date}. Gói hiện tại vẫn có hiệu lực cho đến lúc đó. Điều này không xác nhận thay đổi số lượng chỗ.',
+
   'billing.checkout.cancelledTitle': 'Đã hủy thanh toán',
   'billing.checkout.cancelledBody':
     'Không có khoản nào bị trừ và gói của bạn không đổi.',
@@ -511,9 +518,6 @@ const messages = {
     'Thanh toán chưa được kết nối trên bản triển khai này nên không có gì thay đổi. Hãy liên hệ bộ phận hỗ trợ.',
   'billing.failure.orderNotInvoiceable':
     'Polar không thể xuất hóa đơn cho đơn hàng này. Nếu thiếu tên hoặc địa chỉ thanh toán, hãy thêm ở cổng thanh toán rồi thử lại; nếu không, hãy liên hệ bộ phận hỗ trợ.',
-  'billing.planChanged.title': 'Đã cập nhật gói',
-  'billing.planChanged.body':
-    'Thay đổi đã có hiệu lực ở Polar, nơi sẽ xuất hoá đơn phần chênh lệch. Bản tóm tắt bên dưới theo kịp trong vòng một phút.',
   'billing.discount.toggle': 'Bạn có mã khuyến mãi?',
   'billing.discount.label': 'Mã khuyến mãi',
   'billing.discount.hint': 'Áp dụng cho gói bạn chọn tiếp theo.',

@@ -374,9 +374,16 @@ const messages = {
   'billing.status.incomplete': 'Niedokończona',
   'billing.status.incomplete_expired': 'Wygasła',
 
-  'billing.checkout.completeTitle': 'Płatność przyjęta',
-  'billing.checkout.completeBody':
-    'Nowy plan jest właśnie wprowadzany. Pojawi się tutaj w chwili, w której Polar go potwierdzi — zwykle w kilka sekund.',
+  'billing.return.pending': 'Sprawdzamy zmianę planu',
+  'billing.return.checking': 'Sprawdzamy status rozliczeń',
+  'billing.return.confirmed': 'Plan potwierdzony',
+  'billing.return.scheduled': 'Zmiana planu zaplanowana',
+  'billing.return.delayed': 'Potwierdzenie trwa dłużej',
+  'billing.return.body':
+    'Odśwież, aby sprawdzić ponownie. Jeśli zmiana nadal nie jest potwierdzona, skontaktuj się z pomocą techniczną.',
+  'billing.return.scheduledBody':
+    'Zmiana wejdzie w życie {date}. Do tego czasu obowiązuje obecny plan. Nie potwierdza to zmiany liczby miejsc.',
+
   'billing.checkout.cancelledTitle': 'Płatność przerwana',
   'billing.checkout.cancelledBody':
     'Nic nie zostało obciążone, a plan się nie zmienił.',
@@ -546,9 +553,6 @@ const messages = {
     'Rozliczenia nie są jeszcze podłączone w tym wdrożeniu, więc nic się nie zmieniło. Skontaktuj się z pomocą techniczną.',
   'billing.failure.orderNotInvoiceable':
     'Polar nie może wystawić faktury do tego zamówienia. Jeśli brakuje na nim nazwy lub adresu rozliczeniowego, dodaj je w portalu rozliczeń i spróbuj ponownie; w przeciwnym razie skontaktuj się z pomocą techniczną.',
-  'billing.planChanged.title': 'Plan zaktualizowany',
-  'billing.planChanged.body':
-    'Zmiana już obowiązuje w Polarze, który rozliczy różnicę. Podsumowanie poniżej dogoni ją w ciągu minuty.',
   'billing.discount.toggle': 'Masz kod promocyjny?',
   'billing.discount.label': 'Kod promocyjny',
   'billing.discount.hint': 'Zostanie użyty przy planie, który wybierzesz.',

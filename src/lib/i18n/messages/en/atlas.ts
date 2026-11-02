@@ -442,8 +442,6 @@ const messages = {
   'card.absent': 'Not recorded',
   'card.loading': 'Loading this country',
   'card.loadingNamed': 'Loading {name}',
-  'card.error.body': 'These figures did not load. Nothing has been lost.',
-  'card.error.retry': 'Try again',
   'overlay.close': 'Close {name}',
   'regions.label': 'Regions',
   'regions.hint': 'Adding a region marks {country} as visited too.',

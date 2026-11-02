@@ -404,7 +404,7 @@ const messages = {
   'action.delete.note':
     'O conteúdo de espaço de trabalho que esta pessoa criou fica com o espaço que é dono dele. Suspender a conta em vez de excluir guarda o registro e tira o acesso.',
   'action.delete.owners':
-    'Não é possível excluir uma conta que é a única proprietária de um espaço de trabalho do qual outras pessoas participam. Um proprietário desse espaço pode antes definir outro proprietário no console do espaço de trabalho, ou a conta pode ser suspensa em vez de excluída.',
+    'Esta conta é a única proprietária de um espaço com outros membros. Peça a um proprietário para primeiro tornar outro membro proprietário no console do espaço, ou suspenda a conta.',
   'action.delete.done': 'Conta excluída',
   'action.delete.done.body':
     '{name} e tudo o que estava preso à conta se foram.',

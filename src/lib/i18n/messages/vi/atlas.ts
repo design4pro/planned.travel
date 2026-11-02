@@ -321,8 +321,6 @@ const messages = {
   'card.absent': 'Chưa ghi lại',
   'card.loading': 'Đang tải quốc gia này',
   'card.loadingNamed': 'Đang tải {name}',
-  'card.error.body': 'Các số liệu này chưa tải được. Không có gì bị mất.',
-  'card.error.retry': 'Thử lại',
   'overlay.close': 'Đóng {name}',
   'regions.label': 'Vùng',
   'regions.hint': 'Thêm một vùng cũng đánh dấu {country} là đã ghé thăm.',

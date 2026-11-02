@@ -357,9 +357,16 @@ const messages = {
   'billing.status.incomplete': 'غير مكتمل',
   'billing.status.incomplete_expired': 'منتهي',
 
-  'billing.checkout.completeTitle': 'تم استلام الدفعة',
-  'billing.checkout.completeBody':
-    'جارٍ تطبيق خطتك الجديدة. وتظهر هنا لحظة تأكيد Polar لها — عادةً في ثوانٍ.',
+  'billing.return.pending': 'جارٍ التحقق من تغيير الخطة',
+  'billing.return.checking': 'جارٍ التحقق من حالة الفوترة',
+  'billing.return.confirmed': 'تم تأكيد الخطة',
+  'billing.return.scheduled': 'تمت جدولة تغيير الخطة',
+  'billing.return.delayed': 'يستغرق التأكيد وقتًا أطول',
+  'billing.return.body':
+    'حدّث الصفحة للتحقق مجددًا. إذا ظل التغيير غير مؤكد، فتواصل مع الدعم.',
+  'billing.return.scheduledBody':
+    'يسري التغيير في {date}. تظل خطتك الحالية سارية حتى ذلك الحين. لا يؤكد ذلك تغييرات عدد المقاعد.',
+
   'billing.checkout.cancelledTitle': 'أُلغيت عملية الدفع',
   'billing.checkout.cancelledBody': 'لم يُخصم شيء ولم تتغير خطتك.',
   'billing.portal.backTitle': 'عودة من Polar',
@@ -518,9 +525,6 @@ const messages = {
     'الفوترة غير متصلة بعد في هذا النشر، لذا لم يتغير شيء. تواصل مع الدعم.',
   'billing.failure.orderNotInvoiceable':
     'لا يستطيع Polar إصدار فاتورة لهذا الطلب. إن كان اسم الفوترة أو عنوانها مفقودًا فأضفهما في بوابة الفوترة وأعد المحاولة، وإلا فتواصل مع الدعم.',
-  'billing.planChanged.title': 'تم تحديث الخطة',
-  'billing.planChanged.body':
-    'التغيير سارٍ بالفعل عند Polar، وهي من ستفوتر الفرق. الملخّص أدناه يلحق خلال دقيقة.',
   'billing.discount.toggle': 'هل لديك رمز ترويجي؟',
   'billing.discount.label': 'الرمز الترويجي',
   'billing.discount.hint': 'يُطبَّق على الخطة التي تختارها لاحقًا.',

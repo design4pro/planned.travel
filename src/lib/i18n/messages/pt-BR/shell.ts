@@ -352,7 +352,7 @@ const messages = {
   'admin.denied.body':
     'Se precisar, peça a um proprietário ou a um administrador deste espaço para mudar seu papel.',
   'admin.denied.action': 'Voltar ao painel',
-  'admin.eyebrow': 'Administração do espaço',
+  'admin.eyebrow': 'Console do espaço',
   'admin.description': 'Plano {plan} · criado em {date}',
   'admin.createdUnknown': 'há pouco',
   'admin.workspaceSettings': 'Configurações do espaço',
@@ -399,14 +399,21 @@ const messages = {
   'admin.members.role.label': 'Função de {name}',
   'admin.members.role.saved': '{name} agora é {role}.',
   'admin.members.role.impersonated':
-    'Não é possível alterar uma função enquanto você age como outra conta.',
+    'Não é possível alterar funções nesta sessão. Entre novamente ou pare de atuar como essa conta antes de alterar funções.',
   'admin.members.role.notPermitted':
-    'Você não pode fazer essa alteração. Só um proprietário pode conceder a função de proprietário ou alterar um proprietário.',
+    'Você não pode fazer essa alteração. Peça a um proprietário do espaço para conceder a função de proprietário ou alterar um proprietário.',
   'admin.members.role.lastOwner':
-    'Este é o único proprietário do espaço de trabalho. Defina antes outra pessoa como proprietária.',
+    'O espaço precisa manter um proprietário. Primeiro torne outro membro proprietário.',
   'admin.members.role.notFound':
     'Esta pessoa não está mais no espaço de trabalho. A lista foi atualizada.',
   'admin.members.role.failed': 'Não foi possível alterar a função. Tente de novo.',
+  'admin.members.role.demote.title': 'Alterar sua função?',
+  'admin.members.role.demote.admin':
+    'Você não poderá mais gerenciar proprietários do espaço. Só outro proprietário poderá restaurar sua função.',
+  'admin.members.role.demote.member':
+    'Você perderá o acesso ao console do espaço e aos controles de cobrança, membros e configurações. Peça a um proprietário do espaço para restaurar sua função.',
+  'admin.members.role.demote.confirm': 'Alterar minha função',
+  'admin.members.role.pending': 'Alterando função…',
   'admin.members.role.promote.title': 'Tornar {name} proprietário?',
   'admin.members.role.promote.body':
     '{name} terá o mesmo poder que você: cobrança, membros e configurações. Um proprietário pode rebaixar ou remover qualquer outro proprietário, inclusive você.',

@@ -298,9 +298,16 @@ const messages = {
   'billing.status.canceled': '已取消',
   'billing.status.incomplete': '未完成',
   'billing.status.incomplete_expired': '已過期',
-  'billing.checkout.completeTitle': '已收到付款',
-  'billing.checkout.completeBody':
-    '新方案正在套用。Polar 一確認，這裡就會顯示出來——通常幾秒鐘。',
+  'billing.return.pending': '正在檢查方案變更',
+  'billing.return.checking': '正在檢查帳單狀態',
+  'billing.return.confirmed': '方案已確認',
+  'billing.return.scheduled': '方案變更已排定',
+  'billing.return.delayed': '確認所需時間較長',
+  'billing.return.body':
+    '請重新整理以再次檢查。如果變更仍未確認，請聯絡支援團隊。',
+  'billing.return.scheduledBody':
+    '變更將於{date}生效。在此之前，目前方案保持有效。 這並不確認席位數量的變更。',
+
   'billing.checkout.cancelledTitle': '結帳已取消',
   'billing.checkout.cancelledBody': '沒有扣款，方案也沒有變。',
   'billing.portal.backTitle': '從 Polar 回來了',
@@ -429,9 +436,6 @@ const messages = {
     '此部署尚未連接帳單服務，因此未做任何變更。請聯絡支援團隊。',
   'billing.failure.orderNotInvoiceable':
     'Polar 無法為此訂單開立發票。如果缺少帳單姓名或地址，請在帳單入口網站補上後重試；否則請聯絡支援團隊。',
-  'billing.planChanged.title': '方案已更新',
-  'billing.planChanged.body':
-    '變更已在 Polar 生效，差額由 Polar 開立。下方摘要會在一分鐘內跟上。',
   'billing.discount.toggle': '有促銷碼嗎？',
   'billing.discount.label': '促銷碼',
   'billing.discount.hint': '將套用於你接下來選擇的方案。',

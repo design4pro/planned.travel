@@ -402,7 +402,7 @@ const messages = {
   'action.delete.note':
     'Innehåll i en arbetsyta som den här personen skapat stannar hos arbetsytan som äger det. Att stänga av kontot i stället behåller spåret och tar bort åtkomsten.',
   'action.delete.owners':
-    'Ett konto som är ensam ägare till en arbetsyta där andra personer ingår kan inte raderas. En ägare av arbetsytan kan först göra någon annan till ägare i arbetsytans konsol, eller så kan kontot stängas av i stället.',
+    'Kontot är ensam ägare till en arbetsyta med andra medlemmar. Be en ägare att först göra en annan medlem till ägare i arbetsytans konsol, eller stäng av kontot i stället.',
   'action.delete.done': 'Kontot borttaget',
   'action.delete.done.body': '{name} och allt som hängde på kontot är borta.',
 

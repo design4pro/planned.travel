@@ -4,7 +4,7 @@
  * nothing in this release that enqueues the kind.
  */
 import { readFileSync } from 'node:fs'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   PARTICIPANT_BACKFILL_MARKER_KEY,
   participantBackfillRunKey,
@@ -295,12 +295,34 @@ describe('the chain', () => {
   })
 
   it('does nothing for a duplicate of a message the run has moved past', async () => {
-    const { env, sent } = fakes()
+    const { env, sent, kv } = fakes()
     await run(env, null)
     await run(env, ordered[0])
     const before = [...sent]
-
-    const metrics = await run(env, null)
+    const beforeKv = new Map(kv)
+    const beforeAnchors = anchors()
+    const beforeChanges = harness.sqlite
+      .prepare('SELECT total_changes() AS count')
+      .get()
+    const put = vi.spyOn(env.KV, 'put')
+    const sink = createMemorySink()
+    const metrics = await createParticipantBackfillHandler(() => harness.db)(
+      { runId: 'run-1', after: null },
+      { ...context(env), logger: createLogger({ level: 'info', sink }) },
+    )
+    expect(sink.records).toEqual([
+      expect.objectContaining({
+        level: 'warn',
+        msg: 'participation backfill message already handled',
+      }),
+    ])
+    expect(put).not.toHaveBeenCalled()
+    expect(
+      harness.sqlite.prepare('SELECT total_changes() AS count').get(),
+    ).toEqual(beforeChanges)
+    expect(kv).toEqual(beforeKv)
+    expect(kv.has(PARTICIPANT_BACKFILL_MARKER_KEY)).toBe(false)
+    expect(anchors()).toEqual(beforeAnchors)
 
     expect(metrics).toEqual({ organizations: 0, participants: 0, complete: 0 })
     expect(sent).toEqual(before)

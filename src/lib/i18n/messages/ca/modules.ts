@@ -1458,6 +1458,10 @@ const messages = {
   'vacay.legend.company': "Dia lliure d'empresa",
   'vacay.legend.other': 'Una altra persona absent',
   'vacay.legend.weekend': 'Cap de setmana',
+  'collections.leave.title': 'Vols sortir sense desar?',
+  'collections.leave.body': 'Es perdran els canvis de la col·lecció.',
+  'collections.leave.stay': 'Queda’t',
+  'collections.leave.discard': 'Descarta i surt',
 } satisfies TranslationOf<typeof En>
 
 export default messages

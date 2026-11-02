@@ -371,9 +371,16 @@ const messages = {
   'billing.status.incomplete': 'Unvollständig',
   'billing.status.incomplete_expired': 'Abgelaufen',
 
-  'billing.checkout.completeTitle': 'Zahlung eingegangen',
-  'billing.checkout.completeBody':
-    'Dein neuer Tarif wird gerade übernommen. Er erscheint hier, sobald Polar ihn bestätigt — meist innerhalb weniger Sekunden.',
+  'billing.return.pending': 'Planänderung wird geprüft',
+  'billing.return.checking': 'Abrechnungsstatus wird geprüft',
+  'billing.return.confirmed': 'Plan bestätigt',
+  'billing.return.scheduled': 'Planänderung vorgemerkt',
+  'billing.return.delayed': 'Die Bestätigung dauert länger',
+  'billing.return.body':
+    'Aktualisiere die Seite, um erneut zu prüfen. Bleibt die Änderung unbestätigt, kontaktiere den Support.',
+  'billing.return.scheduledBody':
+    'Die Änderung gilt ab {date}. Bis dahin bleibt dein aktueller Plan bestehen. Änderungen der Anzahl der Plätze sind damit nicht bestätigt.',
+
   'billing.checkout.cancelledTitle': 'Bezahlvorgang abgebrochen',
   'billing.checkout.cancelledBody':
     'Es wurde nichts abgebucht und dein Tarif ist unverändert.',
@@ -527,9 +534,6 @@ const messages = {
     'Die Abrechnung ist in dieser Bereitstellung noch nicht verbunden, daher wurde nichts geändert. Wende dich an den Support.',
   'billing.failure.orderNotInvoiceable':
     'Polar kann für diese Bestellung keine Rechnung ausstellen. Fehlen Rechnungsname oder -adresse, trage sie im Abrechnungsportal nach und versuche es erneut; andernfalls wende dich an den Support.',
-  'billing.planChanged.title': 'Tarif aktualisiert',
-  'billing.planChanged.body':
-    'Die Änderung gilt bereits bei Polar, das die Differenz abrechnet. Die Übersicht unten zieht innerhalb einer Minute nach.',
   'billing.discount.toggle': 'Haben Sie einen Aktionscode?',
   'billing.discount.label': 'Aktionscode',
   'billing.discount.hint': 'Gilt für den Tarif, den Sie als Nächstes wählen.',

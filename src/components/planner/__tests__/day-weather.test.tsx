@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { render as mount, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DndContext } from '@dnd-kit/core'
@@ -776,6 +776,29 @@ describe('DayWeatherPanel', () => {
 
     expect(screen.getByText('5.1 mm')).toBeDefined()
   })
+
+  it.each([
+    ['metric', 0.04, '<0.1 mm'],
+    ['imperial', 0.1, '<0.01 in'],
+    ['metric', 0, '0 mm'],
+    ['imperial', 0, '0 in'],
+  ] as const)(
+    'reads %s %s mm of rain as %s: a trace is a lower bound, only a true zero is zero',
+    (unit, precipitationMm, text) => {
+      render(
+        <DayWeatherPanel
+          reading={{
+            ...READING,
+            precipitationMm,
+            precipitationProbability: null,
+          }}
+          unit={unit}
+        />,
+      )
+
+      expect(screen.getByText(text)).toBeDefined()
+    },
+  )
 })
 
 describe('sunrise and sunset in the fuller forecast', () => {
@@ -902,5 +925,78 @@ describe('DaySection with weather', () => {
     const { container } = renderDay(DATE_LABEL)
 
     expect(container.querySelector('[data-part="day-weather"]')).toBeNull()
+  })
+})
+
+describe('a popover whose day stops being a forecast', () => {
+  const tree = (
+    weather: React.ComponentProps<typeof DaySection>['weather'],
+    onFocusDay?: () => void,
+  ) => (
+    <I18nProvider locale="en" messages={MESSAGES}>
+      <button type="button">Elsewhere</button>
+      <DndContext>
+        <DaySection
+          day={day(DATE_LABEL)}
+          categoryFor={() => undefined}
+          weather={weather}
+          weatherUnit="metric"
+          onFocusDay={onFocusDay}
+        />
+      </DndContext>
+    </I18nProvider>
+  )
+  const header = () =>
+    screen.getByRole('button', { name: /Asakusa and the river/ })
+
+  it.each([
+    ['loading', { status: 'loading' }],
+    ['unavailable', { dayId: 'd1', status: 'unavailable' }],
+    ['none', { dayId: 'd1', status: 'none' }],
+    ['not supplied at all', undefined],
+  ] as const)(
+    'closes it and hands focus to the day’s header button when the day turns %s',
+    async (_name, next) => {
+      const user = userEvent.setup()
+      const onFocusDay = vi.fn()
+      const { rerender } = mount(tree(FORECAST, onFocusDay))
+      await user.click(screen.getByRole('button', { name: /^Forecast/ }))
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog.contains(document.activeElement)).toBe(true)
+
+      rerender(tree(next, onFocusDay))
+
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(document.activeElement).toBe(header())
+      // Focus is moved, not pressed: the day is not selected by the weather going away.
+      expect(onFocusDay).not.toHaveBeenCalled()
+      expect(header().getAttribute('aria-pressed')).toBe('false')
+    },
+  )
+
+  it('hands focus over from the badge itself when the popover was already closed', async () => {
+    const user = userEvent.setup()
+    const { rerender } = mount(tree(FORECAST))
+    await user.tab()
+    await user.tab()
+    await user.tab()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: /^Forecast/ }),
+    )
+
+    rerender(tree({ dayId: 'd1', status: 'unavailable' }))
+
+    expect(document.activeElement).toBe(header())
+  })
+
+  it('leaves focus alone when it was somewhere else', async () => {
+    const user = userEvent.setup()
+    const { rerender } = mount(tree(FORECAST))
+    const elsewhere = screen.getByRole('button', { name: 'Elsewhere' })
+    await user.click(elsewhere)
+
+    rerender(tree({ dayId: 'd1', status: 'none' }))
+
+    expect(document.activeElement).toBe(elsewhere)
   })
 })

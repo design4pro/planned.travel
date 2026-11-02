@@ -81,6 +81,7 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Collection** - a named, coloured collection of saved places shared within a workspace and independent of any single trip. Its owner or a workspace administrator may change its details or delete it.
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
+- **Collection edit draft** - unsaved name, description and colour held in memory for one authenticated user, workspace and collection. Passive dismissal keeps it; Cancel, successful save, confirmed deletion, deliberate departure or loss of access clears it. It has no persistent restore or expiry lifecycle.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
 
@@ -102,3 +103,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Public place** - a separately reviewed, free-public catalogue snapshot available to visitors without a workspace. It is never a collection visibility setting; private source changes do not change the published snapshot.
 - **Place proposal** - an explicitly submitted snapshot of selected public place fields awaiting platform-administrator review. Submission does not publish or widen access to the private source.
 - **Place origin** - the catalogue identifier and revision retained by a trip's independent place snapshot. An origin link is available only while the origin is publicly readable; withdrawal does not remove the trip copy.
+
+- **Billing selection hint** - an expiring, tab-local, workspace- and viewer-scoped record of the requested plan, interval and seats used only to describe a billing return. It grants no entitlement and proves no payment; effective and scheduled changes come from authoritative billing state.

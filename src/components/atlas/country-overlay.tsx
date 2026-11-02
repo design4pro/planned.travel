@@ -19,11 +19,7 @@ import {
 import { countryFacts } from '#/lib/atlas/country-facts'
 import { cn } from '#/lib/cn'
 import { CountryActions } from './country-actions'
-import {
-  CountryCard,
-  CountryCardError,
-  CountryCardSkeleton,
-} from './country-card'
+import { CountryCard, CountryCardSkeleton } from './country-card'
 
 import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
 import type { CountryFactColumns } from '#/lib/atlas/country-facts'
@@ -1159,12 +1155,10 @@ export interface CountryOverlayGoal extends CountryActionsGoal {
  * Whether the figures behind the surface are the current ones.
  *
  * `loading` is the window after a write, while the router re-reads the atlas and
- * the numbers on screen are still the ones from before it. `failed` is a read
- * that did not come back. Both are states of the *screen's* payload rather than
- * of a request this component makes — it makes none — which is why they arrive
- * as a prop.
+ * the numbers on screen are still the ones from before it. A rejected read
+ * replaces Atlas with its route error surface; this component makes no request.
  */
-export type CountryOverlayStatus = 'ready' | 'loading' | 'failed'
+export type CountryOverlayStatus = 'ready' | 'loading'
 
 export interface CountryOverlayProps {
   /** The traveller's record, for the paint layer. */
@@ -1189,8 +1183,6 @@ export interface CountryOverlayProps {
   /** Where the surfaces render. The screen owns it, inside its own slice. */
   readonly container: HTMLElement | null
   readonly status?: CountryOverlayStatus
-  /** Re-reads the atlas. Offered on the failed card, and nowhere else. */
-  readonly onRetry?: () => void
 }
 
 /* ------------------------------------------------------------------- layout */
@@ -1812,30 +1804,19 @@ function AnchoredSurface({
 
 /* ------------------------------------------------------------------- panel */
 
-/** The card's three states, at one geometry, inside the panel. */
+/** The card's ready and loading states, at one geometry, inside the panel. */
 function PanelFacts({
   countryCode,
   country,
   status,
-  onRetry,
 }: {
   readonly countryCode: string
   readonly country: CountryOverlayCountry | null
   readonly status: CountryOverlayStatus
-  readonly onRetry?: () => void
 }) {
   if (status === 'loading') {
     return (
       <CountryCardSkeleton countryCode={countryCode} className={layout.facts} />
-    )
-  }
-  if (status === 'failed') {
-    return (
-      <CountryCardError
-        countryCode={countryCode}
-        onRetry={onRetry}
-        className={layout.facts}
-      />
     )
   }
   return (
@@ -1946,7 +1927,6 @@ interface CountryPanelProps {
   readonly country: CountryOverlayCountry | null
   readonly goal: CountryActionsGoal | null
   readonly status: CountryOverlayStatus
-  readonly onRetry?: () => void
   readonly onCloseAutoFocus: (event: Event) => void
   readonly onInteractOutside: (event: Event) => void
   readonly onFocusOutside: (event: Event) => void
@@ -1983,7 +1963,6 @@ function CountryPanel({
   country,
   goal,
   status,
-  onRetry,
   onCloseAutoFocus,
   onInteractOutside,
   onFocusOutside,
@@ -2041,7 +2020,6 @@ function CountryPanel({
           countryCode={countryCode}
           country={country}
           status={status}
-          onRetry={onRetry}
         />
       </div>
 
@@ -2122,7 +2100,6 @@ export function CountryOverlay({
   padding,
   container,
   status = 'ready',
-  onRetry,
 }: CountryOverlayProps) {
   const { map } = useMapContext()
 
@@ -2437,7 +2414,6 @@ export function CountryOverlay({
                     country={panelCountry}
                     goal={panelGoal}
                     status={status}
-                    onRetry={onRetry}
                     onCloseAutoFocus={returnFocus}
                     onFocusOutside={keepOnFocusMove}
                     onInteractOutside={keepOnOutsidePress}

@@ -352,7 +352,7 @@ const messages = {
   'admin.denied.body':
     'Demandez à un propriétaire ou à un administrateur de cet espace de changer votre rôle si vous en avez besoin.',
   'admin.denied.action': 'Retour au tableau de bord',
-  'admin.eyebrow': 'Administration de l’espace',
+  'admin.eyebrow': 'Console de l’espace',
   'admin.description': 'Formule {plan} · créé le {date}',
   'admin.createdUnknown': 'récemment',
   'admin.workspaceSettings': 'Réglages de l’espace',
@@ -399,14 +399,21 @@ const messages = {
   'admin.members.role.label': 'Rôle de {name}',
   'admin.members.role.saved': '{name} est maintenant {role}.',
   'admin.members.role.impersonated':
-    'Un rôle ne peut pas être modifié pendant que vous agissez au nom d’un autre compte.',
+    'Les rôles ne peuvent pas être modifiés dans cette session. Reconnectez-vous ou cessez d’agir au nom du compte avant de modifier les rôles.',
   'admin.members.role.notPermitted':
-    'Vous ne pouvez pas faire ce changement. Seul un propriétaire peut accorder le rôle de propriétaire ou modifier un propriétaire.',
+    'Vous ne pouvez pas effectuer cette modification. Demandez à un propriétaire de l’espace d’attribuer le rôle de propriétaire ou de modifier un propriétaire.',
   'admin.members.role.lastOwner':
-    'C’est le seul propriétaire de l’espace de travail. Nommez d’abord un autre propriétaire.',
+    'L’espace doit conserver un propriétaire. Nommez d’abord un autre membre propriétaire.',
   'admin.members.role.notFound':
     'Cette personne n’est plus dans l’espace de travail. La liste a été actualisée.',
   'admin.members.role.failed': 'Le rôle n’a pas pu être modifié. Réessayez.',
+  'admin.members.role.demote.title': 'Modifier votre rôle ?',
+  'admin.members.role.demote.admin':
+    'Vous ne pourrez plus gérer les propriétaires de l’espace. Seul un autre propriétaire pourra rétablir votre rôle.',
+  'admin.members.role.demote.member':
+    'Vous perdrez l’accès à la console de l’espace, à la facturation, aux membres et aux paramètres. Demandez à un propriétaire de l’espace de rétablir votre rôle.',
+  'admin.members.role.demote.confirm': 'Modifier mon rôle',
+  'admin.members.role.pending': 'Modification du rôle…',
   'admin.members.role.promote.title': 'Faire de {name} un propriétaire ?',
   'admin.members.role.promote.body':
     '{name} aura le même pouvoir que vous : facturation, membres et réglages. Un propriétaire peut rétrograder ou retirer tout autre propriétaire, vous compris.',

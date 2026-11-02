@@ -1349,6 +1349,10 @@ const messages = {
   'vacay.legend.company': 'Hari libur perusahaan',
   'vacay.legend.other': 'Orang lain tidak hadir',
   'vacay.legend.weekend': 'Akhir pekan',
+  'collections.leave.title': 'Keluar tanpa menyimpan?',
+  'collections.leave.body': 'Perubahan koleksi Anda akan hilang.',
+  'collections.leave.stay': 'Tetap di sini',
+  'collections.leave.discard': 'Buang dan keluar',
 } satisfies TranslationOf<typeof En>
 
 export default messages

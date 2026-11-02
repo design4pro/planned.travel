@@ -355,8 +355,6 @@ const messages = {
   'card.absent': 'Δεν έχει καταγραφεί',
   'card.loading': 'Φόρτωση αυτής της χώρας',
   'card.loadingNamed': 'Φόρτωση: {name}',
-  'card.error.body': 'Αυτά τα στοιχεία δεν φορτώθηκαν. Τίποτα δεν χάθηκε.',
-  'card.error.retry': 'Δοκιμάστε ξανά',
   'overlay.close': 'Κλείσιμο {name}',
   'regions.label': 'Περιφέρειες',
   'regions.hint':

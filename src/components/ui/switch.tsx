@@ -55,7 +55,7 @@ export const Switch = React.forwardRef<HTMLButtonElement, SwitchProps>(
         ref={ref}
         className={cn(
           'relative inline-flex shrink-0 items-center rounded-full border border-transparent p-0.5',
-          'bg-surface-inset ring-1 ring-edge-strong/60 ring-inset',
+          'bg-surface-inset ring-1 ring-edge-strong/60 ring-inset enabled:data-[state=unchecked]:ring-edge-strong',
           transitionBase,
           focusRing,
           disabledState,

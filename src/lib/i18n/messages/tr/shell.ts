@@ -330,7 +330,7 @@ const messages = {
   'admin.denied.body':
     'Gerekiyorsa bu çalışma alanının sahibinden ya da bir yöneticisinden rolünüzü değiştirmesini isteyin.',
   'admin.denied.action': 'Panoya dön',
-  'admin.eyebrow': 'Çalışma alanı yönetimi',
+  'admin.eyebrow': 'Çalışma alanı konsolu',
   'admin.description': '{plan} paketi · {date} tarihinde oluşturuldu',
   'admin.createdUnknown': 'kısa süre önce',
   'admin.workspaceSettings': 'Çalışma alanı ayarları',
@@ -373,13 +373,21 @@ const messages = {
   'admin.members.joined': 'Katıldı',
   'admin.members.role.label': '{name} rolü',
   'admin.members.role.saved': '{name} artık {role}.',
-  'admin.members.role.impersonated': 'Başka bir hesap olarak işlem yaparken rol değiştirilemez.',
+  'admin.members.role.impersonated':
+    'Bu oturumda roller değiştirilemez. Rolleri değiştirmeden önce yeniden giriş yapın veya başka bir hesap olarak işlem yapmayı durdurun.',
   'admin.members.role.notPermitted':
-    'Bu değişikliği yapamazsınız. Sahip rolünü yalnızca bir sahip verebilir veya bir sahibi değiştirebilir.',
+    'Bu değişikliği yapamazsınız. Sahip rolü vermek veya bir sahibin rolünü değiştirmek için bir çalışma alanı sahibine başvurun.',
   'admin.members.role.lastOwner':
-    'Bu, çalışma alanının tek sahibi. Önce başka birini sahip yapın.',
+    'Çalışma alanının bir sahibi olmalıdır. Önce başka bir üyeyi sahip yapın.',
   'admin.members.role.notFound': 'Bu kişi artık çalışma alanında değil. Liste yenilendi.',
   'admin.members.role.failed': 'Rol değiştirilemedi. Yeniden deneyin.',
+  'admin.members.role.demote.title': 'Kendi rolünüz değiştirilsin mi?',
+  'admin.members.role.demote.admin':
+    'Artık çalışma alanı sahiplerini yönetemezsiniz. Rolünüzü yalnızca başka bir sahip geri verebilir.',
+  'admin.members.role.demote.member':
+    'Çalışma alanı konsoluna ve faturalandırma, üye ve ayar denetimlerine erişiminizi kaybedeceksiniz. Rolünüzü geri vermesi için bir çalışma alanı sahibine başvurun.',
+  'admin.members.role.demote.confirm': 'Rolümü değiştir',
+  'admin.members.role.pending': 'Rol değiştiriliyor…',
   'admin.members.role.promote.title': '{name} sahip yapılsın mı?',
   'admin.members.role.promote.body':
     '{name} sizinle aynı yetkiye sahip olacak: faturalama, üyeler ve ayarlar. Bir sahip, sizin de aralarında olduğunuz diğer tüm sahiplerin rolünü düşürebilir veya onları çıkarabilir.',

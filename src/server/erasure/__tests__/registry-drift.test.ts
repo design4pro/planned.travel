@@ -23,6 +23,13 @@ import {
   findRegistryDrift,
 } from './schema-user-columns'
 
+// Independently counted from the 50 userRef column declarations in schema.ts.
+const EXPECTED_USER_REF_COLUMNS = 50
+
+function assertUserRefBaseline(source: string): void {
+  expect(extractUserRefColumns(source)).toHaveLength(EXPECTED_USER_REF_COLUMNS)
+}
+
 const ROOT = join(import.meta.dirname, '..', '..', '..', '..')
 const schemaSource = readFileSync(join(ROOT, 'src/server/db/schema.ts'), 'utf8')
 const authSchemaSource = readFileSync(
@@ -51,9 +58,7 @@ function declaredColumns(): Set<string> {
 describe('the registry against the schema', () => {
   it('reads the schema well enough to mean something', () => {
     // An extraction that silently found nothing would make the drift assertions vacuous.
-    expect(extractUserRefColumns(schemaSource).length).toBeGreaterThanOrEqual(
-      49,
-    )
+    assertUserRefBaseline(schemaSource)
     expect(extractUserForeignKeys(authSchemaSource)).toEqual(
       expect.arrayContaining([
         'session.user_id',
@@ -94,6 +99,22 @@ describe('the registry against the schema', () => {
     expect(
       findRegistryDrift(shrunk, authSchemaSource, ERASURE_REGISTRY),
     ).toEqual({ missing: [], surplus: ['notifications.sender_user_id'] })
+  })
+
+  it('rejects coordinated removal from the schema and registry', () => {
+    const shrunk = schemaSource.replace(
+      "    senderUserId: userRef('sender_user_id'),\n",
+      '',
+    )
+    expect(shrunk).not.toBe(schemaSource)
+    const registry = ERASURE_REGISTRY.filter(
+      (entry) =>
+        !(entry.table === 'notifications' && entry.column === 'sender_user_id'),
+    )
+    expect(findRegistryDrift(shrunk, authSchemaSource, registry)).toEqual({
+      missing: [], surplus: [],
+    })
+    expect(() => assertUserRefBaseline(shrunk)).toThrow()
   })
 
   it('fails when an auth table gains a foreign key to the user', () => {

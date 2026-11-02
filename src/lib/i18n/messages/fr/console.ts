@@ -417,7 +417,7 @@ const messages = {
   'action.delete.note':
     'Le contenu d’espace de travail créé par cette personne reste à l’espace qui le possède. Suspendre le compte plutôt que le supprimer garde la trace et retire l’accès.',
   'action.delete.owners':
-    'Un compte qui est le seul propriétaire d’un espace de travail auquel d’autres personnes appartiennent ne peut pas être supprimé. Un propriétaire de cet espace peut d’abord nommer un autre propriétaire depuis la console de l’espace de travail, ou le compte peut être suspendu à la place.',
+    'Ce compte est l’unique propriétaire d’un espace comptant d’autres membres. Demandez à un propriétaire de nommer d’abord un autre membre propriétaire dans la console de l’espace, ou suspendez plutôt le compte.',
   'action.delete.done': 'Compte supprimé',
   'action.delete.done.body':
     '{name} et tout ce qui était rattaché au compte ont disparu.',

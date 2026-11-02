@@ -122,6 +122,7 @@ export function DaySection({
 }: DaySectionProps) {
   const t = useTranslate()
   const contentId = React.useId()
+  const headerRef = React.useRef<HTMLButtonElement>(null)
   const itemIds = React.useMemo(
     () =>
       day.items.map((item) => {
@@ -192,6 +193,7 @@ export function DaySection({
           </button>
         )}
         <button
+          ref={headerRef}
           type="button"
           onClick={onFocusDay}
           aria-pressed={active}
@@ -234,6 +236,7 @@ export function DaySection({
             weather={weather}
             unit={weatherUnit}
             dateLabel={day.dateLabel}
+            headerRef={headerRef}
           />
         )}
       </div>

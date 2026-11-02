@@ -410,7 +410,7 @@ const messages = {
   'action.delete.note':
     'Inhalte eines Arbeitsbereichs, die diese Person angelegt hat, bleiben beim Arbeitsbereich, dem sie gehören. Das Konto stattdessen zu sperren, behält den Eintrag und nimmt nur den Zugang.',
   'action.delete.owners':
-    'Ein Konto, das einziger Eigentümer eines Arbeitsbereichs ist, dem weitere Personen angehören, kann nicht gelöscht werden. Ein Inhaber dieses Arbeitsbereichs kann zuerst in dessen Arbeitsbereich-Konsole eine andere Person zum Inhaber machen, oder das Konto wird stattdessen gesperrt.',
+    'Dieses Konto ist der einzige Eigentümer eines Workspace mit weiteren Mitgliedern. Bitte einen Workspace-Eigentümer, zuerst ein anderes Mitglied in der Workspace-Konsole zum Eigentümer zu machen, oder sperre stattdessen das Konto.',
   'action.delete.done': 'Konto gelöscht',
   'action.delete.done.body': '{name} und alles, was am Konto hing, ist fort.',
 

@@ -1522,6 +1522,10 @@ const messages = {
   'vacay.legend.company': 'عطلة الشركة',
   'vacay.legend.other': 'غياب شخص آخر',
   'vacay.legend.weekend': 'عطلة نهاية الأسبوع',
+  'collections.leave.title': 'هل تريد المغادرة دون حفظ؟',
+  'collections.leave.body': 'ستفقد التغييرات التي أجريتها على المجموعة.',
+  'collections.leave.stay': 'البقاء',
+  'collections.leave.discard': 'تجاهل ومغادرة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

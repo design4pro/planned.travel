@@ -230,8 +230,8 @@ describe('loadTripWeather', () => {
     ) {
       throw new Error('Today and tomorrow are inside the recording.')
     }
-    expect(tomorrow.reading.windMs).toBeGreaterThan(0)
-    expect(tomorrow.reading.precipitationMm).toBeGreaterThanOrEqual(0)
+    expect(tomorrow.reading.windMs).toBe(5.1)
+    expect(tomorrow.reading.precipitationMm).toBe(12.8)
     expect(tomorrow.reading.slots?.map((slot) => slot.from)).toEqual([
       '00:00',
       '06:00',
