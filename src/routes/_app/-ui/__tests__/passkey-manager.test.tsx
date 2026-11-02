@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -71,6 +72,17 @@ function renameInput(): HTMLElement {
 
 function renameButton(name: string): HTMLElement {
   return screen.getByRole('button', { name: `Rename ${name}` })
+}
+
+function expectDescription(button: HTMLElement, target: HTMLElement): void {
+  const id = button.getAttribute('aria-describedby')
+  expect(id).toBeTruthy()
+  expect(document.getElementById(id ?? '')).toBe(target)
+  expect(
+    Array.from(document.querySelectorAll('[id]')).filter(
+      (node) => node.id === id,
+    ),
+  ).toHaveLength(1)
 }
 
 const FALLBACK = /^Passkey · added /
@@ -166,6 +178,12 @@ describe('a list that did not load', () => {
     expect(
       within(alert).getByRole('button', { name: 'Sign in again' }),
     ).toBeTruthy()
+    expectDescription(
+      within(alert).getByRole('button', { name: 'Sign in again' }),
+      within(alert).getByText(
+        'Your session has ended. Sign in again to continue managing your passkeys.',
+      ),
+    )
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
   })
 
@@ -325,6 +343,10 @@ describe('adding a passkey', () => {
         screen.getByRole('button', { name: 'Sign in again' }),
       ),
     )
+    expectDescription(
+      screen.getByRole('button', { name: 'Sign in again' }),
+      screen.getByRole('status'),
+    )
   })
 
   it('shows the session-ended sentence, not the stale one, for a 401', async () => {
@@ -446,6 +468,45 @@ describe('adding a passkey', () => {
         `You have reached the limit of ${MAX_PASSKEYS_PER_USER} passkeys`,
       ),
     )
+  })
+
+  it('waits for successful sign-out before navigating back to sign-in', async () => {
+    client.listPasskeys.mockResolvedValue(failure(401))
+    let finish: (response: Response) => void = () => {}
+    const fetchMock = vi.fn().mockReturnValue(
+      new Promise<Response>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const assign = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    vi.stubGlobal('location', { ...window.location, assign })
+    try {
+      await mount()
+      const button = await screen.findByRole('button', {
+        name: 'Sign in again',
+      })
+      await userEvent.click(button)
+      expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/auth/sign-out', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      })
+      expect(assign).not.toHaveBeenCalled()
+      expect(button.getAttribute('aria-busy')).toBe('true')
+      await userEvent.click(button)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        finish(new Response('{}', { status: 200 }))
+      })
+      await waitFor(() =>
+        expect(assign).toHaveBeenCalledExactlyOnceWith(
+          '/login?redirect=%2Fpasskeys',
+        ),
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 
   it('keeps Sign in again on screen when signing out fails, and puts focus back on it', async () => {
@@ -1026,6 +1087,10 @@ describe('naming a passkey', () => {
       expect(
         within(row).getByRole('button', { name: 'Sign in again' }),
       ).toBeTruthy()
+      expectDescription(
+        within(row).getByRole('button', { name: 'Sign in again' }),
+        within(row).getByText(/Your session has ended/, { selector: 'p' }),
+      )
       expect(document.activeElement).toBe(renameInput())
     })
 
