@@ -124,10 +124,6 @@ function redactHighEntropy(value, state) {
 
 function sanitizeString(input, key, state) {
   if (completeRedactionMarkerPattern.test(input)) return input
-  if (sensitiveValueKeyPattern.test(key) && input.length > 0) {
-    countReplacement(state, 'secrets')
-    return '«redacted:secret-value»'
-  }
   if (pseudonymKeyPattern.test(key) && input.length > 0) {
     countReplacement(state, 'identifiers')
     return pseudonym(input, 'identifier', state.pseudonymSalt)
@@ -135,6 +131,14 @@ function sanitizeString(input, key, state) {
   if (commandKeyPattern.test(key) && isDangerousPath(input)) {
     countReplacement(state, 'dangerous')
     return '«redacted:dangerous-file-command»'
+  }
+
+  // Decode JSON before pattern redaction so nested serialized tool output stays valid.
+  let structured
+  try { structured = JSON.parse(input) } catch { /* Plain text uses the patterns below. */ }
+  if (typeof structured === 'string' || (structured && typeof structured === 'object')) {
+    const sanitized = sanitizeNode(structured, '', state)
+    return JSON.stringify(sanitized) === JSON.stringify(structured) ? input : JSON.stringify(sanitized)
   }
 
   let value = input
@@ -165,12 +169,14 @@ function sanitizeString(input, key, state) {
   value = replaceMatches(value, /\b(Authorization\s*:\s*)[^\s,;]+/gi, (_match, prefix) => `${prefix}«redacted:authorization»`, state, 'secrets')
   value = replaceMatches(value, /([a-z][a-z0-9+.-]*:\/\/)[^/\s:@]+:[^/\s@]+@/gi, (_match, prefix) => `${prefix}«redacted:credential»@`, state, 'secrets')
   // Quoted assignments also occur inside tool-output strings and generated JSON.
-  value = replaceMatches(value, /(["'])(api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|pwd|secret|client[_-]?secret|token|authorization|cookie|set[_-]?cookie|private[_-]?key)\1\s*[:=]\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi, (_match, quote, name, secret) => {
+  value = value.replace(/(["'])([A-Za-z0-9_-]+)\1\s*[:=]\s*("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;}]+)/gi, (_match, quote, name, secret) => {
+    if (!sensitiveValueKeyPattern.test(name)) return _match
     const delimiter = secret[0] === '"' || secret[0] === "'" ? secret[0] : ''
     const content = delimiter ? secret.slice(1, -1) : secret
     if (completeRedactionMarkerPattern.test(content)) return _match
+    countReplacement(state, 'secrets')
     return `${quote}${name}${quote}: ${delimiter}«redacted:secret-value»${delimiter}`
-  }, state, 'secrets')
+  })
   value = replaceMatches(value, /\b((?:api[_-]?key|access[_-]?token|refresh[_-]?token|password|passwd|secret|client[_-]?secret)\s*[:=]\s*)[^\s,;"']+/gi, (_match, prefix) => `${prefix}«redacted:secret»`, state, 'secrets')
   if (key !== 'generated-file-path') value = redactHighEntropy(value, state)
 
@@ -190,6 +196,11 @@ function sanitizeString(input, key, state) {
 }
 
 function sanitizeNode(value, key, state) {
+  if (sensitiveValueKeyPattern.test(key) && value !== null && value !== '' &&
+      !(typeof value === 'string' && completeRedactionMarkerPattern.test(value))) {
+    countReplacement(state, 'secrets')
+    return '«redacted:secret-value»'
+  }
   if (typeof value === 'string') return sanitizeString(value, key, state)
   if (Array.isArray(value)) return value.map((item) => sanitizeNode(item, '', state))
   if (!value || typeof value !== 'object') return value

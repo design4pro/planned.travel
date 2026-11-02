@@ -27,8 +27,16 @@ it('redacts quoted credentials in generated JSON and embedded tool output', () =
     api_key: 'fixture-"quoted"-key',
     token: 'fixture-token-only',
     client_secret: "fixture-'single'-secret",
+    db_password: 'fixture-prefixed-secret',
+    numeric_password: 123456,
+    object_secret: { value: 'fixture-object-secret' },
+    boolean_secret: false,
   }
-  const content = JSON.stringify({ safe: 'keep this', nested: secrets })
+  const content = JSON.stringify({
+    safe: 'keep this',
+    nested: secrets,
+    config: JSON.stringify({ db_password: 'fixture-serialized-secret' }),
+  })
   writeFileSync(join(root, 'example.json'), content)
   writeFileSync(join(root, 'files.txt'), 'example.json\n')
   writeFileSync(
@@ -72,6 +80,9 @@ it('redacts quoted credentials in generated JSON and embedded tool output', () =
   expect(Object.values(generated.nested)).toEqual(
     Object.keys(secrets).map(() => '«redacted:secret-value»'),
   )
+  expect(JSON.parse(generated.config)).toEqual({
+    db_password: '«redacted:secret-value»',
+  })
   const session = JSON.parse(
     readFileSync(join(root, 'bundle/session.json'), 'utf8'),
   )
