@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useTranslate } from '#/lib/i18n'
 import {
@@ -29,9 +29,10 @@ export type CollectionDraft = Pick<
 >
 
 export interface CollectionEditProps {
+  onBusyChange?: (busy: boolean) => void
   initialDraft?: CollectionDraft
   initialBaseline?: EditableCollection
-  onDraftChange?: (draft: CollectionDraft) => void
+  onDraftChange?: (draft: CollectionDraft, baseline: EditableCollection) => void
   onDiscard?: () => void
   readCurrent: () => Promise<EditableCollection>
   collection: EditableCollection
@@ -47,6 +48,7 @@ export interface CollectionEditProps {
 }
 export function CollectionEditDialog({
   collection,
+  onBusyChange,
   initialDraft,
   initialBaseline,
   onDraftChange,
@@ -57,6 +59,13 @@ export function CollectionEditDialog({
   onSaved,
   returnFocus,
 }: CollectionEditProps) {
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
   const t = useTranslate()
   const [name, setName] = useState(initialDraft?.name ?? collection.name)
   const [description, setDescription] = useState(
@@ -75,7 +84,7 @@ export function CollectionEditDialog({
   const baseline = useRef(initialBaseline ?? collection)
   const needsReconciliation = useRef(Boolean(initialDraft))
   function remember(draft: CollectionDraft) {
-    onDraftChange?.(draft)
+    onDraftChange?.(draft, baseline.current)
   }
   async function save(event: React.FormEvent) {
     event.preventDefault()
@@ -92,10 +101,12 @@ export function CollectionEditDialog({
     }
     lock.current = true
     setBusy(true)
+    onBusyChange?.(true)
     setNameError(undefined)
     try {
       if (error || needsReconciliation.current) {
         const current = await readCurrent()
+        if (!alive.current) return
         needsReconciliation.current = false
         const matchesDraft =
           current.name === trimmed &&
@@ -103,6 +114,7 @@ export function CollectionEditDialog({
           current.colour === colour
         if (matchesDraft) {
           await onSaved()
+          if (!alive.current) return
           toast.success(t('modules.collections.edit.saved'))
           onDiscard?.()
           onClose()
@@ -115,6 +127,7 @@ export function CollectionEditDialog({
           current.colour !== previous.colour
         ) {
           await onSaved()
+          if (!alive.current) return
           baseline.current = current
           setCurrentDetails(current)
           setError(true)
@@ -127,15 +140,20 @@ export function CollectionEditDialog({
         description,
         colour,
       })
+      if (!alive.current) return
       await onSaved()
+      if (!alive.current) return
       toast.success(t('modules.collections.edit.saved'))
       onDiscard?.()
       onClose()
     } catch {
-      setError(true)
+      if (alive.current) setError(true)
     } finally {
       lock.current = false
-      setBusy(false)
+      if (alive.current) {
+        setBusy(false)
+        onBusyChange?.(false)
+      }
     }
   }
   let submitLabel = t('modules.collections.edit.submit')

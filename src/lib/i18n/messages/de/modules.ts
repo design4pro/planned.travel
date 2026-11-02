@@ -1423,6 +1423,10 @@ const messages = {
   'vacay.legend.company': 'Betriebsfeiertag',
   'vacay.legend.other': 'Andere Person abwesend',
   'vacay.legend.weekend': 'Wochenende',
+  'collections.leave.title': 'Ohne Speichern verlassen?',
+  'collections.leave.body': 'Deine Änderungen an der Sammlung gehen verloren.',
+  'collections.leave.stay': 'Bleiben',
+  'collections.leave.discard': 'Verwerfen und verlassen',
 } satisfies TranslationOf<typeof En>
 
 export default messages

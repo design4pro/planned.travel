@@ -1,3 +1,4 @@
+import { requestCollectionExit } from '#/lib/collection-exit'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -119,6 +120,7 @@ export function CreateWorkspaceDialog({
   }
 
   async function create(): Promise<void> {
+    if (!(await requestCollectionExit())) return
     setPending(true)
     setNotice(null)
     let created = false

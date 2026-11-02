@@ -1409,6 +1409,10 @@ const messages = {
   'vacay.legend.company': 'Bedrijfsvrije dag',
   'vacay.legend.other': 'Iemand anders afwezig',
   'vacay.legend.weekend': 'Weekeinde',
+  'collections.leave.title': 'Verlaten zonder opslaan?',
+  'collections.leave.body': 'Je wijzigingen aan de collectie gaan verloren.',
+  'collections.leave.stay': 'Blijven',
+  'collections.leave.discard': 'Verwerpen en verlaten',
 } satisfies TranslationOf<typeof En>
 
 export default messages

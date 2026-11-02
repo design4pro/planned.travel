@@ -81,6 +81,7 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Collection** - a named, coloured collection of saved places shared within a workspace and independent of any single trip. Its owner or a workspace administrator may change its details or delete it.
 - **Saved place** - a place kept in a collection for later, with its own status and labels. A saved copy of a trip place survives changes to or deletion of the original trip; deleting the copy never deletes the trip place.
+- **Collection edit draft** - unsaved name, description and colour held in memory for one authenticated user, workspace and collection. Passive dismissal keeps it; Cancel, successful save, confirmed deletion, deliberate departure or loss of access clears it. It has no persistent restore or expiry lifecycle.
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
 

@@ -1315,6 +1315,10 @@ const messages = {
   'vacay.legend.company': '会社休日',
   'vacay.legend.other': '他の人が不在',
   'vacay.legend.weekend': '週末',
+  'collections.leave.title': '保存せずに移動しますか？',
+  'collections.leave.body': 'コレクションへの変更は失われます。',
+  'collections.leave.stay': 'ここに留まる',
+  'collections.leave.discard': '変更を破棄して移動',
 } satisfies TranslationOf<typeof En>
 
 export default messages

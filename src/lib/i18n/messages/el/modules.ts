@@ -1421,6 +1421,10 @@ const messages = {
   'vacay.legend.company': 'Εταιρική αργία',
   'vacay.legend.other': 'Κάποιος άλλος απουσιάζει',
   'vacay.legend.weekend': 'Σαββατοκύριακο',
+  'collections.leave.title': 'Έξοδος χωρίς αποθήκευση;',
+  'collections.leave.body': 'Οι αλλαγές στη συλλογή σας θα χαθούν.',
+  'collections.leave.stay': 'Παραμονή',
+  'collections.leave.discard': 'Απόρριψη και έξοδος',
 } satisfies TranslationOf<typeof En>
 
 export default messages

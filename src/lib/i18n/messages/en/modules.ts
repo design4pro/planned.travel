@@ -1580,6 +1580,10 @@ const messages = {
   'vacay.legend.company': 'Company holiday',
   'vacay.legend.other': 'Someone else away',
   'vacay.legend.weekend': 'Weekend',
+  'collections.leave.title': 'Leave without saving?',
+  'collections.leave.body': 'Your collection changes will be lost.',
+  'collections.leave.stay': 'Stay',
+  'collections.leave.discard': 'Discard and leave',
 } as const satisfies NamespaceMessages
 
 export default messages

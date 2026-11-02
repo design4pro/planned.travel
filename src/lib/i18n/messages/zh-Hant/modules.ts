@@ -1234,6 +1234,10 @@ const messages = {
   'vacay.legend.company': '公司假日',
   'vacay.legend.other': '其他人缺勤',
   'vacay.legend.weekend': '週末',
+  'collections.leave.title': '不儲存就離開？',
+  'collections.leave.body': '你對收藏集的變更將遺失。',
+  'collections.leave.stay': '留下',
+  'collections.leave.discard': '捨棄變更並離開',
 } satisfies TranslationOf<typeof En>
 
 export default messages

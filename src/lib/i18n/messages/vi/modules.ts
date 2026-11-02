@@ -1328,6 +1328,10 @@ const messages = {
   'vacay.legend.company': 'Ngày nghỉ công ty',
   'vacay.legend.other': 'Người khác vắng mặt',
   'vacay.legend.weekend': 'Cuối tuần',
+  'collections.leave.title': 'Rời đi mà không lưu?',
+  'collections.leave.body': 'Các thay đổi trong bộ sưu tập sẽ bị mất.',
+  'collections.leave.stay': 'Ở lại',
+  'collections.leave.discard': 'Bỏ thay đổi và rời đi',
 } satisfies TranslationOf<typeof En>
 
 export default messages

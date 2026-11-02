@@ -1,3 +1,4 @@
+import { requestCollectionExit } from '#/lib/collection-exit'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { TimerReset, UserRoundCog } from 'lucide-react'
@@ -270,6 +271,7 @@ function ImpersonatedSessionBar({
   useReachableThroughModals(barRef, exitRef)
 
   const end = useCallback(async (): Promise<void> => {
+    if (!(await requestCollectionExit())) return
     setEnding(true)
 
     // One `await` per outcome, because the operator is told what happened

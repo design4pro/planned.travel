@@ -1478,6 +1478,10 @@ const messages = {
   'vacay.legend.company': 'Неробочий день компанії',
   'vacay.legend.other': 'Хтось інший відсутній',
   'vacay.legend.weekend': 'Вихідні',
+  'collections.leave.title': 'Вийти без збереження?',
+  'collections.leave.body': 'Зміни в колекції буде втрачено.',
+  'collections.leave.stay': 'Залишитися',
+  'collections.leave.discard': 'Відхилити зміни й вийти',
 } satisfies TranslationOf<typeof En>
 
 export default messages
