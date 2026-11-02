@@ -53,16 +53,25 @@ export async function executeGate(
     const steps = []
     const jobs =
       command === 'pnpm test'
-        ? ['server', 'tooling', 'ui'].map(
-            (p) => `pnpm exec vitest run --project ${p}`,
-          )
+        ? [
+            'pnpm exec vitest run --project server',
+            'pnpm exec vitest run --project tooling',
+            // The complete UI project exceeded this host's nine-minute budget; all four shards cover it.
+            ...[1, 2, 3, 4].map(
+              (n) => `pnpm exec vitest run --project ui --shard=${n}/4`,
+            ),
+          ]
         : [command]
     for (const job of jobs) {
       let result = entries[job]
-      if (!['timeout', 'killed'].includes(result?.result))
+      if (
+        job.includes(' --shard=') ||
+        !['timeout', 'killed'].includes(result?.result)
+      )
         result = await execute(job)
       if (
         command === 'pnpm test' &&
+        !job.includes(' --shard=') &&
         ['timeout', 'killed'].includes(result.result)
       ) {
         for (let shard = 1; shard <= 4; shard++) {

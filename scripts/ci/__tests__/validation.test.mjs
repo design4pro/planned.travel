@@ -50,8 +50,10 @@ describe('configured validation execution', () => {
     )
     expect(calls).toEqual([
       'pnpm typecheck',
-      ...['server', 'tooling', 'ui'].map(
-        (p) => `pnpm exec vitest run --project ${p}`,
+      'pnpm exec vitest run --project server',
+      'pnpm exec vitest run --project tooling',
+      ...[1, 2, 3, 4].map(
+        (n) => `pnpm exec vitest run --project ui --shard=${n}/4`,
       ),
       'pnpm build',
     ])
@@ -79,9 +81,29 @@ describe('configured validation execution', () => {
         (n) => `pnpm exec vitest run --project server --shard=${n}/4`,
       ),
       'pnpm exec vitest run --project tooling',
-      'pnpm exec vitest run --project ui',
+      ...[1, 2, 3, 4].map(
+        (n) => `pnpm exec vitest run --project ui --shard=${n}/4`,
+      ),
     ])
     expect(result.exitCode).toBe(0)
+  })
+
+  it('retries a failed shard on resume and never recursively shards a partial test selection', async () => {
+    const calls = []
+    const shard = 'pnpm exec vitest run --project ui --shard=1/4'
+    const result = await executeGate(['pnpm test'], {
+      previous: {
+        'pnpm exec vitest run --project server': passed,
+        'pnpm exec vitest run --project tooling': passed,
+        [shard]: { exitCode: 124, result: 'timeout' },
+      },
+      run: async (command) => {
+        calls.push(command)
+        return { exitCode: 124, result: 'timeout' }
+      },
+    })
+    expect(calls).toEqual([shard])
+    expect(result.exitCode).toBe(124)
   })
 
   it('stops on an assertion failure and resumes only successful entries', async () => {

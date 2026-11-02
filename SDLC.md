@@ -179,7 +179,8 @@ Every PR passes the full validation gate before review sign-off. **The command l
 Any non-zero exit fails the gate and blocks the PR. The implementing skills run the configured gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. Changing the gate means editing that one key; anything that needs the list at runtime reads it from there.
 
 Use `node scripts/ci/validation.mjs` to execute that list in order. It expands the pinned unit-test
-command into the same three Vitest projects, bounds each job to nine minutes and retries a timed-out
+command into the same three Vitest projects (UI starts as four complete shards after exceeding this
+host's nine-minute budget), bounds each job to nine minutes and retries a timed-out
 or killed project as all four shards. It emits a compact JSON result with full log paths under
 `.ai/tmp/validation/`. `--resume` reuses successful local jobs only when the tracked content, command
 list, runtime, environment and installed manifest digest match; stage untracked inputs first.
