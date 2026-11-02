@@ -308,7 +308,7 @@ host, in `design4pro/cezar` (`host/`), with no Cezar engine change.
 }
 ```
 
-Up to three actions each of implement, unblock and triage, best first, and at most one each of slice and
+All ready implement actions and up to three each of unblock and triage, best first, and at most one each of slice and
 write-spec, in the order implement, unblock, triage, slice, write-spec; a kind with no candidate is left out, and a
 repository with nothing to do prints `"actions": []`. `target` is an issue
 (`#123`), a spec path (`.ai/specs/<file>.md`) or a plan stage id (`02-S3`). `--plan` is a separate output from

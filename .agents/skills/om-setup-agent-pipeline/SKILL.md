@@ -5,7 +5,7 @@ description: One-time pipeline configurator. Inspects the repo (default branch, 
 
 # Setup Agent Pipeline
 
-Every skill in this collection reads its repository-specific settings from `.ai/agentic.config.json`. This skill writes that file. It is the first skill to run in a fresh repository; the others stop and point here when the config is missing.
+Write `.ai/agentic.config.json`. Run setup first in a fresh repository or when this config is missing.
 
 ## Arguments
 
@@ -35,23 +35,29 @@ Every skill in this collection reads its repository-specific settings from `.ai/
   "qaGate": true,
   "ci": { "maxWaitMinutes": 40 },
   "engine": { "loopStepThreshold": 20, "executorTier": "standard", "stepReview": "final" },
+  "reviewSweep": { "maxParallel": 1, "coordinationRoot": null },
   "paths": {
     "runs": ".ai/runs",
     "analysis": ".ai/analysis",
     "specs": ".ai/specs",
+    "dataModel": ".ai/data-model",
     "prototypes": ".ai/prototypes",
     "scripts": ".ai/scripts",
     "qa": ".ai/qa"
   },
+  "designTokens": null,
   "reviewChecklist": null,
-  "closeKeywords": []
+  "closeKeywords": [],
+  "dependencyAudit": { "minSeverity": "high", "ignore": [] },
+  "prTitleTemplate": "{prefix}({area}): {summary}{issueRef}",
+  "ticketKeyPattern": ""
 }
 ```
 
-Field reference:
+Field defaults: `references/config-capabilities.md`.
 
 - `baseBranch` — the branch PRs target. `"auto"` means resolve at runtime from the repository's default branch; set an explicit name only when PRs target something else.
-- `tracker` — selects `.ai/trackers/<tracker>.md`. Shipped values are `"github"`, `"linear"` (Linear issues + GitHub PRs/CI), and `"jira"` (Jira Cloud issues + GitHub PRs/CI); see Tracker providers below.
+- `tracker` — selects `.ai/trackers/<tracker>.md`. Shipped values are `"github"`, `"gitlab"`, `"forgejo"`, `"linear"` (Linear issues + GitHub PRs/CI), and `"jira"` (Jira Cloud issues + GitHub PRs/CI); see Tracker providers below.
 - `browser.provider` — the browser-automation provider used by QA and integration-test skills. Selects `.ai/browsers/<provider>.md`. Fresh setups default to `"agent-browser"`; configs without this key keep legacy Playwright behavior (see Browser providers).
 - `validation.commands` — ordered list of shell commands that constitute the full validation gate. Skills run them in order and treat any non-zero exit as a gate failure. Keep the list complete: typecheck, lint, tests, build — whatever proves the repo is healthy.
 - `labels.enabled` — when `false`, skills skip every label operation and note that in their PR summaries. Use this for repos that do not want the label workflow.
@@ -65,21 +71,25 @@ Field reference:
 - `engine.executorTier` — optional; the default abstract model tier (`cheap` / `standard` / `capable`) for executor subagents dispatched by the loop skills when a Tasks-table `Exec` cell names none. Harnesses that support subagent model selection map the tier onto their closest model class; others ignore it. Configs without the key behave as `standard`.
 - `engine.loopStepThreshold` — the Step count above which `om-auto-create-pr` hands a run off to `om-auto-create-pr-loop` (default 20). Raise it to keep more runs on the cheaper plain engine; `--loop` always forces the loop regardless.
 - `engine.stepReview` — optional; how often the loop skills code-review landed work mid-run: `final` (default — only the authoritative end-of-run review), `checkpoint` (review the diff at every checkpoint pass), or `per-step` (review each Step's commit as it lands). Blocker/major findings are fixed immediately as `X.Y-review-fix` Steps; minors defer to the final review, which runs in every mode.
-- `paths.runs` — where execution plans of autonomous runs are stored.
-- `paths.analysis` — where generated reports are stored.
-- `paths.specs` — where feature specifications live (default `.ai/specs`). Spec filenames follow `{YYYY-MM-DD}-{kebab-case-title}.md`. `om-spec-writing` writes here, `om-prepare-issue` links from here, `om-followup-issue-from-pr` checks here first in design-doc mode, and `om-brainstorm` writes handoff briefs under `<paths.specs>/briefs/`.
-- `paths.prototypes` — optional repository-relative root for local prototypes (default `.ai/prototypes`). Discovery prototypes live under `discovery/<slug>/`. Preserve a configured value; use the default silently when absent and do not add a setup question. Prototype skills create their own output directories when needed.
-- `paths.scripts` — where reusable environment scripts are generated (default `.ai/scripts`); `om-prepare-test-env` writes the env bring-up/teardown scripts here.
+- `paths.runs` — execution plans for autonomous runs.
+- `paths.analysis` — generated reports.
+- `paths.specs` — specifications (default `.ai/specs`); filenames use `{YYYY-MM-DD}-{kebab-case-title}.md`, with handoff briefs under `<paths.specs>/briefs/`.
+- `paths.dataModel` — interactive data-model HTML views (default `.ai/data-model`); autonomous spec runs keep only the embedded Mermaid diagram.
+- `paths.prototypes` — local prototypes (default `.ai/prototypes`); do not add a setup question. Discovery uses `discovery/<slug>/`; producers create directories as needed.
+- `designTokens` — optional repo-relative snapshot, unset by default. Preserve it without asking.
+- `paths.scripts` — reusable environment scripts (default `.ai/scripts`); `om-prepare-test-env` writes bring-up/teardown scripts here.
 - `paths.qa` — where QA working state and artifacts live (default `.ai/qa`): the shared `test-env.json` descriptor, and QA reports/screenshots under `<paths.qa>/artifacts_<runId>/`.
 - `reviewChecklist` — optional path to a repo-local review checklist file. When set, the `om-code-review` skill reads it in addition to its built-in checklist. A root `CODE_REVIEW.md` (see Project docs) is always picked up regardless.
-- `closeKeywords` — optional list of extra words that mark a PR as closing an issue, for repositories whose PR bodies are not written in English. `om-close-fixed-issues` matches the built-in English keywords (`fix`/`fixes`/`fixed`, `close`/`closes`/`closed`, `resolve`/`resolves`/`resolved`) plus everything listed here, case-insensitively and only immediately before a `#N` token; configured words extend the built-ins and never replace them. The tracker's own `closingIssuesReferences` parse is English-only too, so a Polish repo writing `Zamyka #88` gets no closing signal from either source until it sets, for example, `["zamyka", "naprawia", "rozwiązuje"]`. Leave it empty on an English repository. Whatever the setting, a run that finds issue mentions without a recognized keyword reports them rather than passing over them silently.
+- `closeKeywords` — optional extra issue-closing words, e.g. `["zamyka", "naprawia", "rozwiązuje"]`. Extend the built-in English `fix`/`close`/`resolve` variants; never replace them. Match case-insensitively immediately before `#N`. The tracker's `closingIssuesReferences` is English-only; unmatched mentions are reported. Default `[]` keeps English behavior.
+- `prTitleTemplate` — optional PR title template; defaults to `{prefix}({area}): {summary}{issueRef}`. Placeholders and literal substitution: `references/config-capabilities.md`. Explicit caller titles win.
+- `ticketKeyPattern` — optional ERE for the first ticket key in the head branch; default empty. A nonmatching branch renders no key.
 - `discovery` — optional; written by `om-setup-discovery-pipeline`, never asked for here. `discovery.enabled` switches the product-layer blocks of the SDLC template (product roles, the Discovery stage, the Definition of Ready, protected product decisions) and the readiness checks in the intake skills; `discovery.roles.domainExpert` / `discovery.roles.designer` declare the product roles. Without the key the repository is delivery-only. Present on a re-run, the blocks render between `<!-- discovery:start -->` / `<!-- discovery:end -->` markers, the shape `om-setup-discovery-pipeline` writes.
 
 ## Tracker providers
 
 Skills name the operations in `references/trackers/TEMPLATE.md`; the selected `.ai/trackers/<tracker>.md` says how to execute them and is the team's committed override point. This skill installs shipped descriptors from its own `references/trackers/` directory.
 
-The collection ships `github.md`, `linear.md`, and `jira.md`. Linear and Jira own issues but delegate repository/PR/review/CI/PR-label operations to a required `github.md` companion, so setup installs both. Scaffold any other provider from `TEMPLATE.md`.
+The collection ships `github.md`, `gitlab.md`, `forgejo.md`, `linear.md`, and `jira.md`. GitHub, GitLab, and Forgejo are stand-alone. Linear and Jira own issues but delegate repository/PR/review/CI/PR-label operations to a required `github.md` companion, so setup installs both. Scaffold any other provider from `TEMPLATE.md`.
 
 ## Browser providers
 
@@ -101,15 +111,15 @@ Every skill in this collection checks, right after loading the config, for a rep
 
 1. **Refuse to clobber silently.** If `.ai/agentic.config.json` already exists, show the current content and ask whether to update it. Preserve any custom values the user does not ask to change.
 
-2. **Detect the repository shape.** Resolve the default branch via the tracker **default-branch** operation (for a fresh setup with no descriptor installed yet, use the shipped `references/trackers/github.md` — or the descriptor matching the tracker the user names — and fall back to `git symbolic-ref refs/remotes/origin/HEAD`). Detect candidate validation commands, in this order of evidence:
+2. **Detect the repository shape.** Resolve the default branch via the tracker **default-branch** operation (for a fresh setup with no descriptor installed yet, use the shipped `references/trackers/github.md` — or the descriptor matching the tracker the user names — and fall back to `git symbolic-ref refs/remotes/origin/HEAD`). An `origin` on a GitLab host makes `gitlab` the default tracker. Detect candidate validation commands, in this order of evidence:
 
    1. `package.json` scripts — look for `typecheck`, `lint`, `test`, `build` (and close variants). Choose the runner from the lockfile: `pnpm-lock.yaml` → `pnpm <script>`, `package-lock.json` → `npm run <script>`, `yarn.lock` → the equivalent for that runner, `bun.lockb` → `bun run <script>`.
    2. A `Makefile` — look for `test`, `lint`, `build` targets.
    3. Language conventions — `Cargo.toml` → `cargo test` / `cargo clippy`; `go.mod` → `go test ./...` / `go vet ./...`; `pyproject.toml` → `pytest` and the configured linter.
 
-   Prefer commands mirroring what CI already runs (`.github/workflows/*.yml`).
+   Prefer commands mirroring what CI already runs (`.github/workflows/*.yml`; for `forgejo`, `.forgejo/workflows/` first — see `references/interview-questions.md`).
 
-3. **Ask the user (skip with `--defaults`).** Confirm validation, tracker (`github`, `linear`, `jira`, or custom; default `github`), browser provider, label mode, QA gate, spec path, optional review checklist, and missing project docs. Full guidance: `references/interview-questions.md`.
+3. **Ask the user (skip with `--defaults`).** Confirm validation, tracker (`github`, `linear`, `jira`, `gitlab`, `forgejo`, or custom; default per step 2), browser provider, label mode, QA gate, spec path, optional review checklist, and missing project docs. Offer only detected optional capabilities from `references/config-capabilities.md`. Full guidance: `references/interview-questions.md`.
 
 4. **Install the tracker descriptor.** Copy the shipped descriptor for the chosen tracker from this skill's `references/trackers/<tracker>.md` to `.ai/trackers/<tracker>.md` (create the directory). Rules:
 
@@ -141,13 +151,15 @@ Every skill in this collection checks, right after loading the config, for a rep
 
 9. **Verify cross-skill coverage.** Run the check in `references/skill-coverage.md` (roster, detection script, source resolution): every skill referenced by an installed skill — by name or `om-<skill>/references/<file>` pointer — must be installed or repo-local under `.ai/skills/`. Print the paste-ready `npx skills add` command for anything missing and re-check after the user installs; unattended runs report the command and continue.
 
-10. **Report** per `references/report-templates.md`: what is ready to use,
-    consequential settings or gaps, coverage results, and any required next
-    action. Link the config instead of repeating every generated artifact. Name `om-setup-discovery-pipeline` as the optional product layer.
+10. **Report** per `references/report-templates.md`: readiness, consequential
+    settings/gaps, coverage, and next action. Link the config; name
+    `om-setup-discovery-pipeline` as the optional product layer.
 
 ## The standard config-loading snippet
 
-The canonical config-loading snippet, the auto-run-setup contract, and the post-load sequence are homed in this skill at `references/agentic-setup.md`. Other skills reproduce that snippet and contract; this skill's copy is the canonical version.
+Core loading and post-load behavior: `references/agentic-setup.md`.
+Capability defaults: `references/config-capabilities.md`. Consumers load only
+the slots they use; these copies are canonical.
 
 ## Rules
 
