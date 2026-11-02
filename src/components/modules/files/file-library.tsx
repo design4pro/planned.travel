@@ -61,7 +61,7 @@ import {
   usePreventFileNavigation,
 } from '#/lib/use-prevent-file-navigation'
 import { resolve } from '../shared/deferred-message'
-import { formatRelative } from '#/lib/format'
+import { formatDate, formatRelative } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { formatStorage } from '#/lib/plans'
 import { ACCEPT_ATTRIBUTE, MAX_FILE_BYTES } from '#/server/fns/file-policy'
@@ -914,7 +914,10 @@ export function FileLibrary({
                       {nameFor(people, file.uploadedBy, t)}
                     </TableCell>
                     <TableCell muted className="hidden sm:table-cell">
-                      {formatRelative(file.createdAt, now, locale) ?? '—'}
+                      {/* Relative time can cross a minute between SSR and hydration. */}
+                      {(hintMounted
+                        ? formatRelative(file.createdAt, now, locale)
+                        : formatDate(file.createdAt, locale)) ?? '—'}
                     </TableCell>
                     <TableCell>{fileMenu(file)}</TableCell>
                   </TableRow>

@@ -3,6 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderToString } from 'react-dom/server'
 import {
   cleanup,
   fireEvent,
@@ -444,3 +445,30 @@ it.each(['list', 'table'] as const)(
     )
   },
 )
+
+it('keeps the initial file timestamp stable when hydration crosses a minute boundary', () => {
+  const now = vi
+    .spyOn(Date, 'now')
+    .mockReturnValue(Date.parse('2026-11-02T12:05:00Z'))
+  try {
+    const view = (
+      <I18nProvider locale="en" messages={EN}>
+        <FileLibrary
+          canWrite={false}
+          archived={false}
+          tripId="trip-1"
+          files={[{ ...BOOKING, createdAt: '2026-11-02T12:00:00Z' }]}
+          people={[]}
+          workspaceBytes={0}
+          limitBytes={1_000_000_000}
+          pickRequestedAt={0}
+        />
+      </I18nProvider>
+    )
+    const server = renderToString(view)
+    now.mockReturnValue(Date.parse('2026-11-02T12:06:00Z'))
+    expect(renderToString(view)).toBe(server)
+  } finally {
+    now.mockRestore()
+  }
+})
