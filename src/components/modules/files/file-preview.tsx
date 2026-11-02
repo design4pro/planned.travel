@@ -15,6 +15,7 @@ import {
 import { useTranslate } from '#/lib/i18n'
 import { fetchTripFileBytes, saveBlob } from './download'
 import type { FileData } from './types'
+import { previewImage } from './preview-image'
 
 type Preview =
   | { status: 'loading' }
@@ -53,7 +54,7 @@ export function FilePreview({
     busy.current = true
     setPreview({ status: 'loading' })
     void fetchTripFileBytes({ tripId, fileId: selected.id })
-      .then((blob) => {
+      .then(async (blob) => {
         if (!live) return
         const type = blob.type.split(';')[0]?.trim().toLowerCase() ?? ''
         const image = type.startsWith('image/')
@@ -62,7 +63,10 @@ export function FilePreview({
           close.current()
           return
         }
-        url = URL.createObjectURL(blob)
+        const rendered =
+          type === 'image/svg+xml' ? await previewImage(blob) : blob
+        if (!live) return
+        url = URL.createObjectURL(rendered)
         busy.current = false
         setPreview({ status: 'ready', blob, url, image })
       })

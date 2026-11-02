@@ -23,8 +23,9 @@ test('Files preview and adjacent download', async ({
   // This journey creates current-dated files, so keep the browser and server clocks together.
   await settle(page, route)
   const name = `preview-${test.info().project.name}-${Date.now()}.svg`
+  await page.evaluate(() => localStorage.removeItem('preview-svg-executed'))
   const bytes =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="teal"/></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><script>localStorage.setItem("preview-svg-executed", "yes")</script><rect width="200" height="100" fill="teal"/></svg>'
   const chooserReady = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'Choose files', exact: true }).click()
   const chooser = await chooserReady
@@ -57,6 +58,21 @@ test('Files preview and adjacent download', async ({
       .poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth))
       .toBe(200)
     await expect(dialog.locator('iframe')).toHaveCount(0)
+    // Native “Open image in new tab” navigates directly to the exposed image source.
+    const source = await image.getAttribute('src')
+    if (source === null) throw new Error('Missing image source')
+    const nativeTab = await context.newPage()
+    try {
+      await nativeTab.goto(source)
+      expect(await nativeTab.evaluate(() => document.contentType)).toBe(
+        'image/png',
+      )
+      expect(
+        await page.evaluate(() => localStorage.getItem('preview-svg-executed')),
+      ).toBeNull()
+    } finally {
+      await nativeTab.close()
+    }
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
     await expect(opener).toBeFocused()

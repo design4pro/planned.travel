@@ -956,8 +956,13 @@ const messages = {
   'files.action.upload': 'Ανέβασε αρχεία',
   'files.places.title': 'Αρχείο τοποθεσιών',
   'files.places.description':
-    'Κατεβάστε τις τοποθεσίες αυτού του ταξιδιού ως GeoJSON, μαζί με όσες δεν έχουν συντεταγμένες.',
+    'Κατεβάστε τα μέρη αυτού του ταξιδιού ως GeoJSON ή GPX. Το GPX περιλαμβάνει μόνο μέρη με έγκυρες συντεταγμένες· το GeoJSON διατηρεί όλα τα μέρη.',
   'files.places.action': 'Λήψη τοποθεσιών (.geojson)',
+  'files.places.gpxAction': 'Λήψη μερών (.gpx)',
+  'files.places.gpxDone':
+    'Το GPX κατέβηκε. Μέρη που παραλείφθηκαν χωρίς έγκυρες συντεταγμένες: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'Το GPX κατέβηκε χωρίς σημεία. Όλα τα μέρη παραλείφθηκαν επειδή δεν έχουν έγκυρες συντεταγμένες: {formattedCount}.',
   'files.places.empty':
     'Προσθέστε τοποθεσίες σε αυτό το ταξίδι για να τις κατεβάσετε.',
   'files.places.error':

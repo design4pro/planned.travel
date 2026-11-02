@@ -14,7 +14,7 @@ import { downloadTripFileFn } from '#/server/fns/files'
  *
  * A blob URL is same-origin, and the app sets no Content-Security-Policy header, so opening one
  * typed as markup would run it with the app's authority. Saving the bytes does not need the type.
- * Image previews may retain SVG's type only inside an img; they never navigate to it.
+ * SVG previews expose rasterized pixels; native image navigation must never reach SVG markup.
  */
 const MARKUP_TYPES: ReadonlySet<string> = new Set([
   'text/html',

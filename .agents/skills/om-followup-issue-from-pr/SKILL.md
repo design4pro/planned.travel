@@ -18,7 +18,9 @@ When a plain PR link is pasted, always run the design-doc check (step 3) in addi
   - PR comment link: `…/pull/<num>#issuecomment-<id>`
   - Inline review comment link: `…/pull/<num>#discussion_r<id>`
   - Plain PR link: `…/pull/<num>` — no specific comment; runs design-doc detection (step 3) and, if comments exist, comment selection (step 2).
-- The repo is parsed from the URL (`owner/repo`). Don't assume the current repo.
+  - GitLab shapes: `…/-/merge_requests/<num>#note_<id>` (any note, conversation or inline) and a plain `…/-/merge_requests/<num>`.
+  - Forgejo shapes: `…/pulls/<num>#issuecomment-<id>` (a conversation or an inline review comment, which share this shape) and a plain `…/pulls/<num>`.
+- The repo is parsed from the URL (`owner/repo`; on GitLab the full `group/subgroup/project` path before `/-/`). Don't assume the current repo.
 
 ## Steps
 
@@ -29,6 +31,8 @@ When a plain PR link is pasted, always run the design-doc check (step 3) in addi
 1. **Parse the URL** into `owner`, `repo`, PR `<num>`, and comment id (if present). Note which kind of comment id it is:
    - `issuecomment-<id>` → issue/PR conversation comment.
    - `discussion_r<id>` → inline review comment.
+   - `note_<id>` (GitLab) → the comment handle `merge_requests/<num>/<id>`, fetched with **get-pr-comment**; the descriptor serves conversation and inline notes alike.
+   - `#issuecomment-<id>` on a Forgejo `…/pulls/<num>` link → try **get-pr-comment** first; when the descriptor reports an inline review comment, fetch it with **get-review-comment** from the PR number and id.
 
 2. **Fetch the actionable comment.**
    - Conversation comment: **get-pr-comment** with the comment id → body, author, URL.

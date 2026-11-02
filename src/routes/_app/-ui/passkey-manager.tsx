@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Fingerprint, Pencil, Plus, Trash2 } from 'lucide-react'
 
 import {
@@ -192,6 +192,7 @@ function PasskeyRow({
   onSignOutFailed: () => void
   signInRef: Ref<HTMLButtonElement>
 }) {
+  const renameInputId = useId()
   const i18n = useI18n()
   const { t, locale } = i18n
   const added = formatDate(passkey.createdAt, locale) ?? passkey.createdAt
@@ -237,6 +238,7 @@ function PasskeyRow({
         {rename === null ? null : (
           <>
             <PasskeyRenameField
+              inputId={renameInputId}
               initial={passkey.name ?? ''}
               saving={rename.saving}
               error={rename.error === null ? null : t(rename.error.key)}
@@ -246,7 +248,11 @@ function PasskeyRow({
             />
             {rename.error?.signInAgain ? (
               <div className="mt-2">
-                <SignInAgain buttonRef={signInRef} onFailed={onSignOutFailed} />
+                <SignInAgain
+                  buttonRef={signInRef}
+                  describedBy={`${renameInputId}-error`}
+                  onFailed={onSignOutFailed}
+                />
               </div>
             ) : null}
           </>
@@ -278,6 +284,8 @@ function PasskeyRow({
  * ceremony. UI only; every call goes through `#/lib/auth/client`.
  */
 export function PasskeyManager() {
+  const statusId = useId()
+  const listErrorId = useId()
   const i18n = useI18n()
   const { t, locale } = i18n
   const [list, setList] = useState<ListState>(LOADING)
@@ -602,12 +610,17 @@ export function PasskeyManager() {
             onAdd={addFrom(addRef)}
           />
           {status?.signInAgain && !alertOwnsSignIn ? (
-            <SignInAgain buttonRef={signInRef} onFailed={signOutFailed} />
+            <SignInAgain
+              buttonRef={signInRef}
+              describedBy={statusId}
+              onFailed={signOutFailed}
+            />
           ) : null}
         </div>
         {/* Mounted on the first render and never conditionally: a live region that appears
             with its text is not announced by every screen reader. */}
         <p
+          id={statusId}
           role="status"
           data-part="passkey-status"
           className={cn(
@@ -663,7 +676,11 @@ export function PasskeyManager() {
             title={t('settings.passkeys.error.title')}
             actions={
               list.notice.signInAgain ? (
-                <SignInAgain buttonRef={signInRef} onFailed={signOutFailed} />
+                <SignInAgain
+                  buttonRef={signInRef}
+                  describedBy={listErrorId}
+                  onFailed={signOutFailed}
+                />
               ) : (
                 <Button
                   variant="secondary"
@@ -676,7 +693,7 @@ export function PasskeyManager() {
               )
             }
           >
-            {t(list.notice.key)}
+            <span id={listErrorId}>{t(list.notice.key)}</span>
           </Alert>
         ) : null}
 

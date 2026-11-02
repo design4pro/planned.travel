@@ -980,8 +980,13 @@ const messages = {
   'files.action.upload': 'رفع الملفات',
   'files.places.title': 'ملف الأماكن',
   'files.places.description':
-    'نزّل أماكن هذه الرحلة بصيغة GeoJSON، بما فيها الأماكن التي لا تتوفر لها إحداثيات.',
+    'نزّل أماكن هذه الرحلة بصيغة GeoJSON أو GPX. تتضمن GPX الأماكن ذات الإحداثيات الصالحة فقط؛ وتحتفظ GeoJSON بجميع الأماكن.',
   'files.places.action': 'تنزيل الأماكن (.geojson)',
+  'files.places.gpxAction': 'تنزيل الأماكن (.gpx)',
+  'files.places.gpxDone':
+    'تم تنزيل GPX. الأماكن المستبعدة لعدم وجود إحداثيات صالحة: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'تم تنزيل GPX دون نقاط. استُبعدت جميع الأماكن لعدم وجود إحداثيات صالحة: {formattedCount}.',
   'files.places.empty': 'أضف أماكن إلى هذه الرحلة لتنزيلها.',
   'files.places.error': 'تعذّر إعداد ملف الأماكن. حاول مجددًا.',
   'files.places.pending': 'جارٍ إعداد ملف الأماكن…',

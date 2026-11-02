@@ -49,7 +49,6 @@ import {
   RepositoryError,
 } from '#/server/repos'
 import { createLogger, serializeError } from '#/server/observability'
-import { enqueueDetached } from '#/server/queue/enqueue-detached'
 import { enqueueTask } from '#/server/queue/jobs'
 import {
   affectedStatYears,
@@ -70,7 +69,6 @@ import { settleTripAccessChange } from '#/server/fns/-lib/trip-access-change'
 import { appScope } from './context'
 
 import type { Logger } from '#/server/observability'
-import type { EnqueueInput } from '#/server/queue/jobs'
 import type { Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 
@@ -81,10 +79,7 @@ import type { TenantScope } from '#/server/repos'
 /**
  * How many envelopes may go in one `sendBatch`, re-exported from the module that owns the bound.
  *
- * `enqueueTasks` cuts its input at this number, so {@link enqueueTripPurge} hands it every envelope
- * it has and does not chunk. It matters here because that producer scales with the objects a trip
- * owns, which has no product ceiling: `files` is `UNLIMITED` on the business tier. The constant is
- * re-exported only so the side-effect tests can name the bound they assert against.
+ * The shared producer holds the count bound; purge sends one byte-bounded envelope at a time.
  */
 export { QUEUE_BATCH_MAX } from '#/server/queue/jobs'
 
@@ -441,12 +436,12 @@ async function listTripExportKeys(
  *
  * - **It never fails the delete.** D1 is the record and has already been written; a queue that is
  *   unreachable leaves objects in the bucket, which is a sweep job, where a save that appears to have
- *   failed is a reader deleting the same trip twice. `enqueueDetached` owns the catch — logged once,
- *   under this producer's own message and context — the posture the statistics fan-out takes too.
+ *   failed is a reader deleting the same trip twice. Construction, validation and sending share one
+ *   catch, logged once under this producer's own message and context.
  * - **It chunks the keys.** `files` is `UNLIMITED` on the business tier, so the key list has no
  *   product bound, and a Queues message body is capped at 128 KB: {@link MAX_PURGE_KEYS} keys per
- *   envelope. Cutting the envelopes into `sendBatch` calls is `enqueueTasks`'s, at
- *   `QUEUE_BATCH_MAX`.
+ *   envelope at most, also bounded by serialized UTF-8 bytes. Each envelope is sent separately,
+ *   keeping every send below the batch byte and message-count ceilings too.
  * - **Each chunk's id is deterministic on it.** Two chunks sharing one id would see the second acked
  *   as a duplicate of the first and its objects left in the bucket for good.
  *
@@ -471,26 +466,41 @@ async function enqueueTripPurge(
     return
   }
 
-  await enqueueDetached(
-    () => {
-      const envelopes: Array<EnqueueInput<'trip-purge'>> = []
-      for (let index = 0; index < unique.length; index += MAX_PURGE_KEYS) {
-        const chunk = index / MAX_PURGE_KEYS
-        envelopes.push({
-          kind: 'trip-purge',
-          orgId,
-          id: tripPurgeTaskId(tripId, chunk),
-          payload: { keys: unique.slice(index, index + MAX_PURGE_KEYS) },
-        })
+  try {
+    const { taskQueue } = await import('#/server/auth/env')
+    const queue = taskQueue()
+    const encoder = new TextEncoder()
+    // 8 KiB covers even JSON-escaped orgId (64 chars), id (128) and fixed envelope fields.
+    // Count keys after JSON escaping and UTF-8 encoding, including their commas.
+    const keyByteBudget = 120 * 1024
+    let index = 0
+    let chunk = 0
+    while (index < unique.length) {
+      const chunkKeys: Array<string> = []
+      let bytes = 0
+      while (index < unique.length && chunkKeys.length < MAX_PURGE_KEYS) {
+        const key = unique[index]!
+        const keyBytes = encoder.encode(JSON.stringify(key)).length + 1
+        if (chunkKeys.length > 0 && bytes + keyBytes > keyByteBudget) break
+        chunkKeys.push(key)
+        bytes += keyBytes
+        index++
       }
-      return envelopes
-    },
-    {
-      logger: log(),
-      message: 'the storage purge for a deleted trip was not enqueued',
-      context: { organizationId: orgId, tripId, keys: unique.length },
-    },
-  )
+      await enqueueTask(queue, {
+        kind: 'trip-purge',
+        orgId,
+        id: tripPurgeTaskId(tripId, chunk++),
+        payload: { keys: chunkKeys },
+      })
+    }
+  } catch (cause) {
+    log().warn('the storage purge for a deleted trip was not enqueued', {
+      organizationId: orgId,
+      tripId,
+      keys: unique.length,
+      ...serializeError(cause),
+    })
+  }
 }
 
 /**

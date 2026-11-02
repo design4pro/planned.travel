@@ -131,3 +131,63 @@ it('preserves an intentional structured server refusal', async () => {
     downloadTripPlaces({ tripId: 'trip-1', unavailable: UNAVAILABLE }),
   ).rejects.toBe(refusal)
 })
+
+it('requests GPX, uses its fallback filename and returns the snapshot omission count', async () => {
+  answer({ headers: { 'x-places-omitted': '3', 'x-places-total': '5' } })
+  const result = await downloadTripPlaces({
+    tripId: 'trip-1',
+    format: 'gpx',
+    unavailable: UNAVAILABLE,
+  })
+  expect(downloadTripPlacesFn).toHaveBeenCalledWith({
+    data: { tripId: 'trip-1', format: 'gpx' },
+  })
+  expect(result).toEqual({ filename: 'trip-places.gpx', omitted: 3, total: 5 })
+  expect(saved).toEqual(['trip-places.gpx'])
+})
+
+it.each([null, '-1', 'NaN', '1.5', ''])(
+  'refuses a GPX response with an invalid omission count (%s)',
+  async (count) => {
+    answer({ headers: count === null ? {} : { 'x-places-omitted': count } })
+    await expect(
+      downloadTripPlaces({
+        tripId: 'trip-1',
+        format: 'gpx',
+        unavailable: UNAVAILABLE,
+      }),
+    ).rejects.toThrow(UNAVAILABLE)
+    expect(saved).toEqual([])
+  },
+)
+
+it.each([null, '-1', 'NaN', '1.5', '', '2'])(
+  'refuses an invalid GPX total or an omitted count greater than total (%s)',
+  async (total) => {
+    answer({
+      headers: {
+        'x-places-omitted': '3',
+        ...(total === null ? {} : { 'x-places-total': total }),
+      },
+    })
+    await expect(
+      downloadTripPlaces({
+        tripId: 'trip-1',
+        format: 'gpx',
+        unavailable: UNAVAILABLE,
+      }),
+    ).rejects.toThrow(UNAVAILABLE)
+    expect(saved).toEqual([])
+  },
+)
+
+it('returns the all-omitted snapshot for an empty GPX', async () => {
+  answer({ headers: { 'x-places-omitted': '3', 'x-places-total': '3' } })
+  expect(
+    await downloadTripPlaces({
+      tripId: 'trip-1',
+      format: 'gpx',
+      unavailable: UNAVAILABLE,
+    }),
+  ).toEqual({ filename: 'trip-places.gpx', omitted: 3, total: 3 })
+})

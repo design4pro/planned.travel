@@ -290,8 +290,8 @@ Two amendment rules are specific to this document's shape:
 The Reconciler is a level-triggered loop on the cezar host (a cron every ten minutes; `docs/agents/cezar.md`
 § The Reconciler, ADR 0033). It starts work only when there is work and a free `maxParallel` slot, and it repairs a
 run that failed by continuing it. What there is to do is not decided in the cron: it asks
-`node .ai/scripts/backlog-status.mjs --plan`, which prints, in this order, up to three ranked candidates each of
-implement, unblock and triage (best first, so a candidate that cannot start hands its turn to the next) and at most one
+`node .ai/scripts/backlog-status.mjs --plan`, which prints, in this order, all ready implementation candidates and up to three ranked candidates each of
+unblock and triage (best first, so a candidate that cannot start hands its turn to the next) and at most one
 of slice and write-spec, each with the workflow and task text to send:
 
 | Kind         | Candidate                                                                                                                                                                                                                                                 | Workflow           |
