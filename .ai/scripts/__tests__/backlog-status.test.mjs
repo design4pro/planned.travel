@@ -994,7 +994,7 @@ describe("buildPlan", () => {
 
   // 2026-10-04: one implement candidate (#516) sat in the Reconciler's cooldown for six hours while
   // #121, READY behind it, never started. The Reconciler needs the next candidates to fall back on.
-  it("ranks up to PLAN_CANDIDATES ready issues in pick order, the first one `--next`", () => {
+  it("ranks every ready issue so three cooling-down targets cannot hide the next one", () => {
     const issues = sortIssues([
       row(30, "READY"),
       row(20, "READY", { labels: ["priority-high"] }),
@@ -1007,6 +1007,7 @@ describe("buildPlan", () => {
       ["implement", "#20"],
       ["implement", "#10"],
       ["implement", "#30"],
+      ["implement", "#40"],
     ]);
     expect(plan.actions[0].target).toBe(`#${pickNext(issues, 0)}`);
   });

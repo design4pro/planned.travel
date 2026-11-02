@@ -45,6 +45,10 @@ exists, and a trigger per event cannot see a difference.
    keeps at most one of slice and write-spec. On 2026-10-04 the single implement candidate sat in the six-hour
    cooldown after a finished run while a ready issue behind it never started; the Reconciler now hands the turn to
    the next candidate of a kind when the first cannot start (design4pro/cezar#55).
+   Amended 2026-11-02: implementation candidates are no longer capped. All three previously ranked targets
+   (#1316, #1317, #1320) repeatedly stopped after finding their design-only deliverable already merged;
+   their six-hour cooldowns hid later ready issues. The Reconciler still starts at most one implementation
+   per tick and enforces the same slot, ownership and cooldown limits.
 2. **WIP counts what only a person can clear.** Open PRs by a trusted author, except the `do-not-merge`
    promotion, that are `needs-qa` without `qa-approved`, or `risk-high`, `security` or `blocked`, or
    `changes-requested` and untouched for 24 hours (an autopilot that stopped there is parked on a decision
