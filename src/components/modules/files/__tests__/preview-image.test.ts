@@ -1,11 +1,23 @@
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { previewImage } from '../preview-image'
 
+beforeEach(() => {
+  vi.stubGlobal(
+    'FileReader',
+    class {
+      result = 'data:image/svg+xml;base64,PHN2Zy8+'
+      onload = () => {}
+      readAsDataURL() {
+        this.onload()
+      }
+    },
+  )
+})
 afterEach(() => vi.unstubAllGlobals())
 
-it('exposes only PNG pixels, bounds dimensions and revokes the private SVG source', async () => {
+it('exposes only PNG pixels, bounds dimensions and never creates an SVG object URL', async () => {
   const raster = new Blob(['pixels'], { type: 'image/png' })
-  const revoke = vi.fn()
+  const create = vi.fn()
   const draw = vi.fn()
   const canvas = {
     width: 0,
@@ -17,8 +29,7 @@ it('exposes only PNG pixels, bounds dimensions and revokes the private SVG sourc
     },
   }
   vi.stubGlobal('URL', {
-    createObjectURL: () => 'blob:private-svg',
-    revokeObjectURL: revoke,
+    createObjectURL: create,
   })
   vi.stubGlobal(
     'Image',
@@ -35,14 +46,13 @@ it('exposes only PNG pixels, bounds dimensions and revokes the private SVG sourc
   ).toBe(raster)
   expect([canvas.width, canvas.height]).toEqual([4096, 2048])
   expect(draw).toHaveBeenCalledOnce()
-  expect(revoke).toHaveBeenCalledWith('blob:private-svg')
+  expect(create).not.toHaveBeenCalled()
 })
 
-it('revokes the private source when image decoding fails', async () => {
-  const revoke = vi.fn()
+it('propagates image decoding failures without creating a markup URL', async () => {
+  const create = vi.fn()
   vi.stubGlobal('URL', {
-    createObjectURL: () => 'blob:private-svg',
-    revokeObjectURL: revoke,
+    createObjectURL: create,
   })
   vi.stubGlobal(
     'Image',
@@ -54,5 +64,5 @@ it('revokes the private source when image decoding fails', async () => {
   await expect(previewImage(new Blob(['invalid']))).rejects.toThrow(
     'Invalid image',
   )
-  expect(revoke).toHaveBeenCalledWith('blob:private-svg')
+  expect(create).not.toHaveBeenCalled()
 })
