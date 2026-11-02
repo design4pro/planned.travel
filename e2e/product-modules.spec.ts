@@ -809,6 +809,104 @@ test.describe('08-S1 - a traveller sets their own allowance', () => {
     await expect(settingsDialog(page)).toHaveCount(0)
   })
   // Reuses the Chromium-only serial fixture harness above.
+  test('1442 - protects collection drafts across Back, reload and logout', async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(90_000)
+    const routeCase: RouteCase = {
+      name: 'collection-exits',
+      path: '/collections',
+      ready: 'main',
+    }
+    await visit(page, routeCase, 'light')
+    await page.locator('main a[href^="/collections/"]').first().click()
+    await expect(
+      page.getByRole('button', { name: /^Actions for / }),
+    ).toBeVisible()
+    const detail = new URL(page.url()).pathname
+    const original = await page.getByRole('heading', { level: 1 }).innerText()
+    async function openEditor() {
+      await page.getByRole('button', { name: /^Actions for / }).click()
+      await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    }
+    await openEditor()
+    await page
+      .getByRole('textbox', { name: 'Name', exact: true })
+      .fill(original + ' draft')
+    await page.keyboard.press('Escape')
+    const filter = page.locator('main a[href*="status="]').first()
+    await filter.click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await page.evaluate(() => history.back())
+    // Back across a filter preserves the mounted draft; the next Back leaves the collection.
+    await expect(page).toHaveURL(new RegExp(detail + '$'))
+    await page.evaluate(() => history.back())
+    const warning = page.getByRole('dialog', { name: 'Leave without saving?' })
+    await expect(warning).toBeVisible()
+    await expect(
+      warning.getByRole('button', { name: 'Stay', exact: true }),
+    ).toBeFocused()
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.evaluate(() => {
+      document.documentElement.dir = 'rtl'
+    })
+    await page.screenshot({
+      path: testInfo.outputPath('collection-warning-rtl-mobile.png'),
+    })
+    await page.keyboard.press('Escape')
+    await expect(warning).toHaveCount(0)
+    await expect(page).toHaveURL(new RegExp(detail + '$'))
+    page.once('dialog', (dialog) => {
+      expect(dialog.type()).toBe('beforeunload')
+      void dialog.dismiss()
+    })
+    await page.reload().catch(() => undefined)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original + ' draft')
+    await page.keyboard.press('Escape')
+    let signOuts = 0
+    await page.route('**/api/auth/sign-out', async (route) => {
+      signOuts++
+      await route.fulfill({ status: 500, body: '{}' })
+    })
+    await page.getByRole('button', { name: /account menu/i }).click()
+    await page.getByRole('menuitem', { name: 'Sign out', exact: true }).click()
+    await expect(warning).toBeVisible()
+    expect(signOuts).toBe(0)
+    await warning.getByRole('button', { name: 'Stay', exact: true }).click()
+    expect(signOuts).toBe(0)
+    await page.keyboard.press('Escape')
+    await page.evaluate(() => {
+      document.documentElement.dir = 'ltr'
+    })
+    await page.getByRole('link', { name: 'All collections' }).click()
+    await warning.getByRole('button', { name: 'Discard and leave' }).click()
+    await expect(page).toHaveURL(/\/collections$/)
+    await page.goto(detail)
+    await settle(page, routeCase)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await openEditor()
+    await page
+      .getByRole('textbox', { name: 'Name', exact: true })
+      .fill(original + ' reload draft')
+    page.once('dialog', (dialog) => {
+      void dialog.accept()
+    })
+    await page.reload()
+    await settle(page, routeCase)
+    await openEditor()
+    await expect(
+      page.getByRole('textbox', { name: 'Name', exact: true }),
+    ).toHaveValue(original)
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  })
+
   test('08-S4a - renames a collection and changes a saved place status, then restores both', async ({
     page,
   }) => {

@@ -41,6 +41,13 @@ export function CollectionDeleteDialog({
   returnFocus,
   exists,
 }: CollectionDeleteProps) {
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
   const t = useTranslate()
   const [data, setData] = useState<DeleteSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,10 +65,11 @@ export function CollectionDeleteDialog({
     setLoadError(false)
     try {
       const next = await summary({ collectionId: collection.id })
+      if (!alive.current) return null
       setData(next)
       return next
     } catch {
-      setLoadError(true)
+      if (alive.current) setLoadError(true)
       return null
     } finally {
       setLoading(false)
@@ -80,7 +88,7 @@ export function CollectionDeleteDialog({
         })
       } else if (failed && exists) {
         try {
-          if (!(await exists())) await onDeleted()
+          if (!(await exists()) && alive.current) await onDeleted()
         } catch {
           setLoadError(true)
         }
@@ -127,12 +135,15 @@ export function CollectionDeleteDialog({
     setFailed(false)
     try {
       await remove({ collectionId: collection.id, confirmName })
+      if (!alive.current) return
       await onDeleted()
     } catch {
+      if (!alive.current) return
       const next = await read()
+      if (!alive.current) return
       if (!next && exists) {
         try {
-          if (!(await exists())) {
+          if (!(await exists()) && alive.current) {
             await onDeleted()
             return
           }

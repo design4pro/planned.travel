@@ -1,3 +1,4 @@
+import { requestCollectionExit } from '#/lib/collection-exit'
 import { useId, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useRouter } from '@tanstack/react-router'
@@ -91,6 +92,7 @@ export function useWorkspaceSwitch({
     if (organizationId === activeId || switching.current) return
     const chosen = organizations.find((item) => item.id === organizationId)
     if (!chosen) return
+    if (!(await requestCollectionExit()) || switching.current) return
     const chosenName = chosen.name
     switching.current = true
     setPendingId(organizationId)

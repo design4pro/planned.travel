@@ -1,3 +1,4 @@
+import { requestCollectionExit } from '#/lib/collection-exit'
 import { useId, useRef, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import {
@@ -73,6 +74,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
   const identityId = useId()
 
   async function signOut(): Promise<void> {
+    if (!(await requestCollectionExit())) return
     setSigningOut(true)
     try {
       const response = await fetch(SIGN_OUT_ENDPOINT, {

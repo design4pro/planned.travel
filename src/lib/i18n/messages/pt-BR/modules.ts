@@ -1450,6 +1450,10 @@ const messages = {
   'vacay.legend.company': 'Folga da empresa',
   'vacay.legend.other': 'Outra pessoa ausente',
   'vacay.legend.weekend': 'Fim de semana',
+  'collections.leave.title': 'Sair sem salvar?',
+  'collections.leave.body': 'As alterações na sua coleção serão perdidas.',
+  'collections.leave.stay': 'Ficar',
+  'collections.leave.discard': 'Descartar e sair',
 } satisfies TranslationOf<typeof En>
 
 export default messages

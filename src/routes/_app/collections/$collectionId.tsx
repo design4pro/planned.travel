@@ -76,6 +76,7 @@ function CollectionPage() {
   const cards = useRef<HTMLUListElement>(null)
   const empty = useRef<HTMLDivElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
+  const { shell } = Route.useRouteContext()
   const data = Route.useLoaderData()
   const search = Route.useSearch()
   const { collectionId } = Route.useParams()
@@ -152,7 +153,13 @@ function CollectionPage() {
           actions={
             <>
               <CollectionActions
-                key={data.collection.id}
+                key={JSON.stringify([
+                  shell.session.user.id,
+                  shell.session.organization?.id,
+                  collectionId,
+                  data.canManage,
+                ])}
+                expiresAt={shell.session.expiresAt}
                 canManage={data.canManage}
                 collection={data.collection}
                 readCurrent={async () =>

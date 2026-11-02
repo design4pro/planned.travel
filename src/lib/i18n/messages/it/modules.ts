@@ -1460,6 +1460,10 @@ const messages = {
   'vacay.legend.company': 'Chiusura aziendale',
   'vacay.legend.other': 'Altra persona assente',
   'vacay.legend.weekend': 'Fine settimana',
+  'collections.leave.title': 'Uscire senza salvare?',
+  'collections.leave.body': 'Le modifiche alla raccolta andranno perse.',
+  'collections.leave.stay': 'Resta',
+  'collections.leave.discard': 'Scarta ed esci',
 } satisfies TranslationOf<typeof En>
 
 export default messages

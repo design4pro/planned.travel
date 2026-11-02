@@ -1383,6 +1383,10 @@ const messages = {
   'vacay.legend.company': 'Şirket tatili',
   'vacay.legend.other': 'Başka biri izinli',
   'vacay.legend.weekend': 'Hafta sonu',
+  'collections.leave.title': 'Kaydetmeden ayrılsın mı?',
+  'collections.leave.body': 'Koleksiyon değişiklikleriniz kaybolacak.',
+  'collections.leave.stay': 'Kal',
+  'collections.leave.discard': 'Değişiklikleri sil ve ayrıl',
 } satisfies TranslationOf<typeof En>
 
 export default messages

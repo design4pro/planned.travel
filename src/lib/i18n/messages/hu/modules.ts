@@ -1399,6 +1399,10 @@ const messages = {
   'vacay.legend.company': 'Céges szünnap',
   'vacay.legend.other': 'Más is távol van',
   'vacay.legend.weekend': 'Hétvége',
+  'collections.leave.title': 'Kilépsz mentés nélkül?',
+  'collections.leave.body': 'A gyűjtemény módosításai elvesznek.',
+  'collections.leave.stay': 'Maradás',
+  'collections.leave.discard': 'Elvetés és kilépés',
 } satisfies TranslationOf<typeof En>
 
 export default messages

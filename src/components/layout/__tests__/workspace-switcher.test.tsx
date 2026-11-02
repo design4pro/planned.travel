@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import { registerCollectionExit } from '#/lib/collection-exit'
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -293,6 +294,35 @@ describe('workspace names', () => {
 })
 
 describe('switching', () => {
+  it('asks before activating a workspace, signing out or creating a workspace', async () => {
+    const confirm = vi.fn().mockResolvedValue(false)
+    const release = registerCollectionExit(confirm)
+    const fetcher = vi.spyOn(globalThis, 'fetch')
+    try {
+      const { user } = await mount(sessionOf([ALPHA, BETA]))
+      await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+      expect(confirm).toHaveBeenCalledOnce()
+      expect(auth.setActive).not.toHaveBeenCalled()
+      expect(router.navigate).not.toHaveBeenCalled()
+      expect(workspaceClaimState().switching).toBe(false)
+      await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+      expect(confirm).toHaveBeenCalledTimes(2)
+      expect(fetcher).not.toHaveBeenCalled()
+      await user.click(
+        screen.getByRole('menuitem', { name: 'Create workspace' }),
+      )
+      await user.type(
+        screen.getByRole('textbox', { name: /name/i }),
+        'New workspace',
+      )
+      await user.click(screen.getByRole('button', { name: 'Create workspace' }))
+      expect(confirm).toHaveBeenCalledTimes(3)
+      expect(workspace.create).not.toHaveBeenCalled()
+    } finally {
+      release()
+    }
+  })
+
   it('announces the chosen name, isolated, after navigation, invalidation and menu closure', async () => {
     const calls: Array<string> = []
     const navigating = deferred<void>()

@@ -1297,6 +1297,10 @@ const messages = {
   'vacay.legend.company': '회사 휴일',
   'vacay.legend.other': '다른 사람 부재',
   'vacay.legend.weekend': '주말',
+  'collections.leave.title': '저장하지 않고 나가시겠습니까?',
+  'collections.leave.body': '컬렉션 변경 사항이 사라집니다.',
+  'collections.leave.stay': '머무르기',
+  'collections.leave.discard': '변경 사항을 버리고 나가기',
 } satisfies TranslationOf<typeof En>
 
 export default messages
