@@ -907,8 +907,13 @@ const messages = {
   'files.action.upload': 'Tải tệp lên',
   'files.places.title': 'Tệp địa điểm',
   'files.places.description':
-    'Tải các địa điểm của chuyến đi này dưới dạng GeoJSON, bao gồm cả những địa điểm không có tọa độ.',
+    'Tải các địa điểm của chuyến đi này dưới dạng GeoJSON hoặc GPX. GPX chỉ bao gồm địa điểm có tọa độ hợp lệ; GeoJSON giữ lại mọi địa điểm.',
   'files.places.action': 'Tải địa điểm (.geojson)',
+  'files.places.gpxAction': 'Tải địa điểm (.gpx)',
+  'files.places.gpxDone':
+    'Đã tải GPX. Địa điểm bị bỏ qua do không có tọa độ hợp lệ: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'Đã tải GPX không có điểm. Tất cả địa điểm đều bị bỏ qua do không có tọa độ hợp lệ: {formattedCount}.',
   'files.places.empty': 'Thêm địa điểm vào chuyến đi này để tải xuống.',
   'files.places.error': 'Không thể chuẩn bị tệp địa điểm. Hãy thử lại.',
   'files.places.pending': 'Đang chuẩn bị tệp địa điểm…',

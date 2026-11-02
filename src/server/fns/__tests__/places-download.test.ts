@@ -24,6 +24,7 @@ const { downloadTripPlacesFn, downloadTripPlacesInput } =
 async function download(
   scope: TenantScope | null,
   tripId: string,
+  format?: 'geojson' | 'gpx',
 ): Promise<Response> {
   runtime.scope = scope
   const key = Symbol.for('tanstack-start:start-storage-context')
@@ -39,7 +40,7 @@ async function download(
   await requestHandler(async () => {
     try {
       result = await storage.run({ startOptions: {}, request }, () =>
-        downloadTripPlacesFn({ data: { tripId } }),
+        downloadTripPlacesFn({ data: { tripId, format } }),
       )
     } catch (error) {
       failure = error
@@ -73,111 +74,169 @@ beforeEach(async () => {
   })
 })
 
-describe('the places download server function', () => {
-  it.each(['owner', 'editor', 'viewer', 'organization'] as const)(
-    'allows a %s reader on the free plan too',
-    async (role) => {
-      let scope = tenant.scope
-      if (role !== 'owner') {
-        const userId = await tenant.addUser(`Reader ${role}`)
-        scope = tenant.scopeFor(userId)
-        if (role === 'organization')
-          await updateTrip(tenant.scope, tripId, { visibility: 'organization' })
-        else await addTripMember(tenant.scope, { tripId, userId, role })
-      }
-      // No export entitlement or quota is required.
-      const response = await download(scope, tripId)
-      expect(response.headers.get('content-type')).toBe(
-        'application/geo+json; charset=utf-8',
-      )
-      expect(response.headers.get('content-disposition')).toBe(
-        "attachment; filename*=UTF-8''lisbon-spring-places.geojson",
-      )
-      expect(response.headers.get('cache-control')).toBe('private, no-store')
-      expect(response.headers.get('x-content-type-options')).toBe('nosniff')
-      expect(await response.json()).toMatchObject({
-        type: 'FeatureCollection',
-        features: [{ properties: { name: 'Museum', category: 'Culture' } }],
-      })
-    },
-  )
-
-  it('refuses private and public nonmembers and foreign workspaces before reading any export data', async () => {
-    const stranger = tenant.scopeFor(await tenant.addUser('Stranger'))
-    const foreign = (await harness.seedTenant('foreign-download')).scope
-    const places = vi.spyOn(placeReads, 'listTripPlaces')
-    const categories = vi.spyOn(categoryReads, 'listCategories')
-    const missing = await download(tenant.scope, 'missing').catch(
-      (error: unknown) => error,
-    )
-    expect(missing).toBeInstanceOf(Error)
-    expect(missing).toMatchObject({ name: 'NotFoundError' })
-    for (const visibility of ['private', 'public'] as const) {
-      await updateTrip(tenant.scope, tripId, { visibility })
-      for (const scope of [stranger, foreign]) {
-        const error = await download(scope, tripId).catch(
-          (cause: unknown) => cause,
+describe.each(['geojson', 'gpx'] as const)(
+  'the %s places download server function',
+  (format) => {
+    it.each(['owner', 'editor', 'viewer', 'organization'] as const)(
+      'allows a %s reader on the free plan too',
+      async (role) => {
+        let scope = tenant.scope
+        if (role !== 'owner') {
+          const userId = await tenant.addUser(`Reader ${role}`)
+          scope = tenant.scopeFor(userId)
+          if (role === 'organization')
+            await updateTrip(tenant.scope, tripId, {
+              visibility: 'organization',
+            })
+          else await addTripMember(tenant.scope, { tripId, userId, role })
+        }
+        // No export entitlement or quota is required.
+        const response = await download(scope, tripId, format)
+        expect(response.headers.get('content-type')).toBe(
+          format === 'gpx'
+            ? 'application/gpx+xml; charset=utf-8'
+            : 'application/geo+json; charset=utf-8',
         )
-        expect(error).toMatchObject({
-          name: 'NotFoundError',
-          code: 'NOT_FOUND',
-          message: `trip ${tripId} was not found.`,
+        expect(response.headers.get('content-disposition')).toBe(
+          `attachment; filename*=UTF-8''lisbon-spring-places.${format}`,
+        )
+        expect(response.headers.get('cache-control')).toBe('private, no-store')
+        expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+        if (format === 'gpx') {
+          expect(response.headers.get('x-places-omitted')).toBe('0')
+          expect(await response.text()).toContain('<name>Museum</name>')
+        } else {
+          expect(await response.json()).toMatchObject({
+            type: 'FeatureCollection',
+            features: [{ properties: { name: 'Museum', category: 'Culture' } }],
+          })
+        }
+      },
+    )
+
+    it('refuses private and public nonmembers and foreign workspaces before reading any export data', async () => {
+      const stranger = tenant.scopeFor(await tenant.addUser('Stranger'))
+      const foreign = (await harness.seedTenant('foreign-download')).scope
+      const places = vi.spyOn(placeReads, 'listTripPlaces')
+      const categories = vi.spyOn(categoryReads, 'listCategories')
+      const missing = await download(tenant.scope, 'missing', format).catch(
+        (error: unknown) => error,
+      )
+      expect(missing).toBeInstanceOf(Error)
+      expect(missing).toMatchObject({ name: 'NotFoundError' })
+      for (const visibility of ['private', 'public'] as const) {
+        await updateTrip(tenant.scope, tripId, { visibility })
+        for (const scope of [stranger, foreign]) {
+          const error = await download(scope, tripId, format).catch(
+            (cause: unknown) => cause,
+          )
+          expect(error).toMatchObject({
+            name: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: `trip ${tripId} was not found.`,
+          })
+        }
+      }
+      expect(places).not.toHaveBeenCalled()
+      expect(categories).not.toHaveBeenCalled()
+    })
+
+    it('includes over 500 rows in board order and excludes another trip and tenant', async () => {
+      // Repository insertion avoids quota writes; each insert still applies tenant scoping.
+      for (let index = 0; index < 501; index++) {
+        await placesRepository.insert(tenant.scope, {
+          tripId,
+          name: `Place ${index}`,
+          sortOrder: index + 1,
+          lat: 0,
+          lng: 0,
         })
       }
-    }
-    expect(places).not.toHaveBeenCalled()
-    expect(categories).not.toHaveBeenCalled()
-  })
-
-  it('includes over 500 rows in board order and excludes another trip and tenant', async () => {
-    // Repository insertion avoids quota writes; each insert still applies tenant scoping.
-    for (let index = 0; index < 501; index++) {
+      const otherTrip = await createTrip(tenant.scope, { title: 'Other' })
       await placesRepository.insert(tenant.scope, {
-        tripId,
-        name: `Place ${index}`,
-        sortOrder: index + 1,
+        tripId: otherTrip.id,
+        name: 'Other trip secret',
       })
-    }
-    const otherTrip = await createTrip(tenant.scope, { title: 'Other' })
-    await placesRepository.insert(tenant.scope, {
-      tripId: otherTrip.id,
-      name: 'Other trip secret',
+      const foreign = await harness.seedTenant('foreign-places')
+      const foreignTrip = await createTrip(foreign.scope, { title: 'Foreign' })
+      await createPlace(foreign.scope, {
+        tripId: foreignTrip.id,
+        name: 'Foreign secret',
+      })
+      const response = await download(tenant.scope, tripId, format)
+      const names = [
+        'Museum',
+        ...Array.from({ length: 501 }, (_, i) => `Place ${i}`),
+      ]
+      if (format === 'gpx') {
+        const xml = await response.text()
+        expect(
+          [...xml.matchAll(/<name>(.*?)<\/name>/g)].map((match) => match[1]),
+        ).toEqual(names)
+        expect(xml).not.toContain('secret')
+      } else {
+        const body = (await response.json()) as ReturnType<typeof placesGeoJson>
+        expect(body.features.map((feature) => feature.properties.name)).toEqual(
+          names,
+        )
+        expect(JSON.stringify(body)).not.toContain('secret')
+      }
     })
-    const foreign = await harness.seedTenant('foreign-places')
-    const foreignTrip = await createTrip(foreign.scope, { title: 'Foreign' })
-    await createPlace(foreign.scope, {
-      tripId: foreignTrip.id,
-      name: 'Foreign secret',
-    })
-    const body = (await (
-      await download(tenant.scope, tripId)
-    ).json()) as ReturnType<typeof placesGeoJson>
-    expect(body.features.map((feature) => feature.properties.name)).toEqual([
-      'Museum',
-      ...Array.from({ length: 501 }, (_, i) => `Place ${i}`),
-    ])
-    expect(JSON.stringify(body)).not.toContain('secret')
-  })
 
-  it('returns an empty collection and a safe fallback filename for a non-Latin title', async () => {
-    const trip = await createTrip(tenant.scope, { title: '東京' })
-    const response = await download(tenant.scope, trip.id)
-    expect(response.headers.get('content-disposition')).toBe(
-      "attachment; filename*=UTF-8''trip-places.geojson",
-    )
-    expect(await response.json()).toEqual({
-      type: 'FeatureCollection',
-      features: [],
+    it('returns an empty file and safe fallback filename for a non-Latin title', async () => {
+      const trip = await createTrip(tenant.scope, { title: '東京' })
+      const response = await download(tenant.scope, trip.id, format)
+      expect(response.headers.get('content-disposition')).toBe(
+        `attachment; filename*=UTF-8''trip-places.${format}`,
+      )
+      if (format === 'gpx') {
+        expect(response.headers.get('x-places-omitted')).toBe('0')
+        expect(await response.text()).not.toContain('<wpt')
+      } else
+        expect(await response.json()).toEqual({
+          type: 'FeatureCollection',
+          features: [],
+        })
     })
-  })
 
-  it('validates ids and requires a session', async () => {
-    expect(downloadTripPlacesInput.safeParse({ tripId: '' }).success).toBe(
-      false,
-    )
-    expect(
-      downloadTripPlacesInput.safeParse({ tripId: 'a'.repeat(65) }).success,
-    ).toBe(false)
-    await expect(download(null, tripId)).rejects.toThrow('unauthenticated')
-  })
+    it('validates ids and requires a session', async () => {
+      expect(
+        downloadTripPlacesInput.safeParse({ tripId, format: 'xml' }).success,
+      ).toBe(false)
+      expect(downloadTripPlacesInput.parse({ tripId }).format).toBe('geojson')
+      expect(downloadTripPlacesInput.safeParse({ tripId: '' }).success).toBe(
+        false,
+      )
+      expect(
+        downloadTripPlacesInput.safeParse({ tripId: 'a'.repeat(65) }).success,
+      ).toBe(false)
+      const places = vi.spyOn(placeReads, 'listTripPlaces')
+      const categories = vi.spyOn(categoryReads, 'listCategories')
+      await expect(download(null, tripId, format)).rejects.toThrow(
+        'unauthenticated',
+      )
+      expect(places).not.toHaveBeenCalled()
+      expect(categories).not.toHaveBeenCalled()
+    })
+  },
+)
+
+it('defaults old callers to GeoJSON and reports omissions from the exported GPX snapshot', async () => {
+  const original = await download(tenant.scope, tripId)
+  expect(original.headers.get('content-type')).toBe(
+    'application/geo+json; charset=utf-8',
+  )
+  await createPlace(tenant.scope, { tripId, name: 'No location' })
+  const response = await download(tenant.scope, tripId, 'gpx')
+  expect(response.headers.get('x-places-omitted')).toBe('1')
+  expect(response.headers.get('x-places-total')).toBe('2')
+  const xml = await response.text()
+  expect(xml).toContain('<name>Museum</name>')
+  expect(xml).not.toContain('No location')
+  const empty = await createTrip(tenant.scope, { title: 'Unlocated' })
+  await createPlace(tenant.scope, { tripId: empty.id, name: 'No location' })
+  const allOmitted = await download(tenant.scope, empty.id, 'gpx')
+  expect(allOmitted.headers.get('x-places-omitted')).toBe('1')
+  expect(allOmitted.headers.get('x-places-total')).toBe('1')
+  expect(await allOmitted.text()).not.toContain('<wpt')
 })

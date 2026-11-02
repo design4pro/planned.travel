@@ -895,8 +895,13 @@ const messages = {
   'files.action.upload': 'ファイルをアップロード',
   'files.places.title': '場所のファイル',
   'files.places.description':
-    'この旅行の場所を、座標のない場所も含めてGeoJSON形式でダウンロードします。',
+    'この旅行の場所をGeoJSONまたはGPXでダウンロードします。GPXには有効な座標のある場所のみが含まれ、GeoJSONにはすべての場所が保持されます。',
   'files.places.action': '場所をダウンロード (.geojson)',
+  'files.places.gpxAction': '場所をダウンロード (.gpx)',
+  'files.places.gpxDone':
+    'GPXをダウンロードしました。有効な座標がなく除外された場所：{formattedCount}。',
+  'files.places.gpxAllOmitted':
+    '地点のないGPXをダウンロードしました。有効な座標がないため、すべての場所が除外されました：{formattedCount}。',
   'files.places.empty':
     'ダウンロードするには、この旅行に場所を追加してください。',
   'files.places.error':

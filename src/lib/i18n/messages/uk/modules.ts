@@ -965,8 +965,13 @@ const messages = {
   'files.action.upload': 'Надіслати файли',
   'files.places.title': 'Файл місць',
   'files.places.description':
-    'Завантажте місця цієї подорожі у форматі GeoJSON, зокрема місця без координат.',
+    'Завантажте місця цієї подорожі у форматі GeoJSON або GPX. GPX містить лише місця з дійсними координатами; GeoJSON зберігає всі місця.',
   'files.places.action': 'Завантажити місця (.geojson)',
+  'files.places.gpxAction': 'Завантажити місця (.gpx)',
+  'files.places.gpxDone':
+    'GPX завантажено. Пропущено місць без дійсних координат: {formattedCount}.',
+  'files.places.gpxAllOmitted':
+    'GPX завантажено без точок. Усі місця пропущено через відсутність дійсних координат: {formattedCount}.',
   'files.places.empty': 'Додайте місця до цієї подорожі, щоб завантажити їх.',
   'files.places.error': 'Не вдалося підготувати файл місць. Спробуйте ще раз.',
   'files.places.pending': 'Підготовка файлу місць…',
