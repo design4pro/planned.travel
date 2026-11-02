@@ -29,16 +29,16 @@
 // closing keyword report an empty list, including one whose body opens with `Closes #163`. Reading
 // that field would mean the IN_REVIEW state could never once fire.
 //
-// Usage: node .ai/scripts/backlog-status.mjs [--json | --next | --plan] [--stale-hours N]
+// Usage: node .ai/scripts/backlog-status.mjs [--json | --next | --plan | --issue N] [--stale-hours N]
 
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const AUTOMATIONS = "docs/agents/cezar-automations.json";
 const CONFIG = ".ai/agentic.config.json";
-const RUNS = ".ai/cezar/runs.json";
 const SPECS = ".ai/specs";
 const PLANS = "docs/plans";
 
@@ -263,7 +263,7 @@ const SENTRY_FILER = "app/github-actions";
 /** One issue's state and the single next step that moves it. Pure: every input is passed in. */
 export function classify(
   issue,
-  { trusted, sdlcLabels, openIssues, runs, prLinks, mergedLinks = new Map(), staleHours, now },
+  { trusted, sdlcLabels, openIssues, runs, prLinks, mergedLinks = new Map(), completedSpecs = new Map(), staleHours, now },
 ) {
   const labels = issue.labels.map((label) => label.name);
   const has = (label) => labels.includes(label);
@@ -390,6 +390,10 @@ export function classify(
       `${merged.map((pr) => `#${pr.number}`).join(", ")} merged and closes it: housekeeping closes the issue. Nothing to do.`,
     );
 
+  const completedSpec = completedSpecs.get(issue.number);
+  if (completedSpec)
+    return state("TRACKING", `The exact spec-only brief is delivered in ${completedSpec}. Leave this issue open for slicing; do not implement it again.`);
+
   // The parent afk-to-tickets files for a spec: its tickets carry the work, it carries none.
   if (/^Spec: \.ai\/specs\//.test(issue.body ?? ""))
     return state("TRACKING", "A spec parent: its tickets carry the work. Nothing to do.");
@@ -483,6 +487,40 @@ export function pickNext(sortedIssues, wip) {
 /** The `Status` row of a spec's metadata table (.ai/specs/AGENTS.md), or null without one. */
 export const specStatus = (text) =>
   /^\|\s*\*\*Status\*\*\s*\|\s*([^|\s]+)\s*\|/m.exec(text)?.[1] ?? null;
+
+export const briefDigest = (brief) => createHash("sha256").update(brief).digest("hex");
+
+/** The latest trusted brief owns the deliverable; a covering spec alone proves nothing. */
+export function completedSpecIssues(issues, baseSpecs, trusted) {
+  const completed = new Map();
+  for (const issue of issues) {
+    const brief = trustedBrief(issue, trusted);
+    if (!brief?.includes("<!-- agent-deliverable: spec -->")) continue;
+    const spec = baseSpecs.find(({ text }) =>
+      specStatus(text) === "ready" &&
+      /^\|\s*\*\*Issue\*\*\s*\|\s*#(\d+)\s*\|/m.exec(text)?.[1] === String(issue.number) &&
+      /^<!-- agent-brief-sha256: ([a-f0-9]{64}) -->$/m.exec(text)?.[1] === briefDigest(brief));
+    if (spec) completed.set(issue.number, spec.path);
+  }
+  return completed;
+}
+
+export function trustedBrief(issue, trusted) {
+  const comments = (issue.comments ?? []).filter((c) => trusted.has(c.author?.login) && hasBrief(c.body));
+  const body = !SENTRY_MARKER.test(issue.body ?? "") && trusted.has(issue.author?.login) && hasBrief(issue.body) ? issue.body : null;
+  const comment = comments.at(-1)?.body;
+  // GitHub does not expose when just the body's brief changed; conflicting briefs need assessment.
+  if (body && comment && body !== comment) return null;
+  return comment ?? body;
+}
+
+/** Only the base ref proves a spec merged; a new file in this worktree is not completion. */
+function readBaseSpecs(baseBranch) {
+  const ref = `origin/${baseBranch}`;
+  const paths = execFileSync("git", ["ls-tree", "-r", "--name-only", ref, "--", SPECS], { encoding: "utf8" }).trim().split("\n");
+  return paths.filter((path) => dirname(path) === SPECS && path.endsWith(".md") && !/(?:README|AGENTS)\.md$/.test(path))
+    .map((path) => ({ path, text: execFileSync("git", ["show", `${ref}:${path}`], { encoding: "utf8" }) }));
+}
 
 /**
  * The specs `afk-to-tickets` has not sliced yet, oldest first: `ready` (merged, waiting for a build)
@@ -715,17 +753,24 @@ export const isAlive = (run) =>
   ACTIVE_RUN_STATES.has(run.status) || (run.status === "failed" && Boolean(run.autoResumeAt));
 
 /** The live runs keyed by the issue each one works on. Runs without an `issueNumber` are left out. */
-export function runsByIssue(records) {
+export function runsByIssue(records, currentRunId) {
   const byIssue = new Map();
   for (const run of records) {
-    if (!run.issueNumber || !isAlive(run)) continue;
+    if ((currentRunId && run.id === currentRunId) || !run.issueNumber || !isAlive(run)) continue;
     byIssue.set(Number(run.issueNumber), { status: run.status, workflow: run.workflow });
   }
   return byIssue;
 }
 
 /** The cockpit's run records. Absent on a non-cockpit host, where nothing is queued. */
-const readRunRecords = () => (existsSync(RUNS) ? JSON.parse(readFileSync(RUNS, "utf8")) : []);
+export function runStore() {
+  const common = execFileSync("git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], { encoding: "utf8" }).trim();
+  return join(dirname(common), ".ai/cezar");
+}
+const readRunRecords = () => {
+  const path = join(runStore(), "runs.json");
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : [];
+};
 
 /** Every `.md` under `dir`, at any depth, as `{ path, text }`; empty when `dir` is absent. */
 function readMarkdown(dir) {
@@ -747,15 +792,20 @@ export function parseArgs(argv) {
     if (argv[i] === "--json") options.asJson = true;
     else if (argv[i] === "--next") options.next = true;
     else if (argv[i] === "--plan") options.plan = true;
+    else if (argv[i] === "--issue") {
+      const number = argv[++i];
+      if (!/^[1-9]\d*$/.test(number ?? "") || !Number.isSafeInteger(Number(number))) throw new Error("--issue requires a positive issue number");
+      options.issue = Number(number);
+    }
     else if (argv[i] === "--stale-hours") {
       const value = argv[++i];
       if (!/^\d+$/.test(value ?? "") || Number(value) === 0)
         throw new Error(`--stale-hours needs a positive whole number of hours, got ${value ?? "nothing"}`);
       options.staleHours = Number(value);
-    } else throw new Error(`unknown argument ${argv[i]} - usage: [--json | --next | --plan] [--stale-hours N]`);
+    } else throw new Error(`unknown argument ${argv[i]} - usage: [--json | --next | --plan | --issue N] [--stale-hours N]`);
   }
-  if ([options.asJson, options.next, options.plan].filter(Boolean).length > 1)
-    throw new Error("--json, --next and --plan are separate outputs - pick one");
+  if ([options.asJson, options.next, options.plan, Boolean(options.issue)].filter(Boolean).length > 1)
+    throw new Error("--json, --next, --plan and --issue are separate outputs - pick one");
   return options;
 }
 
@@ -769,7 +819,7 @@ function main(argv) {
   }
   const { asJson, next, plan, staleHours } = options;
 
-  const { labels } = JSON.parse(readFileSync(CONFIG, "utf8"));
+  const { labels, baseBranch } = JSON.parse(readFileSync(CONFIG, "utf8"));
   const trusted = trustedAuthors(JSON.parse(readFileSync(AUTOMATIONS, "utf8")));
   const prs = gh([
     "pr", "list", "--state", "open", "--limit", String(LIST_LIMIT),
@@ -793,13 +843,23 @@ function main(argv) {
     trusted,
     sdlcLabels: { category: labels.category, priority: labels.priority, risk: labels.risk },
     openIssues: new Set(openIssues.map((issue) => issue.number)),
-    runs: runsByIssue(records),
+    runs: runsByIssue(records, options.issue ? process.env.CEZ_RUN_ID ?? process.env.CEZ_TASK_ID : undefined),
     prLinks: linkOpenPrs(prs),
     mergedLinks: linkMergedPrs(mergedPrs),
     staleHours,
     now: Date.now(),
+    completedSpecs: completedSpecIssues(openIssues, readBaseSpecs(baseBranch), trusted),
   };
   const issues = sortIssues(openIssues.map((issue) => classify(issue, context)));
+
+  if (options.issue) {
+    const issue = issues.find((row) => row.number === options.issue);
+    const wip = countWip(prs, trusted, context.now);
+    const ready = issue?.state === "READY" && wip < WIP_LIMIT;
+    const brief = issue && trustedBrief(issue, trusted);
+    console.log(JSON.stringify({ number: options.issue, ready, state: issue?.state ?? "ABSENT", reason: wip >= WIP_LIMIT ? "WIP limit reached" : issue?.next ?? "Not an open issue", briefDigest: brief ? briefDigest(brief) : null }));
+    return;
+  }
 
   if (next) {
     const picked = pickNext(issues, countWip(prs, trusted, context.now));

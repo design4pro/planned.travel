@@ -178,6 +178,15 @@ Every PR passes the full validation gate before review sign-off. **The command l
 
 Any non-zero exit fails the gate and blocks the PR. The implementing skills run the configured gate before opening a PR, and `om-check-and-commit` runs it before pushing a hand-worked branch. Changing the gate means editing that one key; anything that needs the list at runtime reads it from there.
 
+Use `node scripts/ci/validation.mjs` to execute that list in order. It expands the pinned unit-test
+command into the same three Vitest projects, bounds each job to nine minutes and retries a timed-out
+or killed project as all four shards. It emits a compact JSON result with full log paths under
+`.ai/tmp/validation/`. `--resume` reuses successful local jobs only when the tracked content, command
+list, runtime, environment and installed manifest digest match; stage untracked inputs first.
+Ignored fixtures, services and changes inside installed packages are outside that digest, so resume
+is a local interruption-recovery convenience, never trusted CI evidence. After those inputs change,
+run fresh. Attestation always invokes the same executor fresh and refuses a checkout that changed.
+
 ### Agent attestation (ADR 0045)
 
 When the gate is green on the commit an agent is about to hand over, it records that with `node scripts/ci/attestation.mjs attest --pr <n>`: the script runs the committed head's gate from a clean tree and posts the result as a PR comment bound to the tree. CI's `attestation` job accepts it, and `lint · typecheck · build` and `unit tests` then report skipped (which counts as passed) instead of repeating the run. Do it **after the last push**: another commit changes the tree and voids the record, and the full jobs run as before. A diff that touches the gate itself or a `risk-high` path never rides on an attestation, and the e2e journeys always run. The push to `develop` runs everything and gates the deploy.

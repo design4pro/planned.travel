@@ -51,6 +51,8 @@ import {
   runsByIssue,
   sortIssues,
   specStatus,
+  completedSpecIssues,
+  briefDigest,
   trustedAuthors,
   unslicedSpecs,
   waitsForPerson,
@@ -649,6 +651,15 @@ describe("parseArgs", () => {
 });
 
 describe("isAlive and runsByIssue", () => {
+  it("excludes only this run while retaining another active run on the same issue", () => {
+    const runs = runsByIssue([
+      { id: "self", status: "running", issueNumber: 7 },
+      { id: "other", status: "waiting", issueNumber: 7 },
+      { id: "finished", status: "done", issueNumber: 8 },
+    ], "self");
+    expect([...runs.keys()]).toEqual([7]);
+    expect(runs.get(7).status).toBe("waiting");
+  });
   it.each(["queued", "running", "waiting", "review"])("holds an issue while the run is %s", (status) => {
     expect(isAlive({ status })).toBe(true);
   });
@@ -667,6 +678,32 @@ describe("isAlive and runsByIssue", () => {
     ]);
     expect([...runs.keys()]).toEqual([7, 9]);
     expect(runs.get(9)).toEqual({ status: "waiting", workflow: "triage" });
+  });
+});
+
+describe("completedSpecIssues", () => {
+  const trusted = new Set(["maintainer"]);
+  const brief = "## Agent Brief\n<!-- agent-deliverable: spec -->\nWrite a spec.";
+  const spec = { path: ".ai/specs/example.md", text: `| **Status** | ready |\n| **Issue** | #7 |\n<!-- agent-brief-sha256: ${briefDigest(brief)} -->` };
+  const issue = { number: 7, author: { login: "maintainer" }, body: brief, comments: [] };
+
+  it("recognizes an explicitly spec-only trusted brief whose ready spec is on the base", () => {
+    expect(completedSpecIssues([issue], [spec], trusted).get(7)).toBe(spec.path);
+  });
+
+  it("does not confuse a covering spec or draft with a completed runtime ticket", () => {
+    expect(completedSpecIssues([{ ...issue, body: "## Agent Brief\nImplement #7" }], [spec], trusted).size).toBe(0);
+    expect(completedSpecIssues([issue], [{ ...spec, text: spec.text.replace("ready", "draft") }], trusted).size).toBe(0);
+    expect(completedSpecIssues([{ ...issue, author: { login: "stranger" } }], [spec], trusted).size).toBe(0);
+    expect(completedSpecIssues([{ ...issue, body: `${brief}\nChange the requirements.` }], [spec], trusted).size).toBe(0);
+  });
+
+  it("uses only the latest trusted brief and never a Sentry body's self-approval", () => {
+    const comment = { author: { login: "maintainer" }, body: "## Agent Brief\nImplement the runtime." };
+    expect(completedSpecIssues([{ ...issue, comments: [comment] }], [spec], trusted).size).toBe(0);
+    expect(completedSpecIssues([{ ...issue, body: `${brief}\nNew requirement`, comments: [{ ...comment, body: brief }] }], [spec], trusted).size).toBe(0);
+    expect(completedSpecIssues([{ ...issue, body: `<!-- sentry-issue: 1 -->\n${brief}` }], [spec], trusted).size).toBe(0);
+    expect(completedSpecIssues([{ ...issue, author: { login: "stranger" }, comments: [{ ...comment, body: brief }] }], [spec], trusted).has(7)).toBe(true);
   });
 });
 
