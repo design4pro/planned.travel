@@ -8,7 +8,8 @@
  * expense total.
  */
 
-import { and, asc, count, desc, eq, sum } from 'drizzle-orm'
+import { and, asc, count, desc, eq, sql, sum } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 import { z } from 'zod'
 import { impliedRate } from '#/lib/money'
 import {
@@ -340,17 +341,17 @@ const sourceAmountFields = {
   exchangeRate: z.number().finite().positive().nullish(),
 }
 
-/**
- * The source triple of a row that no longer has one. A writer that moves a row's amount or currency
- * without a typed figure stores this beside the new figures: the earlier triple described a sum the
- * row no longer holds, and left in place it would be read as an observation of a pair the row does
- * not carry (#1521).
- */
-const NO_SOURCE_AMOUNT = {
-  originalAmountMinor: null,
-  originalCurrency: null,
-  exchangeRate: null,
-} as const
+/** Compare with the stored row inside the UPDATE so an intervening edit cannot outlive its figure. */
+function sourceWhenUnchanged(
+  table: typeof expenses | typeof budgetItems,
+  unchanged: SQL,
+) {
+  return {
+    originalAmountMinor: sql`case when ${unchanged} then ${table.originalAmountMinor} end`,
+    originalCurrency: sql`case when ${unchanged} then ${table.originalCurrency} end`,
+    exchangeRate: sql`case when ${unchanged} then ${table.exchangeRate} end`,
+  }
+}
 
 const expenseFields = {
   expectedTripCurrency,
@@ -529,20 +530,41 @@ export async function updateBudgetItem(
 ): Promise<BudgetItem> {
   const { expectedTripCurrency: expected, ...patch } =
     updateBudgetItemInput.parse(input)
-  const existing = await requireTripBudgetItem(
-    scope,
-    tripId,
-    budgetItemId,
-    expected,
+  await requireTripBudgetItem(scope, tripId, budgetItemId, expected)
+  const unchanged = and(
+    patch.plannedAmountMinor === undefined
+      ? undefined
+      : eq(budgetItems.plannedAmountMinor, patch.plannedAmountMinor),
+    patch.currency === undefined
+      ? undefined
+      : eq(budgetItems.currency, patch.currency),
   )
-  const moved =
-    (patch.plannedAmountMinor !== undefined &&
-      patch.plannedAmountMinor !== existing.plannedAmountMinor) ||
-    (patch.currency !== undefined && patch.currency !== existing.currency)
-  return budgetItemsRepository.requireUpdate(scope, budgetItemId, {
-    ...definedOnly(patch),
-    ...(moved ? NO_SOURCE_AMOUNT : {}),
-  })
+  if (!unchanged) {
+    return budgetItemsRepository.requireUpdate(
+      scope,
+      budgetItemId,
+      definedOnly(patch),
+    )
+  }
+  const [item] = await scope.db
+    .update(budgetItems)
+    .set({
+      ...definedOnly(patch),
+      ...sourceWhenUnchanged(budgetItems, unchanged),
+    })
+    .where(
+      tenantFilter(
+        scope,
+        budgetItems,
+        eq(budgetItems.id, budgetItemId),
+        eq(budgetItems.tripId, tripId),
+      ),
+    )
+    .returning()
+  if (!item) {
+    throw new NotFoundError(budgetItemsRepository.entityName, budgetItemId)
+  }
+  return item
 }
 
 export async function deleteBudgetItem(
@@ -790,11 +812,16 @@ export async function repriceExpense(
 ): Promise<RepricedExpense> {
   const figures = repriceExpenseInput.parse(input)
   const existing = await requireTripExpense(scope, tripId, expenseId)
-  const patch =
-    figures.amountMinor !== existing.amountMinor ||
-    figures.currency !== existing.currency
-      ? { ...figures, ...NO_SOURCE_AMOUNT }
-      : figures
+  const patch = {
+    ...figures,
+    ...sourceWhenUnchanged(
+      expenses,
+      allOf(
+        eq(expenses.amountMinor, figures.amountMinor),
+        eq(expenses.currency, figures.currency),
+      ),
+    ),
+  }
   const shares = await expenseSharesRepository.findMany(scope, {
     where: eq(expenseShares.expenseId, expenseId),
     orderBy: [asc(expenseShares.id)],
@@ -805,11 +832,21 @@ export async function repriceExpense(
       ? null
       : recomputeShares(existing, shares, patch.amountMinor)
   if (recomputed === null) {
-    const expense = await expensesRepository.requireUpdate(
-      scope,
-      expenseId,
-      patch,
-    )
+    const [expense] = await scope.db
+      .update(expenses)
+      .set(patch)
+      .where(
+        tenantFilter(
+          scope,
+          expenses,
+          eq(expenses.id, expenseId),
+          eq(expenses.tripId, tripId),
+        ),
+      )
+      .returning()
+    if (!expense) {
+      throw new NotFoundError(expensesRepository.entityName, expenseId)
+    }
     return {
       expense,
       shares,
