@@ -289,3 +289,54 @@ it.each(['stop', 'note'] as const)(
     expect(mocks.error).not.toHaveBeenCalled()
   },
 )
+
+it.each(['stop', 'note'] as const)(
+  '%s restores source focus when a collapsed destination move fails',
+  async (kind) => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    mount()
+    await userEvent.click(
+      within(section('d2')).getByRole('button', {
+        name: `Expand or collapse ${longTitle}`,
+      }),
+    )
+    await move(kind)
+    const header = section('d2').querySelector('[data-planner-day-header]')
+    await waitFor(() => expect(document.activeElement).toBe(header))
+    await act(async () => pending.reject(new Error('Save failed')))
+    await waitFor(() =>
+      expect(row(kind, 'd1').contains(document.activeElement)).toBe(true),
+    )
+    expect(
+      section('d2')
+        .querySelector('[aria-expanded]')
+        ?.getAttribute('aria-expanded'),
+    ).toBe('false')
+    expect(announcement().textContent).toBe('That move did not save')
+  },
+)
+
+it.each(['stop', 'note'] as const)(
+  '%s collapsed-target rollback preserves focus deliberately moved elsewhere',
+  async (kind) => {
+    const pending = deferred()
+    mocks.write.mockReturnValue(pending.promise)
+    mount()
+    await userEvent.click(
+      within(section('d2')).getByRole('button', {
+        name: `Expand or collapse ${longTitle}`,
+      }),
+    )
+    await move(kind)
+    const header = section('d2').querySelector('[data-planner-day-header]')
+    await waitFor(() => expect(document.activeElement).toBe(header))
+    const elsewhere = within(section('d3')).getByRole('button', {
+      name: `Expand or collapse ${longTitle}`,
+    })
+    await userEvent.click(elsewhere)
+    await act(async () => pending.reject(new Error('Save failed')))
+    expect(document.activeElement).toBe(elsewhere)
+    expect(row(kind, 'd1')).toBeTruthy()
+  },
+)

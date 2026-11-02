@@ -750,6 +750,10 @@ export function PlanScreen({
             fromMenu &&
             (document.activeElement === document.body ||
               document.activeElement === initiatingControl ||
+              (document.activeElement?.matches('[data-planner-day-header]') &&
+                document.activeElement
+                  .closest('[data-planner-day]')
+                  ?.getAttribute('data-planner-day') === target.container) ||
               (focusedRow?.matches(plannerRowSelector(itemId)) &&
                 focusedRow
                   .closest('[data-planner-day]')
