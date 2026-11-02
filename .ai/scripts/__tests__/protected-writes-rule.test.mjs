@@ -50,6 +50,7 @@ const NOT_COVERED = [
   'om-code-review',
   'om-fix',
   'om-followup-issue-from-pr',
+  'om-merge-buddy',
   'om-open-pr',
   'om-prepare-test-env',
   'om-review-prs',

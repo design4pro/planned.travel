@@ -32,3 +32,12 @@ Six more rules cover the run and every chained skill, whether or not their own o
 - **Find the dev server from the descriptor.** Read `baseUrl` from `.ai/qa/test-env.json` (`sh .ai/scripts/test-env-up.sh` writes it); never grep `.dev.vars*`, which the deny rules refuse. Quote every path that holds a variable, and never `cd` into a route path such as `src/routes/_app/trips/$tripId` unquoted: the shell expands `$tripId` to nothing.
 - **Never try a denied command; use its allowed equivalent.** A command `permissions.deny` refuses ends the run on the first denial under `dontAsk` (run d232173a in money-tracker.online died on an improvised `git reset --hard origin/<branch>`). Move the worktree to the PR head with `git fetch origin <head>` and `git checkout -B <head> origin/<head>`, after checking `git status --short` is clean and `git log origin/<head>..HEAD` is empty: `checkout -B` refuses only when it would overwrite a local change, and it drops a local branch's unpushed commits. Never force-push a rebased branch (denied, `--force-with-lease` included): merge the base instead, or push a new branch. Never `--no-verify`: fix what the hook reports.
 - **Never open a file `permissions.deny` lists under `Read(...)`, not even redacted through `cat` or `sed`.** It ends the run the same way (run b6eb30ef died on `cat .ai/qa/test-env.env`). The login's `passwordEnv` name is in `.ai/qa/test-env.json`; load the values with `set -a; . "$(jq -r .credentialsFile .ai/qa/test-env.json)"; set +a` and use `"$TEST_DEMO_PASSWORD"` in the command (AGENTS.md).
+
+
+## Shared PR and CI evidence
+
+Use `node .ai/scripts/pr-state.mjs <pr>` for the read-only state snapshot and add `--wait` for
+one bounded CI wait. Reuse its required-check and workflow-run evidence instead of rebuilding
+API/polling loops in the agent. `unknown` is never green; inspect the warning rather than treating
+unreadable external checks as passed. This helper does not replace fresh-head checks before
+mutations, claims, unresolved-thread handling, security verdicts or current-head QA approval.

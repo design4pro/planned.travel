@@ -17,9 +17,10 @@
  * a gate the base branch changed, a path that defines the gate itself.
  */
 
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { appendFileSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { runGate } from './validation.mjs'
 
 export const ATTESTATION_MARKER = '<!-- agent-attestation -->'
 const VERSION = 1
@@ -224,7 +225,7 @@ function verify() {
   else process.stdout.write(output)
 }
 
-function attest() {
+async function attest() {
   const pr = option('pr')
   if (!pr) throw new Error('usage: attestation.mjs attest --pr <number>')
   // The tree is the HEAD commit's, so a dirty checkout would attest something it did not run.
@@ -236,17 +237,11 @@ function attest() {
   const config = JSON.parse(
     run('git', ['show', 'HEAD:.ai/agentic.config.json']),
   )
-  const commands = []
-  for (const command of config.validation.commands) {
-    const started = Date.now()
-    const { status } = spawnSync('bash', ['-c', command], { stdio: 'inherit' })
-    commands.push({
-      command,
-      exitCode: status ?? 1,
-      durationMs: Date.now() - started,
-    })
-    if (status !== 0) throw new Error(`${command} failed: nothing to attest`)
-  }
+  // Attestation never trusts the local resume receipt, even if the same tree ran green earlier.
+  const result = await runGate({ commands: config.validation.commands, resume: false })
+  if (result.exitCode !== 0) throw new Error(`validation failed: nothing to attest; logs: ${result.logs}`)
+  if (run('git', ['status', '--porcelain']) !== '') throw new Error('checkout changed during validation: nothing to attest')
+  const commands = result.commands.map(({ command, exitCode, durationMs }) => ({ command, exitCode, durationMs }))
 
   const attestation = {
     version: VERSION,
@@ -314,7 +309,7 @@ if (
     process.exit(2)
   }
   try {
-    command()
+    await command()
   } catch (error) {
     console.error(`attestation: ${error.message}`)
     process.exit(1)
