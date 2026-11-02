@@ -515,6 +515,174 @@ describe('planBoard — date offsets and fallback', () => {
     },
   )
 
+  it.each([
+    { departureDate: null },
+    { departureDate: '2026-02-30' },
+    { departureTimezone: null },
+    { departureTimezone: 'Invalid/Zone' },
+  ])(
+    'keeps a single wall-clock frame on DST days with incomplete endpoints %j',
+    async (extra) => {
+      const { planMoveOutcome } = await import('../plan-move')
+      const result = planBoard(
+        {
+          ...board([
+            {
+              ...day('d1', 1, [stop('after-gap', 'p1', 0, '03:00')]),
+              date: '2026-03-29',
+            },
+          ]),
+          timezone: 'Europe/Berlin',
+        },
+        notes([]),
+        transports([
+          journey('gap', {
+            departureTime: '02:30',
+            departureDate: '2026-03-29',
+            departureTimezone: 'Europe/Berlin',
+            ...extra,
+          }),
+        ]),
+      )
+      expect(dayOf(result, 'd1')).toEqual([leg('gap'), 'after-gap'])
+      expect(
+        planMoveOutcome(
+          result.serverOrder,
+          'after-gap',
+          { container: 'd1', index: 0 },
+          result,
+        ),
+      ).toMatchObject({ kind: 'ask-drop-time' })
+      expect(
+        result.compareItemTimes(leg('gap'), 'after-gap', 'd1'),
+      ).toBeLessThan(0)
+    },
+  )
+
+  it('uses one transitive wall-clock frame for complete and incomplete journeys on the same day', () => {
+    const result = planBoard(
+      {
+        ...board([
+          {
+            ...day('d1', 1, [stop('stop', 'p1', 0, '03:00')]),
+            date: '2026-03-29',
+          },
+        ]),
+        timezone: 'Europe/Berlin',
+      },
+      notes([]),
+      transports([
+        journey('missing', { departureTime: '02:30' }),
+        journey('complete', {
+          departureTime: '02:45',
+          departureDate: '2026-03-28',
+          departureTimezone: 'Europe/London',
+        }),
+      ]),
+    )
+    const ids = [leg('missing'), leg('complete'), 'stop']
+    expect(dayOf(result, 'd1')).toEqual(ids)
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        expect(result.compareItemTimes(ids[i], ids[j], 'd1')).toBeLessThan(0)
+      }
+    }
+  })
+
+  it.each(['stop', 'note'] as const)(
+    'uses the destination fallback frame for a cross-day %s',
+    async (kind) => {
+      const { planMoveOutcome } = await import('../plan-move')
+      const result = planBoard(
+        {
+          ...board([
+            {
+              ...day(
+                'd1',
+                1,
+                kind === 'stop' ? [stop('moving', 'p1', 0, '03:00')] : [],
+              ),
+              date: '2026-03-28',
+            },
+            { ...day('d2', 2, []), date: '2026-03-29' },
+          ]),
+          timezone: 'Europe/Berlin',
+        },
+        notes(
+          kind === 'note' ? [note('moving', 'd1', 0, { time: '03:00' })] : [],
+        ),
+        transports([
+          journey('missing', {
+            departureDayId: 'd2',
+            arrivalDayId: 'd2',
+            departureTime: '02:30',
+          }),
+        ]),
+      )
+      const moving = kind === 'note' ? 'note:moving' : 'moving'
+      expect(
+        planMoveOutcome(
+          result.serverOrder,
+          moving,
+          { container: 'd2', index: 0 },
+          result,
+        ),
+      ).toMatchObject({ kind: 'ask-drop-time' })
+      expect(
+        planMoveOutcome(
+          result.serverOrder,
+          moving,
+          { container: 'd2', index: 1 },
+          result,
+        ),
+      ).toMatchObject({ kind: 'commit' })
+      expect(
+        planMoveOutcome(
+          result.serverOrder,
+          leg('missing', 'd2'),
+          { container: 'd1', index: 0 },
+          result,
+        ),
+      ).toMatchObject({ kind: 'refused', reason: 'not-in-another-day' })
+    },
+  )
+
+  it('prioritizes arrivals across a mixed equal-minute group without changing other ties', async () => {
+    const { planMoveOutcome } = await import('../plan-move')
+    const result = read(
+      { d1: [], d2: [stop('stop', 'p1', 0, '09:35')] },
+      [
+        journey('departure', {
+          departureDayId: 'd2',
+          arrivalDayId: 'd2',
+          departureTime: '09:35',
+        }),
+        journey('arrival', { arrivalDayId: 'd2', arrivalTime: '09:35' }),
+      ],
+      [note('n', 'd2', 0.5, { time: '09:35' })],
+    )
+    expect(dayOf(result, 'd2')).toEqual([
+      leg('arrival', 'd2'),
+      'stop',
+      leg('departure', 'd2'),
+      'note:n',
+    ])
+    expect(
+      planMoveOutcome(
+        result.serverOrder,
+        leg('departure', 'd2'),
+        { container: 'd2', index: 0 },
+        result,
+      ),
+    ).toMatchObject({ kind: 'refused', reason: 'timed' })
+    expect(result.compareItemTimes(leg('departure', 'd2'), 'stop', 'd2')).toBe(
+      0,
+    )
+    expect(
+      result.compareItemTimes(leg('departure', 'd2'), 'note:n', 'd2'),
+    ).toBe(0)
+  })
+
   it('preserves departure ties and stop/note order', () => {
     const result = read(
       { d1: [stop('a', 'p1', 0, '09:35')] },

@@ -321,6 +321,22 @@ function comparisonOf(
     const value = instantAt(date, '00:00')
     return value !== null && new Date(value).toISOString().slice(0, 10) === date
   }
+  // Journeys cannot change day; incomplete endpoints keep that whole day's clocks comparable.
+  const wallClockDays = new Set<string>()
+  for (const journey of journeys.values()) {
+    const time = times.get(journey.itemId)
+    if (time === undefined) continue
+    const row = rows.get(`${journey.kind}:${journey.id}`)
+    const arriving = journey.part === 'arriving'
+    const date = arriving ? row?.arrivalDate : row?.departureDate
+    const zone = arriving ? row?.arrivalTimezone : row?.departureTimezone
+    if (
+      !validDate(date) ||
+      !validZone(zone) ||
+      zonedToUtc(date, time, zone) === null
+    )
+      wallClockDays.add(journey.dayId)
+  }
   return (a, b, dayId) => {
     const day = payload.days.find((entry) => entry.dayId === dayId)
     const value = (id: string): number => {
@@ -329,6 +345,7 @@ function comparisonOf(
       const dayDate = day?.date
       const tripZone = payload.timezone
       if (
+        wallClockDays.has(dayId) ||
         !TIME_PATTERN.test(time) ||
         !validDate(dayDate) ||
         !validZone(tripZone)
@@ -355,7 +372,7 @@ function comparisonOf(
     }
     const difference = value(a) - value(b)
     if (difference !== 0) return difference
-    // Only arrivals win a clock tie; departing rows retain stored-position ties.
+    // Arrivals lead equal-minute groups; all non-arrival ties retain stored positions.
     return (
       Number(journeys.get(b)?.part === 'arriving') -
       Number(journeys.get(a)?.part === 'arriving')
