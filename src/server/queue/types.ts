@@ -169,11 +169,8 @@ export type BackupPayload = z.infer<typeof backupPayloadSchema>
 /**
  * How many object keys one `trip-purge` message may carry.
  *
- * A Queues message body is capped at 128 KB. A storage key is
- * `trips/<org>/<trip>/<file>-<filename>` (`storageKeyFor`), so ~200 bytes at its longest, and 500 of
- * them leaves the envelope comfortably inside that ceiling with room for the rest of it. The producer
- * chunks at this number; the handler chunks again at R2's own per-call ceiling, which is a different
- * limit for a different reason.
+ * The producer also bounds serialized UTF-8 bytes: long or multibyte keys may require fewer
+ * keys to fit the 128 KB message ceiling. The handler chunks again at R2's per-call ceiling.
  */
 export const MAX_PURGE_KEYS = 500
 
