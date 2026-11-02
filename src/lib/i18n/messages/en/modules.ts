@@ -51,6 +51,14 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'files.preview.position': '{current} of {total}',
+  'files.preview.download': 'Download {name}',
+  'files.preview.loading': 'Loading preview',
+  'files.preview.missing': 'The stored copy is missing.',
+  'files.preview.failed':
+    'The preview could not be loaded. Try again or download the file.',
+  'files.preview.previous': 'Previous image',
+  'files.preview.next': 'Next image',
   'vacay.page.eyebrow': 'Time off',
   'vacay.page.title': 'Vacay',
   'vacay.page.description':

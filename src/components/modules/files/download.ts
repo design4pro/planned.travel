@@ -10,10 +10,11 @@
 import { downloadTripFileFn } from '#/server/fns/files'
 
 /**
- * Stored types that must never reach an object URL under their own name.
+ * Stored types that must be neutralized before creating a download URL.
  *
  * A blob URL is same-origin, and the app sets no Content-Security-Policy header, so opening one
  * typed as markup would run it with the app's authority. Saving the bytes does not need the type.
+ * SVG previews expose rasterized pixels; native image navigation must never reach SVG markup.
  */
 const MARKUP_TYPES: ReadonlySet<string> = new Set([
   'text/html',
@@ -72,28 +73,31 @@ export function saveBlob(stored: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
 }
 
-/**
- * Saves one attachment to the reader's machine.
- *
- * Throws with a message worth showing, so the caller's `useAction` can toast it.
- */
+/** Fetches authenticated bytes without saving or changing their MIME type. */
+export async function fetchTripFileBytes(input: {
+  readonly tripId: string
+  readonly fileId: string
+}): Promise<Blob> {
+  const response = await downloadTripFileFn({
+    data: { tripId: input.tripId, fileId: input.fileId },
+  })
+  if (!(response instanceof Response)) {
+    throw new Error('The download did not come back in a form we could save.')
+  }
+  if (!response.ok) {
+    throw Object.assign(new Error(await reasonFor(response)), {
+      status: response.status,
+    })
+  }
+  return response.blob()
+}
+
+/** Saves one attachment under its real name; failures go through the caller's useAction. */
 export async function downloadTripFile(input: {
   readonly tripId: string
   readonly fileId: string
   readonly filename: string
 }): Promise<{ readonly filename: string }> {
-  const response = await downloadTripFileFn({
-    data: { tripId: input.tripId, fileId: input.fileId },
-  })
-
-  if (!(response instanceof Response)) {
-    throw new Error('The download did not come back in a form we could save.')
-  }
-  if (!response.ok) {
-    throw new Error(await reasonFor(response))
-  }
-
-  saveBlob(await response.blob(), input.filename)
-
+  saveBlob(await fetchTripFileBytes(input), input.filename)
   return { filename: input.filename }
 }

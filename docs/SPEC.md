@@ -129,6 +129,13 @@ edit the `dependencies` or `devDependencies` blocks of `package.json`, or `pnpm-
 you genuinely need a package that is absent, stop and report it in your result instead of
 installing it.
 
+**Named PDF preview exception (#1479 / PR #1725).** `pdfjs-dist@6.5.438` is an
+exactly pinned dependency, with only its required lockfile transitives. The owner authorized
+this one renderer because the native PDF viewer consumes Escape outside the application's DOM.
+The application renders PDF pages and selectable text itself; its client-only renderer, worker,
+fonts, CMaps and decoding assets load locally on demand, never from a CDN. No other package
+addition or upgrade is authorized by this exception; the dependency freeze otherwise holds.
+
 **What the freeze does not cover.** The `scripts` block. The freeze exists so the deployed
 bundle's contents stay a decision rather than an accident; a task runner that shells out to a
 committed script adds nothing to the bundle and installs nothing, so it was never the subject.

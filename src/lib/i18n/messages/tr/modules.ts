@@ -14,6 +14,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/modules'
 
 const messages = {
+  'files.preview.position': '{current} / {total}',
+  'files.preview.download': '{name} dosyasını indir',
+  'files.preview.loading': 'Önizleme yükleniyor',
+  'files.preview.missing': 'Saklanan kopya bulunamadı.',
+  'files.preview.failed':
+    'Önizleme yüklenemedi. Tekrar deneyin veya dosyayı indirin.',
+  'files.preview.previous': 'Önceki görsel',
+  'files.preview.next': 'Sonraki görsel',
   'vacay.page.eyebrow': 'Boş zaman',
   'vacay.page.title': 'İzinler',
   'vacay.page.description':

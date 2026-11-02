@@ -105,3 +105,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Place origin** - the catalogue identifier and revision retained by a trip's independent place snapshot. An origin link is available only while the origin is publicly readable; withdrawal does not remove the trip copy.
 
 - **Billing selection hint** - an expiring, tab-local, workspace- and viewer-scoped record of the requested plan, interval and seats used only to describe a billing return. It grants no entitlement and proves no payment; effective and scheduled changes come from authoritative billing state.
+
+- **File preview** - an authenticated, read-only view over Files: an image gallery or a PDF/plain-text reading dialog. Unsupported types download directly.
