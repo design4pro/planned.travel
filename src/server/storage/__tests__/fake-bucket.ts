@@ -84,7 +84,10 @@ export function fakeBucket(
           ? 0
           : keys.findIndex((key) => key > String(listOptions.cursor))
       const rest = start === -1 ? [] : keys.slice(start)
-      const page = rest.slice(0, pageSize)
+      const page = rest.slice(
+        0,
+        Math.min(pageSize, listOptions.limit ?? pageSize),
+      )
       const truncated = rest.length > page.length
       return {
         objects: page.map((key) => ({
