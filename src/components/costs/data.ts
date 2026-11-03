@@ -180,17 +180,9 @@ export function filterExpenses(
   people: ReadonlyArray<CostsPerson>,
   viewerUserId: string,
   removedPersonName?: string,
+  departedPeople: ReadonlyArray<CostsDepartedPerson> = [],
 ): Array<CostsExpense> {
   const needle = (filters.q ?? '').trim().toLowerCase()
-  const nameOf = new Map(
-    people.map((person) => [
-      person.userId,
-      (person.leftWorkspace === true && removedPersonName !== undefined
-        ? removedPersonName
-        : person.name
-      ).toLowerCase(),
-    ]),
-  )
 
   return rows.filter((row) => {
     if (filters.category !== undefined && row.category !== filters.category) {
@@ -212,7 +204,12 @@ export function filterExpenses(
     if (needle === '') {
       return true
     }
-    const payer = row.paidBy === null ? '' : (nameOf.get(row.paidBy) ?? '')
+    const person =
+      row.paidBy === null
+        ? undefined
+        : findPerson(people, departedPeople, row.paidBy)
+    const payer =
+      person === undefined ? '' : (person.name ?? removedPersonName ?? '')
     const haystack =
       `${row.title} ${row.notes ?? ''} ${row.category} ${payer}`.toLowerCase()
     return haystack.includes(needle)
@@ -689,18 +686,12 @@ function csvLine(fields: ReadonlyArray<string>): string {
 export function expensesCsv(input: {
   readonly rows: ReadonlyArray<CostsExpense>
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople?: ReadonlyArray<CostsDepartedPerson>
   readonly viewerUserId: string
   readonly display: DisplayCurrency
   readonly t: Translate
 }): string {
   const { t } = input
-  // The server names a payer who left the workspace in English; the catalogue names them here.
-  const nameOf = new Map(
-    input.people.map((person) => [
-      person.userId,
-      person.leftWorkspace === true ? t('costs.person.removed') : person.name,
-    ]),
-  )
 
   const lines = [
     csvLine([
@@ -725,7 +716,8 @@ export function expensesCsv(input: {
         row.exchangeRate === null ? '' : row.exchangeRate.toFixed(4),
         row.paidBy === null
           ? ''
-          : (nameOf.get(row.paidBy) ?? t('costs.person.removed')),
+          : (findPerson(input.people, input.departedPeople ?? [], row.paidBy)
+              ?.name ?? t('costs.person.removed')),
         row.splitMethod,
         formatMoneyPlain(shareOf(row, input.viewerUserId), row.currency),
         row.notes ?? '',

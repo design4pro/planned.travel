@@ -660,8 +660,7 @@ export function ExpenseDialog({
                     : [
                         {
                           value: departedPayer.userId,
-                          label:
-                            departedPayer.name ?? t('costs.person.removed'),
+                          label: `${departedPayer.name ?? t('costs.person.removed')} · ${t('costs.split.departed')}`,
                         },
                       ]),
                   ...offered.map((person) => {
