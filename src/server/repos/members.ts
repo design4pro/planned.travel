@@ -10,6 +10,10 @@
  * reads it without that predicate.
  */
 
+import {
+  workspaceDeletionAbsent,
+  assertWorkspaceNotDeleting,
+} from '#/server/catalog/workspace-deletions'
 import { and, asc, count, eq, exists, inArray, ne, notExists, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
@@ -294,6 +298,7 @@ export async function addMember(scope: TenantScope, input: AddMemberInput): Prom
   const values = addMemberInput.parse(input)
   assertGrantRole(scope, values.role ?? 'member')
 
+  await assertWorkspaceNotDeleting(scope.db, scope.ctx.organizationId)
   const existing = await getMembership(scope, values.userId)
   if (existing) {
     return existing
@@ -303,12 +308,20 @@ export async function addMember(scope: TenantScope, input: AddMemberInput): Prom
   // The participation anchor first (ADR 0043): a failed anchor write leaves no membership, and an
   // anchor left by a failed membership insert is harmless.
   await recordParticipant(scope, values.userId)
-  return membersRepository.insert(scope, {
-    id: newId(),
-    userId: values.userId,
-    role: values.role ?? 'member',
-    createdAt: new Date(),
-  })
+  const rows = await prepareTenantInsert(
+    scope,
+    member,
+    {
+      id: newId(),
+      userId: values.userId,
+      role: values.role ?? 'member',
+      createdAt: new Date(),
+    },
+    workspaceDeletionAbsent(scope.ctx.organizationId),
+  ).returning()
+  const row = rows[0]
+  if (!row) throw new Error('WORKSPACE_DELETION_PENDING')
+  return row
 }
 
 /**
@@ -566,6 +579,7 @@ export async function createInvitation(
   input: CreateInvitationInput,
 ): Promise<Invitation> {
   assertCanAdminister(scope.ctx, 'invite a member')
+  await assertWorkspaceNotDeleting(scope.db, scope.ctx.organizationId)
   const values = createInvitationInput.parse(input)
 
   assertGrantRole(scope, values.role ?? 'member')
@@ -587,6 +601,7 @@ export async function createInvitation(
       createdAt: new Date(),
     },
     and(
+      workspaceDeletionAbsent(scope.ctx.organizationId),
       Number.isFinite(limits.members)
         ? sql`${usage} < ${limits.members}`
         : sql`1`,
@@ -610,6 +625,7 @@ export async function createInvitation(
   ).returning()
   const row = rows.at(0)
   if (row) return row
+  await assertWorkspaceNotDeleting(scope.db, scope.ctx.organizationId)
   await refuseInvitationDuplicate(scope, values.email)
   throw new QuotaExceededError('members', limits.members, limits.members)
 }

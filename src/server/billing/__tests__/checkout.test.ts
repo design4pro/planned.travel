@@ -2069,3 +2069,65 @@ describe('orderInvoiceUrl', () => {
     expect(harness.calls).toHaveLength(0)
   })
 })
+
+it('refuses checkout and plan changes through the real deletion ledger, recovering after refusal', async () => {
+  const { createHarness: databaseHarness } =
+    await import('#/server/repos/__tests__/harness')
+  const { createSubscriptionStore } = await import('../store')
+  const {
+    insertWorkspaceDeletion,
+    acquireDeletionLease,
+    transitionWorkspaceDeletion,
+  } = await import('#/server/catalog/workspace-deletions')
+  const db = await databaseHarness()
+  try {
+    const a = await db.seedTenant('billing-delete')
+    const b = await db.seedTenant('billing-live')
+    const h = createHarness()
+    const runtime = {
+      ...h.runtime,
+      subscriptions: createSubscriptionStore(db.db),
+    }
+    const row = await insertWorkspaceDeletion(db.db, {
+      organizationId: a.organizationId,
+      initiator: 'owner',
+      requestedBy: a.ownerUserId,
+    })
+    const selection = {
+      planId: 'crew' as const,
+      interval: 'monthly' as const,
+      seats: 4,
+    }
+    for (const action of [createCheckoutSession, changePlan]) {
+      await expect(
+        action(
+          runtime,
+          billingIdentity({ organizationId: a.organizationId }),
+          selection,
+        ),
+      ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+    }
+    expect(h.calls).toHaveLength(0)
+    await createCheckoutSession(
+      runtime,
+      billingIdentity({ organizationId: b.organizationId }),
+      selection,
+    )
+    const token = await acquireDeletionLease(db.db, row.id)
+    if (!token) throw new Error('Missing lease')
+    await transitionWorkspaceDeletion(
+      db.db,
+      row.id,
+      token,
+      'requested',
+      'refused',
+    )
+    await changePlan(
+      runtime,
+      billingIdentity({ organizationId: a.organizationId }),
+      selection,
+    )
+  } finally {
+    db.close()
+  }
+})

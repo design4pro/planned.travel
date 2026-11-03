@@ -286,7 +286,7 @@ through `createTenantRepository()`, which ANDs `organization_id = ?` onto every 
 supplies. A curator moderating a stranger's link holds no tenant context for that stranger's
 workspace and may not invent one: §3.7 rule 2 and SPEC §5 both forbid exactly that, and it is the
 single thing `src/server/repos/base.ts` exists to make inexpressible. Nor is the table reachable
-through `src/server/catalog/repo.ts`: that door serves eight of the twelve global tables of SPEC §5's
+through `src/server/catalog/repo.ts`: that door serves catalog content among the thirteen global tables of SPEC §5's
 carve-out, and `share_links` is not one of them. So the surface is built the way the one existing
 session-less path in this codebase is already built, and named the same way:
 
@@ -360,6 +360,15 @@ MCP server (SPEC §5, SPEC §6). Consequences that are not negotiable:
   unaudited mutation is a failing test.
 
 ### 2.6 The plugin's own HTTP surface is closed
+
+Workspace deletion preparation (ADR 0048) adds no usable deletion endpoint:
+`disableOrganizationDeletion: true` remains enforced. The platform deletion ledger fences
+organization member addition, invitation creation and acceptance, direct repository writers,
+checkout and plan changes while any non-refused row exists. Refused rows restore those paths;
+ordinary workspace reads do not consult the ledger. The eventual owner-only, step-up-protected
+product driver and its destructive endpoint ship separately. Better Auth hooks and Polar calls
+cannot make their check and external write atomic; guarded deletion and late-subscription handling
+remain required before enabling a producer.
 
 Registering Better Auth's `admin` plugin does not only hand us `hasPermission` and five columns. It
 publishes fifteen HTTP endpoints, and `src/routes/api/auth/$.ts` mounts every Better Auth route

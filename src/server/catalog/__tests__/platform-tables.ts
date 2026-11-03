@@ -1,5 +1,5 @@
 /**
- * Four of the global tables of SPEC §5's carve-out, in an in-memory SQLite database.
+ * Five of the global tables of SPEC §5's carve-out, in an in-memory SQLite database.
  *
  * `src/server/repos/__tests__/harness.ts` builds the whole relational model the same way and is the
  * right tool for a tenant repository test. It cannot be the tool here: it imports `../base` and
@@ -8,7 +8,7 @@
  * beside this file exists to catch. That check walks the module graph from every module in this
  * directory, this fixture included, so an import taken here for convenience is as visible as one
  * taken in `audit.ts`. This fixture is deliberately the smaller thing rather than a second copy of
- * that one: two tables, no tenant, no scope, no seeding.
+ * that one: only platform tables, no tenant, no scope, no seeding.
  *
  * The DDL is generated from the Drizzle schema itself (`drizzle-kit/api`), so the real column types,
  * the five real `CHECK` constraints of docs/ACCESS.md §4.1 and the real `token_id` foreign key are
@@ -28,6 +28,7 @@ import {
   providerRegistry,
   providerUsage,
   staffApiTokens,
+  workspaceDeletions,
 } from '#/server/db/schema'
 import type { Database } from '#/server/db/types'
 
@@ -47,6 +48,7 @@ function schemaStatements(): Promise<Array<string>> {
       providerRegistry,
       providerUsage,
       staffApiTokens,
+      workspaceDeletions,
     })
     return generateSQLiteMigration(empty, current)
   })()

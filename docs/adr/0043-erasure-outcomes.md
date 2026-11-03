@@ -21,7 +21,7 @@ names a table and column, where it came from (`user-ref`, `auth`, or `embedded` 
 inside another column), one of **remove**, **anonymise**, **null**, **revoke** or **keep**, a reason, the
 module that will own the scrub and the engine step. A drift test parses `src/server/db/schema.ts` and
 `auth-schema.ts` and fails on a column the registry misses or names without a schema column behind it,
-and a fixture that adds a column proves the failure. The platform audit ledger is the one `keep`.
+and a fixture that adds a column proves the failure. The platform audit ledger retains evidence; ADR 0048 additionally retains workspace deletion attribution and temporary receipts until their bounded terminal cleanup.
 
 Outcomes the spec predates, decided here:
 
