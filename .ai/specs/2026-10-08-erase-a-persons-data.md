@@ -621,7 +621,7 @@ their default channels.
 
 ### Phase 4 - Workspace deletion
 
-`deleteWorkspace` (organization-id predicate, `assertCanAdminister`, member count), `deletePrefix` in `storage/objects.ts`,
+`deleteWorkspace` (organization-id predicate, owner-only authorization, atomic membership and subscription guards), `deletePrefix` in `storage/objects.ts`,
 the room reset, the subscription gate. **Test seam:** `deleteWorkspace` (A's call leaves B untouched; refused with two
 members); the prefix sweep with a fake bucket, 1,000-key batches, resumable; a Polar webhook for a deleted organization.
 
@@ -764,17 +764,17 @@ gated the ticket (`risk-high`, approved, confidence high):
   repeated failures disable the endpoint for every workspace.
 - **`deletePrefix` and the sweep live in `storage/objects.ts` and `storage/workspace-objects.ts`**,
   refusing any prefix that is not a whole directory. `avatars/<org>/` is swept although no portrait is
-  written yet. Collectors the caller runs before the rows go: `listWorkspaceTripIds` (`repos/trips.ts`)
-  and `listWorkspaceJourneyPhotoKeys` (`repos/journey.ts`), both administrators only.
+  written yet. The existing administrator-only collectors remain available; bounded deletion drivers
+  now use `drainWorkspace` for trip ids and `drainWorkspaceObjects` for all owned namespaces,
+  including journey photos, without retaining unbounded id/key lists (#1739).
 - **The room reset is a `POST` `reset` route** that closes every socket, runs `deleteAll()` and
   removes the alarm; `resetTripRooms` tries every trip and then fails naming the ones that did.
 - **No orchestrator ships here.** The engine composes the pieces in a later phase. It must keep its
   resume state somewhere that survives the workspace: `workspace_participants` carries the
   `erasure_id`, is an `orgRef()` table, and goes with the workspace in step 4.
-- **An administrator may delete the workspace, not only the owner.** `deleteWorkspace` stays on
-  `assertCanAdminister`, as plan 09 and plan 10 (`deleteWorkspace` "stays on `assertCanAdminister`") say. The
-  erasure engine calls it with the reserved system user, role `owner`. Narrowing the interactive caller to the
-  owner is a product decision for the phase that adds the screen.
+- **Workspace deletion is owner-only (#1739).** `deleteWorkspace` and `drainWorkspace` now require
+  `assertRole(ctx, 'workspace.delete', 'owner')`. The erasure engine's reserved system scope must
+  therefore retain role `owner`; admins and members are refused before any cleanup.
 - **Open for a person before the engine phase merges (money):** a workspace whose subscription is set to cancel
   at the end of the period can be deleted, and Polar goes on sending events for it. They are acknowledged and
   ignored, logged at `warn` as `billing.webhook.organization_gone`; if the customer undoes the cancellation or a

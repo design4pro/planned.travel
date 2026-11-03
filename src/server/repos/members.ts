@@ -24,7 +24,17 @@ import {
   organization,
   user,
 } from '#/server/db/auth-schema'
-import { auditLog, newId, subscriptions } from '#/server/db/schema'
+import {
+  auditLog,
+  newId,
+  subscriptions,
+  trips,
+  notifications,
+  usageRecords,
+  places,
+  collections,
+  journeys,
+} from '#/server/db/schema'
 import { findLivePaidSubscription, livePaidSubscription } from './billing'
 import {
   allOf,
@@ -40,6 +50,7 @@ import {
   RepositoryError,
   QuotaExceededError,
   assertCanAdminister,
+  assertRole,
 } from './context'
 import { anotherOwner, hasStoredRole, memberAuthority, removalPredicate } from './member-guards'
 import type { BatchStatement } from './batch'
@@ -153,10 +164,10 @@ export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceInput>
 /**
  * Deletes the workspace the scope is bound to, with everything that belongs to it. Only the
  * `organization` row is deleted here: every tenant table follows through its `ON DELETE CASCADE`
- * (`orgRef()`). It touches no object store, trip room or provider - those are the caller's, which
- * collects their keys and trip ids first, because the rows that name them go with this call.
+ * (`orgRef()`). The caller uses the bounded drain to close trip rooms first and the namespace sweep
+ * for objects; this final statement touches no object store, trip room or provider.
  *
- * Refuses, and changes nothing, when the caller cannot administer the workspace, when anyone but
+ * Refuses, and changes nothing, when the caller is not its owner, when anyone but
  * `departingUserId` is still a member, or while the workspace has a live paid subscription.
  * Nothing here cancels a subscription or refunds money.
  *
@@ -169,7 +180,7 @@ export async function deleteWorkspace(
   scope: TenantScope,
   input: DeleteWorkspaceInput = {},
 ): Promise<void> {
-  assertCanAdminister(scope.ctx, 'delete the workspace')
+  assertRole(scope.ctx, 'workspace.delete', 'owner')
   const { departingUserId } = deleteWorkspaceInput.parse(input)
   const organizationName = (await getOrganization(scope)).name
 
@@ -190,18 +201,7 @@ export async function deleteWorkspace(
       and(
         // The tenant discriminator of this table is its primary key.
         eq(organization.id, scope.ctx.organizationId),
-        notExists(
-          scope.db
-            .select({ present: sql`1` })
-            .from(member)
-            .where(tenantFilter(scope, member, anyoneBut(departingUserId))),
-        ),
-        notExists(
-          scope.db
-            .select({ present: sql`1` })
-            .from(subscriptions)
-            .where(tenantFilter(scope, subscriptions, livePaidSubscription())),
-        ),
+        workspaceDeletionEligible(scope, departingUserId),
       ),
     )
     .returning({ id: organization.id })
@@ -211,6 +211,105 @@ export async function deleteWorkspace(
     await refuseIfBlocked()
     throw new NotFoundError('organization', scope.ctx.organizationId)
   }
+}
+
+/** Shared atomic guard for the final delete and every drain step. */
+function workspaceDeletionEligible(
+  scope: TenantScope,
+  departingUserId: string | undefined,
+): SQL {
+  return allOf(
+    notExists(
+      scope.db
+        .select({ present: sql`1` })
+        .from(member)
+        .where(tenantFilter(scope, member, anyoneBut(departingUserId))),
+    ),
+    notExists(
+      scope.db
+        .select({ present: sql`1` })
+        .from(subscriptions)
+        .where(tenantFilter(scope, subscriptions, livePaidSubscription())),
+    ),
+  )
+}
+
+/** Never drain a parent of a deployed NO ACTION relationship separately from its trip. */
+export const WORKSPACE_DRAIN_TABLES = [
+  trips,
+  auditLog,
+  notifications,
+  usageRecords,
+  places,
+  collections,
+  journeys,
+] as const
+export const WORKSPACE_DRAIN_MAX_STEPS = 20
+export const WORKSPACE_DRAIN_BATCH_SIZE = 100
+
+/** Rooms stay outside the repository; a failed close leaves the entire selected trip batch intact. */
+export async function drainWorkspace(
+  scope: TenantScope,
+  input: DeleteWorkspaceInput,
+  closeRooms: (tripIds: ReadonlyArray<string>) => Promise<void>,
+): Promise<{ drained: boolean; steps: number; deleted: number }> {
+  assertRole(scope.ctx, 'workspace.delete', 'owner')
+  const { departingUserId } = deleteWorkspaceInput.parse(input)
+  const [workspace] = await scope.db
+    .select({ name: organization.name })
+    .from(organization)
+    .where(eq(organization.id, scope.ctx.organizationId))
+    .limit(1)
+  if (!workspace) return { drained: true, steps: 0, deleted: 0 }
+  const refuseIfBlocked = async () => {
+    if ((await membersRepository.count(scope, anyoneBut(departingUserId))) > 0)
+      throw new WorkspaceNotEmptyError(workspace.name)
+    if (await findLivePaidSubscription(scope))
+      throw new WorkspaceHasLiveSubscriptionError(workspace.name)
+  }
+  await refuseIfBlocked()
+  let steps = 0
+  let deleted = 0
+  for (const table of WORKSPACE_DRAIN_TABLES) {
+    for (;;) {
+      // Re-select on each retry; progress is the rows already removed, never a caller-supplied cursor.
+      const rows = await scope.db
+        .select({ id: table.id })
+        .from(table)
+        .where(
+          tenantFilter(
+            scope,
+            table,
+            workspaceDeletionEligible(scope, departingUserId),
+          ),
+        )
+        .orderBy(asc(table.id))
+        .limit(WORKSPACE_DRAIN_BATCH_SIZE)
+      if (rows.length === 0) {
+        await refuseIfBlocked()
+        break
+      }
+      if (steps === WORKSPACE_DRAIN_MAX_STEPS)
+        return { drained: false, steps, deleted }
+      if (table === trips) await closeRooms(rows.map((row) => row.id))
+      // One JSON parameter keeps the exact closed-room set below D1's bound-parameter ceiling.
+      const selected = sql`${table.id} in (select value from json_each(${JSON.stringify(rows.map((row) => row.id))}) limit ${WORKSPACE_DRAIN_BATCH_SIZE})`
+      const removed = await scope.db
+        .delete(table)
+        .where(
+          tenantFilter(
+            scope,
+            table,
+            allOf(selected, workspaceDeletionEligible(scope, departingUserId)),
+          ),
+        )
+        .returning({ id: table.id })
+      steps += 1
+      deleted += removed.length
+      await refuseIfBlocked()
+    }
+  }
+  return { drained: true, steps, deleted }
 }
 
 /** Every member, or every member but one. */
