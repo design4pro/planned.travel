@@ -396,4 +396,58 @@ describe('factor proof and rollout at the real auth handler', () => {
       `Account authority local SQLite wall latency: median=${samples[10].toFixed(2)}ms p95=${samples[19].toFixed(2)}ms, primary reads=2\n`,
     )
   })
+  it('does not present another signed-in account receipt as this account recovery', async () => {
+    const first = await signup('receipt-owner@planned.travel')
+    const second = await signup('receipt-unrelated@planned.travel')
+    await activate()
+    const intent = crypto.randomUUID()
+    const registered = await post(
+      '/account-security/register-operation',
+      { intent },
+      first.cookie,
+    )
+    expect(registered.status).toBe(200)
+    const { id } = (await registered.json()) as { id: string }
+    const receiptCookie = cookies(registered)
+    const committed = await post(
+      '/account-security/revoke-other-sessions',
+      { id, intent, confirm: true },
+      `${first.cookie}; ${receiptCookie}`,
+    )
+    expect(committed.status).toBe(200)
+    const availability = await getAuth().handler(
+      new Request(`${BASE_URL}/api/auth/account-security/availability`, {
+        headers: { cookie: `${second.cookie}; ${receiptCookie}` },
+      }),
+    )
+    expect(availability.status).toBe(200)
+    expect(await availability.json()).toEqual({
+      available: true,
+      recovery: null,
+    })
+    const status = await getAuth().handler(
+      new Request(
+        `${BASE_URL}/api/auth/account-security/operation-status?id=${id}`,
+        { headers: { cookie: receiptCookie } },
+      ),
+    )
+    expect(status.status).toBe(200)
+    expect(await status.json()).toMatchObject({ status: 'committed' })
+    expect(await sessionPresent(second.cookie)).toBe(true)
+    const reauthenticated = await post('/sign-in/email', {
+      email: 'receipt-owner@planned.travel',
+      password: PASSWORD,
+    })
+    expect(reauthenticated.status).toBe(200)
+    const recovered = await getAuth().handler(
+      new Request(`${BASE_URL}/api/auth/account-security/availability`, {
+        headers: { cookie: `${cookies(reauthenticated)}; ${receiptCookie}` },
+      }),
+    )
+    expect(recovered.status).toBe(200)
+    expect(await recovered.json()).toMatchObject({
+      available: true,
+      recovery: { id, status: 'committed' },
+    })
+  })
 })

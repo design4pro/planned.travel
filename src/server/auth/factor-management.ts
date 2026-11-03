@@ -71,10 +71,15 @@ export function accountSessionManagement(
                   Date.now(),
                 )
               : null
+          let ownerMatches = false
+          if (previous && id) {
+            const { scope } = await authority.bind(ctx.context.session.user.id)
+            ownerMatches = (await operationFor(scope, id)) !== null
+          }
           return ctx.json({
             available: enabled(),
             recovery:
-              previous && id
+              previous && id && ownerMatches
                 ? { id, ...outcomeOf(previous, Date.now()) }
                 : null,
           })
