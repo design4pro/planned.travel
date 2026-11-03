@@ -109,3 +109,64 @@ it('names a carried removed payer in Arabic when recording a payment', async () 
   )
   await expectRemovedPayer()
 })
+
+it('marks an unnamed departed payer with localized visible and accessible text', async () => {
+  mount(
+    <ExpenseDialog
+      open
+      onOpenChange={() => {}}
+      expense={{ ...EXPENSE, paidBy: 'gone' }}
+      people={PEOPLE}
+      departedPeople={[{ userId: 'gone', name: null, image: null }]}
+      viewerUserId="u1"
+      tripCurrency="EUR"
+      categories={[{ value: 'food', label: 'Food', icon: null }]}
+      defaultCategory="food"
+      today="2026-10-12"
+      onSubmit={async () => {}}
+    />,
+  )
+  const label = `${Costs['person.removed']} · ${Costs['split.departed']}`
+  const payer = screen.getByRole('combobox', { name: Costs['field.paidBy'] })
+  expect(payer.textContent).toBe(label)
+  await userEvent.setup({ delay: null }).click(payer)
+  expect(await screen.findByRole('option', { name: label })).toBeTruthy()
+})
+
+it.each([
+  ['gone', Costs['person.removed']],
+  ['unknown', Costs['rebase.someone']],
+  ['u1', 'Ada'],
+  ['u2', Costs['person.removed']],
+])(
+  'preserves localized payment naming and current-person precedence for %s',
+  (fromUserId, expected) => {
+    mount(
+      <PaymentDialog
+        open
+        onOpenChange={() => {}}
+        seed={{ fromUserId, toUserId: 'recipient', amountMinor: 100 }}
+        people={PEOPLE}
+        departedPeople={[
+          { userId: 'gone', name: null, image: null },
+          { userId: 'u1', name: 'Stale name', image: null },
+          { userId: 'u2', name: 'Hidden name', image: null },
+          { userId: 'recipient', name: 'Pia', image: null },
+        ]}
+        viewerUserId="u1"
+        currency="EUR"
+        today="2026-10-12"
+        onSubmit={async () => {}}
+      />,
+    )
+    expect(
+      screen.getByText(
+        Costs['payment.pays']
+          .replace('{from}', expected)
+          .replace('{to}', 'Pia'),
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText('Stale name')).toBeNull()
+    expect(screen.queryByText('Hidden name')).toBeNull()
+  },
+)
