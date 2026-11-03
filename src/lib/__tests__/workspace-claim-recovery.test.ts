@@ -14,6 +14,7 @@ import {
 afterEach(() => {
   resetWorkspaceClaim()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 function verifyWith(
@@ -55,6 +56,7 @@ describe('explicit workspace compatibility recovery', () => {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
+      signal: expect.any(AbortSignal),
       headers: { 'x-planned-workspace': 'org_a' },
     })
     reply.resolve({ organizationId: 'org_a' })
@@ -65,6 +67,46 @@ describe('explicit workspace compatibility recovery', () => {
       noticeOpen: false,
     })
   })
+
+  it.each(['request', 'body'])(
+    'fails closed when the %s stalls past the deadline, then permits retry',
+    async (phase) => {
+      stale()
+      const controller = new AbortController()
+      const timeout = vi
+        .spyOn(AbortSignal, 'timeout')
+        .mockReturnValue(controller.signal)
+      const stalled = () =>
+        new Promise<never>((_resolve, reject) => {
+          controller.signal.addEventListener(
+            'abort',
+            () => reject(controller.signal.reason),
+            { once: true },
+          )
+        })
+      const request = vi.fn((_url: string, options: RequestInit) => {
+        expect(options.signal).toBe(controller.signal)
+        return phase === 'request'
+          ? stalled()
+          : Promise.resolve({ ok: true, json: stalled })
+      })
+      vi.stubGlobal('fetch', request)
+      const recovery = recoverWorkspaceClaim()
+      await Promise.resolve()
+      expect(timeout).toHaveBeenCalledWith(10_000)
+      controller.abort(
+        new DOMException('Verification timed out', 'TimeoutError'),
+      )
+      await expect(recovery).resolves.toBe(false)
+      expect(workspaceClaimState()).toMatchObject({
+        stale: true,
+        noticeOpen: true,
+      })
+      timeout.mockRestore()
+      verifyWith(async () => ({ organizationId: 'org_a' }))
+      await expect(recoverWorkspaceClaim()).resolves.toBe(true)
+    },
+  )
 
   it('never adopts a mismatching workspace', async () => {
     stale()

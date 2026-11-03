@@ -112,6 +112,7 @@ export async function recoverWorkspaceClaim(): Promise<boolean> {
       method: 'GET',
       credentials: 'same-origin',
       cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
       headers: { [WORKSPACE_CLAIM_HEADER]: claim.organizationId },
     })
     if (!response.ok) return false
