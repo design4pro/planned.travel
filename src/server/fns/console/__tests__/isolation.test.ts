@@ -70,14 +70,15 @@ describe('the console directory reaches no tenant layer', () => {
     expect(graph.unresolved.filter((entry) => !pending.test(entry))).toEqual([])
   })
 
-  it('reaches only the two closed auth-layer repositories and the primitives', () => {
+  it('reaches only the closed auth-layer repositories and the primitives', () => {
     // #1009: recipient invitation consumption. #1174: the insert-if-absent of a new account's own
-    // language. Each is an auth-runtime-free leaf; the barrel and `settings.ts` stay out of reach.
+    // language. ADR 0048 adds the account-only authority capability. The barrel and `settings.ts` stay out of reach.
     const reached = graph.modules.filter((file) =>
       file.startsWith(`${TENANT_REPOS}/`),
     )
     expect(reached.sort()).toEqual(
       [
+        'account-security.ts',
         'base.ts',
         'batch.ts',
         'context.ts',
