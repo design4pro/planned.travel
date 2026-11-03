@@ -479,6 +479,7 @@ it('keeps the draft and chain across a stale-currency refusal and retries with t
       />
     </I18nProvider>
   )
+  router.invalidate.mockRejectedValueOnce(new Error('offline'))
   const view = render(dialog('EUR'))
   fireEvent.change(screen.getByLabelText(/^Name/u), {
     target: { value: 'My typed train' },
@@ -496,6 +497,9 @@ it('keeps the draft and chain across a stale-currency refusal and retries with t
   })
   expect(onWriteError).not.toHaveBeenCalled()
   expect(close).not.toHaveBeenCalled()
+  fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+  await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalledTimes(2))
+  expect(save).toHaveBeenCalledTimes(1)
   view.rerender(dialog('GBP'))
   await vi.waitFor(() =>
     expect(screen.getByLabelText(/^Name/u).getAttribute('value')).toBe(

@@ -205,6 +205,7 @@ it('keeps search choices and results after a stale save, then retries with the r
       />
     </I18nProvider>
   )
+  stubs.invalidate.mockRejectedValueOnce(new Error('offline'))
   const view = mount(search('EUR'))
   const user = userEvent.setup()
   for (const [label, name] of [
@@ -226,6 +227,9 @@ it('keeps search choices and results after a stale save, then retries with the r
   })
   expect(saved).not.toHaveBeenCalled()
   expect(onWriteError).not.toHaveBeenCalled()
+  fireEvent.click(await screen.findByRole('button', { name: 'Try again' }))
+  await vi.waitFor(() => expect(stubs.invalidate).toHaveBeenCalledTimes(2))
+  expect(stubs.save).toHaveBeenCalledTimes(1)
   view.rerender(search('GBP'))
   await vi.waitFor(() =>
     expect(screen.getByRole('alert').textContent).toContain('GBP'),

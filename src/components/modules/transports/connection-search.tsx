@@ -850,6 +850,17 @@ export function ConnectionSearch({
   const t = useTranslate()
   const goneSentence = useGoneSentence()
   const router = useRouter()
+  const [refreshingCurrency, setRefreshingCurrency] = useState(false)
+  async function refreshCurrency(): Promise<void> {
+    setRefreshingCurrency(true)
+    try {
+      await router.invalidate({ sync: true })
+    } catch {
+      // Keep the stale refusal and draft so the reader can retry this read.
+    } finally {
+      setRefreshingCurrency(false)
+    }
+  }
   const refusalRef = useRef<HTMLDivElement>(null)
   const dated = useMemo(() => datedDays(days), [days])
   const [origin, setOrigin] = useState<StationMatch | null>(null)
@@ -886,7 +897,7 @@ export function ConnectionSearch({
     onError: (cause) => {
       if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
         stale.refuse(currencyCode(tripCurrency))
-        void router.invalidate()
+        void refreshCurrency()
       } else {
         onWriteError?.(cause)
       }
@@ -1117,6 +1128,14 @@ export function ConnectionSearch({
           title={t('modules.transports.connection.saveError')}
         >
           {saveError}
+          {stale.pending ? (
+            <Button
+              disabled={refreshingCurrency}
+              onClick={() => void refreshCurrency()}
+            >
+              {t('shell.error.retry')}
+            </Button>
+          ) : null}
         </Alert>
       ) : null}
     </div>

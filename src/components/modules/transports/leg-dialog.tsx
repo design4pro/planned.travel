@@ -229,6 +229,17 @@ export function TransportDialog({
     currentOpen.current = draftId
   }, [draftId])
   const closeRef = useRef<HTMLButtonElement>(null)
+  const [refreshingCurrency, setRefreshingCurrency] = useState(false)
+  async function refreshCurrency(): Promise<void> {
+    setRefreshingCurrency(true)
+    try {
+      await router.invalidate({ sync: true })
+    } catch {
+      // Keep the stale refusal and draft so the reader can retry this read.
+    } finally {
+      setRefreshingCurrency(false)
+    }
+  }
   const priceRef = useRef<HTMLInputElement>(null)
   const openedFor = useRef<string | null>(null)
   const identity = `${tripId}:${transport?.id ?? 'new'}`
@@ -272,7 +283,7 @@ export function TransportDialog({
    */
   function onSaveError(cause: unknown): void {
     if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
-      void router.invalidate()
+      void refreshCurrency()
       if (open && draftId === currentOpen.current) {
         stale.refuse(currencyCode(currency))
       } else {
@@ -538,6 +549,14 @@ export function TransportDialog({
               {!gone && saveError !== null ? (
                 <Alert tone="danger" title={t('modules.form.saveError')}>
                   {saveError}
+                  {stale.pending ? (
+                    <Button
+                      disabled={refreshingCurrency}
+                      onClick={() => void refreshCurrency()}
+                    >
+                      {t('shell.error.retry')}
+                    </Button>
+                  ) : null}
                 </Alert>
               ) : null}
 
