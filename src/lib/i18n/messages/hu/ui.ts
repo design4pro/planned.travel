@@ -28,6 +28,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': '{label} másolása',
+  'copyValue.copied': '{label} másolva',
+  'statusMenu.current': '{label} - jelenleg: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Törlés',
   'action.clearFilters': 'Szűrők törlése',

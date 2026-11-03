@@ -10,6 +10,8 @@ import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
 import modules from '#/lib/i18n/messages/en/modules'
+import ui from '#/lib/i18n/messages/en/ui'
+import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import { MASK_CHARACTER, MaskedCode, maskCode } from '../masked-code'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -24,9 +26,10 @@ const LABEL = 'the confirmation number for Hotel Gracery'
  * render of the masked state needs a provider above it — and reading the shipped
  * file rather than a stub means a key nobody wrote fails here.
  */
-const EN: Catalogue = Object.fromEntries(
-  Object.entries(modules).map(([key, message]) => [`modules.${key}`, message]),
-)
+const EN: Catalogue = {
+  ...namespaceCatalogue('modules', modules),
+  ...namespaceCatalogue('ui', ui),
+}
 
 function inEnglish(node: ReactNode) {
   return (

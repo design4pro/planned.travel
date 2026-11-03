@@ -30,6 +30,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': 'Salin {label}',
+  'copyValue.copied': '{label} disalin',
+  'statusMenu.current': '{label} - saat ini: {status}',
   'action.clear': 'Kosongkan',
   'action.clearFilters': 'Hapus filter',
   'action.close': 'Tutup',

@@ -10,7 +10,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
-import { CopyValue } from '../controls'
+import { I18nProvider } from '#/lib/i18n'
+import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import PlUi from '#/lib/i18n/messages/pl/ui'
+import { CopyValue, StatusMenu } from '../controls'
 
 const VALUE = 'HG-8842190'
 const LABEL = 'the confirmation number for Hotel Gracery'
@@ -122,5 +125,65 @@ describe('CopyValue', () => {
     expect(fireEvent.mouseDown(button)).toBe(false)
     fireEvent.click(button)
     expect(fireEvent.mouseDown(button)).toBe(false)
+  })
+})
+
+describe('localized shared controls', () => {
+  it('translates copy and copied names while preserving the supplied label', async () => {
+    render(
+      <I18nProvider locale="pl" messages={namespaceCatalogue('ui', PlUi)}>
+        <CopyValue value={VALUE} label={LABEL} />
+      </I18nProvider>,
+    )
+    const button = screen.getByRole('button', { name: `Kopiuj: ${LABEL}` })
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    expect(writeText).toHaveBeenCalledWith(VALUE)
+    expect(button.getAttribute('aria-label')).toBe(`Skopiowano: ${LABEL}`)
+  })
+
+  it('keeps the copy name when the clipboard refuses the write', async () => {
+    writeText.mockRejectedValue(new Error('Clipboard denied'))
+    render(<CopyValue value={VALUE} label={LABEL} />)
+    const button = screen.getByRole('button', { name: `Copy ${LABEL}` })
+    await act(async () => {
+      fireEvent.click(button)
+    })
+    expect(button.getAttribute('aria-label')).toBe(`Copy ${LABEL}`)
+  })
+
+  it('names the current status without an i18n provider', () => {
+    render(
+      <StatusMenu
+        label="Hotel Gracery"
+        current={{ value: 'confirmed', label: 'Confirmed', tone: 'success' }}
+        options={[]}
+        onSelect={() => {}}
+      />,
+    )
+    expect(
+      screen.getByRole('button', {
+        name: 'Hotel Gracery — currently Confirmed',
+      }),
+    ).toBeTruthy()
+  })
+
+  it('translates current status while preserving both supplied names', () => {
+    render(
+      <I18nProvider locale="pl" messages={namespaceCatalogue('ui', PlUi)}>
+        <StatusMenu
+          label="Hotel Gracery"
+          current={{ value: 'confirmed', label: 'Confirmed', tone: 'success' }}
+          options={[]}
+          onSelect={() => {}}
+        />
+      </I18nProvider>,
+    )
+    expect(
+      screen.getByRole('button', {
+        name: 'Hotel Gracery - obecnie: Confirmed',
+      }),
+    ).toBeTruthy()
   })
 })

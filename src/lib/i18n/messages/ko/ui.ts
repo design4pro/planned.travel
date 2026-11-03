@@ -16,6 +16,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': '{label} 복사',
+  'copyValue.copied': '{label} 복사됨',
+  'statusMenu.current': '{label} - 현재 상태: {status}',
   'action.clear': '지우기',
   'action.clearFilters': '필터 해제',
   'action.close': '닫기',

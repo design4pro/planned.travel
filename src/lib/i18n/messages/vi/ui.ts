@@ -34,6 +34,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': 'Sao chép {label}',
+  'copyValue.copied': 'Đã sao chép {label}',
+  'statusMenu.current': '{label} - trạng thái hiện tại: {status}',
   'action.clear': 'Xóa trắng',
   'action.clearFilters': 'Bỏ bộ lọc',
   'action.close': 'Đóng',

@@ -17,6 +17,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': '{label}をコピー',
+  'copyValue.copied': '{label}をコピーしました',
+  'statusMenu.current': '{label} - 現在の状態：{status}',
   'action.clear': 'クリア',
   'action.clearFilters': 'フィルターを解除',
   'action.close': '閉じる',
