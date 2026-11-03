@@ -2,14 +2,14 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | ready |
+| **Status**         | implemented |
 | **Issue**          | #124  |
 | **Spec PR**        | #1333 |
-| **Implementation** | none  |
+| **Implementation** | #1821 |
 
 ## TLDR
 
-Proposed: a traveller opens a Day's details over the planner map without leaving the board. The panel reuses existing Day, Stay, Note and Reservation readers and the existing add-Stay flow. This document is design-only; the independent undo capability is specified in [Planner undo](2026-10-16-planner-undo.md).
+Proposed: a traveller opens a Day's details over the planner map without leaving the board. The panel reuses existing Day, Stay, Note and Reservation readers and the existing add-Stay flow. This document is design-only; the independent undo capability is specified in [Planner undo](../2026-10-16-planner-undo.md).
 
 ## Problem and evidence
 
@@ -112,3 +112,11 @@ One complete SLC slice: readable Day detail with its full states and existing ad
 3. Add browser journeys through the real workspace: open from keyboard, use map with panel open, minimise/reopen/close, dated and undated, add Stay then see its real confirmation, viewer/archive without writes, disappearing Day and switching to Place. Assert silent console and panel-attributed layout stability. Run the configured gate and required visual evidence before review.
 
 Each test starts red against the missing feature and runs through public interfaces, not snapshots of implementation wiring. No runtime regression tests are added by this design-only change; the existing spec registry validates this document's lifecycle metadata.
+
+## Amendment - implementation #1821
+
+Issue #1718 delivers this specification as one complete slice. The original design and authoring-time observations above remain historical. The implementation uses an access-scoped, mount-local Reservation cache and keeps the existing weather Popover; title editing and undo remain outside this capability.
+
+Short mobile viewports reuse the workspace Days/Places actions within the detail dock and reserve a logical side lane for map controls. The native feedback actor becomes icon-only there through its public SDK API, retaining its translated accessible label and full-href privacy guard. These supporting workspace, breakpoint, map-control and feedback changes are required to keep the map usable at the specified short/zoomed sizes. Closing the native feedback form does not restore trigger focus in either the original or compact actor; that pre-existing defect is tracked separately in #1820.
+
+The implementation retains the established Day/Stay modal focus contract, exact Reservation identifier joins and all 23 locales. Source issue #124 and spec PR #1333 remain the design provenance; #1718 is the implementation ticket.
