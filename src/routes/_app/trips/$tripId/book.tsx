@@ -71,9 +71,9 @@ function BookPage() {
   const search = Route.useSearch()
   const navigate = Route.useNavigate()
   const [newBookingOpen, setNewBookingOpen] = useState(false)
-  const [importOpen, setImportOpen] = useState(
-    search.import !== undefined && data.canWrite,
-  )
+  const [importOpen, setImportOpen] = useState(search.import !== undefined)
+
+  const [reviewJobId, setReviewJobId] = useState(search.import)
 
   // The parameter is an instruction, not state: it opens the dialog once and is then dropped, so
   // closing the dialog and reopening it is not fought by a URL that still says "open".
@@ -81,8 +81,8 @@ function BookPage() {
     if (search.import === undefined) {
       return
     }
-    // A reader who may not write is refused at the server; the dialog is simply not offered.
-    setImportOpen(data.canWrite)
+    setReviewJobId(search.import)
+    setImportOpen(true)
     void navigate({ search: {}, replace: true })
   }, [data.canWrite, navigate, search.import])
 
@@ -115,7 +115,12 @@ function BookPage() {
           actions={
             data.canWrite ? (
               <>
-                <ImportBookingsAction onClick={() => setImportOpen(true)} />
+                <ImportBookingsAction
+                  onClick={() => {
+                    setReviewJobId(undefined)
+                    setImportOpen(true)
+                  }}
+                />
                 <NewBookingAction onClick={() => setNewBookingOpen(true)} />
               </>
             ) : null
@@ -132,17 +137,18 @@ function BookPage() {
           </Alert>
         )}
 
-        {data.canWrite ? (
-          <ImportBookingsDialog
-            tripId={tripId}
-            userId={bookImportsOwner(
-              shell.session.user.id,
-              shell.session.organization?.id ?? null,
-            )}
-            open={importOpen}
-            onOpenChange={setImportOpen}
-          />
-        ) : null}
+        <ImportBookingsDialog
+          tripId={tripId}
+          jobId={reviewJobId}
+          canWrite={data.canWrite}
+          archived={data.archived}
+          userId={bookImportsOwner(
+            shell.session.user.id,
+            shell.session.organization?.id ?? null,
+          )}
+          open={importOpen}
+          onOpenChange={setImportOpen}
+        />
 
         {total === 0 ? null : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

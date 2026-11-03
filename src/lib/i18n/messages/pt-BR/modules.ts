@@ -206,6 +206,8 @@ const messages = {
   'book.import.widget.stalled': 'Isto está levando mais do que o previsto',
   'book.import.widget.check': 'Olhar de novo',
   'book.import.widget.dismiss': 'Dispensar',
+  'book.import.review.dismissWarning':
+    'Dispensar “{filename}”? As linhas não confirmadas deixarão de ser acessíveis por este registro. Fechar a revisão mantém a tarefa. Se as linhas não aparecerem mais, os dados temporários podem ter expirado; você pode dispensar a tarefa ou verificar novamente.',
   'book.import.review.title': 'O que lemos',
   'book.import.review.from': 'De “{filename}”',
   'book.import.review.selectAll': 'Selecionar tudo',

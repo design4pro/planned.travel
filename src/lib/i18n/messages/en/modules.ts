@@ -282,6 +282,8 @@ const messages = {
   'book.import.widget.stalled': 'This is taking longer than expected',
   'book.import.widget.check': 'Check again',
   'book.import.widget.dismiss': 'Dismiss',
+  'book.import.review.dismissWarning':
+    'Dismiss “{filename}”? Unconfirmed rows will become inaccessible through this register. Closing Review keeps the job. If rows no longer appear, staging may have expired; you can dismiss the job or check again.',
   'book.import.review.title': 'What we read',
   'book.import.review.from': 'From “{filename}”',
   'book.import.review.selectAll': 'Select all',

@@ -210,6 +210,8 @@ const messages = {
   'book.import.widget.stalled': 'Trwa to dłużej, niż się spodziewaliśmy',
   'book.import.widget.check': 'Sprawdź jeszcze raz',
   'book.import.widget.dismiss': 'Zamknij',
+  'book.import.review.dismissWarning':
+    'Odrzucić „{filename}”? Niepotwierdzone wiersze staną się niedostępne przez ten rejestr. Zamknięcie przeglądu zachowuje zadanie. Jeśli wiersze się nie pojawiają, dane tymczasowe mogły wygasnąć; możesz odrzucić zadanie lub sprawdzić ponownie.',
   'book.import.review.title': 'Co przeczytaliśmy',
   'book.import.review.from': 'Z „{filename}”',
   'book.import.review.selectAll': 'Zaznacz wszystko',

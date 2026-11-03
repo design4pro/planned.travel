@@ -17,7 +17,7 @@
  * reader sees and does: the drop target, the refusals at the boundary, the review list and the
  * selection.
  */
-import { useEffect, useId, useReducer, useState } from 'react'
+import { useEffect, useId, useReducer, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { CloudUpload, FileUp } from 'lucide-react'
 
@@ -91,6 +91,9 @@ type Stage =
 
 export interface ImportBookingsDialogProps {
   readonly tripId: string
+  readonly jobId?: string
+  readonly canWrite?: boolean
+  readonly archived?: boolean
   /** The register's owner, a `bookImportsOwner` of the account and workspace — see `bookImportsKey`. */
   readonly userId: string
   readonly open: boolean
@@ -99,6 +102,9 @@ export interface ImportBookingsDialogProps {
 
 export function ImportBookingsDialog({
   tripId,
+  jobId: reviewJobId,
+  canWrite = true,
+  archived = false,
   userId,
   open,
   onOpenChange,
@@ -114,8 +120,13 @@ export function ImportBookingsDialog({
   )
 
   const { entries, jobs } = useBookImports(userId)
-  const registered = entries.filter((entry) => entry.job.tripId === tripId)
+  const registered = entries.filter(
+    (entry) =>
+      entry.job.tripId === tripId &&
+      (reviewJobId === undefined || entry.job.jobId === reviewJobId),
+  )
   const [confirming, setConfirming] = useState(false)
+  const cancelRef = useRef<HTMLButtonElement>(null)
 
   /*
    * The toast titles are the catalogue's generic one, because both of these failures already have a
@@ -149,11 +160,8 @@ export function ImportBookingsDialog({
     .map((file) => `${file.jobId}:${file.drafts.length}`)
     .join(' ')
   useEffect(() => {
-    if (shape.length > 0) {
-      // `arrived` and not `all`: this fires again every time a later file in the same drop answers,
-      // and by then a reader may have unticked rows in the one that answered first.
-      dispatch({ kind: 'arrived', files })
-    }
+    // Preserve earlier choices, and clear selection when dismissal removes the last file.
+    dispatch({ kind: 'arrived', files })
     // `shape` stands in for `files`, which is rebuilt on every poll answer.
   }, [shape])
 
@@ -243,10 +251,12 @@ export function ImportBookingsDialog({
 
   /** One call per file, and the job module clears the register only when nothing is left to write. */
   const write = async (): Promise<void> => {
+    if (!canWrite) return
     setConfirming(true)
     const outcome = await jobs
       .confirm({
         tripId,
+        jobId: reviewJobId,
         selection,
         afterWritten: () => router.invalidate(),
       })
@@ -285,6 +295,47 @@ export function ImportBookingsDialog({
 
         <DialogBody>
           <div className="flex min-w-0 flex-col gap-5">
+            {canWrite ? null : (
+              <Alert tone="info">
+                {t(
+                  archived
+                    ? 'trips.book.readOnly.archived'
+                    : 'trips.book.readOnly.role',
+                )}
+              </Alert>
+            )}
+            {registered
+              .filter(
+                (entry) =>
+                  !canWrite ||
+                  entry.status === 'ready' ||
+                  entry.status === 'stalled',
+              )
+              .map((entry) => (
+                <Alert
+                  key={entry.job.jobId}
+                  tone="warning"
+                  actions={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      shape="pill"
+                      disabled={confirming}
+                      onClick={() => {
+                        jobs.dismissReview(tripId, entry.job.jobId)
+                        cancelRef.current?.focus()
+                      }}
+                    >
+                      {t('modules.book.import.widget.dismiss')}
+                    </Button>
+                  }
+                >
+                  {t('modules.book.import.review.dismissWarning', {
+                    filename: entry.job.filename,
+                  })}
+                </Alert>
+              ))}
+
             {/*
              * No title: each line already names its file and says what is wrong with it, and the
              * only heading the catalogue could lend this list is one written for something else.
@@ -377,7 +428,7 @@ export function ImportBookingsDialog({
                   dispatch({ kind: 'none' })
                 }}
               />
-            ) : refusal === undefined && !working && !stalled ? (
+            ) : refusal === undefined && !working && !stalled && canWrite ? (
               <DropTarget
                 dragging={dragging}
                 progress={stage.kind === 'uploading' ? stage.progress : null}
@@ -392,6 +443,7 @@ export function ImportBookingsDialog({
 
         <DialogFooter>
           <Button
+            ref={cancelRef}
             type="button"
             variant="ghost"
             shape="pill"
@@ -403,7 +455,7 @@ export function ImportBookingsDialog({
             type="button"
             variant="primary"
             shape="pill"
-            disabled={selected === 0}
+            disabled={!canWrite || selected === 0}
             title={
               selected === 0
                 ? t('modules.book.import.review.confirmNone')

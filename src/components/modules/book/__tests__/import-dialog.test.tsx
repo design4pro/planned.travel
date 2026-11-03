@@ -3,15 +3,18 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 
 import { toast } from '#/components/ui'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
+import Trips from '#/lib/i18n/messages/en/trips'
 import Ui from '#/lib/i18n/messages/en/ui'
 import {
+  POLL_BUDGET_MS,
+  POLL_INTERVAL_MS,
   bookImportsKey,
   readBookImports,
   resetBookImportJobs,
@@ -35,6 +38,7 @@ const EN: Catalogue = {
   ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('ui', Ui),
+  ...namespaceCatalogue('trips', Trips),
 }
 
 const stubs = vi.hoisted(() => ({
@@ -586,4 +590,147 @@ describe('the import dialog on a refusal', () => {
       ),
     ).toBeTruthy()
   })
+})
+
+describe('review recovery', () => {
+  function seed() {
+    window.localStorage.setItem(
+      bookImportsKey(USER),
+      JSON.stringify([
+        {
+          jobId: 'booking-import:trip-1:file-1',
+          tripId: 'trip-1',
+          filename: 'confirmation.pdf',
+        },
+        {
+          jobId: 'booking-import:trip-1:file-2',
+          tripId: 'trip-1',
+          filename: 'other.pdf',
+        },
+      ]),
+    )
+  }
+
+  it('explains archived Review, preserves it on close, and dismisses only the chosen job on request', async () => {
+    seed()
+    stubs.view.mockResolvedValue(READY)
+    const close = vi.fn()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <ImportBookingsDialog
+          tripId="trip-1"
+          userId={USER}
+          open
+          onOpenChange={close}
+          canWrite={false}
+          archived
+          jobId="booking-import:trip-1:file-1"
+        />
+      </I18nProvider>,
+    )
+    await screen.findByText('Hotel Okura')
+    expect(screen.getByText(Trips['book.readOnly.archived'])).toBeTruthy()
+    expect(screen.getByText(/Unconfirmed rows.*register/)).toBeTruthy()
+    expect(document.querySelector('[data-part="import-drop"]')).toBeNull()
+    const confirm = screen.getByRole('button', {
+      name: /Add 2/,
+    }) as HTMLButtonElement
+    expect(confirm.disabled).toBe(true)
+    fireEvent.click(confirm)
+    expect(stubs.confirm).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(readBookImports(USER)).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+    expect(readBookImports(USER).map((job) => job.filename)).toEqual([
+      'other.pdf',
+    ])
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Cancel' }),
+    )
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('enables confirmation after restore without another upload', async () => {
+    seed()
+    stubs.view.mockResolvedValue(READY)
+    stubs.confirm.mockResolvedValue({ written: 2, failed: 0, remaining: 0 })
+    const dialog = (canWrite: boolean) => (
+      <I18nProvider locale="en" messages={EN}>
+        <ImportBookingsDialog
+          tripId="trip-1"
+          userId={USER}
+          open
+          onOpenChange={() => {}}
+          canWrite={canWrite}
+          archived={!canWrite}
+          jobId="booking-import:trip-1:file-1"
+        />
+      </I18nProvider>
+    )
+    const result = render(dialog(false))
+    await screen.findByText('Hotel Okura')
+    result.rerender(dialog(true))
+    const confirm = screen.getByRole('button', {
+      name: /Add 2/,
+    }) as HTMLButtonElement
+    expect(confirm.disabled).toBe(false)
+    fireEvent.click(confirm)
+    await waitFor(() => expect(stubs.confirm).toHaveBeenCalledTimes(1))
+    expect(stubs.upload).not.toHaveBeenCalled()
+    await waitFor(() =>
+      expect(readBookImports(USER).map((job) => job.filename)).toEqual([
+        'other.pdf',
+      ]),
+    )
+  })
+})
+
+it('offers informed persistent recovery when staging no longer answers, without discarding temporary working jobs', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true })
+  window.localStorage.setItem(
+    bookImportsKey(USER),
+    JSON.stringify([
+      {
+        jobId: 'booking-import:trip-1:expired',
+        tripId: 'trip-1',
+        filename: 'expired.pdf',
+      },
+    ]),
+  )
+  const result = render(
+    <I18nProvider locale="en" messages={EN}>
+      <ImportBookingsDialog
+        tripId="trip-1"
+        userId={USER}
+        open
+        onOpenChange={() => {}}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+  })
+  expect(readBookImports(USER)).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(POLL_BUDGET_MS)
+  })
+  expect(screen.getByText(/Unconfirmed rows.*register/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+  expect(readBookImports(USER)).toEqual([])
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Cancel' }),
+  )
+  expect(
+    (
+      screen.getByRole('button', {
+        name: 'Select a booking to add',
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true)
+  result.unmount()
+  resetBookImportJobs()
+  open()
+  expect(screen.queryByRole('button', { name: 'Dismiss' })).toBeNull()
+  expect(stubs.confirm).not.toHaveBeenCalled()
 })

@@ -208,6 +208,8 @@ const messages = {
   'book.import.widget.stalled': 'Це триває довше, ніж ми очікували',
   'book.import.widget.check': 'Перевірити ще раз',
   'book.import.widget.dismiss': 'Прибрати',
+  'book.import.review.dismissWarning':
+    'Прибрати «{filename}»? Непідтверджені рядки стануть недоступні через цей список. Закриття перевірки зберігає завдання. Якщо рядки більше не з’являються, строк зберігання тимчасових даних міг минути; можна прибрати завдання або перевірити знову.',
   'book.import.review.title': 'Що ми прочитали',
   'book.import.review.from': 'Із «{filename}»',
   'book.import.review.selectAll': 'Вибрати всі',

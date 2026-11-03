@@ -200,6 +200,8 @@ const messages = {
   'book.import.widget.stalled': 'Det här tar längre tid än väntat',
   'book.import.widget.check': 'Titta igen',
   'book.import.widget.dismiss': 'Stäng',
+  'book.import.review.dismissWarning':
+    'Avfärda ”{filename}”? Obekräftade rader blir då oåtkomliga via detta register. Att stänga granskningen behåller jobbet. Om raderna inte längre visas kan tillfälliga data ha löpt ut; du kan avfärda jobbet eller kontrollera igen.',
   'book.import.review.title': 'Det här läste vi',
   'book.import.review.from': 'Från ”{filename}”',
   'book.import.review.selectAll': 'Markera alla',

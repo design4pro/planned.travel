@@ -208,6 +208,8 @@ const messages = {
   'book.import.widget.stalled': 'Esto tarda más de lo previsto',
   'book.import.widget.check': 'Volver a mirar',
   'book.import.widget.dismiss': 'Descartar',
+  'book.import.review.dismissWarning':
+    '¿Descartar «{filename}»? Las filas sin confirmar dejarán de ser accesibles desde este registro. Cerrar la revisión conserva la tarea. Si las filas ya no aparecen, los datos temporales pueden haber caducado; puedes descartar la tarea o volver a comprobarla.',
   'book.import.review.title': 'Lo que hemos leído',
   'book.import.review.from': 'De «{filename}»',
   'book.import.review.selectAll': 'Seleccionar todo',
