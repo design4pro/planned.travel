@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 
 import { MEDIA_LG_UP, MEDIA_SHORT_HEIGHT } from '#/lib/breakpoints'
@@ -84,21 +84,36 @@ export function FeedbackWidget() {
     }
   }, [])
   const compact = planner && short
+  const widget = useRef<ReturnType<Feedback['createWidget']> | undefined>(
+    undefined,
+  )
+  useEffect(
+    () => () => {
+      widget.current?.removeFromDom()
+      widget.current = undefined
+    },
+    [],
+  )
 
   /**
    * Labels and actor width are read at construction. Rebuild on locale or dock changes,
    * preserving the same SDK form and the cancellation guard for its lazy import.
    */
   useEffect(() => {
-    if (!REPORTING_ENABLED || !offered) return
+    if (!REPORTING_ENABLED || !offered) {
+      widget.current?.removeFromDom()
+      widget.current = undefined
+      return
+    }
 
-    let widget: ReturnType<Feedback['createWidget']> | undefined
     let cancelled = false
 
     void feedback().then((integration) => {
       if (cancelled) return
+      const restoreFocus = widget.current?.el.matches(':focus')
+      widget.current?.removeFromDom()
       const triggerLabel = t('shell.feedback.triggerLabel')
-      widget = integration.createWidget({
+      widget.current = integration.createWidget({
         tags: { locale },
         // Keep the native actor in its side lane beside the short planner dock.
         triggerLabel: compact ? '' : triggerLabel,
@@ -133,11 +148,11 @@ export function FeedbackWidget() {
         errorForbiddenText: t('shell.feedback.errorForbiddenText'),
         errorGenericText: t('shell.feedback.errorGenericText'),
       })
+      if (restoreFocus) widget.current.el.focus({ preventScroll: true })
     })
 
     return () => {
       cancelled = true
-      widget?.removeFromDom()
     }
   }, [locale, t, offered, compact])
 

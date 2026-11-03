@@ -105,7 +105,10 @@ beforeEach(() => {
   // have to be re-established here - `restoreMocks` does neither for a bare `vi.fn()`.
   vi.clearAllMocks()
   route.href = '/trips'
-  createWidget.mockReturnValue({ removeFromDom })
+  createWidget.mockReturnValue({
+    el: document.createElement('button'),
+    removeFromDom,
+  })
   startFeedback.mockReturnValue({ createWidget, setTheme })
 })
 
@@ -117,6 +120,21 @@ afterEach(() => {
 
 describe('FeedbackWidget', () => {
   it('compacts only the short mobile planner and restores its label on resize or navigation', async () => {
+    const host = document.createElement('div')
+    document.body.appendChild(host)
+    const shadow = host.attachShadow({ mode: 'open' })
+    createWidget.mockImplementation(() => {
+      const el = document.createElement('button')
+      shadow.append(el)
+      return {
+        el,
+        removeFromDom: () => {
+          removeFromDom()
+          el.remove()
+        },
+      }
+    })
+    const actor = () => shadow.querySelector('button')!
     let short = false
     const queries: EventTarget[] = []
     vi.spyOn(window, 'matchMedia').mockImplementation((query) => {
@@ -140,12 +158,14 @@ describe('FeedbackWidget', () => {
     expect((await widgetOptions()).triggerLabel).toBe(
       enShell['feedback.triggerLabel'],
     )
+    actor().focus()
     act(() => {
       short = true
       queries.forEach((query) => query.dispatchEvent(new Event('change')))
     })
     await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(2))
     expect(removeFromDom).toHaveBeenCalledTimes(1)
+    expect(shadow.activeElement).toBe(actor())
     expect((await widgetOptions()).triggerLabel).toBe('')
     expect((await widgetOptions()).triggerAriaLabel).toBe(
       enShell['feedback.triggerLabel'],
@@ -155,6 +175,10 @@ describe('FeedbackWidget', () => {
       queries.forEach((query) => query.dispatchEvent(new Event('change')))
     })
     await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(3))
+    expect(shadow.activeElement).toBe(actor())
+    const outside = document.createElement('button')
+    document.body.appendChild(outside)
+    outside.focus()
     expect((await widgetOptions()).triggerLabel).toBe(
       enShell['feedback.triggerLabel'],
     )
@@ -163,6 +187,7 @@ describe('FeedbackWidget', () => {
       queries.forEach((query) => query.dispatchEvent(new Event('change')))
     })
     await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(4))
+    expect(document.activeElement).toBe(outside)
     route.href = '/trips/t1/book'
     await view.speak('en')
     await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(5))
@@ -170,6 +195,11 @@ describe('FeedbackWidget', () => {
       enShell['feedback.triggerLabel'],
     )
     expect(removeFromDom).toHaveBeenCalledTimes(4)
+    expect(document.activeElement).toBe(outside)
+    view.unmount()
+    host.remove()
+    outside.remove()
+    createWidget.mockReset()
   })
 
   it('builds the widget in the reader’s language and tags it with the locale', async () => {
