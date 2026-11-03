@@ -4,7 +4,7 @@
 | ------------------ | ----- |
 | **Status**         | ready |
 | **Issue**          | #1744 |
-| **Spec PR**        | none  |
+| **Spec PR**        | #1818 |
 | **Implementation** | none  |
 
 <!-- agent-brief-sha256: 2a781f2d54cef3f42cd82fbb6fb9820d6f0d74d9148734fa31e64b5ec5d051f3 -->
