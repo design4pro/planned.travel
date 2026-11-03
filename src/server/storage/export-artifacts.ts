@@ -55,6 +55,7 @@ export interface ExportStore {
   list: (options: {
     prefix: string
     cursor?: string | undefined
+    limit?: number
   }) => Promise<ExportListResult>
   delete: (keys: string | Array<string>) => Promise<void>
 }
