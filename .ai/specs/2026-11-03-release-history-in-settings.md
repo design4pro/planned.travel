@@ -181,6 +181,18 @@ audit row in the same atomic database batch. Extend the existing permission voca
 all workspace roles are denied. Re-read role/ban state before invoking the existing pure
 `requirePermission`; do not replace it with a second role resolver. Impersonation is denied.
 
+The amendment must explicitly resolve the existing audit and batch contracts, not merely
+add action names. Today `docs/ACCESS.md` §4.3 and `catalog/audit.ts` require after-commit,
+non-throwing audit append through a single writer; `repos/batch.ts` requires `TenantScope`
+and `runBatch` falls back to sequential execution. Neither existing API satisfies this design.
+Add a bounded release-publication exception to §4.3, preserving all existing callers' behavior.
+Keep audit validation and statement construction owned by `catalog/audit.ts`, exposing a
+prepared-statement seam for the release repository's atomic batch without introducing a
+catalog-to-repos import or a second audit writer. Provide a plain-`Database`, fail-closed atomic
+batch seam that refuses unsupported drivers before any write; never fabricate `TenantScope`
+or use sequential fallback. Test audit validation/insert failure, unsupported-driver refusal
+and whole-batch rollback, alongside regression tests for existing non-throwing audit callers.
+
 SPEC §9 also needs a bounded editorial-content exception: release prose is reviewed content,
 separate from interface messages, with the fallback policy below. Until that amendment lands,
 English fallback on this signed-in surface would violate §9 rules 2/6/8. Future Studio roles,
@@ -211,7 +223,7 @@ additional collections/tables and anonymous publication remain separate amendmen
 5. **Reconcile/publish.** Verify the exact deployed Git tree contains the approved source hash
    and cutoff; containment in ancestry alone is insufficient if a later commit changed it.
    Record the receipt and entry links and CAS publication pointers with their audit rows in
-   an atomic `runBatch`. No interactive D1 transaction or cross-system atomicity is assumed.
+   the fail-closed atomic database batch seam defined above. No interactive D1 transaction or cross-system atomicity is assumed.
    Re-read active production identity immediately before committing; ambiguous or changing
    activation leaves the operation pending for retry. A late older receipt can record history
    only after independently verifying it truly ran; it cannot replace the active pointer.
@@ -425,7 +437,8 @@ files, and extend an existing owner if another ticket has already delivered it.
 
 1. Land the ADR and exact SPEC/access/architecture/policy amendments described above, including
    editorial fallback and bounded SQL access. Define source grammar and all seven table constraints,
-   permission/audit vocabulary, deployment identity adapter and threat model. Fresh security and
+   permission/audit vocabulary, the release-only atomic-audit contract exception and prepared
+   audit/plain-Database atomic batch seams above, deployment identity adapter and threat model. Fresh security and
    tenancy approval is a gate before runtime work. App behavior remains unchanged.
 2. Test the shared repository interface first: immutable import/revisions, uniqueness, draft
    invisibility, cross-workspace/role denial and atomic audit. Implement only required shared
