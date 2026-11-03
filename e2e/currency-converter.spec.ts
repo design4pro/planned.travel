@@ -200,16 +200,20 @@ for (const state of ['stale', 'blocked', 'failure'] as const) {
         : state === 'failure'
           ? 'Rates could not be refreshed.'
           : 'These reference rates may be out of date.'
-    await expect(widget.getByRole('status')).toContainText(status)
+    await expect(
+      widget.getByRole('status', { name: '', exact: true }),
+    ).toContainText(status)
     if (state === 'failure')
       await expect(widget.locator('output')).toHaveCount(0)
     else await expect(widget.locator('output')).toContainText('1.25')
     const refresh = widget.getByRole('button', { name: 'Refresh rates' })
     await expect(refresh).toHaveAttribute('aria-disabled', 'true')
+    const beforeRefresh = reads
+    expect(beforeRefresh).toBeGreaterThan(0)
     await refresh.focus()
     await page.keyboard.press('Enter')
     await expect(refresh).toBeFocused()
-    expect(reads).toBe(1)
+    expect(reads).toBe(beforeRefresh)
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -266,7 +270,9 @@ test('reserves the asynchronous converter footprint through the first response',
     await page.getByRole('button', { name: 'Reference', exact: true }).click()
     const widget = page.locator('[data-part="dashboard-widget-currency"]')
     const refresh = widget.getByRole('button', { name: 'Refresh rates' })
-    await expect(widget.getByRole('status')).toContainText('Loading')
+    await expect(
+      widget.getByRole('status', { name: '', exact: true }),
+    ).toContainText('Loading')
     await refresh.scrollIntoViewIfNeeded()
     await page.evaluate(() => document.fonts.ready)
     const before = await refresh.boundingBox()
@@ -354,4 +360,71 @@ interface CurrencyShiftWindow {
     reset: () => void
     stop: () => void
   }
+}
+
+for (const [picker, lastWidget] of [
+  [false, false],
+  [true, false],
+  [true, true],
+]) {
+  test(`returns focus after a cross-tab hide: picker=${picker}, last=${lastWidget}`, async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    test.setTimeout(90_000)
+    expect(await useSession(context, page, baseURL)).toBe(true)
+    await page.setViewportSize({ width: 360, height: 800 })
+    if (lastWidget)
+      await page.addInitScript(() =>
+        localStorage.setItem(
+          'planned.dashboard-widgets',
+          JSON.stringify({ shown: ['currency'], zones: [] }),
+        ),
+      )
+    await page.route('**/_serverFn/**', (route) => {
+      if (!callsServerFn(new URL(route.request().url()), 'getPublicRatesFn'))
+        return route.continue()
+      return route.fulfill({
+        json: { result: { status: 'unavailable', reason: 'provider-failed' } },
+      })
+    })
+    const other = await context.newPage()
+    try {
+      await other.goto('/pricing', { waitUntil: 'domcontentloaded' })
+      await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+      const trigger = page.getByRole('button', {
+        name: 'Reference',
+        exact: true,
+      })
+      await expect(trigger).toBeVisible({ timeout: 30000 })
+      await trigger.click()
+      const widget = page.locator('[data-part="dashboard-widget-currency"]')
+      if (picker) {
+        await widget.getByRole('button', { name: 'To currency' }).click()
+        await expect(page.getByRole('combobox')).toBeFocused()
+      } else await widget.getByRole('textbox', { name: 'Amount' }).focus()
+      await other.evaluate(
+        (last) =>
+          localStorage.setItem(
+            'planned.dashboard-widgets',
+            JSON.stringify({
+              shown: last ? [] : ['clock', 'bookings', 'tripMix', 'storage'],
+              zones: [],
+            }),
+          ),
+        lastWidget,
+      )
+      await expect(widget).toHaveCount(0)
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(
+        page.getByRole('button', {
+          name: lastWidget ? 'Choose widgets' : 'Reference',
+          exact: true,
+        }),
+      ).toBeFocused()
+    } finally {
+      await other.close()
+    }
+  })
 }

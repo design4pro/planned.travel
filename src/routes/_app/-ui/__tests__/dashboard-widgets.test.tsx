@@ -5,6 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createPortal } from 'react-dom'
 
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -217,36 +218,43 @@ describe('the surface the widgets are mounted on', () => {
   })
 })
 
-it('returns focus to the menu when another tab hides a focused widget', async () => {
-  function FocusHarness() {
-    const widgets = useDashboardWidgets()
-    return (
-      <I18nProvider locale="en" messages={EN}>
-        <DashboardWidgetsMenu widgets={widgets} />
-        {widgets.isShown('currency') ? (
-          <DashboardWidget id="currency">
-            <input aria-label="Amount" />
-          </DashboardWidget>
-        ) : null}
-      </I18nProvider>
+it.each([false, true])(
+  'returns focus to the menu when another tab hides a focused widget (portal=%s)',
+  async (portal) => {
+    function FocusHarness() {
+      const widgets = useDashboardWidgets()
+      return (
+        <I18nProvider locale="en" messages={EN}>
+          <DashboardWidgetsMenu widgets={widgets} />
+          {widgets.isShown('currency') ? (
+            <DashboardWidget id="currency">
+              {portal ? (
+                createPortal(<input aria-label="Amount" />, document.body)
+              ) : (
+                <input aria-label="Amount" />
+              )}
+            </DashboardWidget>
+          ) : null}
+        </I18nProvider>
+      )
+    }
+    render(<FocusHarness />)
+    screen.getByRole('textbox', { name: 'Amount' }).focus()
+    act(() => {
+      localStorage.setItem(
+        'planned.dashboard-widgets',
+        JSON.stringify({ shown: [], zones: [] }),
+      )
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: 'planned.dashboard-widgets',
+          storageArea: localStorage,
+        }),
+      )
+    })
+    expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Choose widgets' }),
     )
-  }
-  render(<FocusHarness />)
-  screen.getByRole('textbox', { name: 'Amount' }).focus()
-  act(() => {
-    localStorage.setItem(
-      'planned.dashboard-widgets',
-      JSON.stringify({ shown: [], zones: [] }),
-    )
-    window.dispatchEvent(
-      new StorageEvent('storage', {
-        key: 'planned.dashboard-widgets',
-        storageArea: localStorage,
-      }),
-    )
-  })
-  expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
-  expect(document.activeElement).toBe(
-    screen.getByRole('button', { name: 'Choose widgets' }),
-  )
-})
+  },
+)

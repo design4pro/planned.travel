@@ -1,5 +1,7 @@
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -234,6 +236,8 @@ export function DashboardWidgetsColumn({ children }: { children: ReactNode }) {
   )
 }
 
+const HiddenWidgetFocus = createContext<(() => void) | null>(null)
+
 /**
  * The phone's way in: a compact trigger in the dashboard header opening the
  * same widgets in the shipped bottom sheet, which brings its own drag-to-dismiss,
@@ -245,9 +249,15 @@ export function DashboardWidgetsColumn({ children }: { children: ReactNode }) {
 export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
   const { t } = useI18n()
   const direction = useSheetDirection('bottom')
+  const [open, setOpen] = useState(false)
+  const hiddenFocus = useRef(false)
+  const recoverFocus = useCallback(() => {
+    hiddenFocus.current = true
+    setOpen(false)
+  }, [])
 
   return (
-    <Sheet direction={direction}>
+    <Sheet direction={direction} open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -259,7 +269,23 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
           {t('shell.dashboard.widgets.label')}
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" data-part="dashboard-widgets-sheet">
+      <SheetContent
+        side="bottom"
+        data-part="dashboard-widgets-sheet"
+        onCloseAutoFocus={(event) => {
+          if (!hiddenFocus.current) return
+          hiddenFocus.current = false
+          event.preventDefault()
+          const target =
+            document.querySelector<HTMLButtonElement>(
+              '[data-part="dashboard-widgets-trigger"]',
+            ) ??
+            document.querySelector<HTMLButtonElement>(
+              '[data-part="dashboard-widgets-menu"]',
+            )
+          target?.focus()
+        }}
+      >
         <SheetHeader className="pe-14">
           <SheetTitle>{t('shell.dashboard.widgets.label')}</SheetTitle>
           <SheetDescription>
@@ -267,7 +293,9 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
-          <div className="flex min-w-0 flex-col gap-6">{children}</div>
+          <HiddenWidgetFocus.Provider value={recoverFocus}>
+            <div className="flex min-w-0 flex-col gap-6">{children}</div>
+          </HiddenWidgetFocus.Provider>
         </SheetBody>
       </SheetContent>
     </Sheet>
@@ -283,13 +311,19 @@ export function DashboardWidget({
   children: ReactNode
 }) {
   const root = useRef<HTMLDivElement>(null)
+  const focused = useRef(false)
+  const recoverFocus = useContext(HiddenWidgetFocus)
   useLayoutEffect(() => {
     const element = root.current
     return () => {
       if (
-        element?.contains(document.activeElement) &&
+        (focused.current || element?.contains(document.activeElement)) &&
         !dashboardWidgetPreference.read().shown.includes(id)
       ) {
+        if (recoverFocus) {
+          recoverFocus()
+          return
+        }
         document
           .querySelector<HTMLButtonElement>(
             '[data-part="dashboard-widgets-menu"]',
@@ -297,9 +331,18 @@ export function DashboardWidget({
           ?.focus()
       }
     }
-  }, [id])
+  }, [id, recoverFocus])
   return (
-    <div ref={root} data-part={`dashboard-widget-${id}`}>
+    <div
+      ref={root}
+      data-part={`dashboard-widget-${id}`}
+      onFocusCapture={() => {
+        focused.current = true
+      }}
+      onBlurCapture={() => {
+        focused.current = false
+      }}
+    >
       {children}
     </div>
   )
