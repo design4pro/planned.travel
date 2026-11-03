@@ -121,23 +121,36 @@ export function DayDetail({
         onClose()
       }}
     >
-      <header className="flex shrink-0 items-center gap-2 border-b border-glass-edge px-3 py-2">
+      <header
+        className={cn(
+          'flex shrink-0 items-center gap-2 border-b border-glass-edge px-3 py-2',
+          compact && 'flex-wrap gap-x-1 gap-y-0 py-1',
+        )}
+      >
         <CalendarDays
           aria-hidden="true"
           size={18}
           className="shrink-0 text-brand"
         />
-        <div className="min-w-0 flex-1">
+        <div className={compact ? 'contents' : 'min-w-0 flex-1'}>
           <h2
             id={headingId}
             ref={heading}
             tabIndex={-1}
-            className="truncate font-display text-label font-bold text-ink outline-none"
+            className={cn(
+              'truncate font-display text-label font-bold text-ink outline-none',
+              compact && 'min-w-0 flex-1',
+            )}
           >
             {dayName}
             {model.day.title ? ` · ${model.day.title}` : ''}
           </h2>
-          <p className="text-caption text-ink-3">
+          <p
+            className={cn(
+              'text-caption text-ink-3',
+              compact && 'order-last basis-full',
+            )}
+          >
             {date === null
               ? t('trips.plan.dayDetail.undated')
               : `${weekdayName(new Date(`${date}T12:00:00Z`).getUTCDay(), locale, 'long')}, ${formatDate(date, locale)}`}
@@ -168,7 +181,12 @@ export function DayDetail({
         />
       </header>
       {minimised ? null : (
-        <div className="min-h-0 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] text-caption text-ink-2 [overflow-wrap:anywhere]">
+        <div
+          className={cn(
+            'min-h-0 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] text-caption text-ink-2 [overflow-wrap:anywhere]',
+            compact && 'py-1',
+          )}
+        >
           <section aria-labelledby={`${headingId}-stays`} className="min-h-24">
             <h3
               id={`${headingId}-stays`}

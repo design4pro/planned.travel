@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { signIn, useSession } from './helpers/session'
+import { pinDemoLanguage, signIn, useSession } from './helpers/session'
 import { unblockCrossOriginFonts, visit, watchConsole } from './helpers/console'
 import { callsServerFn } from './helpers/server-fn'
 import { showDays } from './helpers/trip-weather'
@@ -676,5 +676,116 @@ test('short planner controls and feedback stay usable by pointer @chromium-only'
     expect(await report.evaluate((node) => node.matches(':focus'))).toBe(
       compactFocus,
     )
+  }
+})
+
+test('a short Arabic Day detail keeps its full date and a readable scrolling body', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  await page.goto('/settings/language', {
+    waitUntil: 'networkidle',
+    timeout: 60_000,
+  })
+  await expect
+    .poll(
+      async () =>
+        (
+          await readCaptureState(page, {
+            name: 'language',
+            path: '/settings/language',
+            ready: '[data-testid="locale-chip-ar"]',
+          })
+        ).hydrated,
+      { timeout: 60_000 },
+    )
+    .toBe(true)
+  try {
+    const written = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes('/_serverFn/'),
+    )
+    await page.getByTestId('locale-chip-ar').click()
+    await written
+    await page.setViewportSize({ width: 360, height: 450 })
+    await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-plan-loaded]')).toBeVisible()
+    await expect(page.locator('[data-workspace-splash]')).toHaveCount(0)
+    await page.getByRole('button', { name: 'الأيام', exact: true }).click()
+    await page.locator('[data-planner-day-header]').first().click()
+    const panel = page.locator('[data-day-detail]')
+    await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
+    await expect(panel.locator('section[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    const body = panel.locator(':scope > div')
+    await expect
+      .poll(() =>
+        body.evaluate((node) => {
+          const style = getComputedStyle(node)
+          const box = node.getBoundingClientRect()
+          const panelBox = node.parentElement!.getBoundingClientRect()
+          const visibleHeight =
+            Math.min(box.bottom, panelBox.bottom, innerHeight) -
+            Math.max(box.top, panelBox.top, 0)
+          return (
+            visibleHeight >= 40 &&
+            visibleHeight -
+              parseFloat(style.paddingTop) -
+              parseFloat(style.paddingBottom) >=
+              parseFloat(style.lineHeight)
+          )
+        }),
+      )
+      .toBe(true)
+    const header = panel.locator('header')
+    const date = header.locator('p')
+    await expect(date).toContainText('2026')
+    expect(
+      await date.evaluate((node) => {
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const bounds = node.getBoundingClientRect()
+        return [...range.getClientRects()].every(
+          (box) =>
+            box.left >= bounds.left - 1 &&
+            box.right <= bounds.right + 1 &&
+            box.top >= bounds.top - 1 &&
+            box.bottom <= bounds.bottom + 1,
+        )
+      }),
+    ).toBe(true)
+    const headerBefore = await header.boundingBox()
+    const reservation = panel.locator('section[aria-busy] a').first()
+    await reservation.scrollIntoViewIfNeeded()
+    await expect(reservation).toBeInViewport({ ratio: 1 })
+    expect(await body.evaluate((node) => node.scrollTop)).toBeGreaterThan(0)
+    expect(await header.boundingBox()).toEqual(headerBefore)
+    const panelBounds = await panel.boundingBox()
+    const mapBounds = await page.locator('[data-plan-loaded]').boundingBox()
+    expect(
+      panelBounds &&
+        mapBounds &&
+        panelBounds.height <= mapBounds.height / 2 + 1,
+    ).toBe(true)
+    await panel.getByRole('button', { name: 'تصغير تفاصيل اليوم' }).click()
+    await expect(
+      panel.getByRole('button', { name: 'توسيع تفاصيل اليوم' }),
+    ).toBeFocused()
+    await expect(date).toBeInViewport({ ratio: 1 })
+    await panel.getByRole('button', { name: 'توسيع تفاصيل اليوم' }).click()
+    for (const name of ['الأيام', 'الأماكن']) {
+      await panel.getByRole('button', { name, exact: true }).click()
+      await expect(page.getByRole('dialog')).toBeVisible()
+      await page.keyboard.press('Escape')
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+    }
+    await panel.getByRole('button', { name: 'إغلاق تفاصيل اليوم' }).click()
+    await expect(panel).toHaveCount(0)
+  } finally {
+    expect(await pinDemoLanguage(page)).toBe(true)
   }
 })
