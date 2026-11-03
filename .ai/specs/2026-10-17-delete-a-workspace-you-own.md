@@ -764,3 +764,12 @@ recovered membership without repeating departure or updating the session.
 
 The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
 requests, rather than introducing another shared resolver. Implementation: PR #1708.
+
+## Amendment - team deletion design (#1744)
+
+The deferred notice-window follow-up is specified in
+[Delete a team workspace after a cancellable notice window](2026-11-03-team-workspace-deletion-notice.md).
+It proposes a fourteen-day cancellable schedule, retains private-trip visibility and depends on this
+specification's deletion infrastructure landing first. It enables no runtime behavior and does not
+change this specification's immediate sole-member or erasure guard. The scheduled branch's exact
+guard, fence, privacy and retention amendments belong to that follow-up's implementation slices.
