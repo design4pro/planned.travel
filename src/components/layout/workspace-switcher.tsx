@@ -14,11 +14,18 @@ import { useTranslate } from '#/lib/i18n'
 import {
   beginWorkspaceSwitch,
   endWorkspaceSwitch,
+  waitForWorkspaceCalls,
+  workspaceClaimState,
+  prepareWorkspaceResync,
+  prepareWorkspaceDocument,
+  finishWorkspaceResync,
+  reopenNoticeFor,
 } from '#/lib/workspace-claim-store'
 import { MenuItem, MenuLabel, MenuRadioGroup, MenuRadioItem } from './menu'
 
 import { foldWorkspaceName } from './workspace-name'
 
+import type { WorkspaceSwitch } from '#/lib/workspace-claim-store'
 import type { ShellOrganization } from './session'
 
 /** Better Auth answers a `set-active` for a workspace the caller does not belong to with this. */
@@ -39,20 +46,30 @@ const TOO_MANY_REQUESTS = 429
 export function useWorkspaceResync() {
   const router = useRouter()
 
-  return async () => {
-    // A cached `/dashboard` of the previous workspace would otherwise show, stale, under the new
-    // workspace's name while it reloads. `replace` keeps Back from returning to a trip that
-    // belongs to the workspace just left.
-    router.clearCache()
-    await router.navigate({ to: '/dashboard', replace: true })
-    await router.invalidate({ sync: true })
-    // Router loads can resolve after rendering an error boundary instead of rejecting.
-    if (
-      router.state.matches.some(
-        ({ status }) => status === 'error' || status === 'notFound',
-      )
-    ) {
-      throw new Error('Workspace reload failed')
+  return async (
+    token: WorkspaceSwitch,
+    expected: ReadonlyArray<string | null>,
+  ) => {
+    prepareWorkspaceResync(token, expected)
+    try {
+      // A cached `/dashboard` of the previous workspace would otherwise show, stale, under the new
+      // workspace's name while it reloads. `replace` keeps Back from returning to a trip that
+      // belongs to the workspace just left.
+      router.clearCache()
+      await router.navigate({ to: '/dashboard', replace: true })
+      prepareWorkspaceResync(token, expected)
+      prepareWorkspaceDocument(token)
+      await router.invalidate({ sync: true })
+      // Router loads can resolve after rendering an error boundary instead of rejecting.
+      if (
+        router.state.matches.some(
+          ({ status }) => status === 'error' || status === 'notFound',
+        )
+      ) {
+        throw new Error('Workspace reload failed')
+      }
+    } finally {
+      finishWorkspaceResync(token)
     }
   }
 }
@@ -89,17 +106,26 @@ export function useWorkspaceSwitch({
   const [pendingId, setPendingId] = useState<string | null>(null)
 
   async function run(organizationId: string): Promise<void> {
-    if (organizationId === activeId || switching.current) return
+    if (
+      organizationId === activeId ||
+      switching.current ||
+      workspaceClaimState().switching
+    )
+      return
     const chosen = organizations.find((item) => item.id === organizationId)
     if (!chosen) return
-    if (!(await requestCollectionExit()) || switching.current) return
+    if (
+      !(await requestCollectionExit()) ||
+      switching.current ||
+      workspaceClaimState().switching
+    )
+      return
     const chosenName = chosen.name
     switching.current = true
     setPendingId(organizationId)
-    // `setActive` moves the session before this tab's shell is re-read, and a call this tab makes in
-    // between (a poll, an upload status) would be refused for a change the reader just made.
-    beginWorkspaceSwitch()
+    const transition = beginWorkspaceSwitch()
     try {
+      await waitForWorkspaceCalls(transition)
       const failure = await authClient.organization
         .setActive({ organizationId })
         .then(({ error }) => (error ? toAuthFailure(error) : null))
@@ -118,7 +144,12 @@ export function useWorkspaceSwitch({
         )
       }
       try {
-        await resync()
+        await resync(
+          transition,
+          failure
+            ? [transition.organizationId, organizationId]
+            : [organizationId],
+        )
       } catch {
         // Offline navigation can fail too; release the menu without an unhandled rejection.
         // A failed activation already told the reader that its outcome is unconfirmed.
@@ -130,8 +161,11 @@ export function useWorkspaceSwitch({
         return
       }
       if (failure) return
+    } catch (cause) {
+      reopenNoticeFor(cause)
+      return
     } finally {
-      endWorkspaceSwitch()
+      endWorkspaceSwitch(transition)
       switching.current = false
       // Commit the close, including Radix's modal cleanup, before announcing outside the menu.
       flushSync(() => {

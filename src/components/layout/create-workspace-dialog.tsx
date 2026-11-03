@@ -24,6 +24,8 @@ import { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 import {
   beginWorkspaceSwitch,
   endWorkspaceSwitch,
+  waitForWorkspaceCalls,
+  workspaceClaimState,
   reopenNoticeFor,
 } from '#/lib/workspace-claim-store'
 import { hasVisibleCharacter } from '#/lib/workspace-name'
@@ -104,41 +106,39 @@ export function CreateWorkspaceDialog({
     if (refusals > 0) nameRef.current?.focus()
   }, [refusals])
 
-  // Creating a workspace activates it on the session, so this tab changes workspace itself: the
-  // re-read after it must not be refused for the claim it has not re-read yet (as in the switcher).
-  // The create call itself keeps the claim, so a tab showing a stale workspace is refused before it
-  // is checked against a role and a plan it does not show. The price is a short window, between the
-  // server activating the new workspace and its answer, in which a poll of this tab can be refused
-  // and open the notice for a change this tab itself made; the re-read closes it again.
-  async function resyncSwitching(): Promise<void> {
-    beginWorkspaceSwitch()
-    try {
-      await resync()
-    } finally {
-      endWorkspaceSwitch()
-    }
-  }
-
   async function create(): Promise<void> {
-    if (!(await requestCollectionExit())) return
+    if (
+      workspaceClaimState().switching ||
+      !(await requestCollectionExit()) ||
+      workspaceClaimState().switching
+    )
+      return
+    const transition = beginWorkspaceSwitch()
     setPending(true)
     setNotice(null)
-    let created = false
+    let submitted = false
     try {
-      const result = await createWorkspaceFn({ data: { name: name.trim() } })
+      await waitForWorkspaceCalls(transition)
+      submitted = true
+      const result = await createWorkspaceFn({
+        data: { name: name.trim() },
+        fetch: transition.fetch,
+      })
       if (!result.ok) {
         setNotice({ kind: 'refusal', reason: result.reason })
         return
       }
-      created = true
       if (!result.activated) {
         toast.error(t('shell.workspace.switchFailed'), {
           description: t('shell.workspace.switchFailedBody'),
         })
       }
+      onOpenChange(false)
+      await resync(transition, [
+        result.activated ? result.organizationId : transition.organizationId,
+      ]).catch(() => undefined)
     } catch (cause) {
       const failure = readPublicFailure(cause)
-      // A catalogue key rather than a sentence, so it is resolved here and is not the English kind.
       const changed = reopenNoticeFor(cause)
       setNotice({
         kind: 'failure',
@@ -147,18 +147,15 @@ export function CreateWorkspaceDialog({
           : (failure.message ?? t('shell.workspace.createFailed')),
         authored: !changed && failure.message !== undefined,
       })
-      // Only an unknown outcome needs a re-read: a refusal, a validation failure or a stale tab wrote
-      // nothing.
-      if (failure.kind === 'unexpected' && !changed) {
-        await resyncSwitching().catch(() => undefined)
+      // A lost create response supplies no trustworthy destination; never adopt an arbitrary workspace.
+      if (submitted && failure.kind === 'unexpected' && !changed) {
+        await resync(transition, [transition.organizationId]).catch(
+          () => undefined,
+        )
       }
     } finally {
+      endWorkspaceSwitch(transition)
       setPending(false)
-    }
-
-    if (created) {
-      onOpenChange(false)
-      await resyncSwitching().catch(() => undefined)
     }
   }
 

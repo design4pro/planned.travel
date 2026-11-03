@@ -93,6 +93,15 @@ claim only narrows access: the tenant context still comes from the session alone
 socket states the same claim as `?workspace=` on its URL, because a browser cannot set a header on a
 WebSocket (#979, §5).
 
+Deliberate workspace switching and creation first drain calls already in flight, then cancel new
+unrelated server-function calls locally without replaying them. A tab-local fetch capability admits
+only the create call and its own shell/dashboard resynchronization and one document-locale read;
+every dispatched call retains the displayed claim. Creation validates the original workspace, while
+shell resynchronization checks
+its expected activation outcome before adopting a new claim. A competing workspace or a genuine
+refusal remains visible; the capability changes no server authorization (#1704). The document locale
+is renegotiated after the shell confirms the destination, preserving Follow workspace language.
+
 ### 2.3 A tile range request (`GET /api/tiles/basemap.pmtiles`, `Range: bytes=…`)
 
 Implemented in `src/routes/api/tiles/$.ts` and `-lib/`. MapLibre reads a Protomaps archive by

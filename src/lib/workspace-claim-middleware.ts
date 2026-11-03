@@ -32,34 +32,39 @@ import {
 } from './workspace-claim'
 import {
   markWorkspaceStale,
+  permitsWorkspaceCall,
+  trackWorkspaceCall,
+  workspaceSwitchCancelled,
   workspaceClaimState,
+  workspaceCallClaim,
   workspaceClaimGeneration,
 } from './workspace-claim-store'
 
 export const workspaceClaimMiddleware = createMiddleware({
   type: 'function',
-}).client(async ({ next }) => {
+}).client(async ({ next, fetch }) => {
   const generation = workspaceClaimGeneration()
-  const { organizationId, stale, switching } = workspaceClaimState()
+  const { stale } = workspaceClaimState()
+  const organizationId = workspaceCallClaim(fetch)
 
   if (stale) {
     throw new Error(WORKSPACE_CHANGED_KEY)
   }
 
-  // No claim before the shell has loaded, on the server, or while this tab is switching workspace
-  // itself: all three behave as a call always did.
-  if (organizationId === null || switching) {
-    return next()
-  }
-
+  if (!permitsWorkspaceCall(fetch)) throw workspaceSwitchCancelled()
+  // Shell-less calls keep their existing behavior; transitions never remove a displayed claim.
+  const finish = trackWorkspaceCall()
   try {
+    if (organizationId === null) return await next()
     return await next({ headers: { [WORKSPACE_CLAIM_HEADER]: organizationId } })
   } catch (cause) {
     if (isWorkspaceChanged(cause)) {
-      if (workspaceClaimGeneration() === generation)
+      if (organizationId !== null && workspaceClaimGeneration() === generation)
         markWorkspaceStale(organizationId)
       throw new Error(WORKSPACE_CHANGED_KEY, { cause })
     }
     throw cause
+  } finally {
+    finish()
   }
 })

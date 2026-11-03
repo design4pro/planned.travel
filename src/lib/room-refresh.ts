@@ -1,8 +1,11 @@
 /** Room refreshes keep the displayed workspace; only a navigation may adopt the session's. */
 
-import { isWorkspaceChanged } from './workspace-claim'
+import { isWorkspaceChanged, WORKSPACE_CHANGED_KEY } from './workspace-claim'
 import {
   markWorkspaceStale,
+  takeWorkspaceResync,
+  ownsWorkspaceSwitch,
+  workspaceSwitchCancelled,
   resumeWorkspaceClaim,
   setWorkspaceClaim,
   workspaceClaimGeneration,
@@ -176,20 +179,27 @@ export async function readWorkspaceShell<
 >(
   controller: AbortController,
   preload: boolean,
-  read: (preserveWorkspace: boolean) => Promise<T | null>,
+  read: (
+    preserveWorkspace: boolean,
+    fetch?: typeof globalThis.fetch,
+  ) => Promise<T | null>,
 ): Promise<T | null> {
+  const transition = !preload ? takeWorkspaceResync(controller) : undefined
+  if (workspaceClaimState().switching && !transition)
+    throw workspaceSwitchCancelled()
   const refresh = !preload ? pending : undefined
   if (refresh) {
     pending = undefined
     refresh.controller = controller
     refreshes.set(controller, refresh)
     tokens.set(refresh.id, refresh)
-  } else if (!preload) {
+  } else if (!preload && !transition) {
     resumeWorkspaceClaim()
   }
+  const generation = workspaceClaimGeneration()
   let shell: T | null
   try {
-    shell = await read(refresh !== undefined)
+    shell = await read(refresh !== undefined, transition?.fetch)
   } catch (error) {
     if (refresh && workspaceClaimGeneration() !== refresh.generation)
       return refresh.shell as T
@@ -200,6 +210,21 @@ export async function readWorkspaceShell<
   }
   if (controller.signal.aborted || preload || shell === null) return shell
   const organizationId = shell.session.organization?.id ?? null
+  if (transition) {
+    if (
+      !ownsWorkspaceSwitch(transition) ||
+      workspaceClaimGeneration() !== generation
+    )
+      throw workspaceSwitchCancelled()
+    if (
+      workspaceClaimState().stale ||
+      !transition.expected.includes(organizationId)
+    ) {
+      const displayed = workspaceClaimState().organizationId
+      if (displayed !== null) markWorkspaceStale(displayed)
+      throw new Error(WORKSPACE_CHANGED_KEY)
+    }
+  }
   if (refresh && workspaceClaimGeneration() !== refresh.generation)
     return refresh.shell as T
   if (refresh) {

@@ -18,14 +18,23 @@ import {
 } from '../workspace-claim'
 import {
   beginWorkspaceSwitch,
+  endWorkspaceSwitch,
+  waitForWorkspaceCalls,
+  prepareWorkspaceResync,
+  prepareWorkspaceDocument,
+  takeWorkspaceDocumentFetch,
+  workspaceResyncToken,
+  workspaceSwitchFetch,
   dismissWorkspaceNotice,
   markWorkspaceStale,
   resetWorkspaceClaim,
   setWorkspaceClaim,
   workspaceClaimState,
 } from '../workspace-claim-store'
+import { readWorkspaceShell } from '../room-refresh'
 
 type ClientHandler = (ctx: {
+  fetch?: typeof globalThis.fetch
   next: (options?: { headers?: Record<string, string> }) => Promise<unknown>
 }) => Promise<unknown>
 
@@ -67,14 +76,17 @@ describe('workspaceClaimMiddleware', () => {
     expect(next).toHaveBeenCalledWith()
   })
 
-  it('sends no claim while the tab is switching workspace itself', async () => {
+  it('cancels unrelated calls locally while switching, without a false stale notice', async () => {
     setWorkspaceClaim('org_a')
     beginWorkspaceSwitch()
     const next = vi.fn().mockResolvedValue('ok')
 
-    await middleware({ next })
+    await expect(middleware({ next })).rejects.toMatchObject({
+      name: 'AbortError',
+    })
 
-    expect(next).toHaveBeenCalledWith()
+    expect(next).not.toHaveBeenCalled()
+    expect(workspaceClaimState().noticeOpen).toBe(false)
   })
 
   it('marks the tab stale on a refusal and still throws it to the caller', async () => {
@@ -151,5 +163,261 @@ describe('workspaceClaimMiddleware', () => {
     expect(isWorkspaceChanged(outcome)).toBe(true)
     // A poll is not the reader asking: it must not pull the dialog back after "Not now".
     expect(workspaceClaimState().noticeOpen).toBe(false)
+  })
+})
+
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {}
+  let reject: (error: unknown) => void = () => {}
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes
+    reject = no
+  })
+  return { promise, resolve, reject }
+}
+
+const shell = (id: string) => ({ session: { organization: { id } } })
+
+describe('deliberate workspace transition concurrency', () => {
+  it('keeps unrelated writes and polling unsent throughout creation and resync', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    await waitForWorkspaceCalls(token)
+    const activation = deferred<unknown>()
+    const createTransport = vi.fn().mockReturnValue(activation.promise)
+    const own = middleware({ fetch: token.fetch, next: createTransport })
+    expect(createTransport).toHaveBeenCalledWith({
+      headers: { [WORKSPACE_CLAIM_HEADER]: 'org_a' },
+    })
+    const unrelated = vi.fn()
+    await expect(middleware({ next: unrelated })).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    await expect(middleware({ next: unrelated })).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    activation.resolve('activated')
+    await own
+    prepareWorkspaceResync(token, ['org_b'])
+    const controller = new AbortController()
+    const answer = deferred<ReturnType<typeof shell>>()
+    const reading = readWorkspaceShell(controller, false, async (_, fetch) => {
+      await middleware({ fetch, next: vi.fn().mockResolvedValue('shell') })
+      return answer.promise
+    })
+    await expect(middleware({ next: unrelated })).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    answer.resolve(shell('org_b'))
+    await reading
+    const dashboard = vi.fn().mockResolvedValue('dashboard')
+    await middleware({
+      fetch: workspaceSwitchFetch(workspaceResyncToken(controller)),
+      next: dashboard,
+    })
+    expect(dashboard).toHaveBeenCalledWith({
+      headers: { [WORKSPACE_CLAIM_HEADER]: 'org_b' },
+    })
+    await expect(middleware({ next: unrelated })).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    endWorkspaceSwitch(token)
+    expect(unrelated).not.toHaveBeenCalled()
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_b',
+      stale: false,
+      noticeOpen: false,
+      switching: false,
+    })
+    // A completed router context cannot grant permission during a newer transition.
+    const newer = beginWorkspaceSwitch()
+    expect(workspaceSwitchFetch(token.id)).toBeUndefined()
+    endWorkspaceSwitch(token)
+    expect(workspaceClaimState().switching).toBe(true)
+    endWorkspaceSwitch(newer)
+  })
+
+  it.each([false, true])(
+    'drains an earlier write before activation and preserves its refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const answer = deferred<unknown>()
+      const earlier = middleware({
+        next: vi.fn().mockReturnValue(answer.promise),
+      }).catch((error) => error)
+      const token = beginWorkspaceSwitch()
+      let ready = false
+      const waiting = waitForWorkspaceCalls(token)
+        .then(() => {
+          ready = true
+        })
+        .catch((error) => error)
+      await Promise.resolve()
+      expect(ready).toBe(false)
+      if (refused) answer.reject(refusal())
+      else answer.resolve('saved in org_a')
+      await earlier
+      const outcome = await waiting
+      expect(ready).toBe(!refused)
+      expect(workspaceClaimState().stale).toBe(refused)
+      if (refused) expect(isWorkspaceChanged(outcome)).toBe(true)
+      endWorkspaceSwitch(token)
+    },
+  )
+
+  it('expires the document capability after consumption, refusal or owner cleanup', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    prepareWorkspaceResync(token, ['org_b'])
+    expect(() => prepareWorkspaceDocument(token)).not.toThrow()
+    expect(takeWorkspaceDocumentFetch()).toBeUndefined()
+    setWorkspaceClaim('org_b')
+    prepareWorkspaceDocument(token)
+    expect(takeWorkspaceDocumentFetch()).toBe(token.fetch)
+    expect(takeWorkspaceDocumentFetch()).toBeUndefined()
+    prepareWorkspaceDocument(token)
+    markWorkspaceStale('org_b')
+    expect(takeWorkspaceDocumentFetch()).toBeUndefined()
+    setWorkspaceClaim('org_b')
+    prepareWorkspaceDocument(token)
+    endWorkspaceSwitch(token)
+    expect(takeWorkspaceDocumentFetch()).toBeUndefined()
+  })
+
+  it('never retargets creation when an earlier navigation updates the claim', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    setWorkspaceClaim('org_c')
+    await expect(waitForWorkspaceCalls(token)).rejects.toMatchObject({
+      name: 'AbortError',
+    })
+    const next = vi.fn().mockResolvedValue('created')
+    await middleware({ fetch: token.fetch, next })
+    expect(next).toHaveBeenCalledWith({
+      headers: { [WORKSPACE_CLAIM_HEADER]: 'org_a' },
+    })
+    endWorkspaceSwitch(token)
+  })
+
+  it('keeps the original create claim and exposes a competing-tab refusal', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    await expect(
+      middleware({
+        fetch: token.fetch,
+        next: vi.fn().mockRejectedValue(refusal()),
+      }),
+    ).rejects.toThrow(WORKSPACE_CHANGED_KEY)
+    expect(workspaceClaimState()).toMatchObject({
+      stale: true,
+      noticeOpen: true,
+    })
+    expect(() => prepareWorkspaceResync(token, ['org_b'])).toThrow(
+      WORKSPACE_CHANGED_KEY,
+    )
+    endWorkspaceSwitch(token)
+  })
+
+  it.each([
+    { expected: ['org_b'], actual: 'org_b' },
+    { expected: ['org_a'], actual: 'org_a' },
+    { expected: ['org_a', 'org_b'], actual: 'org_a' },
+  ])(
+    'accepts only the confirmed or explicitly uncertain activation outcome: $actual / $expected',
+    async ({ expected, actual }) => {
+      setWorkspaceClaim('org_a')
+      const token = beginWorkspaceSwitch()
+      prepareWorkspaceResync(token, expected)
+      await readWorkspaceShell(new AbortController(), false, async () =>
+        shell(actual),
+      )
+      expect(workspaceClaimState()).toMatchObject({
+        organizationId: actual,
+        stale: false,
+      })
+      endWorkspaceSwitch(token)
+    },
+  )
+
+  it('does not adopt a competing third workspace during its own resync', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    prepareWorkspaceResync(token, ['org_b'])
+    await expect(
+      readWorkspaceShell(new AbortController(), false, async () =>
+        shell('org_c'),
+      ),
+    ).rejects.toThrow(WORKSPACE_CHANGED_KEY)
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_a',
+      stale: true,
+      noticeOpen: true,
+    })
+    endWorkspaceSwitch(token)
+  })
+
+  it('does not clear a newer genuine refusal when its own shell response is delayed', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    prepareWorkspaceResync(token, ['org_b'])
+    const answer = deferred<ReturnType<typeof shell>>()
+    const reading = readWorkspaceShell(
+      new AbortController(),
+      false,
+      () => answer.promise,
+    )
+    markWorkspaceStale('org_a')
+    answer.resolve(shell('org_b'))
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' })
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_a',
+      stale: true,
+      noticeOpen: true,
+    })
+    endWorkspaceSwitch(token)
+  })
+
+  it('rejects overlaps and ignores a superseded shell response and cleanup', async () => {
+    setWorkspaceClaim('org_a')
+    const first = beginWorkspaceSwitch()
+    expect(() => beginWorkspaceSwitch()).toThrow()
+    prepareWorkspaceResync(first, ['org_b'])
+    const answer = deferred<ReturnType<typeof shell>>()
+    const reading = readWorkspaceShell(
+      new AbortController(),
+      false,
+      () => answer.promise,
+    )
+    endWorkspaceSwitch(first)
+    const second = beginWorkspaceSwitch()
+    prepareWorkspaceResync(second, ['org_c'])
+    await readWorkspaceShell(new AbortController(), false, async () =>
+      shell('org_c'),
+    )
+    answer.resolve(shell('org_b'))
+    await expect(reading).rejects.toMatchObject({ name: 'AbortError' })
+    endWorkspaceSwitch(first)
+    expect(workspaceClaimState()).toMatchObject({
+      organizationId: 'org_c',
+      switching: true,
+    })
+    endWorkspaceSwitch(second)
+  })
+
+  it('preserves expired-session and membership-removal outcomes', async () => {
+    setWorkspaceClaim('org_a')
+    const token = beginWorkspaceSwitch()
+    prepareWorkspaceResync(token, ['org_b'])
+    await expect(
+      readWorkspaceShell(new AbortController(), false, async () => null),
+    ).resolves.toBeNull()
+    prepareWorkspaceResync(token, ['org_b'])
+    await expect(
+      readWorkspaceShell(new AbortController(), false, async () => {
+        throw new Error('membership removed')
+      }),
+    ).rejects.toThrow('membership removed')
+    endWorkspaceSwitch(token)
+    expect(workspaceClaimState().switching).toBe(false)
   })
 })
