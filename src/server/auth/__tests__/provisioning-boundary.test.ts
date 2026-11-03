@@ -58,7 +58,11 @@ describe('src/server/auth/provisioning.ts', () => {
       'asc',
       'count',
       'eq',
+      'notExists',
+      'sql',
     ])
+    expect(source).not.toMatch(/\bsql\.raw\s*\(/)
+    expect(source).not.toMatch(/sql`[^`]*\b(?:select|insert|update|delete)\b/i)
     expect(source).not.toMatch(/\bimport\(/)
     expect(source).not.toMatch(/\brequire\(/)
     // A side-effect or double-quoted import would slip past the specifier scan above.

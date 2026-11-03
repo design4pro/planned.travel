@@ -1,4 +1,4 @@
-import { and, asc, count, eq } from 'drizzle-orm'
+import { and, asc, count, eq, notExists, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { member, organization, user as userTable } from '#/server/db/auth-schema'
 import { recordParticipation } from './participation'
@@ -76,10 +76,9 @@ export { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 /**
  * Writes an organization and the `owner` membership of `user` in one batch, reserving a free slug.
  *
- * The one writer of that pair: sign-up provisioning and workspace creation both end here, so the two
- * rows can never be written apart. `slugBase` is where the slug starts and defaults to the name; the
- * personal workspace passes its own, which is why it keeps the slug it always had. `metadata` is
- * written through as JSON, or as `null`.
+ * Explicit workspace creation writes the pair together; personal provisioning below also guards
+ * membership absence inside its batch. `slugBase` is where the slug starts and defaults to the name.
+ * `metadata` is written through as JSON, or as `null`.
  */
 export async function createOrganizationFor(
   db: AuthDb,
@@ -162,11 +161,46 @@ export async function provisionPersonalOrganization(
   const existing = await firstOrganizationIdFor(db, user.id)
   if (existing) return existing
 
-  return createOrganizationFor(db, user, {
-    name: personalOrganizationName(user),
-    metadata: { personal: true },
-    slugBase: personalOrganizationSlug(user),
-  })
+  const organizationId = nanoid(24)
+  const slug = await reserveSlug(db, personalOrganizationSlug(user))
+  const now = Date.now()
+  const noMembership = notExists(
+    db.select({ id: member.id }).from(member).where(eq(member.userId, user.id)),
+  )
+  // D1 serializes batches: all three writes test absence before the final membership insert.
+  await db.batch([
+    db.insert(organization).select(
+      db
+        .select({
+          id: sql`${organizationId}`.as('id'),
+          name: sql`${personalOrganizationName(user)}`.as('name'),
+          slug: sql`${slug}`.as('slug'),
+          logo: sql`null`.as('logo'),
+          metadata: sql`${JSON.stringify({ personal: true })}`.as('metadata'),
+          createdAt: sql`${now}`.as('createdAt'),
+          updatedAt: sql`${now}`.as('updatedAt'),
+        })
+        .from(userTable)
+        .where(and(eq(userTable.id, user.id), noMembership)),
+    ),
+    recordParticipation(db, organizationId, user.id, noMembership),
+    db.insert(member).select(
+      db
+        .select({
+          id: sql`${nanoid(24)}`.as('id'),
+          organizationId: sql`${organizationId}`.as('organizationId'),
+          userId: userTable.id,
+          role: sql`${'owner'}`.as('role'),
+          createdAt: sql`${now}`.as('createdAt'),
+        })
+        .from(userTable)
+        .where(and(eq(userTable.id, user.id), noMembership)),
+    ),
+  ])
+  const recovered = await firstOrganizationIdFor(db, user.id)
+  if (!recovered)
+    throw new Error('Personal workspace provisioning produced no membership')
+  return recovered
 }
 
 /** The organization a returning user should land in: their oldest membership. */
