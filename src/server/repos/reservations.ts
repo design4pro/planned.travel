@@ -355,10 +355,31 @@ async function insertReservation(
   input: CreateReservationInput,
   importedAt: Date | null,
 ): Promise<Reservation> {
+  const values = await prepareReservationCreate(scope, input)
+  return reservationsRepository.insert(scope, { ...values, importedAt })
+}
+
+/** Validates the booking half before a single write or a stay's atomic pair. */
+export async function prepareReservationCreate(
+  scope: TenantScope,
+  input: CreateReservationInput,
+) {
   const values = createReservationInput.parse(input)
   await requireWritableBookingTrip(scope, values.tripId)
   await assertReferences(scope, values.tripId, values)
-  return reservationsRepository.insert(scope, { ...values, importedAt })
+  return values
+}
+
+/** The same scoped row and reference guards for standalone and paired updates. */
+export async function prepareReservationUpdate(
+  scope: TenantScope,
+  reservationId: string,
+  input: UpdateReservationInput,
+) {
+  const values = definedOnly(updateReservationInput.parse(input))
+  const existing = await requireWritableReservation(scope, reservationId)
+  await assertReferences(scope, existing.tripId, values)
+  return { values, existing }
 }
 
 export async function updateReservation(
@@ -366,9 +387,7 @@ export async function updateReservation(
   reservationId: string,
   input: UpdateReservationInput,
 ): Promise<Reservation> {
-  const values = definedOnly(updateReservationInput.parse(input))
-  const existing = await requireWritableReservation(scope, reservationId)
-  await assertReferences(scope, existing.tripId, values)
+  const { values } = await prepareReservationUpdate(scope, reservationId, input)
   return reservationsRepository.requireUpdate(scope, reservationId, values)
 }
 

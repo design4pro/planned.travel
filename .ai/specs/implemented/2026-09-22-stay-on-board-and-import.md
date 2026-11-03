@@ -149,3 +149,7 @@ What shipped in #757 differs from the design above in these places. Both phases 
 5. **One extra copy key: `trips.plan.day.addStayShort`** ("Add a stay"). This is the visible label. `trips.plan.day.addStay` ("Add a stay for {day}") is the accessible name. In every locale the visible label is the opening words of the name, so the control meets WCAG 2.5.3 (Label in Name) the way the note control does. The place control beside it does not meet it yet (#758).
 6. **The day-panel action lives in `PlannerDayTools`**, the documented owner of a day's footer controls, rather than in `plan-screen.tsx`. `plan-screen.tsx` only mounts the dialog.
 7. **An imported stay's name is the booking's written title.** An untitled row therefore gets the same catalogue fallback as its reservation. The stay's address is the imported location. The stay's `placeId` is not set, the same as `createStay`.
+
+## Amendment: atomic stay writes (#1663)
+
+The explicit stay form now creates and updates its reservation and nights in one atomic batch through `src/server/repos/stay-pairs.ts`, using the existing reservation and stay validation. `stay-writes.ts` owns orchestration and runs ledger synchronization, audit and realtime success effects only after that batch commits. Creation no longer needs compensation; a refused update preserves both previous rows. The import path and stay deletion retain their existing semantics.
