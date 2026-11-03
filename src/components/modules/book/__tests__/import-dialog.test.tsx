@@ -650,6 +650,50 @@ describe('review recovery', () => {
     expect(close).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['dismissal', 'refusal'] as const)(
+    'keeps replacement upload out of selected Review after %s',
+    async (recovery) => {
+      seed()
+      stubs.view.mockImplementation(({ data }: { data: { jobId: string } }) =>
+        Promise.resolve(
+          recovery === 'refusal' && data.jobId.endsWith('file-1')
+            ? { status: 'refused', refusal: { code: 'empty' } }
+            : READY,
+        ),
+      )
+      render(
+        <I18nProvider locale="en" messages={EN}>
+          <ImportBookingsDialog
+            tripId="trip-1"
+            userId={USER}
+            open
+            onOpenChange={() => {}}
+            jobId="booking-import:trip-1:file-1"
+          />
+        </I18nProvider>,
+      )
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: recovery === 'dismissal' ? 'Dismiss' : 'Try another file',
+        }),
+      )
+      expect(readBookImports(USER).map((job) => job.filename)).toEqual([
+        'other.pdf',
+      ])
+      expect(document.querySelector('[data-part="import-drop"]')).toBeNull()
+      expect(screen.queryByText('Hotel Okura')).toBeNull()
+      expect(
+        (
+          screen.getByRole('button', {
+            name: 'Select a booking to add',
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true)
+      expect(stubs.upload).not.toHaveBeenCalled()
+      expect(stubs.confirm).not.toHaveBeenCalled()
+    },
+  )
+
   it('enables confirmation after restore without another upload', async () => {
     seed()
     stubs.view.mockResolvedValue(READY)
