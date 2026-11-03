@@ -119,7 +119,7 @@ describe('authored copy crosses intact', () => {
     for (const [name, message] of [
       [
         'TripArchivedError',
-        'This trip is archived. Restore it before making changes.',
+        'This trip is archived. The trip owner must restore it before changes can be made.',
       ],
       [
         'TripRoleError',

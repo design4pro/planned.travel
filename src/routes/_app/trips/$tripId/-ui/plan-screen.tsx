@@ -1766,9 +1766,8 @@ export function PlanScreen({
       />
 
       {/*
-       * The desk's dialog, not a second form: it owns the stay's validation, both of its writes,
-       * the compensation and the ledger line, and its save invalidates the router, so the board's
-       * own loader re-reads the new nights.
+       * The desk's dialog owns validation and calls the atomic stay-pair write and ledger sync.
+       * Its save invalidates the router, so the board's own loader re-reads the new nights.
        */}
       <BookingDialog
         tripId={payload.tripId}

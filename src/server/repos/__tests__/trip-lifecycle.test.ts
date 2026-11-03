@@ -555,7 +555,7 @@ describe('trip lifecycle', () => {
       // The sentence crosses to the browser verbatim (`AUTHORED_ERROR_NAMES`, #391), so it is
       // asserted here rather than left to the classifier's own tests.
       expect(error.message).toBe(
-        'This trip is archived. Restore it before making changes.',
+        'This trip is archived. The trip owner must restore it before changes can be made.',
       )
     })
 

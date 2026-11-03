@@ -2,14 +2,14 @@
  * A stay and the booking that pays for it, at the server-function seam.
  *
  * The claims worth testing here are the ones no single repository can make: that the two writes are
- * ordered and compensated, that removing the booking leaves the nights, that a stay's total is never
+ * committed together, that removing the booking leaves the nights, that a stay's total is never
  * turned into a per-night figure, and that a stay of one trip cannot be written under another's name.
  *
  * The plain functions (`createStay`, `updateStay`, `deleteStay`) are driven rather than the server
  * functions wrapping them, for the reason `reservations.test.ts` gives: outside a Start build a
  * server function discards its answer. Everything else is real — a migrated SQLite database, real
- * repositories, real foreign keys — except one switch that makes the stay's own write fail, which is
- * the only way to reach the compensation without a defect to reach it through.
+ * repositories, real foreign keys — except deterministic archive injection at the batch seam and a database trigger that refuses
+ * the second statement, exercising rollback through real storage.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,7 +20,15 @@ import {
   addTripMember,
   archiveTrip,
   createTrip,
+  createStayPair,
+  updateStayPair,
+  updateAccommodation,
+  prepareAccommodationCreate,
+  prepareAccommodationUpdate,
+  prepareReservationCreate,
+  prepareReservationUpdate,
   deleteReservation,
+  listAuditLog,
   listTripAccommodations,
   listTripDays,
   listTripExpenses,
@@ -31,26 +39,32 @@ import { NotFoundError } from '#/server/repos/context'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
-import type { Day, Trip } from '#/server/db/types'
-import type * as Repos from '#/server/repos'
+import type { Day, DayAccommodation, Trip } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
+import type * as Batch from '#/server/repos/batch'
 
 /* ------------------------------------------------------------------ mocking */
 
-const stubs = vi.hoisted(() => ({ failStayWrite: false }))
+const stubs = vi.hoisted(() => ({
+  beforeStayWrite: undefined as (() => Promise<void>) | undefined,
+  afterStayWrite: undefined as (() => Promise<void>) | undefined,
+  mirror: vi.fn(async (): Promise<void> => undefined),
+}))
 
-/** The one seam: `createAccommodation` refuses when asked to, and is the real one otherwise. */
-vi.mock('#/server/repos', async (importOriginal) => {
-  const real = await importOriginal<typeof Repos>()
+/** Archive after all preparation, immediately before the real atomic batch reaches storage. */
+vi.mock('#/server/repos/batch', async (importOriginal) => {
+  const real = await importOriginal<typeof Batch>()
   return {
     ...real,
-    createAccommodation: async (
-      ...args: Parameters<typeof real.createAccommodation>
-    ) => {
-      if (stubs.failStayWrite) {
-        throw new Error('the stay write failed')
-      }
-      return real.createAccommodation(...args)
+    runAtomicBatch: async (...args: Parameters<typeof real.runAtomicBatch>) => {
+      const interrupt = stubs.beforeStayWrite
+      stubs.beforeStayWrite = undefined
+      await interrupt?.()
+      const result = await real.runAtomicBatch(...args)
+      const after = stubs.afterStayWrite
+      stubs.afterStayWrite = undefined
+      await after?.()
+      return result
     },
   }
 })
@@ -60,7 +74,7 @@ vi.mock('../context', () => ({
   appScope: async (): Promise<never> => {
     throw new Error('the plain functions are driven with an explicit scope')
   },
-  mirrorToRoom: async (): Promise<void> => undefined,
+  mirrorToRoom: stubs.mirror,
   patch: (kind: string, id: string, fields: unknown) => ({
     entity: { kind, id },
     op: 'upsert',
@@ -86,6 +100,8 @@ const { bookingDeskPayload } = await import('../reservations')
 
 /* -------------------------------------------------------------------- setup */
 
+let fixture: Awaited<ReturnType<typeof createHarness>>
+let sqlite: Awaited<ReturnType<typeof createHarness>>['sqlite']
 let scope: TenantScope
 let tenantOf: SeededTenant
 let trip: Trip
@@ -123,8 +139,12 @@ function stayPayload(overrides: Record<string, unknown> = {}) {
 }
 
 beforeEach(async () => {
-  stubs.failStayWrite = false
+  stubs.mirror.mockClear()
+  stubs.beforeStayWrite = undefined
+  stubs.afterStayWrite = undefined
   const harness = await createHarness()
+  fixture = harness
+  sqlite = harness.sqlite
   tenantOf = await harness.seedTenant('stays')
   scope = tenantOf.scope
   trip = await createTrip(scope, {
@@ -172,14 +192,16 @@ describe('a stay and the booking that pays for it', () => {
     })
   })
 
-  it('deletes the booking again when the stay write fails, leaving no orphan and no cost', async () => {
-    stubs.failStayWrite = true
+  it('rolls back the booking when the stay write fails, leaving no orphan and no cost', async () => {
+    sqlite.exec(`CREATE TRIGGER fail_stay_insert BEFORE INSERT ON day_accommodations
+      BEGIN SELECT RAISE(ABORT, 'the stay write failed'); END`)
 
     const error = await captureError(() =>
       createStay(scope, stayPayload({ priceMinor: 42_000, currency: 'JPY' })),
     )
 
-    expect(error.message).toBe('the stay write failed')
+    expect(error.message).toContain('the stay write failed')
+    expect(stubs.mirror).not.toHaveBeenCalled()
     expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
     expect(await listTripAccommodations(scope, trip.id)).toEqual([])
     expect(await listTripExpenses(scope, trip.id)).toEqual([])
@@ -498,8 +520,7 @@ describe('a stay saved under a trip currency that is no longer the trip’s', ()
   })
 
   it('answers the other workspace’s trip and row as not found, never as a currency refusal', async () => {
-    const harness = await createHarness()
-    const elsewhere = await harness.seedTenant('stays-elsewhere')
+    const elsewhere = await fixture.seedTenant('stays-elsewhere')
     const abroad = await createTrip(elsewhere.scope, {
       title: 'Lisbon',
       startDate: '2026-05-01',
@@ -547,16 +568,17 @@ describe('a stay saved under a trip currency that is no longer the trip’s', ()
 })
 
 /**
- * The same two deletes on the database D1 is actually running. `reservation_id` arrived by
- * `ADD COLUMN`, so what D1 enforces is `NO ACTION`, not the `set null` `schema.ts` declares
- * (`DEPLOYED_WITHOUT_ON_DELETE` in `migrations-match-schema.test.ts` registers it, ADR 0044); on the
- * default harness these cases would pass whether or not the link is cleared before the booking
- * goes.
+ * Atomic pairs and the existing deletes on the database D1 is actually running. `reservation_id`
+ * arrived by `ADD COLUMN`, so D1 enforces `NO ACTION`, not the `set null` the schema declares
+ * (ADR 0044). The migrated foreign keys must hold on rollback as well as on deletion.
  */
 describe('on the migrated database', () => {
   beforeEach(async () => {
     const harness = await createHarness({ ddl: 'migrations' })
-    scope = (await harness.seedTenant('stays-migrated')).scope
+    fixture = harness
+    sqlite = harness.sqlite
+    tenantOf = await harness.seedTenant('stays-migrated')
+    scope = tenantOf.scope
     trip = await createTrip(scope, {
       title: 'Tokyo in spring',
       startDate: '2026-04-10',
@@ -564,6 +586,257 @@ describe('on the migrated database', () => {
       currency: 'JPY',
     })
     days = await listTripDays(scope, trip.id)
+  })
+
+  it('leaves no reservation, stay or expense when archiving interrupts creation', async () => {
+    stubs.mirror.mockClear()
+    const auditBefore = await listAuditLog(scope, { entityType: 'reservation' })
+    stubs.beforeStayWrite = () =>
+      archiveTrip(scope, trip.id).then(() => undefined)
+    const error = await captureError(() =>
+      createStay(scope, stayPayload({ priceMinor: 42_000, currency: 'JPY' })),
+    )
+    expect(error).toBeInstanceOf(TripArchivedError)
+    expect(stubs.mirror).not.toHaveBeenCalled()
+    expect(await listAuditLog(scope, { entityType: 'reservation' })).toEqual(
+      auditBefore,
+    )
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+    expect(await listTripAccommodations(scope, trip.id)).toEqual([])
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+  })
+
+  it('preserves the previous pair and expense when archiving interrupts an update', async () => {
+    const ids = await createStay(
+      scope,
+      stayPayload({ priceMinor: 42_000, currency: 'JPY' }),
+    )
+    const before = {
+      reservations: await listTripReservations(scope, { tripId: trip.id }),
+      stays: await listTripAccommodations(scope, trip.id),
+      expenses: await listTripExpenses(scope, trip.id),
+    }
+    stubs.mirror.mockClear()
+    const auditBefore = await listAuditLog(scope, { entityType: 'reservation' })
+    stubs.beforeStayWrite = () =>
+      archiveTrip(scope, trip.id).then(() => undefined)
+    const error = await captureError(() =>
+      updateStay(scope, {
+        ...stayPayload({
+          title: 'Changed',
+          priceMinor: 50_000,
+          currency: 'JPY',
+        }),
+        ...ids,
+      }),
+    )
+    expect(error).toBeInstanceOf(TripArchivedError)
+    expect(stubs.mirror).not.toHaveBeenCalled()
+    expect(await listAuditLog(scope, { entityType: 'reservation' })).toEqual(
+      auditBefore,
+    )
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      before.reservations,
+    )
+    expect(await listTripAccommodations(scope, trip.id)).toEqual(before.stays)
+    expect(await listTripExpenses(scope, trip.id)).toEqual(before.expenses)
+  })
+
+  it('does not overwrite a stay link changed after preparation', async () => {
+    const ids = await createStay(scope, stayPayload())
+    const bookings = await listTripReservations(scope, { tripId: trip.id })
+    let unlinked: DayAccommodation | undefined
+    stubs.mirror.mockClear()
+    stubs.beforeStayWrite = async () => {
+      unlinked = await updateAccommodation(scope, ids.stayId, {
+        reservationId: null,
+      })
+    }
+    const error = await captureError(() =>
+      updateStay(scope, {
+        ...stayPayload({ title: 'Changed' }),
+        ...ids,
+      }),
+    )
+    expect(error).toBeInstanceOf(NotFoundError)
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      bookings,
+    )
+    expect(await listTripAccommodations(scope, trip.id)).toEqual([unlinked])
+    expect(stubs.mirror).not.toHaveBeenCalled()
+  })
+
+  it('keeps a complete pre-archive commit and reports a refused ledger sync', async () => {
+    stubs.afterStayWrite = () =>
+      archiveTrip(scope, trip.id).then(() => undefined)
+    const result = await createStay(
+      scope,
+      stayPayload({ priceMinor: 42_000, currency: 'JPY' }),
+    )
+    expect(result).toMatchObject({ ledger: 'failed', ledgerFailed: true })
+    const [booking] = await listTripReservations(scope, { tripId: trip.id })
+    const [stay] = await listTripAccommodations(scope, trip.id)
+    expect(booking).toMatchObject({
+      id: result.reservationId,
+      title: 'Hotel Gracery Shinjuku',
+      priceMinor: 42_000,
+    })
+    expect(stay).toMatchObject({
+      id: result.stayId,
+      reservationId: booking.id,
+      name: booking.title,
+    })
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(stubs.mirror).toHaveBeenCalledOnce()
+    expect(
+      (await listAuditLog(scope, { action: 'reservation.created' })).items,
+    ).toHaveLength(1)
+  })
+
+  it('keeps foreign rows invisible through every paired repository and preparation interface', async () => {
+    const foreign = await fixture.seedTenant('foreign-stays')
+    const foreignTrip = await createTrip(foreign.scope, {
+      title: 'Private',
+      startDate: '2026-04-10',
+      endDate: '2026-04-14',
+    })
+    const [first, last] = await listTripDays(foreign.scope, foreignTrip.id)
+    if (!first || !last) throw new Error('Missing test days')
+    const booking = { tripId: foreignTrip.id, title: 'Private stay' }
+    const nights = {
+      name: 'Private stay',
+      startDayId: first.id,
+      endDayId: last.id,
+    }
+    const written = await createStayPair(foreign.scope, booking, nights)
+    const before = {
+      bookings: await listTripReservations(foreign.scope, {
+        tripId: foreignTrip.id,
+      }),
+      stays: await listTripAccommodations(foreign.scope, foreignTrip.id),
+    }
+    for (const attempt of [
+      () => createStayPair(scope, booking, nights),
+      () =>
+        updateStayPair(
+          scope,
+          foreignTrip.id,
+          written.reservation.id,
+          written.stay.id,
+          { title: 'Changed' },
+          { name: 'Changed' },
+        ),
+      () => prepareReservationCreate(scope, booking),
+      () =>
+        prepareReservationUpdate(scope, written.reservation.id, {
+          title: 'Changed',
+        }),
+      () =>
+        prepareAccommodationCreate(scope, {
+          ...nights,
+          tripId: foreignTrip.id,
+        }),
+      () =>
+        prepareAccommodationUpdate(scope, written.stay.id, { name: 'Changed' }),
+    ])
+      expect(await captureError(attempt)).toBeInstanceOf(NotFoundError)
+    expect(
+      await listTripReservations(foreign.scope, { tripId: foreignTrip.id }),
+    ).toEqual(before.bookings)
+    expect(await listTripAccommodations(foreign.scope, foreignTrip.id)).toEqual(
+      before.stays,
+    )
+  })
+
+  it('refuses a viewer creation and update without changing the existing pair or expense', async () => {
+    const ids = await createStay(
+      scope,
+      stayPayload({ priceMinor: 42_000, currency: 'JPY' }),
+    )
+    const viewerId = await tenantOf.addUser('Stay viewer')
+    await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    const viewer = tenantOf.scopeFor(viewerId)
+    const before = {
+      bookings: await listTripReservations(scope, { tripId: trip.id }),
+      stays: await listTripAccommodations(scope, trip.id),
+      expenses: await listTripExpenses(scope, trip.id),
+    }
+    stubs.mirror.mockClear()
+    for (const attempt of [
+      () => createStay(viewer, stayPayload()),
+      () =>
+        updateStay(viewer, { ...stayPayload({ title: 'Changed' }), ...ids }),
+    ])
+      expect(await captureError(attempt)).toBeInstanceOf(TripRoleError)
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      before.bookings,
+    )
+    expect(await listTripAccommodations(scope, trip.id)).toEqual(before.stays)
+    expect(await listTripExpenses(scope, trip.id)).toEqual(before.expenses)
+    expect(stubs.mirror).not.toHaveBeenCalled()
+  })
+
+  it('refuses an unsupported atomic driver before writing either half', async () => {
+    Object.defineProperty(scope.db, 'batch', { value: undefined })
+    const error = await captureError(() => createStay(scope, stayPayload()))
+    expect(error.message).toBe('Atomic batch driver required.')
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+    expect(await listTripAccommodations(scope, trip.id)).toEqual([])
+    expect(stubs.mirror).not.toHaveBeenCalled()
+  })
+
+  it('rolls back a reservation update if the second statement fails', async () => {
+    const ids = await createStay(
+      scope,
+      stayPayload({ priceMinor: 42_000, currency: 'JPY' }),
+    )
+    const bookings = await listTripReservations(scope, { tripId: trip.id })
+    const stays = await listTripAccommodations(scope, trip.id)
+    const lines = await listTripExpenses(scope, trip.id)
+    const auditBefore = await listAuditLog(scope, { entityType: 'reservation' })
+    stubs.mirror.mockClear()
+    sqlite.exec(`CREATE TRIGGER fail_stay_update BEFORE UPDATE ON day_accommodations
+      BEGIN SELECT RAISE(ABORT, 'the stay update failed'); END`)
+    const error = await captureError(() =>
+      updateStay(scope, {
+        ...stayPayload({
+          title: 'Changed',
+          priceMinor: 50_000,
+          currency: 'JPY',
+        }),
+        ...ids,
+      }),
+    )
+    expect(error.message).toContain('the stay update failed')
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual(
+      bookings,
+    )
+    expect(await listTripAccommodations(scope, trip.id)).toEqual(stays)
+    expect(await listTripExpenses(scope, trip.id)).toEqual(lines)
+    expect(await listAuditLog(scope, { entityType: 'reservation' })).toEqual(
+      auditBefore,
+    )
+    expect(stubs.mirror).not.toHaveBeenCalled()
+  })
+
+  it('rolls back both inserts on storage failure on the migrated schema', async () => {
+    sqlite.exec(`CREATE TRIGGER fail_stay_insert BEFORE INSERT ON day_accommodations
+      BEGIN SELECT RAISE(ABORT, 'the stay write failed'); END`)
+    const error = await captureError(() =>
+      createStay(scope, stayPayload({ priceMinor: 42_000, currency: 'JPY' })),
+    )
+    expect(error.message).toContain('the stay write failed')
+    expect(await listTripReservations(scope, { tripId: trip.id })).toEqual([])
+    expect(await listTripAccommodations(scope, trip.id)).toEqual([])
+    expect(await listTripExpenses(scope, trip.id)).toEqual([])
+    expect(stubs.mirror).not.toHaveBeenCalled()
+    expect(
+      (await listAuditLog(scope, { entityType: 'reservation' })).items,
+    ).toEqual([])
   })
 
   it('deletes only the booking and keeps the nights, unlinked', async () => {

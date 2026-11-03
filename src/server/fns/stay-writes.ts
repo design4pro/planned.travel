@@ -1,5 +1,5 @@
 /**
- * The stay's writes as plain functions: the booking and the nights, in order, with the compensation.
+ * The stay's writes as plain functions: the booking and the nights, committed together.
  *
  * They live apart from the server functions in `stays.ts` so that module can use them only inside
  * its handlers. A client build of a server-function module keeps whatever the module still exports
@@ -8,25 +8,21 @@
  * Here nothing a client imports ever names them.
  */
 import { AUDIT_ACTIONS, trail } from '#/server/audit/trail'
-import { createLogger, serializeError } from '#/server/observability'
 import {
   NotFoundError,
   assertExpectedTripCurrency,
-  createAccommodation,
-  createReservation,
+  createStayPair,
   dayAccommodationsRepository,
   deleteAccommodation,
   deleteReservation,
   requireTripDay,
   requireWritableBookingTrip,
   requireWritableTrip,
-  updateAccommodation,
-  updateReservation,
+  updateStayPair,
 } from '#/server/repos'
 import { mirrorToRoom, orNull, patch, tombstone } from './context'
 import { ledgerReport, syncReservationExpense } from './reservations'
 
-import type { Logger } from '#/server/observability'
 import type { Day, DayAccommodation } from '#/server/db/types'
 import type { TenantScope } from '#/server/repos'
 import type {
@@ -38,19 +34,10 @@ import type {
 
 /* ----------------------------------------------------------------- helpers */
 
-/** Memoised per isolate, for the one line this module emits: a compensation that failed. */
-let logger: Logger | undefined
-
-function log(): Logger {
-  logger ??= createLogger({ context: { component: 'stay-writes' } })
-  return logger
-}
-
 /**
  * Both days, resolved in the trip, and in order.
  *
- * Checked before the first write rather than left to `createAccommodation`, so a stay whose check-out
- * precedes its check-in is refused before a booking exists that would then need undoing.
+ * Checked before preparing the pair, so an inverted day range gets the same refusal as the form.
  */
 async function stayDays(
   scope: TenantScope,
@@ -162,14 +149,7 @@ function auditMetadata(data: Pick<StayInput, 'tripId' | 'status' | 'title'>) {
 
 /* ------------------------------------------------------------------ writes */
 
-/**
- * Writes a stay and the booking that pays for it: the booking first, then the stay linked to it.
- *
- * If the second write fails the booking is deleted again. A stay with no booking is recoverable by
- * hand; a booking claiming nights nobody is staying is a lie the reader cannot see — so the order and
- * the compensation both point the same way. The ledger line is written only once both rows exist, so
- * a rolled-back booking never leaves a cost behind.
- */
+/** Commits the booking and nights together before any ledger or success side effect. */
 export async function createStay(
   scope: TenantScope,
   data: StayInput,
@@ -178,27 +158,14 @@ export async function createStay(
   assertExpectedTripCurrency(trip, data.expectedTripCurrency)
   const { start, end } = await stayDays(scope, data)
 
-  const reservation = await createReservation(scope, {
-    tripId: data.tripId,
-    ...bookingValues(data, start, end),
-  })
-  let stay: DayAccommodation
-  try {
-    stay = await createAccommodation(scope, {
+  const { reservation, stay } = await createStayPair(
+    scope,
+    {
       tripId: data.tripId,
-      ...stayValues(data),
-      reservationId: reservation.id,
-    })
-  } catch (cause) {
-    await deleteReservation(scope, reservation.id).catch((error: unknown) => {
-      log().warn('stay compensation failed', {
-        reservationId: reservation.id,
-        organizationId: scope.ctx.organizationId,
-        ...serializeError(error),
-      })
-    })
-    throw cause
-  }
+      ...bookingValues(data, start, end),
+    },
+    stayValues(data),
+  )
   const ledger = await syncReservationExpense(scope, { reservation, trip })
 
   await mirrorToRoom(scope, data.tripId, [
@@ -221,14 +188,7 @@ export async function createStay(
   }
 }
 
-/**
- * Updates both halves of a stay, booking first. It never creates a booking for a stay that had none:
- * the payload names both rows, and they must already be linked to each other.
- *
- * There is no compensation here. If the stay write fails after the booking write, the booking holds
- * the new values, the stay the old ones, and the ledger line is not resynced; the failure reaches
- * the reader, and saving again repairs all three, because every write here is an idempotent update.
- */
+/** Updates the linked pair atomically; a refused batch preserves both previous rows. */
 export async function updateStay(
   scope: TenantScope,
   data: StayUpdate,
@@ -238,12 +198,14 @@ export async function updateStay(
   assertExpectedTripCurrency(trip, data.expectedTripCurrency)
   const { start, end } = await stayDays(scope, data)
 
-  const reservation = await updateReservation(
+  const { reservation } = await updateStayPair(
     scope,
+    data.tripId,
     data.reservationId,
+    stay.id,
     bookingValues(data, start, end),
+    stayValues(data),
   )
-  await updateAccommodation(scope, stay.id, stayValues(data))
   const ledger = await syncReservationExpense(scope, { reservation, trip })
 
   await mirrorToRoom(scope, data.tripId, [
