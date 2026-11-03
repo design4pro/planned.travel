@@ -162,12 +162,15 @@ describe('the sweep over registered places', () => {
   })
 
   it('covers every registered place that is neither the ledger nor the anchor', () => {
-    // The ledger and the anchor are the only registered places the sweep does not look at.
+    // Audit evidence, deletion recovery and the final anchor are not swept.
     expect(
       ERASURE_REGISTRY.filter((entry) => !swept.includes(entry)).map(placeOf),
     ).toEqual([
       'workspace_participants.user_id',
       'platform_audit_log.actor_user_id',
+      'workspace_deletions.requested_by',
+      'workspace_deletions.receipt_to',
+      'workspace_deletions.receipt_name',
       'platform_audit_log.entity_id',
     ])
   })

@@ -12,7 +12,8 @@
  * - the rewritten object keys, by `head`;
  * - `active-sessions-<userId>` and the discount-attempt counter, absent.
  *
- * `platform_audit_log` is the one registered exception and is not swept. The platform-table places
+ * `platform_audit_log` and `workspace_deletions` are retention exceptions and are not swept.
+ * The platform-table places
  * that SPEC §5 keeps behind `src/server/catalog` are reported as unverified until the change that
  * ships their scrubs supplies their counts via `countPlatformUserReferences`: **any gap fails the sweep**, and a missing email is
  * never read as zero.

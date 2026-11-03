@@ -120,6 +120,7 @@ async function delivery(
  * methods can prove it does not happen again.
  */
 class CountingStore implements SubscriptionStore {
+  workspaceDeletionPending(id: string) { return this.inner.workspaceDeletionPending(id) }
   writes = 0
 
   constructor(private readonly inner: SubscriptionStore) {}

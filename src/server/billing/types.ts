@@ -74,6 +74,7 @@ export interface SubscriptionRecord {
 
 /** Tenant-scoped persistence for billing state. Implemented over Drizzle/D1. */
 export interface SubscriptionStore {
+  workspaceDeletionPending: (organizationId: string) => Promise<boolean>
   findByOrganization: (organizationId: string) => Promise<SubscriptionRecord | null>
   findByProviderCustomerId: (
     providerCustomerId: string,

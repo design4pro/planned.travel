@@ -49,7 +49,7 @@ import {
 } from 'vitest'
 import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
 import { authSchema } from '#/server/db/auth-schema'
-import { subscriptions, workspaceParticipants } from '#/server/db/schema'
+import { subscriptions, workspaceParticipants, workspaceDeletions } from '#/server/db/schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
 import type { AuthDb } from '../db'
@@ -191,6 +191,7 @@ beforeAll(async () => {
     await generateSQLiteDrizzleJson({
       ...authSchema,
       workspaceParticipants,
+      workspaceDeletions,
       subscriptions,
     }),
   )
@@ -2778,5 +2779,68 @@ describe('two-factor setup protects a working factor', () => {
     const own = await person()
     await enrol(own.cookie)
     expect(stored(other.id)).toEqual(before)
+  })
+})
+
+it('fences the real Better Auth member, invitation and recipient interfaces during deletion', async () => {
+  const {
+    insertWorkspaceDeletion,
+    acquireDeletionLease,
+    transitionWorkspaceDeletion,
+  } = await import('#/server/catalog/workspace-deletions')
+  const ownerEmail = 'deletion-hook-owner@planned.travel'
+  const recipientEmail = 'deletion-hook-recipient@planned.travel'
+  const ownerId = await createAccount(ownerEmail)
+  const recipientId = await createAccount(recipientEmail)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipientId)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(ownerId) as { id: string }
+  const ownerCookie = sessionCookie(await signIn(ownerEmail))
+  const recipientCookie = sessionCookie(await signIn(recipientEmail))
+  const invitation = await getAuth().api.createInvitation({
+    headers: new Headers({ cookie: ownerCookie }),
+    body: { email: recipientEmail, role: 'member', organizationId: org.id },
+  })
+  const row = await insertWorkspaceDeletion(repositoryDatabase, {
+    organizationId: org.id,
+    initiator: 'owner',
+    requestedBy: ownerId,
+  })
+  await expect(
+    getAuth().api.addMember({
+      body: { userId: recipientId, role: 'member', organizationId: org.id },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  await expect(
+    getAuth().api.createInvitation({
+      headers: new Headers({ cookie: ownerCookie }),
+      body: {
+        email: 'another@planned.travel',
+        role: 'member',
+        organizationId: org.id,
+      },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  await expect(
+    getAuth().api.acceptInvitation({
+      headers: new Headers({ cookie: recipientCookie }),
+      body: { invitationId: invitation.id },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  const token = await acquireDeletionLease(repositoryDatabase, row.id)
+  if (!token) throw new Error('Missing lease')
+  await transitionWorkspaceDeletion(
+    repositoryDatabase,
+    row.id,
+    token,
+    'requested',
+    'refused',
+  )
+  await getAuth().api.acceptInvitation({
+    headers: new Headers({ cookie: recipientCookie }),
+    body: { invitationId: invitation.id },
   })
 })

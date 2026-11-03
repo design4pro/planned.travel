@@ -24,7 +24,7 @@
  * Durable Object, logs, Resend, Polar) are inventoried in the spec's section 6, and several of them
  * are residuals, not outcomes. Their purges and the metadata rewrite are `./stores`, and the sweep
  * that checks both and every place below is `./verify`. This is what keeps `keep` honest: the
- * platform audit ledger is the only entry that has it.
+ * platform audit evidence and deletion recovery records alone retain it until their stated prune.
  *
  * `Former member` ids: an `anonymise` replaces the person's id with the workspace's Former member id
  * (`erased_<nanoid>`, one per workspace per erasure, `workspace_participants.tombstone_id`).
@@ -538,6 +538,10 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
     'keep',
     "Append-only security ledger (docs/ACCESS.md section 4.3) whose CHECKs forbid nulling an actor. Kept until the 400-day prune; the retention decision is the owner's (spec, owner confirms item 3).",
   ),
+
+  userRef('workspace_deletions', 'requested_by', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Deletion attribution survives until the terminal ledger prune at 30 days; unfinished recovery is never pruned.'),
+  embedded('workspace_deletions', 'receipt_to', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary receipt address, cleared when queued or refused; terminal retention is 30 days.'),
+  embedded('workspace_deletions', 'receipt_name', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary workspace receipt name, cleared when queued or refused; terminal retention is 30 days.'),
 
   /* ------------------------------------------------- auth tables (go with the user row) -- */
   authPlace(

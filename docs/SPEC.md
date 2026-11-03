@@ -425,18 +425,45 @@ and admitted by amendment at the end of this section. The third is the erasure c
 primitives, admitted by amendments below.
 The fourth discovers only organisation ids for the weekly tenant audit retention sweep.
 
-Twelve tables are platform content rather than tenant data:
+Thirteen tables are platform content or recovery state rather than tenant data:
 
 `catalog_sources` · `catalog_runs` · `catalog_ingest` · `catalog_places` ·
 `catalog_place_sources` · `place_packs` · `place_pack_places` · `staff_api_tokens` ·
-`platform_audit_log` · `provider_registry` · `provider_usage` · `airports`
+`platform_audit_log` · `provider_registry` · `provider_usage` · `airports` · `workspace_deletions`
 
-Eleven of them carry no `organization_id` at all. `provider_usage` is the exception and the
-paragraph below argues it, because the column there is attribution rather than a tenant
-discriminator.
+Eleven carry no `organization_id`. `provider_usage` and `workspace_deletions` carry attribution without a foreign key, not a tenant discriminator. Their state must survive workspace deletion.
 
-That list is closed. A thirteenth global table is a change to this contract, not a schema decision
+That list is closed. A fourteenth global table is a change to this contract, not a schema decision
 a builder makes on the way past.
+
+`workspace_deletions` joins the existing global-table member (ADR 0048), not a fifth catalog
+exception. Only `catalog/workspace-deletions.ts` writes its platform recovery state. The eventual
+`workspace-deletion` driver is its sole production writer, authorized by an owner request with
+step-up and an impersonation veto, or the independently authorized erasure job, queue or cron.
+No production writer ships in the ledger prerequisite slice. The platform-actor permission and
+per-mutation audit clauses are inapplicable to recovery checkpoints; the eventual driver audits
+the deletion itself. Importer tests pin rare readers: auth organization hooks, direct membership
+and invitation creation, atomic invitation acceptance, and the billing store used by checkout and
+plan changes. Ordinary requests and webhooks gain no ledger lookup. Repository inserts bind the
+shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate
+is the narrow exception to a tenant statement reaching a global table: it returns no ledger
+projection and never registers the ledger with the tenant repository factory. Better Auth hooks and external billing
+calls have a check/write window; the downstream guarded deletion and late-subscription handling
+must close its destructive consequences. `done` still fences; only `refused` lifts the fence.
+
+The row contains ids, state, a token-bound expiring lease, attempts, a bounded error code and a
+closed snapshot of plan/status/counts. Temporary receipt email/name are cleared when queued or
+refused; erasure rows never carry them. No organization foreign key may cascade into this table.
+Terminal rows alone are pruned after 30 days (`done_at` for done, `updated_at` for refused), in
+bounded batches. Unfinished recovery is never pruned. A lease token prevents an expired holder
+from advancing or releasing a replacement holder's lease. Requesters and temporary receipts are
+explicit retention exceptions in the erasure registry.
+
+Reserved for the later driver only: a `system:workspace-deletion` owner scope, bound to the
+organization read from a leased ledger row, may drive deletion repositories without a session.
+This is an exception to the scope argument, not permission for requests to fabricate tenant
+contexts. No factory or executable driver ships with this reservation; the eventual factory must
+have a transitive importer guard excluding routes and server functions.
 
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
 eight-name form of this sentence contradicted this same section's mandate to write that table on
@@ -511,7 +538,7 @@ another. What guards it instead is the shape of that module, stated as three pro
 grepping for a spelling; and **read-only**, so the absent writer clauses have nothing to be absent
 from. Adding a write path to this table is a change to this contract and not a refactor.
 
-Twelve names, and a thirteenth is an amendment.
+Thirteen names, and a fourteenth is an amendment.
 
 These tables must **never** be reached through `src/server/repos/base.ts` or
 `createTenantRepository()`. That layer exists so that forgetting the tenant filter is not
@@ -519,14 +546,14 @@ expressible, and handing it a fabricated, empty, or placeholder tenant context i
 global rows destroys the single guarantee it was built to give. Reaching for
 `createTenantRepository()` here is a defect, not a shortcut.
 
-Their isolation invariant is different and equally mandatory. `platform_audit_log` is one of two
-members of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
+Their isolation invariant is different and equally mandatory. `workspace_deletions` is owned only by its recovery catalog module as described above.
+`platform_audit_log` is another member of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
 reached through it. Its single writer is `src/server/catalog/audit.ts`, and every other clause
 below binds it unchanged - never `createTenantRepository()`, never `base.ts`, always an explicit
 platform actor. `airports` is the other, and it is out for the opposite reason - nothing writes it
 from the application at all, so there is no mutation for `repo.ts` to carry; its single reader is
 `src/server/catalog/airports.ts` and the amendment above states the three properties that stand in
-for the clauses a writer would answer. For the other eight, all access goes through
+for the clauses a writer would answer. For the remaining catalog content, all access goes through
 `src/server/catalog/repo.ts`, where every mutation takes an explicit platform actor
 (`{ userId, actorKind, role }`), passes `requirePermission` before it touches a row, and writes a
 `platform_audit_log` entry in the same call: actor, action, entity type, entity id, and a
@@ -551,7 +578,7 @@ in one module, reached only from the quarter-hourly cron.
 
 It satisfies neither clause the tables above are held to, and this paragraph says so rather than
 reading those clauses loosely. `trips` carries an `organization_id` and is tenant data: the scan
-adds no name to the list above, which is twelve names and still closed. There is no session
+adds no name to the list above, which is thirteen names and still closed. There is no session
 behind a cron, so there is no platform actor to authorise with and `requirePermission` has no
 subject; the read mutates nothing, so there is no `platform_audit_log` row to write. Both clauses
 are _inapplicable_ to this read, which is a different statement from waived — every `server/catalog`
@@ -640,7 +667,7 @@ workspace together. `created_at` is the only retention criterion, no audit of th
 written, and `drained: false` is logged at error level. The catalog module-graph guard forbids
 reaching repositories from discovery. `TENANT_AUDIT_RETENTION_DAYS = 400` is owner confirms.
 
-Four members, and that list is closed as firmly as the twelve names are. A fifth exception —
+Four members, and that list is closed as firmly as the thirteen names are. A fifth exception —
 another cross-tenant read, another module handed a plain `Database`, other than an `…Unscoped`
 repos function of the FU-3 shape above — is an amendment to this section, not something a builder
 takes on the way past.
@@ -771,11 +798,11 @@ Rules:
   permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
 - The stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
   and the identity-table access of the auth provisioning module. §5 states `server/catalog` as a closed list of four. The
-  first member is the twelve global tables: eleven carry no `organization_id` at all and the twelfth,
-  `provider_usage`, carries one only as attribution, so none of them can pass through the tenant
+  first member is thirteen global tables: eleven carry no `organization_id`, while
+  `provider_usage` and `workspace_deletions` carry attribution only, so none of them can pass through the tenant
   repository, and every path that mutates or serves that platform content is guarded instead by an
   explicit platform actor, `requirePermission`, and a `platform_audit_log` write in the same call —
-  unchanged and mandatory, save for the metering tick §5 argues as guarded by its shape instead. The second is one cron discovery read over
+  unchanged and mandatory, save for the metering tick and deletion recovery ledger §5 guards by their shapes instead. The second is one cron discovery read over
   tenant rows, `listDueTripReminders` in `src/server/catalog/reminders.ts`, which has no session
   behind it to authorise and no mutation to audit and is guarded by its shape instead:
   session-less, projection-only (scheduling coordinates, no tenant-readable field), windowed on

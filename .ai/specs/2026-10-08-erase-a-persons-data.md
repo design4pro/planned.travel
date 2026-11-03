@@ -913,3 +913,12 @@ Selective deletion uses batches of at most 128 keys instead of `deleteAll()`. Re
 retain unexpired barriers through the existing 15-minute TTL; their pruning alarm never postpones an
 earlier alarm. Reset persistence failures propagate to the caller. The adapter stamps reset after the
 revoking write; older Workers without that stamp still reset without weakening an existing barrier.
+
+
+## Amendment - workspace deletion recovery attribution (#1737)
+
+`workspace_deletions.requested_by`, `receipt_to` and `receipt_name` are explicit `keep` outcomes
+owned by `catalog/workspace-deletions.ts` (ADR 0048). Requester attribution remains until the
+30-day terminal prune. Temporary receipt fields clear when queued or refused; erasure-initiated
+rows never carry them. Unfinished recovery is never pruned. The append-only platform audit
+ledger retains its separate 400-day rule.

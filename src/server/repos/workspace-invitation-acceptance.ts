@@ -4,6 +4,7 @@
  * exists it resolves only an organization id, using the authenticated user's current email (FU-3).
  * This leaf never imports auth runtime; only its recipient operations may use the delegated scope.
  */
+import { workspaceDeletionAbsent } from '#/server/catalog/workspace-deletions'
 import { and, eq, sql } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 import { invitation, member, user } from '#/server/db/auth-schema'
@@ -63,6 +64,7 @@ export async function acceptWorkspaceInvitation(
     eq(invitation.role, source.role),
     sql`${invitation.expiresAt} >= ${now.getTime()}`,
     recipient(scope),
+    workspaceDeletionAbsent(scope.ctx.organizationId),
     sql`${invitation.role} in ('member', 'admin', 'owner')`,
   )
   const winningMember = sql`exists (select 1 from ${member} where ${tenantFilter(
