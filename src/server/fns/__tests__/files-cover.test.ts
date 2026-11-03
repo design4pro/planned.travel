@@ -41,6 +41,7 @@ const stubs = vi.hoisted(() => ({
   objects: new Set<string>(),
   afterPut: null as (() => Promise<void>) | null,
   deleteFailure: false,
+  headFailure: false,
   afterDelete: null as (() => Promise<void>) | null,
   room: vi.fn(async () => undefined),
   bucket: vi.fn(),
@@ -67,6 +68,10 @@ vi.mock('../context', () => ({
   filesBucket: () => {
     stubs.bucket()
     return {
+      head: async (): Promise<null> => {
+        if (stubs.headFailure) throw new Error('head unavailable')
+        return null
+      },
       put: async (key: string, _body: ReadableStream, options?: { customMetadata?: Record<string, string> }): Promise<void> => {
         if (options?.customMetadata?.storageTombstone) {
           if (stubs.deleteFailure) throw new Error('delete unavailable')
@@ -167,6 +172,7 @@ beforeEach(async () => {
   stubs.objects.clear()
   stubs.afterPut = null
   stubs.deleteFailure = false
+  stubs.headFailure = false
   stubs.afterDelete = null
   vi.clearAllMocks()
 })
@@ -438,6 +444,32 @@ describe('file writes and the trip guards', () => {
     stubs.deleteFailure = false
     await deleteFile({ tripId, fileId })
     expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 0, fileCount: 0 })
+    expect(stubs.room).toHaveBeenCalledTimes(1)
+    expect((await listAuditLog(tenant.scope, { action: 'file.deleted' })).items).toEqual([
+      expect.objectContaining({ entityId: fileId }),
+    ])
+  })
+
+  it('admits an unrelated upload while failed garbage cleanup remains charged', async () => {
+    const { tripId, fileId } = await tripWithCover()
+    stubs.deleteFailure = true
+    await expect(deleteFile({ tripId, fileId })).rejects.toThrow('delete unavailable')
+    const other = await createTrip(tenant.scope, { title: 'Other upload' })
+    const response = await uploadFile(other.id)
+    expect(await response.json()).toMatchObject({ ok: true })
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 2056, fileCount: 2 })
+  })
+
+  it('admits an upload while a legacy cover head fails and keeps the conservative charge', async () => {
+    const legacy = await createTrip(tenant.scope, { title: 'Legacy cover' })
+    await updateTrip(tenant.scope, legacy.id, {
+      coverImageKey: `trips/${tenant.organizationId}/${legacy.id}/legacy.jpg`,
+    })
+    stubs.headFailure = true
+    const other = await createTrip(tenant.scope, { title: 'Other upload' })
+    const response = await uploadFile(other.id)
+    expect(await response.json()).toMatchObject({ ok: true })
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 25 * 1024 * 1024 + 8, fileCount: 2 })
   })
 
   it('cleans the stored object when recordFile refuses a role revoked after put', async () => {

@@ -14,7 +14,7 @@ import {
   finishTripCopy,
 } from '../trips'
 import { upsertSubscription } from '../billing'
-import { createHarness } from './harness'
+import { createHarness, subscribeTenant } from './harness'
 import {
   abandonStorage,
   cleanupStorage,
@@ -92,6 +92,21 @@ describe('shared storage admission', () => {
       kind: 'image' as const,
     }
   }
+
+  it('admits Crew writers with unlimited file count while enforcing its finite byte ceiling', async () => {
+    await subscribeTenant(tenant.scope, 'crew')
+    await upsertSubscription(tenant.scope, { storageLimitBytes: 20 })
+    await recordFile(tenant.scope, {
+      ...input('attachment'), filename: 'photo.jpg', contentType: 'image/jpeg',
+    })
+    const source = input('attachment')
+    const store = fakeBucket({ [source.storageKey]: { body: '1234567890' } })
+    const target = await startTripCopy(tenant.scope, tripId, { title: 'Copy' })
+    await copyStoredCover(tenant.scope, store, target, source.storageKey,
+      `trips/${tenant.organizationId}/${target}/cover.jpg`)
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 20, fileCount: 2 })
+    await expect(reserveStorage(tenant.scope, input('over-limit', 1))).rejects.toMatchObject({ metric: 'storage_bytes' })
+  })
 
   it('isolates reservations, settlement, cleanup and usage across tenants', async () => {
     const beta = await harness.seedTenant('other')

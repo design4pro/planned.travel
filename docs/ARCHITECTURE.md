@@ -463,9 +463,12 @@ Two reasons this sits at the repository boundary rather than in the route:
   from consuming the D1 write budget everyone else shares. Tenant isolation (`organization_id`
   on every query) is correctness; quotas are capacity.
 
-For storage, the order matters: `src/server/repos/files.ts` writes the R2 object first, then
-asserts the quota, and deletes the object if the assertion throws. R2 has no transaction to
-join, so the compensating delete is the transaction.
+Storage writers reserve both ceilings atomically through `src/server/repos/storage-admission.ts`
+before a create-only R2 put. Attachment metadata and reservation settlement publish in one D1
+batch; copied covers settle through the same ledger. Interrupted writes and deleted metadata keep
+their usage charged until object cleanup or a cancellation fence succeeds (ADR 0049).
+Opportunistic cleanup failures retain that charge and do not block otherwise-admissible writes;
+explicit deletion and purge still report cleanup failures for retry.
 
 ---
 

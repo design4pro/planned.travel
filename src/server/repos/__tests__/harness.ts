@@ -51,6 +51,8 @@ function toSqliteParams(params: ReadonlyArray<unknown>): Array<SqliteValue> {
     if (param === null || param === undefined) {
       return null
     }
+    // D1's JSON transport converts non-finite numbers to null; node:sqlite accepts Infinity.
+    if (typeof param === 'number' && !Number.isFinite(param)) return null
     if (typeof param === 'boolean') {
       return param ? 1 : 0
     }

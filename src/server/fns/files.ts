@@ -324,8 +324,6 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
     await clearTripCoverIfKey(scope, row.tripId, row.storageKey)
     const bucket = filesBucket()
     await deleteFile(scope, data.tripId, data.fileId)
-    await purgeStorageKey(scope, bucket, row.storageKey)
-
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { filesChangedAt: Date.now() }),
     ])
@@ -343,6 +341,8 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
         sizeBytes: row.sizeBytes,
       },
     })
+    // Metadata effects must survive a failed object cleanup and its metadata-less retry.
+    await purgeStorageKey(scope, bucket, row.storageKey)
     return { deleted: true }
   })
 

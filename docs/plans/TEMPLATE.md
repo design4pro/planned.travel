@@ -123,7 +123,8 @@ Which metric this stage's writes consume, and where the ceiling is asserted.
 - The published number is the enforced number. A metric added to the catalogue and not to the
   resolver is caught by `src/server/billing/__tests__/limits.test.ts`; a stage that adds one adds the
   case there too.
-- For R2 writes, the order is object first, assert second, compensating delete on throw.
+- For workspace quota-bearing R2 writes, reserve both ceilings atomically before a create-only
+  put, then settle through the shared ledger; failed cleanup stays charged (ADR 0049).
 - If the stage creates no countable row, say so in one sentence and why.
 
 ### Tenant isolation test

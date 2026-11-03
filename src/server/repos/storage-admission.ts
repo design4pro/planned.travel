@@ -86,8 +86,14 @@ export async function storageAdmissionPredicate(
 ) {
   const { limits } = await resolveQuotas(scope)
   const usage = usageRows(scope)
-  return sql`(${limits.files} = ${UNLIMITED} or (select count(*) from (${usage})) + 1 <= ${limits.files})
-    and (${limits.storage_bytes} = ${UNLIMITED} or (select coalesce(sum(bytes), 0) from (${usage})) + ${bytes} <= ${limits.storage_bytes})`
+  // D1 serializes Infinity as NULL, so only finite ceilings belong in bound SQL parameters.
+  const fileLimit = limits.files === UNLIMITED
+    ? sql`1`
+    : sql`(select count(*) from (${usage})) + 1 <= ${limits.files}`
+  const byteLimit = limits.storage_bytes === UNLIMITED
+    ? sql`1`
+    : sql`(select coalesce(sum(bytes), 0) from (${usage})) + ${bytes} <= ${limits.storage_bytes}`
+  return sql`(${fileLimit}) and (${byteLimit})`
 }
 
 export async function throwStorageQuota(scope: TenantScope): Promise<never> {

@@ -1,4 +1,5 @@
 /** Storage effects use the same tenant ledger for uploads, copied covers and cleanup retries. */
+import { createLogger } from '#/server/observability/logger'
 import {
   NotFoundError,
   assertStorageKey,
@@ -17,6 +18,8 @@ import {
 } from '#/server/repos'
 import type { StorageReservation, TenantScope } from '#/server/repos'
 import type { ObjectStore } from './objects'
+
+const cleanupLogger = createLogger({ context: { component: 'storage-cleanup' } })
 
 /** A permanent empty object fences arbitrarily late create-only writes; never TTL-delete it. */
 async function fenceStorage(
@@ -51,13 +54,14 @@ export async function cleanupStorage(
         )
       )
         continue
-      const object = await store.head(cover.storageKey)
-      await observeLegacyCover(
-        scope,
-        cover.tripId,
-        cover.storageKey,
-        object?.size ?? null,
-      )
+      try {
+        const object = await store.head(cover.storageKey)
+        await observeLegacyCover(scope, cover.tripId, cover.storageKey, object?.size ?? null)
+      } catch {
+        cleanupLogger.warn('legacy cover observation failed; conservative usage retained', {
+          orgId: scope.ctx.organizationId, tripId: cover.tripId,
+        })
+      }
     }
   }
   for (const candidate of await storageCleanupCandidates(scope)) {
@@ -67,8 +71,14 @@ export async function cleanupStorage(
       )
     )
       continue
-    const row = await claimStorageCleanup(scope, candidate.id)
-    if (row) await fenceStorage(scope, store, row)
+    try {
+      const row = await claimStorageCleanup(scope, candidate.id)
+      if (row) await fenceStorage(scope, store, row)
+    } catch {
+      cleanupLogger.warn('opportunistic storage cleanup failed; usage retained for retry', {
+        orgId: scope.ctx.organizationId, reservationId: candidate.id,
+      })
+    }
   }
 }
 

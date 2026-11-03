@@ -33,7 +33,10 @@ after a whole workspace has been erased.
 Attachment deletion commits guarded metadata removal first. Its charge and file id survive in the
 ledger, so an authorized retry can finish object deletion after the file row is gone. Trip deletion
 and erasure preserve pre-ledger accounting before cascades. Normal admission retries cleanup in
-bounded tenant-scoped passes, and trip purge uses the same ledger-aware cleanup; absent D1 fails
+bounded tenant-scoped passes. Failed opportunistic cleanup keeps usage charged without blocking
+unrelated admission; explicit deletion and purge still report failures for retry. Metadata deletion
+emits its audit and peer refresh before fallible storage cleanup. Trip purge uses the same
+ledger-aware cleanup; absent D1 fails
 closed. Unreferenced retained objects and failed writes stay charged until storage confirms their
 removal or cancellation fence. No new cross-tenant discovery query is introduced.
 

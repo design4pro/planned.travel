@@ -1,5 +1,10 @@
 # Product modules
 
+> Storage contract update (#1784, ADR 0049): historical R2-first/check-then-insert descriptions
+> below are superseded for workspace quota-bearing writes by atomic reservation before a
+> create-only put, followed by settlement. Failed cleanup remains charged. Future tenant writers
+> must extend and reuse the shared storage ledger; see `docs/ARCHITECTURE.md` §6.
+
 The four optional modules a workspace switches on beside the trip itself: the leave planner, the
 world-map tracker, the travel journal and the saved place collections. And the gate that decides
 which of them a plan has actually bought.
