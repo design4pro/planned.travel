@@ -1,6 +1,10 @@
 import { expect, it, vi } from 'vitest'
 
-import { fetchPublicSnapshot, validSnapshot } from '../frankfurter'
+import {
+  fetchPublicSnapshot,
+  PublicProviderError,
+  validSnapshot,
+} from '../frankfurter'
 
 const now = () => Date.parse('2026-11-03T18:00:00Z')
 const eur = { date: '2026-11-03', base: 'EUR', quote: 'EUR', rate: 1 }
@@ -76,4 +80,80 @@ it('validates cache provenance, bounds and timestamps', () => {
     { rates: { EUR: 1, USD: Infinity } },
   ])
     expect(() => validSnapshot({ ...value, ...patch }, now())).toThrow()
+})
+
+it('rejects malformed JSON even when the provider returns 200', async () => {
+  await expect(
+    fetchPublicSnapshot(async () => new Response('[{"date":'), now),
+  ).rejects.toBeInstanceOf(SyntaxError)
+})
+
+it.each([302, 307, 500, 503])(
+  'rejects HTTP %s and cancels its body without following or retrying',
+  async (status) => {
+    const cancel = vi.fn()
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async () =>
+        new Response(new ReadableStream({ cancel }), {
+          status,
+          headers: { Location: 'https://untrusted.example/rates' },
+        }),
+    )
+    await expect(fetchPublicSnapshot(fetch, now)).rejects.toBeInstanceOf(
+      PublicProviderError,
+    )
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(fetch.mock.calls[0]?.[1]?.redirect).toBe('error')
+  },
+)
+
+it('propagates a fetch redirect rejection without retrying', async () => {
+  const error = new TypeError('fetch failed: unexpected redirect')
+  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, options) => {
+    expect(options?.redirect).toBe('error')
+    throw error
+  })
+  await expect(fetchPublicSnapshot(fetch, now)).rejects.toBe(error)
+  expect(fetch).toHaveBeenCalledOnce()
+})
+
+it('aborts an unfinished fetch at five seconds without retrying', async () => {
+  vi.useFakeTimers()
+  // Native AbortSignal.timeout uses Node's real clock; drive that platform seam here.
+  const timeout = vi.spyOn(AbortSignal, 'timeout').mockImplementation((ms) => {
+    const controller = new AbortController()
+    setTimeout(
+      () => controller.abort(new DOMException('Timed out', 'TimeoutError')),
+      ms,
+    )
+    return controller.signal
+  })
+  try {
+    const fetch = vi.fn<typeof globalThis.fetch>(
+      async (_url, options) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = options?.signal
+          if (!signal) throw new Error('Missing abort signal')
+          signal.addEventListener('abort', () => reject(signal.reason), {
+            once: true,
+          })
+        }),
+    )
+    const settled = vi.fn()
+    const request = fetchPublicSnapshot(fetch, now)
+    void request.then(settled, settled)
+    const failure = expect(request).rejects.toMatchObject({
+      name: 'TimeoutError',
+    })
+    await vi.advanceTimersByTimeAsync(4999)
+    expect(settled).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    await failure
+    expect(timeout).toHaveBeenCalledWith(5000)
+    expect(fetch).toHaveBeenCalledOnce()
+  } finally {
+    timeout.mockRestore()
+    vi.useRealTimers()
+  }
 })
