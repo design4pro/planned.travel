@@ -767,6 +767,17 @@ The shared resolver landed in PR #1708. Issue #1738 completes Phase 3's concurre
 writes on membership absence in one D1 batch; losing requests read the surviving membership.
 Explicit workspace creation keeps its existing batch and limit enforcement.
 
+## Amendment - deletion ledger prerequisite (#1737)
+
+The ledger joins the existing global-table member of SPEC §5; four catalog members remain.
+The rare-path reader list is derived from actual writers, including direct repository invitation
+creation and atomic recipient acceptance, rather than the original hook count. Atomic repository
+inserts share the non-refused predicate; library hooks and billing calls retain a check/write
+window requiring the later guarded delete and late-subscription handling. A random lease token
+is stored alongside expiry so a stale holder cannot advance a replacement lease. The reserved
+driver-only scope is documentation only until the driver slice. No producer or deletion endpoint
+is activated by this prerequisite. ADR 0048 records the contract.
+
 ## Implementation preparation - bounded cleanup (#1739)
 
 `repos/members.ts` now owns `drainWorkspace`: at most 20 steps of 100 rows, trips first and then

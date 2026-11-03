@@ -332,3 +332,27 @@ it('renews the same expired reservation after departure without changing its gra
   ).toBe('owner')
   expect(await getMembership(tenant.scope, issuerId)).toBeNull()
 })
+
+it('atomically fences recipient acceptance and preserves the pending invitation until refusal', async () => {
+  const {
+    insertWorkspaceDeletion,
+    acquireDeletionLease,
+    transitionWorkspaceDeletion,
+  } = await import('#/server/catalog/workspace-deletions')
+  const invitation = await invite()
+  const row = await insertWorkspaceDeletion(h.db, {
+    organizationId: tenant.organizationId,
+    initiator: 'owner',
+    requestedBy: tenant.ownerUserId,
+  })
+  expect(
+    await acceptWorkspaceInvitation(recipient(), invitation.id, now),
+  ).toBeNull()
+  expect(await getMembership(tenant.scope, recipientId)).toBeNull()
+  const token = await acquireDeletionLease(h.db, row.id)
+  if (!token) throw new Error('Missing lease')
+  await transitionWorkspaceDeletion(h.db, row.id, token, 'requested', 'refused')
+  expect(
+    await acceptWorkspaceInvitation(recipient(), invitation.id, now),
+  ).not.toBeNull()
+})

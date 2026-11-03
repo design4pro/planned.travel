@@ -549,10 +549,12 @@ describe('collecting what the rows name before they go', () => {
 })
 
 describe('the schema the delete relies on', () => {
-  /** Tenant tables that carry an organization id on purpose without being cascaded out with it. */
+  /** Platform tables whose organization id is attribution, not a cascading tenant discriminator. */
   const KEPT_AFTER_DELETE: ReadonlyArray<string> = [
     // Metering attribution for the platform's own cost accounting, not tenant content (SPEC §5).
     'provider_usage',
+    // Durable deletion recovery must survive the cascade (ADR 0048).
+    'workspace_deletions',
   ]
 
   it('cascades every table that has an organization_id out of the organization row', () => {
