@@ -428,7 +428,11 @@ export function ImportBookingsDialog({
                   dispatch({ kind: 'none' })
                 }}
               />
-            ) : refusal === undefined && !working && !stalled && canWrite ? (
+            ) : refusal === undefined &&
+              !working &&
+              !stalled &&
+              canWrite &&
+              reviewJobId === undefined ? (
               <DropTarget
                 dragging={dragging}
                 progress={stage.kind === 'uploading' ? stage.progress : null}
