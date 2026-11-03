@@ -820,6 +820,10 @@ const messages = {
     'Ta karta pokazuje przestrzeń {name}, ale przestrzeń została zmieniona w innej karcie lub oknie. Nic nie zostało zapisane.',
   'session.openCurrentWorkspace': 'Otwórz bieżącą przestrzeń',
   'session.workspaceChangedDismiss': 'Nie teraz',
+  'session.workspaceCheck': 'Sprawdź tę przestrzeń',
+  'session.workspaceCheckPending': 'Sprawdzanie dostępu do przestrzeni…',
+  'session.workspaceCheckFailed':
+    'Nie udało się potwierdzić dostępu do tej przestrzeni. Żadna operacja nie została ponowiona. Możesz sprawdzić ponownie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

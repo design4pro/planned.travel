@@ -9,7 +9,7 @@ import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
 import { authSchema, member, organization } from '#/server/db/auth-schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { resolveActiveWorkspace } from '../active-workspace'
-import { requireOrg } from '../session'
+import { requireOrg, verifyWorkspaceCompatibility } from '../session'
 import { normaliseSession, requireOrgFrom } from '../tenant'
 import type { BatchStatement } from '#/server/repos/batch'
 import type { AuthDb } from '../db'
@@ -445,4 +445,53 @@ describe('final departure followed by authenticated reload', () => {
       read.mockRestore()
     }
   })
+})
+
+describe('strict workspace compatibility verification', () => {
+  it('verifies the original session workspace with its current downgraded role', async () => {
+    const { a } = await fixture()
+    requestSession(a.ownerUserId, a.organizationId)
+    shared.claim = a.organizationId
+    await expect(verifyWorkspaceCompatibility()).resolves.toEqual({
+      organizationId: a.organizationId,
+    })
+    await expect(requireOrg({ role: 'admin' })).rejects.toMatchObject({
+      reason: 'insufficient-role',
+    })
+  })
+
+  it.each([
+    'absent',
+    'malformed',
+    'mismatch',
+    'fallback',
+    'revoked',
+    'expired',
+  ])(
+    'refuses %s without changing the session or provisioning',
+    async (kind) => {
+      const { a, b } = await fixture()
+      requestSession(a.ownerUserId, a.organizationId)
+      shared.claim = a.organizationId
+      if (kind === 'absent') shared.claim = null
+      if (kind === 'malformed') shared.claim = 'bad claim'
+      if (kind === 'mismatch') shared.claim = b.organizationId
+      if (kind === 'fallback') requestSession(a.ownerUserId, b.organizationId)
+      if (kind === 'revoked')
+        await db.delete(member).where(eq(member.organizationId, a.organizationId))
+      if (kind === 'expired') shared.session = {}
+      const before = {
+        session: structuredClone(shared.session),
+        organizations: await db.select().from(organization),
+        members: await db.select().from(member),
+      }
+      let reason = 'workspace-changed'
+      if (kind === 'revoked') reason = 'not-a-member'
+      if (kind === 'expired') reason = 'unauthenticated'
+      await expect(verifyWorkspaceCompatibility()).rejects.toMatchObject({ reason })
+      expect(shared.session).toEqual(before.session)
+      expect(await db.select().from(organization)).toEqual(before.organizations)
+      expect(await db.select().from(member)).toEqual(before.members)
+    },
+  )
 })

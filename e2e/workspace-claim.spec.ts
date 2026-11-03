@@ -113,7 +113,7 @@ test('a tab that is showing the previous workspace is refused, writes nothing, a
   await switchTo(other, FIRST)
   expect(await tripTitles(other)).not.toContain(title)
 
-  // The way out is a reload into whatever the session now says; B just switched back to FIRST. The
+  // The reload action opens whatever the session now says; B just switched back to FIRST. The
   // trip name typed into A's creation dialog is unsent text, so the press asks before it discards
   // that, and takes focus to the safe choice.
   await notice
@@ -331,3 +331,83 @@ for (const trigger of ['commit', 'catch-up', 'room-close'] as const) {
     }
   })
 }
+
+/** 1705 - explicit verification recovers the original mounted workspace without replaying a write. */
+test('a stale tab can verify its original workspace in place after another tab switches back', async ({
+  context,
+  page,
+  baseURL,
+}) => {
+  test.setTimeout(150_000)
+  await context.clearCookies()
+  expect(await signIn(page, baseURL)).toBe(true)
+  await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+  await switchTo(page, FIRST)
+  await page.goto('/trips', { waitUntil: 'networkidle' })
+  const title = `  In-place recovery ${Date.now()}  `
+  const creation = page.getByRole('dialog', { name: /trip/i })
+  await expect(async () => {
+    await page
+      .getByRole('button', { name: 'New trip', exact: true })
+      .filter({ visible: true })
+      .first()
+      .click()
+    await creation.getByLabel('Trip name').fill(title, { timeout: 5_000 })
+  }).toPass({ timeout: 45_000 })
+  const input = creation.getByLabel('Trip name')
+  const mounted = await input.elementHandle()
+  const other = await context.newPage()
+  try {
+    await other.goto('/dashboard', { waitUntil: 'networkidle' })
+    await switchTo(other, SECOND)
+    await creation
+      .getByRole('button', { name: 'Create trip', exact: true })
+      .click()
+    const notice = page.getByRole('alertdialog', {
+      name: 'The workspace changed in another tab',
+    })
+    await expect(notice).toBeVisible()
+    const check = notice.getByRole('button', { name: 'Check this workspace' })
+    await check.click()
+    await expect(notice.getByRole('status')).toContainText('Could not verify')
+    await expect(input).toHaveValue(title)
+    await expect(check).toBeFocused()
+
+    await switchTo(other, FIRST)
+    const posts: string[] = []
+    page.on('request', (request) => {
+      if (request.method() === 'POST') posts.push(request.url())
+    })
+    const verification = page.waitForResponse((response) =>
+      response.url().endsWith('/api/workspace-compatibility'),
+    )
+    await check.focus()
+    await page.keyboard.press('Enter')
+    const response = await verification
+    expect(response.status()).toBe(200)
+    expect(response.headers()['cache-control']).toBe('no-store')
+    await expect(notice).toBeHidden()
+    await expect(page).toHaveURL(/\/trips$/)
+    await expect(creation).toBeVisible()
+    await expect(input).toHaveValue(title)
+    expect(
+      await input.evaluate(
+        (element, previous) => element === previous,
+        mounted,
+      ),
+    ).toBe(true)
+    expect(posts, 'verification must not replay the refused create').toEqual([])
+    expect(await tripTitles(other)).not.toContain(title.trim())
+
+    // Only a fresh, explicit submission writes the trip.
+    await creation
+      .getByRole('button', { name: 'Create trip', exact: true })
+      .click()
+    await expect(creation).toBeHidden({ timeout: 20_000 })
+    expect(await tripTitles(other)).toContain(title.trim())
+  } finally {
+    await other.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+    await switchTo(other, FIRST)
+    await other.close()
+  }
+})

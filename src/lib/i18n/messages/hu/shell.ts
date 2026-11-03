@@ -764,6 +764,10 @@ const messages = {
     'Ez a lap ezt a munkaterületet mutatja: {name}. A munkaterületet azonban egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
   'session.openCurrentWorkspace': 'Az aktuális munkaterület megnyitása',
   'session.workspaceChangedDismiss': 'Most nem',
+  'session.workspaceCheck': 'Munkaterület ellenőrzése',
+  'session.workspaceCheckPending': 'Munkaterület-hozzáférés ellenőrzése…',
+  'session.workspaceCheckFailed':
+    'Nem sikerült ellenőrizni a hozzáférést ehhez a munkaterülethez. Egyetlen művelet sem ismétlődött meg. Újra ellenőrizheted.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

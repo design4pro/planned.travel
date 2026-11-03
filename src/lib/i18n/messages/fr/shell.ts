@@ -794,6 +794,11 @@ const messages = {
     'Cet onglet affiche {name}, mais l’espace de travail a été changé dans un autre onglet ou une autre fenêtre. Rien n’a été enregistré.',
   'session.openCurrentWorkspace': 'Ouvrir l’espace de travail actuel',
   'session.workspaceChangedDismiss': 'Pas maintenant',
+  'session.workspaceCheck': 'Vérifier cet espace de travail',
+  'session.workspaceCheckPending':
+    'Vérification de l’accès à l’espace de travail…',
+  'session.workspaceCheckFailed':
+    'Impossible de confirmer l’accès à cet espace de travail. Aucune opération n’a été relancée. Vous pouvez vérifier à nouveau.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

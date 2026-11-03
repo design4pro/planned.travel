@@ -746,6 +746,10 @@ const messages = {
     'Αυτή η καρτέλα εμφανίζει τον χώρο «{name}», αλλά ο χώρος εργασίας άλλαξε σε άλλη καρτέλα ή παράθυρο. Δεν αποθηκεύτηκε τίποτα.',
   'session.openCurrentWorkspace': 'Άνοιγμα του τρέχοντος χώρου εργασίας',
   'session.workspaceChangedDismiss': 'Όχι τώρα',
+  'session.workspaceCheck': 'Έλεγχος αυτού του χώρου εργασίας',
+  'session.workspaceCheckPending': 'Έλεγχος πρόσβασης στον χώρο εργασίας…',
+  'session.workspaceCheckFailed':
+    'Δεν ήταν δυνατή η επιβεβαίωση πρόσβασης σε αυτόν τον χώρο εργασίας. Καμία ενέργεια δεν επαναλήφθηκε. Μπορείτε να ελέγξετε ξανά.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
