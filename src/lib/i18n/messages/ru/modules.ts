@@ -208,6 +208,8 @@ const messages = {
   'book.import.widget.stalled': 'Это занимает больше времени, чем мы ждали',
   'book.import.widget.check': 'Проверить снова',
   'book.import.widget.dismiss': 'Скрыть',
+  'book.import.review.dismissWarning':
+    'Убрать «{filename}»? Неподтверждённые строки станут недоступны через этот список. Закрытие проверки сохраняет задание. Если строки больше не появляются, срок хранения временных данных мог истечь; можно убрать задание или проверить снова.',
   'book.import.review.title': 'Что мы прочитали',
   'book.import.review.from': 'Из «{filename}»',
   'book.import.review.selectAll': 'Выбрать все',

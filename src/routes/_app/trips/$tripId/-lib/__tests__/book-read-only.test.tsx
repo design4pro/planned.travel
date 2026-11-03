@@ -23,7 +23,25 @@ vi.mock('#/components/layout/error-state', () => ({ ErrorPanel: () => null }))
 vi.mock('#/components/modules/book', () => ({
   BookingsTimeline: () => null,
   ImportBookingsAction: () => <button>Import bookings</button>,
-  ImportBookingsDialog: () => null,
+  ImportBookingsDialog: ({
+    open,
+    canWrite,
+    archived,
+    jobId,
+  }: {
+    open: boolean
+    canWrite: boolean
+    archived: boolean
+    jobId?: string
+  }) =>
+    open ? (
+      <div
+        data-testid="import-review"
+        data-writable={String(canWrite)}
+        data-archived={String(archived)}
+        data-job={jobId}
+      />
+    ) : null,
   NewBookingAction: () => <button>New booking</button>,
   bookImportsOwner: () => 'owner',
 }))
@@ -55,7 +73,7 @@ const { Route } = await import('../../book')
 
 afterEach(cleanup)
 
-function mount(canWrite: boolean, archived: boolean) {
+function mount(canWrite: boolean, archived: boolean, review?: string) {
   vi.spyOn(Route, 'useLoaderData').mockReturnValue({
     currency: 'EUR',
     canWrite,
@@ -67,7 +85,7 @@ function mount(canWrite: boolean, archived: boolean) {
     maskCodes: false,
   })
   vi.spyOn(Route, 'useParams').mockReturnValue({ tripId: 'trip-1' })
-  vi.spyOn(Route, 'useSearch').mockReturnValue({ import: undefined })
+  vi.spyOn(Route, 'useSearch').mockReturnValue({ import: review })
   vi.spyOn(Route, 'useNavigate').mockReturnValue(vi.fn())
   const Component = Route.options.component as ComponentType
   return render(<Component />)
@@ -90,4 +108,16 @@ it('says nothing, and offers the writers, to a writer of a live trip', () => {
   const result = mount(true, false)
   expect(result.queryByText(/trips\.book\.readOnly/)).toBeNull()
   expect(result.getByRole('button', { name: 'New booking' })).toBeTruthy()
+})
+
+it('opens archived Review for the selected job while keeping confirmation unavailable', () => {
+  const result = mount(false, true, 'booking-import:trip-1:file-1')
+  const review = result.getByTestId('import-review')
+  expect(review.getAttribute('data-writable')).toBe('false')
+  expect(review.getAttribute('data-archived')).toBe('true')
+  expect(review.getAttribute('data-job')).toBe('booking-import:trip-1:file-1')
+  expect(Route.useNavigate()).toHaveBeenCalledWith({
+    search: {},
+    replace: true,
+  })
 })

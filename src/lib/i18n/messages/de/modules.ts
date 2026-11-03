@@ -203,6 +203,8 @@ const messages = {
   'book.import.widget.stalled': 'Das dauert länger als gedacht',
   'book.import.widget.check': 'Nochmal nachsehen',
   'book.import.widget.dismiss': 'Ausblenden',
+  'book.import.review.dismissWarning':
+    '„{filename}“ verwerfen? Unbestätigte Zeilen sind dann über dieses Verzeichnis nicht mehr zugänglich. Das Schließen der Prüfung behält den Auftrag. Wenn keine Zeilen mehr erscheinen, sind die zwischengespeicherten Daten möglicherweise abgelaufen; du kannst den Auftrag verwerfen oder erneut prüfen.',
   'book.import.review.title': 'Was wir gelesen haben',
   'book.import.review.from': 'Aus „{filename}“',
   'book.import.review.selectAll': 'Alle auswählen',

@@ -183,6 +183,8 @@ const messages = {
   'book.import.widget.stalled': '这比预想的久',
   'book.import.widget.check': '再看一次',
   'book.import.widget.dismiss': '关掉',
+  'book.import.review.dismissWarning':
+    '忽略“{filename}”？未确认的行将无法再通过此列表访问。关闭审核窗口会保留任务。如果行不再显示，临时数据可能已过期；你可以忽略任务或再次检查。',
   'book.import.review.title': '我们读到的内容',
   'book.import.review.from': '来自“{filename}”',
   'book.import.review.selectAll': '全选',
