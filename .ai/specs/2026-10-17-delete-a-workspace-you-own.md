@@ -762,5 +762,24 @@ workspace after confirmed absence. Read failures propagate; banned and impersona
 claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
 recovered membership without repeating departure or updating the session.
 
-The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
-requests, rather than introducing another shared resolver. Implementation: PR #1708.
+The shared resolver landed in PR #1708. Issue #1738 completes Phase 3's concurrent recovery:
+`provisionPersonalOrganization` conditions organization, participation anchor and owner membership
+writes on membership absence in one D1 batch; losing requests read the surviving membership.
+Explicit workspace creation keeps its existing batch and limit enforcement.
+
+
+## Implementation preparation - bounded cleanup (#1739)
+
+`repos/members.ts` now owns `drainWorkspace`: at most 20 steps of 100 rows, trips first and then
+`WORKSPACE_DRAIN_TABLES`, with owner authorization and atomic membership/subscription guards. A trip
+batch is selected with `LIMIT`; its room callback must finish before deletion. The exact selected ids
+are carried in one JSON parameter and selected through `json_each` with `LIMIT`, so concurrent inserts
+cannot substitute unclosed rooms and the statement stays below D1's 100-parameter ceiling.
+
+`storage/workspace-objects.ts` exposes `drainWorkspaceObjects`: one budget of 20 deletion batches,
+1,000 keys per listing, across the shared `WORKSPACE_KEY_FAMILIES`, including `journeys`. Both drains
+return `drained: false` when more work remains and resume by selecting the remaining rows or keys.
+The existing numeric `deletePrefix` and `sweepWorkspaceObjects` completion helpers reuse the same
+storage implementation and retain their calling contracts. The future deletion driver must use the
+bounded drain interfaces, rather than those completion helpers. No deletion action or driver is
+introduced by this preparation slice.

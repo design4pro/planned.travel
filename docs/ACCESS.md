@@ -521,7 +521,10 @@ report queue failure as recoverable delivery failure; real transitions write the
 lookup, acceptance and rejection stay open, retaining recipient, verification, expiry and status checks
 and the participation anchor. This tenant action keeps central impersonator attribution (§6.4).
 
-`deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
+`deleteWorkspace` (`src/server/repos/members.ts`, #1057, #1739) is that repository-SQL deletion.
+It and the bounded `drainWorkspace` require `assertRole(ctx, 'workspace.delete', 'owner')`;
+admins and members are refused. Every destructive statement atomically retains the tenant,
+departing-member and live-subscription guards. This preparation exposes no public deletion action.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace
