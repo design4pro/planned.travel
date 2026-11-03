@@ -323,13 +323,12 @@ In `file-library.tsx`, on the existing drop `<div>`:
 | The listener and the drop zone                | `file-library.tsx` — the only component that owns the upload queue                                      |
 | Row creation, quota and tenant scoping        | `src/server/repos/files.ts` — unchanged                                                                 |
 
-**The R2 write ordering is not touched, and is restated because this stage edits the function that
-owns it** (`uploadTripFileFn`): the object is written to R2 **first** (`bucket.put`), **then** the
-quota is asserted and the row inserted (`recordFile` calls `assertQuota(scope, 'files', …)` and
-`assertQuota(scope, 'storage_bytes', …)` before the insert), **and if that throws the object just
-written is deleted again**. A dangling object is a sweep job; a dangling row is a broken download.
-The audit `trail` entry still goes after the row. This stage adds the wallet-pass kind resolution
-inside that sequence and moves none of its steps.
+**The R2 write ordering** (`uploadTripFileFn`) now follows ADR 0048: shared byte and
+object capacity is reserved atomically before the create-only R2 write, then `recordFile`
+inserts the row and settles the reservation together. A failed publication triggers guarded
+cleanup; capacity stays charged until deletion or a cancellation fence succeeds. The audit
+`trail` entry still goes after the row. This stage introduced wallet-pass kind resolution;
+issue #1784 subsequently replaced its original check-after-write quota sequence.
 
 **Dependency direction.** `paste.ts` and `screening.ts` import from `file-policy.ts`; nothing in
 `file-policy.ts` imports from `components/`. `components/ui` is untouched and never fetches.

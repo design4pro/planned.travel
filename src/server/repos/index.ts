@@ -28,6 +28,7 @@
  * | `trip-currency` | — previews and commits re-basing a trip's budget currency; reads and, in one atomic batch, rewrites `expenses`, `expense_shares`, `settlements`, `budget_items`, `trips` and pins the priced rows of `places`, `reservations`, `transports`, `day_accommodations` |
  * | `lists`         | `packing_lists`, `packing_items`, `packing_templates`, `packing_template_items` |
  * | `files`         | `trip_files` |
+ * | `storage-admission` | `storage_objects`; shared byte/object reservations, retained usage and cleanup |
  * | `collab`        | `collab_messages`, `collab_message_reactions`, `collab_notes`, `collab_polls`, `collab_poll_votes`, `check_ins` |
  * | `collections`   | `collections`, `collection_places`, `collection_labels`, `collection_place_labels` |
  * | `journey`       | `journeys`, `journey_entries`, `journey_photos`, `journey_moods` |
@@ -67,6 +68,7 @@ export type { DayRunItemInput } from './day-journeys'
 export * from './days'
 export * from './expenses'
 export * from './files'
+export * from './storage-admission'
 export * from './invites'
 export * from './itinerary'
 export * from './journey'

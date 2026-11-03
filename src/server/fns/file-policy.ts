@@ -85,7 +85,7 @@ const XML_EXCEPTION_EXTENSION = 'gpx'
  *   header;
  * - (c) every **uploaded** object (`uploadTripFileFn`) is **stored** with
  *   `contentDisposition: attachment`, so a public domain would serve it as a download. `trip-copy`
- *   copies the cover through `copyObject`, which carries the disposition over with the type;
+ *   copies the cover through shared storage admission, retaining the disposition and type;
  * - (d) **no client code gives the user a same-origin object URL typed `text/html` or
  *   `image/svg+xml` or `application/gpx+xml`**: `download.ts` re-types a blob of those types to
  *   `application/octet-stream` before `URL.createObjectURL`, and `export-download.ts` does so for

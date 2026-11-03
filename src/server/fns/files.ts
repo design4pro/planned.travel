@@ -1,12 +1,8 @@
 /**
  * Write and read paths for trip attachments.
  *
- * The bytes go to the `FILES` R2 bucket; the row that makes them listable,
- * authorisable and countable goes to D1 through `recordFile`, which is where the
- * plan's file-count and storage quotas are enforced. The order matters and is
- * deliberate: object first, row second, and if the row is refused the object we
- * just wrote is deleted again — a dangling object is a sweep job, a dangling row
- * is a broken download.
+ * Both quota ceilings are reserved before bytes move. Publishing transfers the charge atomically;
+ * a failed or cancelled upload stays charged until a storage fence prevents late writes.
  *
  * Upload is a `FormData` handler that answers with a plain `Response` rather than
  * a serialised value, so the browser can drive it with `XMLHttpRequest` and get
@@ -23,6 +19,10 @@ import {
   getFile,
   getStorageUsage,
   recordFile,
+  reserveStorage,
+  removedFileStorage,
+  NotFoundError,
+  QuotaExceededError,
   requireFileForWrite,
   requireTrip,
   requireTripForFileWrite,
@@ -31,6 +31,7 @@ import {
   TripRoleError,
   updateFile,
 } from '#/server/repos'
+import { abandonStorage, cleanupStorage, purgeStorageKey, writeStorageObject } from '#/server/storage/admission'
 import { appScope, filesBucket, mirrorToRoom, orNull, patch } from './context'
 import {
   FILE_KIND_VALUES,
@@ -152,6 +153,8 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
     const filename = sanitiseFilename(request.file.name)
     const contentType = resolveContentType(filename, request.file.type)
 
+    const bucket = filesBucket()
+    await cleanupStorage(scope, bucket)
     const [usage, quotas] = await Promise.all([
       getStorageUsage(scope),
       resolveQuotas(scope),
@@ -184,9 +187,14 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
       fileId,
       filename,
     })
-    const bucket = filesBucket()
-
-    await bucket.put(storageKey, request.file.stream(), {
+    let reservationId: string | undefined
+    try {
+      const reservation = await reserveStorage(scope, {
+        tripId: trip.id, storageKey, sizeBytes: request.file.size,
+        kind: request.kind ?? defaultKindFor(filename, contentType),
+      })
+      reservationId = reservation.id
+      await writeStorageObject(scope, bucket, reservation, request.file.stream(), {
       httpMetadata: {
         contentType,
         contentDisposition: contentDispositionFor(filename),
@@ -196,9 +204,8 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
         tripId: trip.id,
         uploadedBy: scope.ctx.userId,
       },
-    })
+      })
 
-    try {
       const row = await recordFile(scope, {
         tripId: trip.id,
         storageKey,
@@ -207,7 +214,7 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
         sizeBytes: request.file.size,
         kind: request.kind ?? defaultKindFor(filename, contentType),
         description: request.description,
-      })
+      }, reservationId)
 
       await mirrorToRoom(scope, trip.id, [
         patch('trip', trip.id, { filesChangedAt: Date.now() }),
@@ -243,13 +250,15 @@ export const uploadTripFileFn = createServerFn({ method: 'POST' })
         { headers: { 'cache-control': 'no-store' } },
       )
     } catch (cause) {
-      // The quota is checked again inside `recordFile`, against the same
-      // transaction that inserts. Losing that race must not leave the bucket
-      // holding bytes nothing points at.
-      await bucket.delete(storageKey)
+      // Settlement protects a published object even if a later notification fails.
+      if (reservationId !== undefined) {
+        await abandonStorage(scope, bucket, reservationId).catch(() => undefined)
+      }
       return refuse(
         'rejected',
-        cause instanceof Error && cause.message.length > 0
+        cause instanceof TripArchivedError ||
+        cause instanceof TripRoleError ||
+        cause instanceof QuotaExceededError
           ? cause.message
           : 'The upload could not be recorded. Try again in a moment.',
       )
@@ -300,14 +309,22 @@ export const deleteTripFileFn = createServerFn({ method: 'POST' })
 
     // The guards come first, on the trip the stored row names: the cover clear below is a write, and
     // a viewer, an archived trip or a file of another trip must not reach it.
+    if (await getFile(scope, data.fileId) === null) {
+      await requireTripForFileWrite(scope, data.tripId)
+      const removed = await removedFileStorage(scope, data.tripId, data.fileId)
+      if (!removed) throw new NotFoundError('file', data.fileId)
+      await purgeStorageKey(scope, filesBucket(), removed.storageKey)
+      return { deleted: true }
+    }
     const row = await requireFileForWrite(scope, data.tripId, data.fileId)
     // A trip's cover is one of its files, and a deleted file must not leave the tile pointing at
     // bytes that are gone. Cleared on the trip the *file row* names, where the cover is that very
     // object - and before the bucket delete, by a write that is open to every role, so an editor's
     // delete cannot fail halfway with the object already removed.
     await clearTripCoverIfKey(scope, row.tripId, row.storageKey)
-    const storageKey = await deleteFile(scope, data.tripId, data.fileId)
-    await filesBucket().delete(storageKey)
+    const bucket = filesBucket()
+    await deleteFile(scope, data.tripId, data.fileId)
+    await purgeStorageKey(scope, bucket, row.storageKey)
 
     await mirrorToRoom(scope, data.tripId, [
       patch('trip', data.tripId, { filesChangedAt: Date.now() }),

@@ -1,4 +1,5 @@
 /** Trip erasure primitives. No request handler or Worker binding belongs here. */
+import { retainTripStorage } from './storage-admission'
 import { asc, eq, exists, ne, notExists, or, sql } from 'drizzle-orm'
 import { member } from '#/server/db/auth-schema'
 import {
@@ -95,6 +96,7 @@ export async function eraseUserTrips(
           await files.findMany(scope, { where: eq(tripFiles.tripId, trip.id) })
         ).map((row) => row.storageKey)
         if (trip.coverImageKey) storageKeys.push(trip.coverImageKey)
+        await retainTripStorage(scope, trip.id)
         await prepareTripRemoval({
           organizationId: scope.ctx.organizationId,
           tripId: trip.id,

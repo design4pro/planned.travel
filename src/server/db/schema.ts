@@ -1731,6 +1731,46 @@ export const packingTemplateItems = sqliteTable(
  * Files
  * ---------------------------------------------------------------------------------------------- */
 
+export const STORAGE_OBJECT_STATES = [
+  'reserved',
+  'writing',
+  'retained',
+  'garbage',
+  'deleted',
+] as const
+
+/** Survives trip deletion until storage confirms cleanup; deleted rows fence key reuse. */
+export const storageObjects = sqliteTable(
+  'storage_objects',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id').notNull(),
+    storageKey: text('storage_key').notNull(),
+    fileId: text('file_id'),
+    sizeBytes: integer('size_bytes').notNull(),
+    kind: text('kind').notNull().default('document'),
+    state: text('state', { enum: STORAGE_OBJECT_STATES }).notNull(),
+    needsFence: integer('needs_fence', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('storage_objects_key_unq').on(t.storageKey),
+    index('storage_objects_org_trip_idx').on(t.organizationId, t.tripId),
+    index('storage_objects_org_state_expiry_idx').on(
+      t.organizationId,
+      t.state,
+      t.expiresAt,
+    ),
+    enumCheck('storage_objects_state_chk', t.state, STORAGE_OBJECT_STATES),
+    enumCheck('storage_objects_kind_chk', t.kind, FILE_KINDS),
+    nonNegativeCheck('storage_objects_size_chk', t.sizeBytes),
+  ],
+)
+
 export const tripFiles = sqliteTable(
   'trip_files',
   {
