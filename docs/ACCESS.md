@@ -211,6 +211,14 @@ no conditional cell and no footnote that turns a no into a yes.
 | `revoke` | yes     | no        | no     |
 | `delete` | yes     | no        | no     |
 
+### 2.2a Self-service sign-out of other devices
+
+After the D1-owned account-security cutover (ADR 0048), a person with a non-impersonated self session created less than five minutes ago can register and explicitly confirm signing out every other device. The current session token is retained, factor state and trusted-browser policy are unchanged, and Google/Apple/passkey sign-in remains available. This grants no platform role and no authority over another account.
+
+The operation receives a restricted HttpOnly receipt before a destructive request is permitted. Strict inputs carry intent/operation ids, never an account selector. Origin checks, native rate limits and a winning-claim-gated atomic D1 batch protect the operation. Session/trust acceptance and refresh check primary authority even when KV has an old blob. Missing/malformed metadata or storage errors refuse after cutover. Password login's provisional session is never accepted before all native factor hooks finish.
+
+A committed result can still have cleanup pending. Encrypted retry references and durable workspace targets survive failures; the existing room-eviction worker acknowledges successful closure rather than publication alone. Status reconciliation needs only the restricted receipt and works for fifteen minutes after commit. An unknown result offers status checks, not a blind destructive retry.
+
 ### 2.3 `catalog`, `pack`, `source`, `share`
 
 | Statement         | `admin` | `curator` | `user` |

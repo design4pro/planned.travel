@@ -141,7 +141,13 @@ export function createTripRoomEvictHandler(
         `${failed} of ${tripIds.length} trip rooms could not be told to close a person's sockets`,
       )
     }
-    if (payload.accountSecurityOperationId) await acknowledgeAccountRoomEviction(databaseFor(binding), payload.accountSecurityOperationId, userId, organizationId)
+    if (payload.accountSecurityOperationId)
+      await acknowledgeAccountRoomEviction(
+        databaseFor(binding),
+        payload.accountSecurityOperationId,
+        userId,
+        organizationId,
+      )
     return { rooms: tripIds.length, failed }
   }
 }

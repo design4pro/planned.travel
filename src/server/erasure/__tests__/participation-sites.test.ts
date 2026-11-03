@@ -141,11 +141,14 @@ describe('who imports the erasure catalog', () => {
         (file.startsWith('server/catalog/') && specifier === './erasure'),
     )
 
-  it('is the participation backfill handler and nothing else', () => {
+  it('limits importers to participation backfill and account-security routing discovery', () => {
     const importers = sourceTexts
       .filter(([file, source]) => imports(file, source))
       .map(([file]) => file)
-    expect(importers).toEqual(['server/queue/handlers/participant-backfill.ts'])
+    expect(importers).toEqual([
+      'server/auth/account-security-cleanup.ts',
+      'server/queue/handlers/participant-backfill.ts',
+    ])
   })
 
   it('sees an importer under any spelling (fixture)', () => {

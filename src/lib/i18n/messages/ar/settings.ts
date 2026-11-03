@@ -763,13 +763,18 @@ const messages = {
   'twoFactor.off.pending': 'جارٍ الإيقاف',
   'twoFactor.off.cancel': 'إبقاؤها مفعّلة',
   'twoFactor.off.done': 'المصادقة الثنائية متوقفة',
-  "security.other.label": "تسجيل الخروج من الأجهزة الأخرى",
-  "security.other.description": "يجب تسجيل الدخول مجددًا على الأجهزة الأخرى. تُغلق الاتصالات بشكل غير متزامن؛ وتظل المتصفحات الموثوقة وGoogle وApple ومفاتيح المرور متاحة.",
-  "security.other.committed": "تم تسجيل الخروج من الأجهزة الأخرى. يظل هذا الجهاز مسجّل الدخول.",
-  "security.other.refused": "لم تُجرِ هذه العملية أي تغييرات. سجّل الدخول مجددًا ثم أكّد خلال خمس دقائق.",
-  "security.other.unknown": "النتيجة غير معروفة. تحقّق من الحالة قبل بدء عملية أخرى.",
-  "security.other.pending": "أُلغيت الجلسات الأخرى. قد يستغرق إغلاق الاتصالات وقتًا أطول.",
-  "security.other.check": "التحقّق من الحالة",
+  'security.other.label': 'تسجيل الخروج من الأجهزة الأخرى',
+  'security.other.description':
+    'يجب تسجيل الدخول مجددًا على الأجهزة الأخرى. تُغلق الاتصالات بشكل غير متزامن؛ وتظل المتصفحات الموثوقة وGoogle وApple ومفاتيح المرور متاحة.',
+  'security.other.committed':
+    'تم تسجيل الخروج من الأجهزة الأخرى. يظل هذا الجهاز مسجّل الدخول.',
+  'security.other.refused':
+    'لم تُجرِ هذه العملية أي تغييرات. سجّل الدخول مجددًا ثم أكّد خلال خمس دقائق.',
+  'security.other.unknown':
+    'النتيجة غير معروفة. تحقّق من الحالة قبل بدء عملية أخرى.',
+  'security.other.pending':
+    'أُلغيت الجلسات الأخرى. قد يستغرق إغلاق الاتصالات وقتًا أطول.',
+  'security.other.check': 'التحقّق من الحالة',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -777,13 +777,18 @@ const messages = {
   'twoFactor.off.pending': 'Vypínání',
   'twoFactor.off.cancel': 'Ponechat zapnuté',
   'twoFactor.off.done': 'Dvoufaktorové ověřování je vypnuté',
-  "security.other.label": "Odhlásit ostatní zařízení",
-  "security.other.description": "Na ostatních zařízeních je nutné se znovu přihlásit. Spojení se uzavírají asynchronně; důvěryhodné prohlížeče, Google, Apple a přístupové klíče zůstávají dostupné.",
-  "security.other.committed": "Ostatní zařízení jsou odhlášena. Toto zařízení zůstává přihlášeno.",
-  "security.other.refused": "Tato operace nic nezměnila. Přihlaste se znovu a potvrďte do pěti minut.",
-  "security.other.unknown": "Výsledek není znám. Před další operací zkontrolujte stav.",
-  "security.other.pending": "Ostatní relace byly zneplatněny. Uzavření spojení může trvat déle.",
-  "security.other.check": "Zkontrolovat stav",
+  'security.other.label': 'Odhlásit ostatní zařízení',
+  'security.other.description':
+    'Na ostatních zařízeních je nutné se znovu přihlásit. Spojení se uzavírají asynchronně; důvěryhodné prohlížeče, Google, Apple a přístupové klíče zůstávají dostupné.',
+  'security.other.committed':
+    'Ostatní zařízení jsou odhlášena. Toto zařízení zůstává přihlášeno.',
+  'security.other.refused':
+    'Tato operace nic nezměnila. Přihlaste se znovu a potvrďte do pěti minut.',
+  'security.other.unknown':
+    'Výsledek není znám. Před další operací zkontrolujte stav.',
+  'security.other.pending':
+    'Ostatní relace byly zneplatněny. Uzavření spojení může trvat déle.',
+  'security.other.check': 'Zkontrolovat stav',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -1,6 +1,6 @@
 # 0048. Account session authority is primary and account scoped
 
-Status: proposed
+Status: accepted
 Date: 2026-11-03
 Issue: #1758
 Amends: SPEC §5/§6; CODE_REVIEW layering contract
@@ -11,7 +11,7 @@ Account security spans a person's workspaces. A tenant repository cannot model i
 
 ## Decision
 
-`src/server/repos/account-security.ts` is one closed account-auth repository, separate from FU-3 and the tenant base. Its allowed records are the native `user` identity projection (`id`, `banned`, `banExpires`), native `session` rows, and new account revision, session proof, verification proof, revocation operation and cleanup records, plus one global monotonic revocation-fence scalar. It cannot query `organization`, `member`, or tenant-content tables. Native credential/factor reads and writes continue through Better Auth's adapter. No password, factor secret, backup set or provider token enters this repository.
+`src/server/repos/account-security.ts` is one closed account-auth repository, separate from FU-3 and the tenant base. Its allowed records are the native `user` identity projection (`id`, `banned`, `banExpires`), native `session` rows, native `verification` rows restricted to the exact two-factor challenge and trusted-browser identifier shapes, and new account revision, session proof, verification proof, revocation operation and cleanup records, plus one global monotonic revocation-fence scalar. It cannot query `organization`, `member`, or tenant-content tables. Durable room targets contain workspace routing ids only; a queue acknowledgement may settle only its recorded operation/account/workspace triple. Native credential/factor reads and writes continue through Better Auth's adapter. No password, factor secret, backup set or provider token enters this repository.
 
 A branded `AccountAuthScope` is issued only in `auth/account-authority.ts`. The subject comes from a native authenticated session or an internal native identity lookup during authentication, never an operation's client selector. The pre-authentication capability can read a revision but cannot authorize a revocation. Account mutations additionally require a verified current session and proof revision. A constructor accepting arbitrary request `userId` is forbidden. Allowed production callers are `auth/account-authority.ts` (proof binding and authority reads) and `auth/factor-management.ts` (register, commit and reconcile self-service operations). `auth/account-security-cleanup.ts` has a separate bounded system capability for keyset discovery of pending operation ids and account-bound encrypted cleanup references; it cannot accept arbitrary table/query names or return tenant content.
 
@@ -32,3 +32,11 @@ Expand adds metadata and revision-aware writers/readers with enforcement and act
 ## Required evidence
 
 Before runtime implementation, independently review this concrete contract and the exhaustive inventory in `docs/account-session-authority.md`. Before completion, prove stale/re-cached blobs, refresh, concurrent sign-in, old challenges, failed CAS, actual batch rollback, cleanup restart, missing/stale/empty index, over-200/safety-limit paging, account/workspace isolation, lost entire response and two browser contexts at the named public seams. Measure primary D1 calls/latency and update the hot-path budget. The full validation gate and final independent diff review remain required.
+
+## Implementation details established during review
+
+Better Auth rebuilds `internalAdapter` after all plugin init hooks, so its one stable wrapper is installed after `$context` resolves. Per-request proof state remains in `AsyncLocalStorage.run`. Password sessions are inserted atomically with `password-pending` metadata and become accepted only after the complete native hook pipeline returns a successful matching token/user; unknown legacy trust cannot leave a provisional session accepted. Trust metadata records whether its lineage includes actual factor verification, so legacy trust rotation during expand cannot gain post-cutover authority.
+
+D1 owns the irreversible cutover bit. The optional `ACCOUNT_SECURITY_ENFORCEMENT=active` deployment setting requests activation only after the primary bounded backfill validation succeeds; clearing that setting afterwards does not disable D1 authority. A missing singleton fails closed when activation is requested. Queue publication never acknowledges a room target: the existing `trip-room-evict` handler records acknowledgement after the actual fan-out succeeds, and pending targets survive publication loss and retries.
+
+The existing erasure catalog `listWorkspacesHoldingUser` has one additional named caller: account-security room discovery. It projects only workspace routing ids from durable participation anchors, including a workspace the person has left, with 100 rows per keyset page and a 250-page refusal. Its erasure id is discarded. No scrub primitive is granted to this caller. D1 activation additionally requires the completed historical participant-backfill marker to have been validated and recorded; current memberships alone cannot prove historical coverage.

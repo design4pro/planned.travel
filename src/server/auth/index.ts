@@ -323,7 +323,7 @@ function buildAuth() {
   const db = authDb()
   const authority = createAccountAuthority(db, securityEnforcement)
 
-  return authority.wrap(betterAuth({
+  const auth = betterAuth({
     appName: APP_NAME,
     baseURL: baseUrl,
     basePath: '/api/auth',
@@ -417,9 +417,9 @@ function buildAuth() {
       window: 60,
       max: 100,
       customRules: {
-        '/account-security/register': { window: 300, max: 5 },
-        '/account-security/commit': { window: 300, max: 5 },
-        '/account-security/status': { window: 60, max: 20 },
+        '/account-security/register-operation': { window: 300, max: 5 },
+        '/account-security/revoke-other-sessions': { window: 300, max: 5 },
+        '/account-security/operation-status': { window: 60, max: 20 },
         '/sign-in/email': { window: 60, max: 10 },
         '/sign-up/email': { window: 300, max: 5 },
         '/request-password-reset': { window: 300, max: 5 },
@@ -586,9 +586,9 @@ function buildAuth() {
       // its behalf. Nothing here replaces the hooks below; both run.
       admin(adminOptions),
       authority.plugin,
-      accountSessionManagement(db, authority, securityEnforcement, async () => sweepAccountSecurity(db, {
+      accountSessionManagement(db, authority, authority.enforced, async () => sweepAccountSecurity(db, {
         key: authSecret(), store: sessionStore(), now: Date.now(),
-        workspaces: workspaceIdsOf,
+        discoveryDb: authRepositoryDb(),
         publish: async (userId, accountSecurityOperationId, organizations) => {
           await enqueueTasks(taskQueue(), organizations.map((orgId) => ({ kind: 'trip-room-evict' as const, orgId, payload: { userId, accountSecurityOperationId } })))
         },
@@ -671,7 +671,8 @@ function buildAuth() {
         })
       },
     },
-  }))
+  })
+  return authority.wrap(auth)
 }
 
 export type Auth = ReturnType<typeof buildAuth>

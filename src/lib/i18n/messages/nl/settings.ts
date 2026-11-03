@@ -777,13 +777,18 @@ const messages = {
   'twoFactor.off.pending': 'Bezig met uitschakelen',
   'twoFactor.off.cancel': 'Ingeschakeld houden',
   'twoFactor.off.done': 'Tweestapsverificatie is uitgeschakeld',
-  "security.other.label": "Andere apparaten afmelden",
-  "security.other.description": "Andere apparaten moeten opnieuw inloggen. Verbindingen sluiten asynchroon; vertrouwde browsers, Google, Apple en toegangssleutels blijven beschikbaar.",
-  "security.other.committed": "Andere apparaten zijn afgemeld. Dit apparaat blijft ingelogd.",
-  "security.other.refused": "Deze actie heeft niets gewijzigd. Log opnieuw in en bevestig binnen vijf minuten.",
-  "security.other.unknown": "Het resultaat is onbekend. Controleer de status voordat je een andere actie start.",
-  "security.other.pending": "Andere sessies zijn ingetrokken. Het sluiten van verbindingen kan langer duren.",
-  "security.other.check": "Status controleren",
+  'security.other.label': 'Andere apparaten afmelden',
+  'security.other.description':
+    'Andere apparaten moeten opnieuw inloggen. Verbindingen sluiten asynchroon; vertrouwde browsers, Google, Apple en toegangssleutels blijven beschikbaar.',
+  'security.other.committed':
+    'Andere apparaten zijn afgemeld. Dit apparaat blijft ingelogd.',
+  'security.other.refused':
+    'Deze actie heeft niets gewijzigd. Log opnieuw in en bevestig binnen vijf minuten.',
+  'security.other.unknown':
+    'Het resultaat is onbekend. Controleer de status voordat je een andere actie start.',
+  'security.other.pending':
+    'Andere sessies zijn ingetrokken. Het sluiten van verbindingen kan langer duren.',
+  'security.other.check': 'Status controleren',
 } satisfies TranslationOf<typeof En>
 
 export default messages

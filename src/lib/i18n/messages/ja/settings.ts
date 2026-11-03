@@ -728,13 +728,18 @@ const messages = {
   'twoFactor.off.pending': 'オフにしています',
   'twoFactor.off.cancel': 'オンのままにする',
   'twoFactor.off.done': '二要素認証はオフです',
-  "security.other.label": "他のデバイスからログアウト",
-  "security.other.description": "他のデバイスでは再ログインが必要です。接続は順次閉じられます。信頼済みブラウザー、Google、Apple、パスキーは引き続き利用できます。",
-  "security.other.committed": "他のデバイスはログアウトしました。このデバイスはログインしたままです。",
-  "security.other.refused": "この操作では変更されませんでした。再ログインし、5分以内に確認してください。",
-  "security.other.unknown": "結果を確認できません。別の操作を始める前に状態を確認してください。",
-  "security.other.pending": "他のセッションは無効になりました。接続が閉じるまで時間がかかる場合があります。",
-  "security.other.check": "状態を確認",
+  'security.other.label': '他のデバイスからログアウト',
+  'security.other.description':
+    '他のデバイスでは再ログインが必要です。接続は順次閉じられます。信頼済みブラウザー、Google、Apple、パスキーは引き続き利用できます。',
+  'security.other.committed':
+    '他のデバイスはログアウトしました。このデバイスはログインしたままです。',
+  'security.other.refused':
+    'この操作では変更されませんでした。再ログインし、5分以内に確認してください。',
+  'security.other.unknown':
+    '結果を確認できません。別の操作を始める前に状態を確認してください。',
+  'security.other.pending':
+    '他のセッションは無効になりました。接続が閉じるまで時間がかかる場合があります。',
+  'security.other.check': '状態を確認',
 } satisfies TranslationOf<typeof En>
 
 export default messages

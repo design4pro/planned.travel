@@ -787,13 +787,18 @@ const messages = {
   'twoFactor.off.pending': 'Désactivation',
   'twoFactor.off.cancel': 'La garder activée',
   'twoFactor.off.done': 'La double authentification est désactivée',
-  "security.other.label": "Déconnecter les autres appareils",
-  "security.other.description": "Les autres appareils devront se reconnecter. Les connexions se ferment de façon asynchrone ; les navigateurs de confiance, Google, Apple et les clés d’accès restent disponibles.",
-  "security.other.committed": "Les autres appareils sont déconnectés. Cet appareil reste connecté.",
-  "security.other.refused": "Cette opération n’a rien modifié. Reconnectez-vous et confirmez dans les cinq minutes.",
-  "security.other.unknown": "Le résultat est inconnu. Vérifiez l’état avant de lancer une autre opération.",
-  "security.other.pending": "Les autres sessions sont révoquées. La fermeture des connexions peut prendre plus de temps.",
-  "security.other.check": "Vérifier l’état",
+  'security.other.label': 'Déconnecter les autres appareils',
+  'security.other.description':
+    'Les autres appareils devront se reconnecter. Les connexions se ferment de façon asynchrone ; les navigateurs de confiance, Google, Apple et les clés d’accès restent disponibles.',
+  'security.other.committed':
+    'Les autres appareils sont déconnectés. Cet appareil reste connecté.',
+  'security.other.refused':
+    'Cette opération n’a rien modifié. Reconnectez-vous et confirmez dans les cinq minutes.',
+  'security.other.unknown':
+    'Le résultat est inconnu. Vérifiez l’état avant de lancer une autre opération.',
+  'security.other.pending':
+    'Les autres sessions sont révoquées. La fermeture des connexions peut prendre plus de temps.',
+  'security.other.check': 'Vérifier l’état',
 } satisfies TranslationOf<typeof En>
 
 export default messages

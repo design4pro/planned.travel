@@ -656,13 +656,16 @@ const messages = {
   'twoFactor.off.pending': '正在關閉',
   'twoFactor.off.cancel': '保持開啟',
   'twoFactor.off.done': '雙重驗證已關閉',
-  "security.other.label": "登出其他裝置",
-  "security.other.description": "其他裝置需要重新登入。連線會非同步關閉；受信任的瀏覽器、Google、Apple 和通行密鑰仍可使用。",
-  "security.other.committed": "其他裝置已登出。此裝置保持登入狀態。",
-  "security.other.refused": "此操作未做任何變更。請重新登入，並在五分鐘內確認。",
-  "security.other.unknown": "結果未知。請先檢查狀態，再開始其他操作。",
-  "security.other.pending": "其他工作階段已撤銷。連線可能需要更長時間才能關閉。",
-  "security.other.check": "檢查狀態",
+  'security.other.label': '登出其他裝置',
+  'security.other.description':
+    '其他裝置需要重新登入。連線會非同步關閉；受信任的瀏覽器、Google、Apple 和通行密鑰仍可使用。',
+  'security.other.committed': '其他裝置已登出。此裝置保持登入狀態。',
+  'security.other.refused':
+    '此操作未做任何變更。請重新登入，並在五分鐘內確認。',
+  'security.other.unknown': '結果未知。請先檢查狀態，再開始其他操作。',
+  'security.other.pending':
+    '其他工作階段已撤銷。連線可能需要更長時間才能關閉。',
+  'security.other.check': '檢查狀態',
 } satisfies TranslationOf<typeof En>
 
 export default messages

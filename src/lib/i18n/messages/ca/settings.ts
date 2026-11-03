@@ -783,13 +783,18 @@ const messages = {
   'twoFactor.off.pending': 'S’està desactivant',
   'twoFactor.off.cancel': 'Mantén-la activada',
   'twoFactor.off.done': 'L’autenticació de dos factors està desactivada',
-  "security.other.label": "Tancar la sessió als altres dispositius",
-  "security.other.description": "Els altres dispositius hauran de tornar a iniciar sessió. Les connexions es tanquen de manera asíncrona; els navegadors de confiança, Google, Apple i les claus d’accés continuen disponibles.",
-  "security.other.committed": "Els altres dispositius estan desconnectats. Aquest dispositiu continua connectat.",
-  "security.other.refused": "Aquesta operació no ha fet canvis. Torna a iniciar sessió i confirma en cinc minuts.",
-  "security.other.unknown": "El resultat és desconegut. Comprova l’estat abans d’iniciar una altra operació.",
-  "security.other.pending": "Les altres sessions estan revocades. Les connexions poden trigar més a tancar-se.",
-  "security.other.check": "Comprovar l’estat",
+  'security.other.label': 'Tancar la sessió als altres dispositius',
+  'security.other.description':
+    'Els altres dispositius hauran de tornar a iniciar sessió. Les connexions es tanquen de manera asíncrona; els navegadors de confiança, Google, Apple i les claus d’accés continuen disponibles.',
+  'security.other.committed':
+    'Els altres dispositius estan desconnectats. Aquest dispositiu continua connectat.',
+  'security.other.refused':
+    'Aquesta operació no ha fet canvis. Torna a iniciar sessió i confirma en cinc minuts.',
+  'security.other.unknown':
+    'El resultat és desconegut. Comprova l’estat abans d’iniciar una altra operació.',
+  'security.other.pending':
+    'Les altres sessions estan revocades. Les connexions poden trigar més a tancar-se.',
+  'security.other.check': 'Comprovar l’estat',
 } satisfies TranslationOf<typeof En>
 
 export default messages

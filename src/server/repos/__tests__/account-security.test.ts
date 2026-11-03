@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { accountSecurity, securityFence, securityOperation, session, sessionAuthority, user } from '#/server/db/auth-schema'
+import {
+  accountSecurity,
+  securityFence,
+  securityOperation,
+  session,
+  sessionAuthority,
+  user,
+} from '#/server/db/auth-schema'
 import { createAccountAuthority } from '#/server/auth/account-authority'
 import {
-  acceptedSession, cleanupPage, commitRevocation, finishCleanupReference,
-  noteCleanupAttempt, operationFor, readEntryFence, recordCleanupReference,
-  recordSessionProof, registerRevocation, setCleanupState,
+  reserveNativeAccountDeletion,
+  reservedAccountDeletions,
+  acceptedSession,
+  cleanupPage,
+  commitRevocation,
+  finishCleanupReference,
+  noteCleanupAttempt,
+  operationFor,
+  readEntryFence,
+  recordCleanupReference,
+  insertNativeSession,
+  registerRevocation,
+  setCleanupState,
 } from '../account-security'
 import { createHarness } from './harness'
 import type { Harness } from './harness'
@@ -16,17 +33,57 @@ let second: AccountAuthScope
 const now = Date.now()
 
 async function addSession(scope: AccountAuthScope, id: string) {
-  await harness.db.insert(session).values({ id, token: `fixture-${id}`, userId: scope.userId, createdAt: new Date(now - 1000), updatedAt: new Date(now - 1000), expiresAt: new Date(now + 600000) })
-  await recordSessionProof(scope, id, { revision: 0, trustRevision: 0, lastFence: 0 }, 'native', now - 1000)
+  await insertNativeSession(
+    scope,
+    {
+      id,
+      token: `fixture-${id}`,
+      userId: scope.userId,
+      activeOrganizationId: null,
+      ipAddress: null,
+      userAgent: null,
+      impersonatedBy: null,
+      createdAt: new Date(now - 1000),
+      updatedAt: new Date(now - 1000),
+      expiresAt: new Date(now + 600000),
+    },
+    { revision: 0, trustRevision: 0, lastFence: 0 },
+    'native',
+    now - 1000,
+  )
 }
-async function registration(scope: AccountAuthScope, id: string, sessionId: string) {
-  await registerRevocation(scope, { id, sessionId, intent: id, receiptDigest: `fixture-digest-${id}`, revision: 0, expiresAt: now + 300000 })
+async function registration(
+  scope: AccountAuthScope,
+  id: string,
+  sessionId: string,
+) {
+  await registerRevocation(scope, {
+    id,
+    sessionId,
+    intent: id,
+    receiptDigest: `fixture-digest-${id}`,
+    revision: 0,
+    expiresAt: now + 300000,
+  })
 }
 async function footprint() {
-  return { fence: await harness.db.select().from(securityFence), accounts: await harness.db.select().from(accountSecurity), sessions: await harness.db.select().from(session), proofs: await harness.db.select().from(sessionAuthority), operations: await harness.db.select().from(securityOperation) }
+  return {
+    fence: await harness.db.select().from(securityFence),
+    accounts: await harness.db.select().from(accountSecurity),
+    sessions: await harness.db.select().from(session),
+    proofs: await harness.db.select().from(sessionAuthority),
+    operations: await harness.db.select().from(securityOperation),
+  }
 }
 async function commit(scope: AccountAuthScope, id: string, sessionId: string) {
-  return commitRevocation(scope, { id, sessionId, token: `fixture-${sessionId}`, intent: id, claim: crypto.randomUUID(), now })
+  return commitRevocation(scope, {
+    id,
+    sessionId,
+    token: `fixture-${sessionId}`,
+    intent: id,
+    claim: crypto.randomUUID(),
+    now,
+  })
 }
 
 beforeEach(async () => {
@@ -41,6 +98,11 @@ beforeEach(async () => {
   await addSession(first, 'current')
   await addSession(first, 'other')
   await addSession(second, 'unrelated')
+  await harness.db.update(securityFence).set({
+    ready: true,
+    cutover: true,
+    anchorBackfillRunId: 'fixture-complete',
+  })
 })
 afterEach(() => harness.close())
 
@@ -48,13 +110,25 @@ describe('account revocation through the atomic repository interface', () => {
   it('retains the current token and separates accounts and their workspaces', async () => {
     await registration(first, 'op', 'current')
     expect(await commit(first, 'op', 'current')).toBe(true)
-    expect(await acceptedSession(first, 'fixture-current', now) !== null).toBe(true)
-    expect(await acceptedSession(first, 'fixture-other', now) === null).toBe(true)
-    expect(await acceptedSession(second, 'fixture-unrelated', now) !== null).toBe(true)
-    expect(await acceptedSession(second, 'fixture-current', now) === null).toBe(true)
+    expect(
+      (await acceptedSession(first, 'fixture-current', now)) !== null,
+    ).toBe(true)
+    expect((await acceptedSession(first, 'fixture-other', now)) === null).toBe(
+      true,
+    )
+    expect(
+      (await acceptedSession(second, 'fixture-unrelated', now)) !== null,
+    ).toBe(true)
+    expect(
+      (await acceptedSession(second, 'fixture-current', now)) === null,
+    ).toBe(true)
     expect(await operationFor(second, 'op')).toBeNull()
-    expect((await cleanupPage(first, 1, '', 200)).map((row) => row.id)).toEqual(['other'])
-    expect(await cleanupPage(second, 1, '', 200)).not.toContainEqual(expect.objectContaining({ id: 'other' }))
+    expect((await cleanupPage(first, 1, '', 200)).map((row) => row.id)).toEqual(
+      ['other'],
+    )
+    expect(await cleanupPage(second, 1, '', 200)).not.toContainEqual(
+      expect.objectContaining({ id: 'other' }),
+    )
     const before = await footprint()
     await setCleanupState(second, 'op', { cleanupPending: false })
     await noteCleanupAttempt(second, 'op', now)
@@ -81,7 +155,9 @@ describe('account revocation through the atomic repository interface', () => {
 
   it('rolls back a real statement fault after the winning claim and fence update', async () => {
     await registration(first, 'op', 'current')
-    harness.sqlite.exec("create trigger fixture_failure before update on account_security begin select raise(abort, 'fixture failure'); end")
+    harness.sqlite.exec(
+      "create trigger fixture_failure before update on account_security begin select raise(abort, 'fixture failure'); end",
+    )
     const before = await footprint()
     await expect(commit(first, 'op', 'current')).rejects.toThrow()
     expect(await footprint()).toEqual(before)
@@ -89,7 +165,10 @@ describe('account revocation through the atomic repository interface', () => {
 
   it('refuses a driver without atomic batching before writing', async () => {
     await registration(first, 'op', 'current')
-    const db = new Proxy(harness.db, { get: (target, key, receiver) => key === 'batch' ? undefined : Reflect.get(target, key, receiver) })
+    const db = new Proxy(harness.db, {
+      get: (target, key, receiver) =>
+        key === 'batch' ? undefined : Reflect.get(target, key, receiver),
+    })
     const before = await footprint()
     await expect(commit({ ...first, db }, 'op', 'current')).rejects.toThrow()
     expect(await footprint()).toEqual(before)
@@ -102,14 +181,45 @@ describe('account revocation through the atomic repository interface', () => {
   })
 
   it('fails closed on missing or reset authority after cutover', async () => {
-    await harness.db.update(securityFence).set({ ready: true, cutover: true, value: 1 })
+    await harness.db.update(securityFence).set({
+      ready: true,
+      cutover: true,
+      value: 1,
+      anchorBackfillRunId: 'fixture-complete',
+    })
     await harness.db.update(accountSecurity).set({ lastFence: 1 })
-    await expect(readEntryFence(harness.db, true)).rejects.toThrow()
+    expect((await readEntryFence(harness.db, true)).enforced).toBe(true)
     await harness.db.update(securityFence).set({ value: 0 })
     await expect(readEntryFence(harness.db, false)).rejects.toThrow()
     await harness.db.delete(securityFence)
     await expect(readEntryFence(harness.db, false)).rejects.toThrow()
     await expect(readEntryFence(harness.db, true)).rejects.toThrow()
     expect(await harness.db.select().from(user)).toHaveLength(2)
+  })
+  it('refuses deletion after revocation wins, retaining durable cleanup', async () => {
+    await registration(first, 'op', 'current')
+    expect(await commit(first, 'op', 'current')).toBe(true)
+    const before = await footprint()
+    await expect(
+      reserveNativeAccountDeletion(first, 'delete', now),
+    ).rejects.toThrow()
+    expect(await footprint()).toEqual(before)
+  })
+
+  it('refuses revocation after deletion reserves the account and retains restart recovery', async () => {
+    await registration(first, 'op', 'current')
+    expect(await reserveNativeAccountDeletion(first, 'delete', now)).toBe(
+      'delete',
+    )
+    const before = await footprint()
+    expect(await commit(first, 'op', 'current')).toBe(false)
+    expect(await footprint()).toEqual(before)
+    expect(await reservedAccountDeletions(harness.db, now + 60001)).toEqual([
+      first.userId,
+    ])
+    expect(
+      await reserveNativeAccountDeletion(first, 'retry', now + 60001),
+    ).toBe('delete')
+    expect(await acceptedSession(first, 'fixture-current', now)).toBeNull()
   })
 })

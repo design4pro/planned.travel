@@ -33,7 +33,7 @@ import {
 } from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 
-import { authSchema } from '#/server/db/auth-schema'
+import { authSchema, accountSecuritySchema } from '#/server/db/auth-schema'
 import { workspaceParticipants } from '#/server/db/schema'
 
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
@@ -154,6 +154,7 @@ export function createSessionKv(): SessionKv {
  * the cost of one statement each.
  */
 export interface AuthDatabase {
+  readonly queries: Array<string>
   readonly sqlite: DatabaseSync
   readonly db: SqliteRemoteDatabase<typeof authSchema>
   reset: () => void
@@ -163,7 +164,11 @@ export interface AuthDatabase {
 export async function createAuthDatabase(): Promise<AuthDatabase> {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
+    await generateSQLiteDrizzleJson({
+      ...authSchema,
+      ...accountSecuritySchema,
+      workspaceParticipants,
+    }),
   )
 
   const sqlite = new DatabaseSync(':memory:')
@@ -177,20 +182,34 @@ export async function createAuthDatabase(): Promise<AuthDatabase> {
       .all() as unknown as Array<{ name: string }>
   ).map((row) => row.name)
 
+  const queries: Array<string> = []
   const db: SqliteRemoteDatabase<typeof authSchema> = drizzle(
-    async (query, params, method) =>
-      runStatement(sqlite, query, params, method),
-    async (queries) =>
-      queries.map((entry) =>
-        runStatement(sqlite, entry.sql, entry.params, entry.method),
-      ),
+    async (query, params, method) => {
+      queries.push(query)
+      return runStatement(sqlite, query, params, method)
+    },
+    async (batchQueries) => {
+      sqlite.exec('BEGIN')
+      try {
+        const results = batchQueries.map((entry) =>
+          runStatement(sqlite, entry.sql, entry.params, entry.method),
+        )
+        sqlite.exec('COMMIT')
+        return results
+      } catch (error) {
+        sqlite.exec('ROLLBACK')
+        throw error
+      }
+    },
     { schema: authSchema },
   )
 
   return {
     sqlite,
     db,
+    queries,
     reset() {
+      queries.length = 0
       for (const table of tables) sqlite.exec(`delete from "${table}"`)
     },
     close() {

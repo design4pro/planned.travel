@@ -42,6 +42,7 @@ export interface AuthFailure {
   readonly status: number
   /** Server-supplied message, already safe to render. Empty when absent. */
   readonly message: string
+  readonly retryAt?: number
 }
 
 /** The subset of Better Auth's client error object we rely on. */
@@ -193,6 +194,9 @@ async function requestAuth(
   const response = await fetch(`${AUTH_BASE_PATH}${path}`, {
     method,
     credentials: 'include',
+    ...(path.startsWith('/account-security/')
+      ? { signal: AbortSignal.timeout(15000) }
+      : {}),
     ...(method === 'POST'
       ? {
           headers: { 'content-type': 'application/json' },
@@ -206,11 +210,19 @@ async function requestAuth(
       typeof payload === 'object' && payload !== null
         ? (payload as Record<string, unknown>)
         : {}
-    throw Object.assign(new Error('PasskeyRequestFailed'), {
+    const retry = response.headers.get('retry-after')
+    const retrySeconds = retry === null ? Number.NaN : Number(retry)
+    const retryAt = Number.isFinite(retrySeconds)
+      ? Date.now() + retrySeconds * 1000
+      : Date.parse(retry ?? '')
+    throw Object.assign(new Error('AuthRequestFailed'), {
       authFailure: {
         code: typeof record.code === 'string' ? record.code : null,
         status: response.status,
         message: typeof record.message === 'string' ? record.message : '',
+        ...(Number.isFinite(retryAt) && retryAt >= Date.now()
+          ? { retryAt }
+          : {}),
       } satisfies AuthFailure,
     })
   }
@@ -222,7 +234,7 @@ function postToAuth(path: string, body: unknown): Promise<unknown> {
 }
 
 /** Pulls the normalised failure back off a rejection raised by `postToAuth`. */
-function passkeyFailure(cause: unknown): AuthFailure {
+export function authRequestFailure(cause: unknown): AuthFailure {
   if (
     typeof cause === 'object' &&
     cause !== null &&
@@ -321,7 +333,7 @@ export async function signInWithPasskey(
     return { ok: true }
   } catch (cause) {
     if (isDismissedCeremony(cause)) return { ok: false, aborted: true }
-    return { ok: false, aborted: false, failure: passkeyFailure(cause) }
+    return { ok: false, aborted: false, failure: authRequestFailure(cause) }
   }
 }
 
@@ -384,7 +396,7 @@ export async function listPasskeys(): Promise<PasskeyListResult> {
       requiresPassword: record.requiresPassword !== false,
     }
   } catch (cause) {
-    return { ok: false, failure: passkeyFailure(cause) }
+    return { ok: false, failure: authRequestFailure(cause) }
   }
 }
 
@@ -408,7 +420,7 @@ export async function renamePasskey(
     }
     return { ok: true, passkey }
   } catch (cause) {
-    return { ok: false, failure: passkeyFailure(cause) }
+    return { ok: false, failure: authRequestFailure(cause) }
   }
 }
 
@@ -435,7 +447,7 @@ export async function deletePasskey(
     if (deleted !== true) return { ok: false, failure: UNKNOWN_FAILURE }
     return { ok: true }
   } catch (cause) {
-    return { ok: false, failure: passkeyFailure(cause) }
+    return { ok: false, failure: authRequestFailure(cause) }
   }
 }
 
@@ -568,39 +580,114 @@ export async function registerPasskey(): Promise<PasskeyRegistrationResult> {
       ok: false,
       aborted: false,
       alreadyEnrolled: false,
-      failure: passkeyFailure(cause),
+      failure: authRequestFailure(cause),
     }
   }
 }
 
-export type OtherDeviceOutcome = { readonly status: 'committed' | 'refused' | 'unknown'; readonly cleanupPending: boolean }
-
-/** The receipt stays in an HttpOnly cookie; only the non-secret operation id reaches this client. */
-export async function otherDeviceAvailability(): Promise<boolean> {
-  const value = await requestAuth('GET', '/account-security/availability')
-  return typeof value === 'object' && value !== null && 'available' in value && value.available === true
+export type OtherDeviceOutcome = {
+  readonly status: 'committed' | 'refused' | 'unknown'
+  readonly cleanupPending: boolean
+  readonly retryAt?: number
 }
 
-export async function registerOtherDeviceRevocation(intent: string): Promise<string> {
-  const value = await requestAuth('POST', '/account-security/register', { intent })
-  if (typeof value !== 'object' || value === null || !('id' in value) || typeof value.id !== 'string' || !/^[0-9a-f-]{36}$/.test(value.id)) throw new Error('InvalidOperationRegistration')
+/** The receipt stays in an HttpOnly cookie; only the non-secret operation id reaches this client. */
+export async function otherDeviceAvailability(): Promise<{
+  available: boolean
+  recovery: (OtherDeviceOutcome & { id: string }) | null
+}> {
+  const value = await requestAuth('GET', '/account-security/availability')
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('available' in value) ||
+    typeof value.available !== 'boolean' ||
+    !('recovery' in value)
+  )
+    throw new Error('InvalidAccountSecurityAvailability')
+  const recovery = value.recovery
+  if (recovery === null) return { available: value.available, recovery: null }
+  if (
+    typeof recovery !== 'object' ||
+    !('id' in recovery) ||
+    typeof recovery.id !== 'string' ||
+    !/^[0-9a-f-]{36}$/.test(recovery.id) ||
+    !('status' in recovery) ||
+    !('cleanupPending' in recovery) ||
+    typeof recovery.cleanupPending !== 'boolean'
+  )
+    throw new Error('InvalidAccountSecurityRecovery')
+  if (
+    recovery.status !== 'unknown' &&
+    recovery.status !== 'committed' &&
+    recovery.status !== 'refused'
+  )
+    throw new Error('InvalidAccountSecurityRecovery')
+  return {
+    available: value.available,
+    recovery: {
+      id: recovery.id,
+      status: recovery.status,
+      cleanupPending: recovery.cleanupPending,
+    },
+  }
+}
+
+export async function registerOtherDeviceRevocation(
+  intent: string,
+): Promise<string> {
+  const value = await requestAuth(
+    'POST',
+    '/account-security/register-operation',
+    { intent },
+  )
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('id' in value) ||
+    typeof value.id !== 'string' ||
+    !/^[0-9a-f-]{36}$/.test(value.id)
+  )
+    throw new Error('InvalidOperationRegistration')
   return value.id
 }
 
-export async function settleOtherDeviceRevocation(id: string, intent: string | null): Promise<OtherDeviceOutcome> {
+export async function settleOtherDeviceRevocation(
+  id: string,
+  intent: string | null,
+): Promise<OtherDeviceOutcome> {
   try {
-    const value = intent === null
-      ? await requestAuth('GET', `/account-security/status?id=${encodeURIComponent(id)}`)
-      : await requestAuth('POST', '/account-security/commit', { id, intent, confirm: true })
-    if (typeof value !== 'object' || value === null || !('status' in value)) return { status: 'unknown', cleanupPending: false }
-    if (value.status === 'refused') return { status: 'refused', cleanupPending: false }
-    if (value.status === 'committed' && 'cleanupPending' in value && typeof value.cleanupPending === 'boolean') return { status: 'committed', cleanupPending: value.cleanupPending }
+    const value =
+      intent === null
+        ? await requestAuth(
+            'GET',
+            `/account-security/operation-status?id=${encodeURIComponent(id)}`,
+          )
+        : await requestAuth('POST', '/account-security/revoke-other-sessions', {
+            id,
+            intent,
+            confirm: true,
+          })
+    if (typeof value !== 'object' || value === null || !('status' in value))
+      return { status: 'unknown', cleanupPending: false }
+    if (value.status === 'refused')
+      return { status: 'refused', cleanupPending: false }
+    if (
+      value.status === 'committed' &&
+      'cleanupPending' in value &&
+      typeof value.cleanupPending === 'boolean'
+    )
+      return { status: 'committed', cleanupPending: value.cleanupPending }
     return { status: 'unknown', cleanupPending: false }
   } catch (cause) {
-    if (intent !== null && typeof cause === 'object' && cause !== null && 'authFailure' in cause) {
-      const failure = cause.authFailure
-      if (typeof failure === 'object' && failure !== null && 'status' in failure && typeof failure.status === 'number' && failure.status >= 400 && failure.status < 500) return { status: 'refused', cleanupPending: false }
+    const failure = authRequestFailure(cause)
+    return {
+      status:
+        intent !== null && failure.status >= 400 && failure.status < 500
+          ? 'refused'
+          : 'unknown',
+      cleanupPending: false,
+      ...(failure.retryAt === undefined ? {} : { retryAt: failure.retryAt }),
     }
-    return { status: 'unknown', cleanupPending: false }
   }
 }

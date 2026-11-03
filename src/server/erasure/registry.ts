@@ -540,6 +540,47 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
   ),
 
   /* ------------------------------------------------- auth tables (go with the user row) -- */
+  {
+    ...authPlace(
+      'account_security',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0048).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'session_authority',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0048).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'verification_authority',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0048).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'account_security_operation',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0048).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+
   authPlace(
     'user',
     'id',

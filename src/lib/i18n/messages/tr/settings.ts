@@ -759,13 +759,18 @@ const messages = {
   'twoFactor.off.pending': 'Kapatılıyor',
   'twoFactor.off.cancel': 'Açık tut',
   'twoFactor.off.done': 'İki faktörlü doğrulama kapalı',
-  "security.other.label": "Diğer cihazlardan çıkış yap",
-  "security.other.description": "Diğer cihazların yeniden giriş yapması gerekir. Bağlantılar eşzamansız kapanır; güvenilir tarayıcılar, Google, Apple ve geçiş anahtarları kullanılabilir kalır.",
-  "security.other.committed": "Diğer cihazlardan çıkış yapıldı. Bu cihazın oturumu açık kalır.",
-  "security.other.refused": "Bu işlem değişiklik yapmadı. Yeniden giriş yapıp beş dakika içinde onaylayın.",
-  "security.other.unknown": "Sonuç bilinmiyor. Başka bir işlem başlatmadan önce durumu kontrol edin.",
-  "security.other.pending": "Diğer oturumlar iptal edildi. Bağlantıların kapanması daha uzun sürebilir.",
-  "security.other.check": "Durumu kontrol et",
+  'security.other.label': 'Diğer cihazlardan çıkış yap',
+  'security.other.description':
+    'Diğer cihazların yeniden giriş yapması gerekir. Bağlantılar eşzamansız kapanır; güvenilir tarayıcılar, Google, Apple ve geçiş anahtarları kullanılabilir kalır.',
+  'security.other.committed':
+    'Diğer cihazlardan çıkış yapıldı. Bu cihazın oturumu açık kalır.',
+  'security.other.refused':
+    'Bu işlem değişiklik yapmadı. Yeniden giriş yapıp beş dakika içinde onaylayın.',
+  'security.other.unknown':
+    'Sonuç bilinmiyor. Başka bir işlem başlatmadan önce durumu kontrol edin.',
+  'security.other.pending':
+    'Diğer oturumlar iptal edildi. Bağlantıların kapanması daha uzun sürebilir.',
+  'security.other.check': 'Durumu kontrol et',
 } satisfies TranslationOf<typeof En>
 
 export default messages

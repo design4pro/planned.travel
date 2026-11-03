@@ -22,3 +22,7 @@ The Decision above names `server/catalog` as the single stated exception. `docs/
 ### Clarification, 2026-10-25 - Better Auth's adapter is not application SQL
 
 The Decision and the amendment above speak of application SQL. Better Auth's own tables reached through the library's adapter, as `src/server/auth/passkey/plugin.ts` does for the user-keyed `passkey` table, are not application SQL and are neither a fourth exception nor a precedent (SPEC §6; #1187). Tenant queries still pass through the tenant-scoped repository, and the catalog, `…Unscoped` and provisioning rules above are unchanged.
+
+### Amendment, 2026-11-03 - one bounded account-auth repository
+
+ADR 0048 adds the fourth closed application-SQL exception: `repos/account-security.ts`, with account-auth capabilities minted by the auth boundary, named production callers and separate bounded system cleanup/acknowledgement capabilities. It can reach only the named account/session/security records and the global revocation-fence scalar. It cannot reach organization/member rows or tenant content, and does not expand FU-3 or provisioning. The earlier three-exception wording remains historical.
