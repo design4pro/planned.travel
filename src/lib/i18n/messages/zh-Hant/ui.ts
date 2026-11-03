@@ -16,6 +16,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': '複製{label}',
+  'copyValue.copied': '已複製{label}',
+  'statusMenu.current': '{label} - 目前狀態：{status}',
   'action.clear': '清除',
   'action.clearFilters': '清除篩選',
   'action.close': '關閉',

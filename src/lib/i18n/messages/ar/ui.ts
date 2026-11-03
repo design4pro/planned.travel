@@ -30,6 +30,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': 'نسخ {label}',
+  'copyValue.copied': 'تم نسخ {label}',
+  'statusMenu.current': '{label} - الحالة الحالية: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'مسح',
   'action.clearFilters': 'أزل المرشِّحات',

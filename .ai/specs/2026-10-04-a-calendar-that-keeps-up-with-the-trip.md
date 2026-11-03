@@ -617,7 +617,7 @@ url, encoded>&name=<trip title, or `planned.travel` for the workspace link, enco
    failed enable or rotate.
 
 Components, exactly: **Copy link** is a `Button` whose label is the catalogue key `link.copy` (not
-`CopyValue`, whose visible text is the value itself, upper-cased, with a hard-coded English name and no
+`CopyValue`, whose visible text is the value itself, upper-cased, with no
 announcement, and which is not changed here), with a **polite live region** announcing `link.copied` or
 `link.copyFailed`; after a failed copy the link stays on screen and the message tells the person to select
 the address and copy it by hand. The address is text, not an `<input>`, with `dir="ltr"`, `translate="no"`,
@@ -1074,7 +1074,7 @@ Each criterion belongs to the phase named, so every ticket has its own contract.
   membership read) and the implementation run files an issue for the deletion flow.
 - Making the card findable from the trip header or the trips list, and the hard-coded English around it on
   the Files screen: follow-up issues the implementation run files.
-- Fixing `CopyValue` (its hard-coded name and missing announcement affect its other callers).
+- Fixing `CopyValue` (its missing announcement affects its other callers).
 - Share links (`07-S6`) storing their token in plaintext; it is that stage's, and it may adopt
   `hashFeedSecret`.
 - Edge rate limiting of unknown-token floods (a Cloudflare zone rule).

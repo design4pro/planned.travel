@@ -27,6 +27,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': '{label} kopyala',
+  'copyValue.copied': '{label} kopyalandı',
+  'statusMenu.current': '{label} - mevcut durum: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Temizle',
   'action.clearFilters': 'Süzgeçleri temizle',

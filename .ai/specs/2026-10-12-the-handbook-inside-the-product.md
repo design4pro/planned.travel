@@ -168,7 +168,7 @@ One column at a 68-character measure; `--font-display` headings, `--font-ui` bod
   hover (`(hover: none)`, and below `lg`), is at least 24x24 CSS px, and sits at the inline end (so in `ar` at the left). Activating it
   updates the address bar to the fragment and copies the URL; "Link copied" is announced through an always-mounted polite region and the
   affordance shows a check for two seconds; a clipboard failure announces `settings.help.anchor.failed` instead. It does not reuse
-  `CopyValue` (`src/components/modules/shared/controls.tsx`), whose label is hardcoded English.
+  `CopyValue` (`src/components/modules/shared/controls.tsx`), whose label was localized by #1631.
 - **`callout`** renders `Alert` with `role="note"` and `aria-live="off"` (Alert makes `info` and `warning` live regions by default, and an
   article mounting on a client transition would be read out); `create-workspace-dialog.tsx` is the precedent for the override.
 - **`shortcut`** renders one `Kbd` per key with the key name as text and a visible separator that is not `aria-hidden`. It does **not** use
@@ -426,7 +426,7 @@ pipeline merges one spec ticket at a time anyway. A chain also makes the stage's
 5. `docs/plans/11-boundaries-and-blockers.md`: remove `EXT-04` from the entry-5 row and heading (four rows), note that typed blocks need no renderer; the grep "a change updates every document that states what it changes" over `EXT-04`, `markdown renderer`, `help browser`.
 6. Measure and quote the payload budget.
 7. Add a **Handbook** entry to `CONTEXT.md` (the word the menu, the eyebrow and the search use for what the URL calls `/help`; _Avoid_: "help centre", "docs"), so the eight article tickets and the translators use one term.
-8. File one follow-up issue (outside the cap) for the neighbouring hardcoded English this ticket touches but must not copy: the "Platform console" entry in `user-menu.tsx` and the label in `src/components/modules/shared/controls.tsx` (`CopyValue`). The new entry uses `t('settings.help.menu')`.
+8. Follow-up #1631 localizes the neighbouring copy this ticket must not duplicate: the "Platform console" entry in `user-menu.tsx` and the label in `src/components/modules/shared/controls.tsx` (`CopyValue`). The new entry uses `t('settings.help.menu')`.
 9. If the shell has no seam for a translated route title, file the app-wide page-title gap as one issue and reference it (Routes).
 10. `getting-started`'s "Where to go next" links only to routes in this ticket; each later article ticket appends a `link` block to its own article there (a label and a description key).
 

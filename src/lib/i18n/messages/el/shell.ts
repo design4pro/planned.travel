@@ -21,6 +21,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'account.platformConsole': 'Κονσόλα πλατφόρμας',
   'toaster.label': 'Ειδοποιήσεις',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Βασικές ενότητες',

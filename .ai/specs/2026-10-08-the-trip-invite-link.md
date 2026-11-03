@@ -559,7 +559,7 @@ and records the link's creator.
   ready - copy it and send it again") because the URL changes.
 - **Reused primitives:** `Card`, `Button`, `Avatar`, `Badge`, `Alert`, `EmptyState`, `Skeleton`, `Separator`,
   `Input`, `SwitchField`, `SimpleSelect` from `#/components/ui`; the people screen's `ConfirmDialog` (exported, with
-  `onCloseAutoFocus` and an optional `pendingLabel`, so `invite.replace.pending` is shown and announced). **`CopyValue` is not used**: it builds English strings in code, upper-cases the value, is
+  `onCloseAutoFocus` and an optional `pendingLabel`, so `invite.replace.pending` is shown and announced). **`CopyValue` is not used**: it upper-cases the value, is
   about 16px tall and cannot select the URL. No primitive and no token is added.
 - **Motion.** The join card enters at 220 ms on `--ease-out-quint` with a 6px rise; a join state change cross-fades
   at 150 ms with the outgoing state `inert`; transform and opacity only. The owner panel uses the existing house

@@ -12,6 +12,8 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import PlShell from '#/lib/i18n/messages/pl/shell'
+import PlUi from '#/lib/i18n/messages/pl/ui'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import { WORKSPACE_LIMIT } from '#/lib/workspace-limit'
 import {
@@ -1510,4 +1512,36 @@ describe('the account menu trigger', () => {
       screen.getByRole('menu', { name: 'Kasia Nowak, account menu' }),
     ).not.toBeNull()
   })
+})
+
+it('names platform and workspace destinations separately in the active locale', async () => {
+  const session = sessionOf([ALPHA])
+  const user = userEvent.setup()
+  render(
+    <I18nProvider
+      locale="pl"
+      messages={{
+        ...namespaceCatalogue('shell', PlShell),
+        ...namespaceCatalogue('ui', PlUi),
+      }}
+    >
+      <UserMenu
+        session={{
+          ...session,
+          user: { ...session.user, isPlatformAdmin: true, isAdmin: true },
+        }}
+      />
+    </I18nProvider>,
+  )
+  await user.click(screen.getByRole('button', { name: /Kasia Nowak/ }))
+  expect(
+    screen
+      .getByRole('menuitem', { name: 'Konsola platformy' })
+      .getAttribute('href'),
+  ).toBe('/console')
+  expect(
+    screen
+      .getByRole('menuitem', { name: PlShell['account.admin'] })
+      .getAttribute('href'),
+  ).toBe('/admin')
 })

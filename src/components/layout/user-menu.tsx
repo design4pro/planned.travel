@@ -183,7 +183,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
               <MenuSeparator />
               <AccountDestination disabled={switchingWorkspace} to="/console">
                 <SlidersHorizontal aria-hidden className="size-4 text-brand" />
-                Platform console
+                {t('shell.account.platformConsole')}
               </AccountDestination>
             </>
           ) : null}

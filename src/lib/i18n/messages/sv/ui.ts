@@ -22,6 +22,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/ui'
 
 const messages = {
+  'copyValue.copy': 'Kopiera {label}',
+  'copyValue.copied': '{label} kopierat',
+  'statusMenu.current': '{label} - aktuell status: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Töm',
   'action.clearFilters': 'Rensa filter',
