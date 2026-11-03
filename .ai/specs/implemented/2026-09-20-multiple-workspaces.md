@@ -578,5 +578,6 @@ workspace after confirmed absence. Read failures propagate; banned and impersona
 claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
 recovered membership without repeating departure or updating the session.
 
-The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
-requests, rather than introducing another shared resolver. Implementation: PR #1708.
+The shared resolver landed in PR #1708. Issue #1738 adds atomic personal provisioning under
+concurrent reloads to that resolver; explicit workspace creation retains its existing batch and
+limit enforcement.
