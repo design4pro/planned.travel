@@ -140,6 +140,9 @@ export default defineConfig({
   // virtual authenticator, takes it away through the delete dialog and, if it failed first, deletes it in its `finally`. The "visitor language after a signed-in choice" walk in `e2e/journeys.spec.ts` is another: Chromium-only and serial, it sets the demo member's language to German in settings and pins it back to following the workspace in `finally`. `08-S1` and `08-S2a` in `e2e/product-modules.spec.ts` also write fixture state:
   // Chromium-only serial walks that set the demo member's allowance and leave settings on `/vacay`, or add a region under a visited country on `/atlas`, and restore their changes in `finally`. The real contention is the auth rate
   // limiter's single per-path bucket, which `hasSession()` now asks once per worker.
+  // `e2e/stop-menu-reflow.spec.ts` also writes language overrides: serial cases use the owner
+  // on Chromium and Mika on mobile Safari, restoring each original preference in `finally`.
+  // Its planner moves are intercepted and never write the shared itinerary.
   // One per CI shard. Measured on `vite dev`, before CI served a build: two workers on the 2-vCPU runner starved the
   // atlas tests — MapLibre renders through software WebGL there, and with two
   // browsers plus Vite SSR competing, React hydration outran the 10 s action

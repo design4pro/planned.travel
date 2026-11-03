@@ -36,8 +36,10 @@
  *     --viewports 1440x900,360x800 \
  *     --themes light,dark \
  *     [--auth] [--map] [--state hover-visited] \
- *     [--hover 'selector'] [--click 'selector'] [--settle 800] \
+ *     [--hover 'selector'] [--click 'selector' ...] [--settle 800] \
  *     [--enter 'selector'] [--dismiss 'selector']
+ *
+ * Repeat --click to open nested controls in order on every frame.
  *
  * Prints one JSON object on stdout: { requestedUrl, files, console, warnings, captureValid }. Each
  * file records the URL the browser actually landed on, and a frame taken on a pathname other than
@@ -51,6 +53,7 @@ import { mkdir, stat } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { chromium } from '@playwright/test'
+import { parseCaptureArgs } from './capture-args.mjs'
 import { dismissIfPresent, enterThrough } from './click-through.mjs'
 import { landedUrlWarning, pathnameOf } from './landed-url.mjs'
 
@@ -100,23 +103,7 @@ const TOOLCHAIN_BROKEN = [
   },
 ]
 
-function args() {
-  const out = {}
-  const argv = process.argv.slice(2)
-  for (let i = 0; i < argv.length; i++) {
-    const key = argv[i]
-    if (!key.startsWith('--')) continue
-    const next = argv[i + 1]
-    if (next === undefined || next.startsWith('--')) out[key.slice(2)] = true
-    else {
-      out[key.slice(2)] = next
-      i++
-    }
-  }
-  return out
-}
-
-const opt = args()
+const opt = parseCaptureArgs(process.argv.slice(2))
 const need = (k) => {
   const v = opt[k]
   if (typeof v !== 'string') {
@@ -329,8 +316,8 @@ async function main() {
         await page.locator(opt.hover).first().hover({ timeout: 15_000 })
         await page.waitForTimeout(settleMs)
       }
-      if (typeof opt.click === 'string') {
-        await page.locator(opt.click).first().click({ timeout: 15_000 })
+      for (const selector of Array.isArray(opt.click) ? opt.click : []) {
+        await page.locator(selector).first().click({ timeout: 15_000 })
         await page.waitForTimeout(settleMs)
       }
 
@@ -350,7 +337,7 @@ async function main() {
       // The screen this frame is of. `--click` navigates on purpose, so there the landing is what
       // the capture was about; otherwise it is the shutter read, which is what catches a redirect
       // the app makes after hydration.
-      const seen = typeof opt.click === 'string' ? landing : page.url()
+      const seen = Array.isArray(opt.click) ? landing : page.url()
 
       // The same predicate, evaluated a second time — the last point before a PNG exists. It closes
       // the post-hydration bounce the check after `goto` cannot see, and `--hover`, `--dismiss` and

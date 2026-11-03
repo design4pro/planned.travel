@@ -481,7 +481,7 @@ Route `/vacay`, light and dark, desktop (1280), mobile (360) and 2560:
   the dashed border; trip hairline (08-S5e); a mode control in the header for the plan's owner (08-S5f); a legend with the new rows;
   localised month and weekday names (08-S5a) in the user's week (08-S5b).
 - States: the kind picker open over a day (`--state kind-picker --click '[data-part="vacay-day"][data-date="2026-08-19"]'`); company mode (`--state company --click '[data-part="vacay-mode"]
-[data-value="company"]'`). `capture.mjs` takes one `--click`, so the states that need several interactions or a failing route - a
+[data-value="company"]'`). `capture.mjs` accepts repeated `--click` flags for ordered interactions. States requiring drag gestures, a failing route or controlled loading - a
   pending range with the bottom bar, the failure alert (`page.route()` failing a write), a blocked weekend's reason in the bottom
   region, the twelve-card skeleton - are Playwright screenshots taken in `e2e/product-modules.spec.ts` instead.
 - Frames are the blind A/B pair from `scripts/visual/capture.mjs`; nothing is compared to a stored image (ADR 0016).
