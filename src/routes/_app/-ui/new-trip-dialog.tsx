@@ -25,6 +25,7 @@ import {
 import { messageOf } from '#/components/modules/shared'
 import { useTranslate } from '#/lib/i18n'
 import { createTripFn } from '../-server/trip-lifecycle'
+import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { attachCover } from './trip-cover-upload'
 import {
   DEFAULT_REMINDER_DAYS,
@@ -165,7 +166,10 @@ export function NewTripDialog({
       cover: {
         filename: attached.filename,
         uploadedFileId: attached.uploadedFileId,
-        reason: attached.reason,
+        reason:
+          attached.reason === TRIP_ARCHIVED_KEY
+            ? t(TRIP_ARCHIVED_KEY)
+            : attached.reason,
       },
     })
   }

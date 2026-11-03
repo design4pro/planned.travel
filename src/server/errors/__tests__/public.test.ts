@@ -14,6 +14,7 @@ import { z } from 'zod'
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
+import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import { AuthRequirementError } from '#/server/auth/tenant'
 import { PolarApiError } from '#/server/billing/polar'
@@ -447,5 +448,24 @@ describe('a billing failure carries one constant code', () => {
     expect(classifyFailure({ name: 'PolarApiError', status: '429' })).toEqual({
       kind: 'unexpected',
     })
+  })
+})
+
+describe('the archived edit-trip refusal', () => {
+  it('admits the exact catalogue key', () => {
+    expect(TRIP_ARCHIVED_KEY).toBe('shell.trips.card.archivedReason')
+    expect(
+      classifyFailure(new Error('shell.trips.card.archivedReason')),
+    ).toEqual({ kind: 'refusal', message: 'shell.trips.card.archivedReason' })
+  })
+  it.each([
+    'shell.trips.card.archivedReason.',
+    'x.shell.trips.card.archivedReason',
+    ' shell.trips.card.archivedReason ',
+    'shell.trips.card.other',
+  ])('redacts unapproved value %s', (message) => {
+    expect(
+      classifyFailure(new RepositoryError(message, 'TRIP_ARCHIVED')),
+    ).toEqual({ kind: 'unexpected' })
   })
 })

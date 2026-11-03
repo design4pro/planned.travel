@@ -12,7 +12,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   NotFoundError,
   RepositoryError,
-  TripArchivedError,
   TripRoleError,
   addTripMember,
   archiveTrip,
@@ -482,7 +481,7 @@ describe('updateTripFn reclaiming the cover it leaves behind', () => {
 
     await expect(
       updateTrip({ tripId, coverFileId: null, currency }),
-    ).rejects.toBeInstanceOf(TripArchivedError)
+    ).rejects.toThrow('shell.trips.card.archivedReason')
 
     expect(stubs.bucket?.calls).toEqual([])
     expect(stubs.bucket?.remaining.has(coverKey)).toBe(true)
