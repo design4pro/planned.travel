@@ -43,6 +43,7 @@ import { listTripDays, requireTripDay } from './days'
 import {
   TRIP_WRITE_ROLES,
   assertTripRole,
+  assertExpectedTripCurrency,
   requireTrip,
   requireWritableTrip,
 } from './trips'
@@ -141,6 +142,12 @@ const transportFields = {
 
 export const createTransportInput = z.object({
   tripId: idSchema,
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{3}$/)
+    .toUpperCase()
+    .optional(),
   ...transportFields,
 })
 export type CreateTransportInput = z.infer<typeof createTransportInput>
@@ -365,9 +372,10 @@ export async function createTransport(
   scope: TenantScope,
   input: CreateTransportInput,
 ): Promise<Transport> {
-  const values = createTransportInput.parse(input)
-  await requireWritableTrip(scope, values.tripId)
+  const { expectedTripCurrency, ...values } = createTransportInput.parse(input)
+  const trip = await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
+  assertExpectedTripCurrency(trip, expectedTripCurrency)
   await requireDayPair(
     scope,
     values.tripId,
@@ -831,6 +839,12 @@ async function isGone(
  */
 export const saveTransportInput = z.object({
   tripId: idSchema,
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{3}$/)
+    .toUpperCase()
+    .optional(),
   transportId: idSchema,
   intent: z.enum(TRANSPORT_SAVE_INTENTS),
   record: z.object(transportFields).partial(),
@@ -902,7 +916,7 @@ export async function saveTransport(
   scope: TenantScope,
   input: SaveTransportInput,
 ): Promise<SavedTransport> {
-  const { tripId, transportId, intent, record, chain } =
+  const { tripId, transportId, intent, record, chain, expectedTripCurrency } =
     saveTransportInput.parse(input)
   await requireTrip(scope, tripId)
 
@@ -923,8 +937,9 @@ export async function saveTransport(
   if (existing === null && !isAcceptableNewId(transportId)) {
     throw new NotFoundError('transport', transportId)
   }
-  await requireWritableTrip(scope, tripId)
+  const trip = await requireWritableTrip(scope, tripId)
   await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
+  assertExpectedTripCurrency(trip, expectedTripCurrency)
   // An insert needs a title and an update does not. The check sits after the scoped lookup, the
   // trip agreement and the role, so it tells a caller nothing about a row they cannot see: a
   // foreign id and an id that never existed are both "not here yet" and are refused alike.
@@ -1024,6 +1039,12 @@ export async function saveTransport(
 export const searchedConnectionInput = z
   .object({
     tripId: idSchema,
+    expectedTripCurrency: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z]{3}$/)
+      .toUpperCase()
+      .optional(),
     /** Absent for a new journey; the record being re-searched otherwise. */
     transportId: idSchema.nullish(),
     mode: z.enum(TRANSPORT_MODES),
@@ -1208,6 +1229,7 @@ export async function saveSearchedConnection(
 
   return saveTransport(scope, {
     tripId: values.tripId,
+    expectedTripCurrency: values.expectedTripCurrency,
     transportId: existing?.id ?? newId(),
     intent: existing === null ? 'create' : 'edit',
     record:

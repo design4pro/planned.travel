@@ -404,6 +404,7 @@ export const saveTransportFn = createServerFn({ method: 'POST' })
 
     const { transport, legs } = await saveTransport(scope, {
       tripId: data.tripId,
+      expectedTripCurrency: data.expectedTripCurrency,
       transportId: data.transportId,
       // A tab on the previous bundle sends none; `create` is the rule that bundle expects.
       intent: data.intent ?? 'create',
@@ -631,6 +632,7 @@ export const saveSearchedConnectionFn = createServerFn({ method: 'POST' })
 
       const saved = await saveSearchedConnection(scope, {
         tripId: data.tripId,
+        expectedTripCurrency: data.expectedTripCurrency,
         transportId: orNull(data.transportId),
         mode: data.mode,
         title: data.title,

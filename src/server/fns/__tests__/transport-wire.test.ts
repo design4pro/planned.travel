@@ -146,3 +146,29 @@ describe('saveSearchedConnectionSchema', () => {
     }
   })
 })
+
+for (const [name, schema, data] of [
+  ['manual', saveTransportSchema, { ...RECORD, ...chain(0, 0) }],
+  ['searched', saveSearchedConnectionSchema, { ...SEARCHED, ...chain(2) }],
+] as const) {
+  describe(`${name} expected trip currency`, () => {
+    it('normalizes the control field without changing the fare currency', () => {
+      expect(
+        schema.parse({
+          ...data,
+          currency: 'USD',
+          expectedTripCurrency: ' eur ',
+        }),
+      ).toMatchObject({ currency: 'USD', expectedTripCurrency: 'EUR' })
+      expect(schema.parse(data)).not.toHaveProperty('expectedTripCurrency')
+    })
+    it.each(['', 'EU', 'EURO', 'E1R', null])(
+      'refuses invalid currency %s',
+      (expectedTripCurrency) => {
+        expect(
+          schema.safeParse({ ...data, expectedTripCurrency }).success,
+        ).toBe(false)
+      },
+    )
+  })
+}

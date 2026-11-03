@@ -349,6 +349,57 @@ describe('transport content roll-up', () => {
       legs: [],
     }
   }
+  it.each(['manual', 'searched'] as const)(
+    'forwards %s currency refusal before writes or side effects',
+    async (kind) => {
+      const before = await getTransport(owner, transportB)
+      const data = { ...record('2026-06-01'), expectedTripCurrency: 'USD' }
+      await expect(
+        startStorage.run(startContext(), () =>
+          kind === 'manual'
+            ? saveTransportFn({ data })
+            : saveSearchedConnectionFn({
+                data: {
+                  ...data,
+                  stations: [
+                    {
+                      name: 'Osaka',
+                      code: '',
+                      lat: null,
+                      lng: null,
+                      timezone: '',
+                    },
+                    {
+                      name: 'Tokyo',
+                      code: '',
+                      lat: null,
+                      lng: null,
+                      timezone: '',
+                    },
+                  ],
+                  legs: [
+                    {
+                      serviceNumber: '',
+                      platform: '',
+                      seat: '',
+                      departureDayId: '',
+                      arrivalDayId: '',
+                      departureDate: '',
+                      departureTime: '',
+                      arrivalDate: '',
+                      arrivalTime: '',
+                    },
+                  ],
+                },
+              }),
+        ),
+      ).rejects.toMatchObject({ message: 'costs.refusal.tripCurrencyChanged' })
+      expect(await getTransport(owner, transportB)).toEqual(before)
+      expect(stubs.sent).toEqual([])
+      expect(stubs.mirrorToRoom).not.toHaveBeenCalled()
+    },
+  )
+
   it('refuses archived writes before room notifications or roll-up messages', async () => {
     await archiveTrip(owner, tripB)
     const before = await getTransport(owner, transportB)
