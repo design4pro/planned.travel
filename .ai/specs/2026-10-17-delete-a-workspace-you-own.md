@@ -775,4 +775,3 @@ It proposes a fourteen-day cancellable schedule, retains private-trip visibility
 specification's deletion infrastructure landing first. It enables no runtime behavior and does not
 change this specification's immediate sole-member or erasure guard. The scheduled branch's exact
 guard, fence, privacy and retention amendments belong to that follow-up's implementation slices.
-
