@@ -186,7 +186,9 @@ const messages = {
   'refusal.rebaseChanged':
     '你确认的过程中行程发生了变化，所以没有做任何更改。请核对新的金额后再次确认。',
   'refusal.tripCurrencyChanged':
-    '这趟行程的预算货币现在是 {to}，所以没有保存。页面已刷新，请核对金额后再次保存。',
+    '此行程的预算货币现为 {to}，因此未保存。请重新输入金额并再次保存。',
+  'refusal.currencyPending':
+    '预算货币已更改，因此未保存。无法确认当前货币。已保留草稿；请再次尝试保存以检查货币，或取消。',
   /* ---------------------------------------- display currency (#844) */
   'display.label': '显示货币',
   'display.indicator.perTrip': '行程自身货币',

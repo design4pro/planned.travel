@@ -348,7 +348,7 @@ describe('the payment dialog', () => {
       )
       expect(screen.getByText('That did not save')).toBeTruthy()
       expect(
-        screen.getByText(/trip changed while you were confirming/),
+        screen.getByText(/current currency could not be confirmed/),
       ).toBeTruthy()
       expect(screen.queryByText(REFUSAL)).toBeNull()
       expect(

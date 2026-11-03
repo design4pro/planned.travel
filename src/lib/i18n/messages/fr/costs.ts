@@ -213,7 +213,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Le voyage a changé pendant votre confirmation : rien n’a donc été modifié. Vérifiez les nouveaux montants et confirmez à nouveau.',
   'refusal.tripCurrencyChanged':
-    'La devise du budget de ce voyage est maintenant {to} : rien n’a donc été enregistré. La page a été actualisée : vérifiez le montant et enregistrez à nouveau.',
+    'La devise du budget de ce voyage est désormais {to}, donc rien n’a été enregistré. Saisissez à nouveau le montant et enregistrez.',
+  'refusal.currencyPending':
+    'La devise du budget a changé, donc rien n’a été enregistré. La devise actuelle n’a pas pu être confirmée. Votre brouillon est conservé ; réessayez d’enregistrer pour vérifier la devise, ou annulez.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Devise d’affichage',
   'display.indicator.perTrip': 'Devise propre',

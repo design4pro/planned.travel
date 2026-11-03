@@ -211,7 +211,9 @@ const messages = {
   'refusal.rebaseChanged':
     'El viaje cambió mientras lo confirmabas, así que no se modificó nada. Revisa las cifras nuevas y vuelve a confirmar.',
   'refusal.tripCurrencyChanged':
-    'La moneda del presupuesto de este viaje ahora es {to}, así que no se guardó. La página se ha actualizado: revisa el importe y vuelve a guardar.',
+    'La moneda del presupuesto de este viaje ahora es {to}, por lo que no se ha guardado. Vuelve a introducir el importe y guarda de nuevo.',
+  'refusal.currencyPending':
+    'No se ha guardado porque la moneda del presupuesto ha cambiado. No se ha podido confirmar la moneda actual. Se conserva tu borrador; intenta guardar de nuevo para comprobarla o cancela.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Moneda de visualización',
   'display.indicator.perTrip': 'Moneda propia',

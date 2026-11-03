@@ -286,7 +286,9 @@ const messages = {
   'refusal.rebaseChanged':
     'The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.',
   'refusal.tripCurrencyChanged':
-    'The budget currency of this trip is now {to}, so this was not saved. The page has been refreshed: check the amount and save again.',
+    'The budget currency of this trip is now {to}, so this was not saved. Re-enter the amount and save again.',
+  'refusal.currencyPending':
+    'This was not saved because the budget currency changed. The current currency could not be confirmed. Your draft is kept; try saving again to check, or cancel.',
   /* ----------------------- the budget currency dialog (#841) */
   'rebase.open': 'Change budget currency',
   'rebase.title': 'Change the budget currency',

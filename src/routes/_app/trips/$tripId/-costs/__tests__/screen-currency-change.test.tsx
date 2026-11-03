@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -13,6 +13,7 @@ import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Trips from '#/lib/i18n/messages/en/trips'
 import Ui from '#/lib/i18n/messages/en/ui'
+import { createExpenseFn, recordPaymentFn } from '#/server/fns/costs'
 import { CostsScreen } from '../screen'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -235,4 +236,64 @@ describe('the budget currency button', () => {
       await screen.findByRole('dialog', { name: Costs['rebase.title'] }),
     ).toBeTruthy()
   })
+})
+
+describe('money dialog sessions', () => {
+  it.each(['expense', 'payment'] as const)(
+    'keeps the next %s draft open when a cancelled save finishes',
+    async (kind) => {
+      let finish = () => {}
+      if (kind === 'expense') {
+        vi.mocked(createExpenseFn).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finish = () => resolve({ expenseId: 'saved' })
+          }),
+        )
+      } else {
+        vi.mocked(recordPaymentFn).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finish = () => resolve({ settlementId: 'saved' })
+          }),
+        )
+      }
+      mount(payload({ canWrite: true, viewerUserId: 'u-ada' }))
+      const user = userEvent.setup({ delay: null })
+      const opener = kind === 'expense' ? 'Add expense' : 'Add payment'
+      const submit = kind === 'expense' ? 'Add expense' : 'Record payment'
+      await user.click(
+        screen.getByRole('button', { name: opener }),
+      )
+      if (kind === 'expense')
+        await user.type(
+          screen.getByLabelText(/^What was it for/),
+          'First draft',
+        )
+      await user.type(screen.getByLabelText(/^Amount/), '40')
+      await user.click(
+        screen.getByRole('button', { name: submit }),
+      )
+      await user.keyboard('{Escape}')
+      await vi.waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await user.click(
+        screen.getByRole('button', { name: opener }),
+      )
+      if (kind === 'expense')
+        await user.type(
+          screen.getByLabelText(/^What was it for/),
+          'Second draft',
+        )
+      await user.type(screen.getByLabelText(/^Amount/), '50')
+      await act(async () => {
+        finish()
+      })
+      expect(screen.getByRole('dialog')).toBeTruthy()
+      expect(screen.getByLabelText(/^Amount/)).toHaveProperty('value', '50')
+      if (kind === 'expense')
+        expect(screen.getByLabelText(/^What was it for/)).toHaveProperty(
+          'value',
+          'Second draft',
+        )
+    },
+    20000,
+  )
 })

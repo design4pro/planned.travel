@@ -103,7 +103,11 @@ export function CostsScreen({
   const t = useTranslate()
   const { trip } = useTripHeader()
   const router = useRouter()
+  const [session, setSession] = useState<Session>({ kind: 'none' })
+  const [open, setOpen] = useState(false)
   const {
+    currency: dialogCurrency,
+    suggestedRate,
     snapshot,
     addExpense,
     editExpense,
@@ -112,10 +116,12 @@ export function CostsScreen({
     removePayment,
     setDisplay,
     savingDisplay,
-  } = useCostsActions(data)
-
-  const [session, setSession] = useState<Session>({ kind: 'none' })
-  const [open, setOpen] = useState(false)
+  } = useCostsActions(
+    data,
+    open && (session.kind === 'expense' || session.kind === 'payment')
+      ? session.id
+      : null,
+  )
   // A monotonic counter, not state: it only ever feeds the `key` of the dialog
   // being opened, and bumping it must not itself schedule a render.
   const sessions = useRef(0)
@@ -586,16 +592,18 @@ export function CostsScreen({
         <ExpenseDialog
           key={`expense-${session.id}`}
           open={open}
-          onOpenChange={setOpen}
+          onOpenChange={(next) => {
+            if (sessions.current === session.id) setOpen(next)
+          }}
           expense={session.row}
           people={data.people}
           departedPeople={data.departedPeople}
           viewerUserId={data.viewerUserId}
-          tripCurrency={data.currency}
+          tripCurrency={dialogCurrency}
           categories={categories}
           defaultCategory={defaultCategory}
           today={data.today}
-          suggestedRate={data.suggestedRate}
+          suggestedRate={suggestedRate}
           onSubmit={(value) =>
             session.row === null
               ? addExpense(value)
@@ -608,14 +616,16 @@ export function CostsScreen({
         <PaymentDialog
           key={`payment-${session.id}`}
           open={open}
-          onOpenChange={setOpen}
+          onOpenChange={(next) => {
+            if (sessions.current === session.id) setOpen(next)
+          }}
           seed={session.seed}
           people={data.people}
           withBalance={data.balances
             .filter((row) => row.balanceMinor !== 0)
             .map((row) => row.userId)}
           viewerUserId={data.viewerUserId}
-          currency={data.currency}
+          currency={dialogCurrency}
           today={data.today}
           onSubmit={addPayment}
         />

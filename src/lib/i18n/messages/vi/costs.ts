@@ -204,7 +204,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Chuyến đi đã thay đổi trong lúc bạn xác nhận, nên chưa có gì bị thay đổi. Hãy kiểm tra các số mới rồi xác nhận lại.',
   'refusal.tripCurrencyChanged':
-    'Tiền tệ của ngân sách chuyến đi này giờ là {to}, nên chưa lưu gì. Trang đã được làm mới: hãy kiểm tra số tiền rồi lưu lại.',
+    'Đơn vị tiền tệ ngân sách của chuyến đi này hiện là {to}, nên chưa lưu. Hãy nhập lại số tiền rồi lưu lại.',
+  'refusal.currencyPending':
+    'Chưa lưu vì đơn vị tiền tệ ngân sách đã thay đổi. Không thể xác nhận đơn vị tiền tệ hiện tại. Bản nháp của bạn được giữ lại; hãy thử lưu lại để kiểm tra hoặc hủy.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Tiền tệ hiển thị',
   'display.indicator.perTrip': 'Tiền tệ riêng',
