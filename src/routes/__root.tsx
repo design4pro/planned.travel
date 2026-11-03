@@ -20,6 +20,7 @@ import {
   RECOVERY_CATALOGUES,
 } from '#/lib/i18n'
 import { themeBootstrapScript } from '#/lib/theme'
+import { takeWorkspaceDocumentFetch } from '#/lib/workspace-claim-store'
 import { negotiateRequestLocale } from '#/server/fns/locale'
 
 import appCss from '../styles/styles.css?url'
@@ -92,7 +93,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   loader: async (): Promise<ShellData> => {
     let recovery = SOURCE_LANGUAGE
     try {
-      const { locale, dir, signedIn } = await negotiateRequestLocale()
+      const { locale, dir, signedIn } = await negotiateRequestLocale({
+        fetch: takeWorkspaceDocumentFetch(),
+      })
       recovery = { locale, dir, signedIn: false, messages: {} }
       return { locale, dir, signedIn, messages: await loadCatalogue(locale) }
     } catch {

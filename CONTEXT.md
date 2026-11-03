@@ -107,3 +107,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Billing selection hint** - an expiring, tab-local, workspace- and viewer-scoped record of the requested plan, interval and seats used only to describe a billing return. It grants no entitlement and proves no payment; effective and scheduled changes come from authoritative billing state.
 
 - **File preview** - an authenticated, read-only view over Files: an image gallery or a PDF/plain-text reading dialog. Unsupported types download directly.
+
+- **Release** - a numbered set of application changes promoted from develop to main. Its user-facing version is distinct from the commit SHA and deployment identifier; promotion alone does not prove it has reached production.
+- **Release history** - the Settings record of reviewed improvements and fixes proven shipped to production, newest first. It remains a historical record after an application rollback.

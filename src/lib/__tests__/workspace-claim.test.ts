@@ -161,7 +161,7 @@ describe('the tab store', () => {
     beginWorkspaceSwitch()
     expect(workspaceClaimState().switching).toBe(true)
 
-    // A link followed mid-switch reads the shell too; that must not end the switcher's window.
+    // The owner's shell updates the claim before its dashboard; unrelated calls stay blocked.
     setWorkspaceClaim('org_b')
     expect(workspaceClaimState()).toMatchObject({
       organizationId: 'org_b',
