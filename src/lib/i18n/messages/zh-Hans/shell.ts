@@ -607,6 +607,10 @@ const messages = {
     '此标签页显示的是“{name}”，但工作区已在另一个标签页或窗口中切换。没有保存任何内容。',
   'session.openCurrentWorkspace': '打开当前工作区',
   'session.workspaceChangedDismiss': '暂不',
+  'session.workspaceCheck': '检查此工作空间',
+  'session.workspaceCheckPending': '正在检查工作空间访问权限…',
+  'session.workspaceCheckFailed':
+    '无法确认此工作空间的访问权限。未重新执行任何操作。你可以再次检查。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -790,6 +790,11 @@ const messages = {
     'Aquesta pestanya mostra {name}, però l’espai de treball s’ha canviat en una altra pestanya o finestra. No s’ha desat res.',
   'session.openCurrentWorkspace': 'Obre l’espai de treball actual',
   'session.workspaceChangedDismiss': 'Ara no',
+  'session.workspaceCheck': 'Comprova aquest espai de treball',
+  'session.workspaceCheckPending':
+    'S’està comprovant l’accés a l’espai de treball…',
+  'session.workspaceCheckFailed':
+    'No s’ha pogut verificar l’accés a aquest espai de treball. No s’ha repetit cap operació. Pots tornar-ho a comprovar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

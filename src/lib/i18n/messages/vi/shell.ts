@@ -703,6 +703,11 @@ const messages = {
     'Tab này đang hiển thị {name}, nhưng không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
   'session.openCurrentWorkspace': 'Mở không gian làm việc hiện tại',
   'session.workspaceChangedDismiss': 'Để sau',
+  'session.workspaceCheck': 'Kiểm tra không gian làm việc này',
+  'session.workspaceCheckPending':
+    'Đang kiểm tra quyền truy cập không gian làm việc…',
+  'session.workspaceCheckFailed':
+    'Không thể xác minh quyền truy cập không gian làm việc này. Không thao tác nào được thực hiện lại. Bạn có thể kiểm tra lại.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

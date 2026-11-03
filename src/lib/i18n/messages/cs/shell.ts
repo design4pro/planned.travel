@@ -802,6 +802,10 @@ const messages = {
     'Tato karta zobrazuje {name}, ale prostor byl změněn v jiné kartě nebo okně. Nic se neuložilo.',
   'session.openCurrentWorkspace': 'Otevřít aktuální prostor',
   'session.workspaceChangedDismiss': 'Teď ne',
+  'session.workspaceCheck': 'Ověřit tento pracovní prostor',
+  'session.workspaceCheckPending': 'Ověřování přístupu k pracovnímu prostoru…',
+  'session.workspaceCheckFailed':
+    'Přístup k tomuto pracovnímu prostoru se nepodařilo ověřit. Žádná operace nebyla zopakována. Můžete to zkusit znovu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
