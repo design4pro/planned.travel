@@ -284,6 +284,7 @@ export interface StartDropInput {
 }
 
 export interface ConfirmInput {
+  readonly jobId?: string
   readonly tripId: string
   readonly selection: ImportSelection
   /**
@@ -328,6 +329,8 @@ export interface BookImportJobs {
    * is still working.
    */
   readonly forgetRefused: (tripId?: string) => void
+  /** Informed dismissal from Review, scoped to one job in this owner's register. */
+  readonly dismissReview: (tripId: string, jobId: string) => void
   /**
    * Dismiss: forgets the refused and the stalled jobs ({@link isDismissible}).
    *
@@ -636,8 +639,10 @@ export function createBookImportJobs(
       return { kind: 'started', refreshFailures }
     },
 
-    async confirm({ tripId, selection, afterWritten }) {
-      const files = offeredFiles(tripId)
+    async confirm({ tripId, jobId, selection, afterWritten }) {
+      const files = offeredFiles(tripId).filter(
+        (file) => jobId === undefined || file.jobId === jobId,
+      )
       let written = 0
       let left = 0
       const failures: Array<unknown> = []
@@ -692,6 +697,12 @@ export function createBookImportJobs(
         (entry) =>
           entry.status === 'refused' &&
           (tripId === undefined || entry.job.tripId === tripId),
+      )
+    },
+
+    dismissReview(tripId, jobId) {
+      forgetWhere(
+        (entry) => entry.job.tripId === tripId && entry.job.jobId === jobId,
       )
     },
 

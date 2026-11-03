@@ -210,6 +210,8 @@ const messages = {
   'book.import.widget.stalled': 'Això triga més del que esperàvem',
   'book.import.widget.check': 'Torna-ho a comprovar',
   'book.import.widget.dismiss': 'Descarta',
+  'book.import.review.dismissWarning':
+    'Vols descartar «{filename}»? Les files sense confirmar deixaran de ser accessibles des d’aquest registre. Tancar la revisió conserva la tasca. Si les files ja no apareixen, les dades temporals poden haver caducat; pots descartar la tasca o tornar-ho a comprovar.',
   'book.import.review.title': 'Què hem llegit',
   'book.import.review.from': 'De «{filename}»',
   'book.import.review.selectAll': 'Selecciona-ho tot',

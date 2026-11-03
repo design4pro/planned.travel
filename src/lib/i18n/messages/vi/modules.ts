@@ -194,6 +194,8 @@ const messages = {
   'book.import.widget.stalled': 'Việc này lâu hơn dự tính',
   'book.import.widget.check': 'Xem lại lần nữa',
   'book.import.widget.dismiss': 'Bỏ qua',
+  'book.import.review.dismissWarning':
+    'Bỏ tác vụ “{filename}”? Các hàng chưa xác nhận sẽ không còn truy cập được qua danh sách này. Đóng phần xem lại vẫn giữ tác vụ. Nếu các hàng không còn xuất hiện, dữ liệu tạm có thể đã hết hạn; bạn có thể bỏ tác vụ hoặc kiểm tra lại.',
   'book.import.review.title': 'Những gì chúng tôi đọc được',
   'book.import.review.from': 'Từ “{filename}”',
   'book.import.review.selectAll': 'Chọn tất cả',

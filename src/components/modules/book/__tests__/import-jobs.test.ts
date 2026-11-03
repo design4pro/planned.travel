@@ -1048,3 +1048,43 @@ describe('the shell chunk', () => {
     expect(source).toContain("import('../files/upload')")
   })
 })
+
+describe('informed dismissal of one review', () => {
+  it('persists only the selected dismissal and preserves account/workspace isolation', async () => {
+    register([row('a'), row('b'), { ...row('c'), tripId: 'trip-2' }])
+    register([row('a')], 'user-2:org-1')
+    register([row('a')], 'user-1:org-2')
+    const port = fakePort()
+    port.view.mockResolvedValue(ready())
+    const jobs = watched(port)
+    await tick(0)
+    jobs.dismissReview(TRIP, jobId('a'))
+    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([
+      jobId('b'),
+      jobId('c'),
+    ])
+    expect(
+      createBookImportJobs(OWNER, port).getSnapshot().entries,
+    ).toHaveLength(2)
+    expect(readBookImports('user-2:org-1')).toHaveLength(1)
+    expect(readBookImports('user-1:org-2')).toHaveLength(1)
+    jobs.dismissReview(TRIP, jobId('c'))
+    expect(readBookImports(OWNER)).toHaveLength(2)
+  })
+
+  it('preserves temporary working responses and permits an explicit exit after staging disappears', async () => {
+    register([row('a'), row('b')])
+    const port = fakePort()
+    const jobs = watched(port)
+    await tick(POLL_INTERVAL_MS)
+    expect(readBookImports(OWNER)).toHaveLength(2)
+    expect(statusOf(jobs, 'a')).toBe('working')
+    await tick(POLL_BUDGET_MS)
+    expect(statusOf(jobs, 'a')).toBe('stalled')
+    jobs.dismissReview(TRIP, jobId('a'))
+    expect(readBookImports(OWNER).map((job) => job.jobId)).toEqual([jobId('b')])
+    expect(
+      createBookImportJobs(OWNER, port).getSnapshot().entries,
+    ).toHaveLength(1)
+  })
+})
