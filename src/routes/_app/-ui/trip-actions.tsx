@@ -72,6 +72,7 @@ import { uploadFile } from '#/components/modules/files/upload'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
+import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { inclusiveDays } from '#/lib/trip-dates'
 import { formatNumber } from '../-lib/format'
 import {
@@ -122,6 +123,7 @@ export function TripEditSheet({
   const isOwner = trip.role === 'owner'
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [archivedRefusal, setArchivedRefusal] = useState(false)
   const [coverProgress, setCoverProgress] = useState<number | null>(null)
   /** The file that did not become the cover, named in the sentence that offers to go on without. */
   const [coverFailure, setCoverFailure] = useState<{
@@ -136,12 +138,13 @@ export function TripEditSheet({
   }, [coverFailure])
   const errorRef = useRef<HTMLDivElement>(null)
   // The re-read after a refusal can take the owner role away while Save or Retry holds focus; both
-  // go (disabled, hidden), so focus moves to the refusal that explains it.
+  // go (disabled, hidden), so focus moves to the refusal that explains it. An archived refusal
+  // also removes Retry, and needs the same focus handoff.
   useEffect(() => {
-    if (!isOwner) {
+    if (!isOwner || archivedRefusal) {
       errorRef.current?.focus()
     }
-  }, [isOwner])
+  }, [isOwner, archivedRefusal])
   /** A file already stored whose cover write failed, so a retry does not upload it twice. */
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
@@ -203,6 +206,7 @@ export function TripEditSheet({
     }
     setSaving(true)
     setError(null)
+    setArchivedRefusal(false)
     setCoverFailure(null)
     try {
       const coverFileId = await coverChange(skipCover)
@@ -228,15 +232,24 @@ export function TripEditSheet({
       // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
       // language of the screen it lands on. `current` is the currency the trip still has.
       const refusal = currencyRefusalOf(cause)
-      setError(
-        refusal === 'shell.editTrip.currencyLocked'
-          ? t(refusal, { current: trip.currency })
-          : messageOf(cause, t('shell.editTrip.error')),
-      )
-      // Any other refusal may mean the reader's role changed under this sheet: read the trip again
-      // so `trip.role` follows. The currency refusal has its own message, and any other failure
-      // keeps the trip it has.
-      if (refusal === null && readPublicFailure(cause).kind === 'refusal') {
+      const archived = readPublicFailure(cause).message === TRIP_ARCHIVED_KEY
+      setArchivedRefusal(archived)
+      if (archived) {
+        setError(t(TRIP_ARCHIVED_KEY))
+      } else {
+        setError(
+          refusal === 'shell.editTrip.currencyLocked'
+            ? t(refusal, { current: trip.currency })
+            : messageOf(cause, t('shell.editTrip.error')),
+        )
+      }
+      // Refresh permission refusals, but keep an archived trip's unsaved sheet: a reload removes
+      // its list row and the editor it owns. Currency refusals also keep their current trip.
+      if (
+        !archived &&
+        refusal === null &&
+        readPublicFailure(cause).kind === 'refusal'
+      ) {
         try {
           await router.invalidate()
         } catch {
@@ -285,7 +298,7 @@ export function TripEditSheet({
                   tone="danger"
                   title={t('shell.editTrip.errorTitle')}
                   actions={
-                    isOwner ? (
+                    isOwner && !archivedRefusal ? (
                       <Button
                         type="button"
                         variant="secondary"

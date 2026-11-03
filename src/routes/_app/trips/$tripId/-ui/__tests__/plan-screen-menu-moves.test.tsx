@@ -110,7 +110,10 @@ async function openMenu(kind: Kind) {
   if (source === null) throw new Error('Missing source row')
   await userEvent.click(within(source).getByRole('button', { name }))
   if (kind === 'stop') {
-    screen.getByRole('menuitem', { name: 'Move to day' }).focus()
+    screen
+      .getAllByRole('menuitem', { name: 'Move to day' })
+      .find((item) => item.getAttribute('aria-haspopup') === 'menu')
+      ?.focus()
     await userEvent.keyboard('{ArrowRight}')
   }
 }

@@ -205,7 +205,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Onaylarken gezi değişti, bu yüzden hiçbir şey değiştirilmedi. Yeni tutarları kontrol edin ve yeniden onaylayın.',
   'refusal.tripCurrencyChanged':
-    'Bu gezinin bütçe para birimi artık {to}, bu yüzden kaydedilmedi. Sayfa yenilendi: tutarı kontrol edin ve yeniden kaydedin.',
+    'Bu seyahatin bütçe para birimi artık {to}, bu nedenle kaydedilmedi. Tutarı yeniden girip tekrar kaydedin.',
+  'refusal.currencyPending':
+    'Bütçe para birimi değiştiği için kaydedilmedi. Güncel para birimi doğrulanamadı. Taslağınız korundu; para birimini kontrol etmek için tekrar kaydetmeyi deneyin veya iptal edin.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Görüntüleme para birimi',
   'display.indicator.perTrip': 'Kendi para birimi',

@@ -21,6 +21,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/ui'
 
 const messages = {
+  'copyValue.copy': 'Kopírovat: {label}',
+  'copyValue.copied': 'Zkopírováno: {label}',
+  'statusMenu.current': '{label} - aktuálně: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Vymazat',
   'action.clearFilters': 'Zrušit filtry',

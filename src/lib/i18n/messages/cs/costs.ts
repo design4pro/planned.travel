@@ -211,7 +211,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Cesta se změnila, zatímco jste potvrzovali, takže se nic nezměnilo. Zkontrolujte nové částky a potvrďte znovu.',
   'refusal.tripCurrencyChanged':
-    'Měna rozpočtu této cesty je nyní {to}, proto se nic neuložilo. Stránka byla obnovena: zkontrolujte částku a uložte znovu.',
+    'Měna rozpočtu této cesty je nyní {to}, proto se změny neuložily. Zadejte částku znovu a uložte.',
+  'refusal.currencyPending':
+    'Změny se neuložily, protože se změnila měna rozpočtu. Aktuální měnu se nepodařilo potvrdit. Rozepsané údaje zůstaly zachovány; zkuste znovu uložit a ověřit měnu, nebo akci zrušte.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Zobrazená měna',
   'display.indicator.perTrip': 'Vlastní měna',

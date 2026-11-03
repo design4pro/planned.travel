@@ -755,7 +755,8 @@ export function isCurrencyNotNullFailure(cause: unknown): boolean {
  * would otherwise save its typed digits into the new currency as if they were already in it. The
  * check reads the trip the writer has just resolved, so it costs no query; a caller that says
  * nothing (booking sync, the seed) is not checked. Nothing has been written when this throws. The
- * booking and stay writers (`fns/reservations.ts`, `fns/stay-writes.ts`) call it too.
+ * booking and stay writers (`fns/reservations.ts`, `fns/stay-writes.ts`) and the place and
+ * transport price writers call it too.
  */
 export function assertExpectedTripCurrency(
   trip: Pick<Trip, 'currency'>,

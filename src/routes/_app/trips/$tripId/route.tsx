@@ -1,3 +1,4 @@
+import { readRoomRefresh } from '#/lib/room-refresh'
 import {
   Outlet,
   createFileRoute,
@@ -25,12 +26,18 @@ import { HeaderSkeleton, RowsSkeleton } from '../../-ui/scaffold'
  * the sub-navigation stays put and only the panel below it changes.
  */
 export const Route = createFileRoute('/_app/trips/$tripId')({
-  loader: async ({ params }) => {
-    const result = await loadTripHeader({ data: { tripId: params.tripId } })
-    if (!result.found) throw notFound()
-    const { found: _found, ...payload } = result
-    return payload
-  },
+  loader: async ({ params, abortController, context }) =>
+    readRoomRefresh(
+      abortController,
+      '/_app/trips/$tripId',
+      async () => {
+        const result = await loadTripHeader({ data: { tripId: params.tripId } })
+        if (!result.found) throw notFound()
+        const { found: _found, ...payload } = result
+        return payload
+      },
+      context.roomRefresh,
+    ),
   pendingComponent: TripPending,
   notFoundComponent: () => (
     <AppFrame>

@@ -9,7 +9,10 @@
  * last membership revoked while the tab was open — are thrown as message *keys*,
  * not as sentences. See {@link shellFailure}.
  */
-import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
+import {
+  parseWorkspaceClaim,
+  WORKSPACE_CLAIM_HEADER,
+} from '#/lib/workspace-claim'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { z } from 'zod'
@@ -20,7 +23,12 @@ import { resolvePlatformRole } from '#/server/auth/access'
 import { authDb } from '#/server/auth/db'
 import { resolveSessionWorkspace } from '#/server/auth/active-workspace'
 import { getSession } from '#/server/auth/session'
-import { isOrganizationRole, roleSatisfies } from '#/server/auth/tenant'
+import { organizationIdsFor } from '#/server/auth/provisioning'
+import {
+  isOrganizationRole,
+  requireOrgFrom,
+  roleSatisfies,
+} from '#/server/auth/tenant'
 import { getDb } from '#/server/db/client'
 import { createLogger } from '#/server/observability'
 import {
@@ -242,16 +250,18 @@ export function buildShellSession(input: ShellSessionInput): ShellSession {
   }
 }
 
-export const loadShell = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<ShellPayload | null> => {
+export const loadShell = createServerFn({ method: 'GET' })
+  .validator(z.object({ preserveWorkspace: z.boolean().optional() }).optional())
+  .handler(async ({ data }): Promise<ShellPayload | null> => {
     const session = await getSession()
     if (!session) {
       return null
     }
 
     const auth = authDb()
+    const claim = getRequest().headers.get(WORKSPACE_CLAIM_HEADER)
     const resolved = await resolveSessionWorkspace(auth, session, {
-      claim: getRequest().headers.get(WORKSPACE_CLAIM_HEADER),
+      claim,
     })
     if (!resolved) {
       if (session.session.activeOrganizationId) {
@@ -262,6 +272,34 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
     const { organizationId, role } = resolved
     if (!isOrganizationRole(role)) {
       throw shellFailure('shell.session.membershipRemoved')
+    }
+
+    if (data?.preserveWorkspace) {
+      const parsedClaim = parseWorkspaceClaim(claim)
+      const removedEffectiveWorkspace =
+        !session.session.activeOrganizationId &&
+        parsedClaim.status === 'valid' &&
+        parsedClaim.organizationId !== organizationId &&
+        !(await organizationIdsFor(auth, session.user.id)).includes(
+          parsedClaim.organizationId,
+        )
+      // Losing the displayed membership is revocation, not another tab switching workspace.
+      if (
+        removedEffectiveWorkspace ||
+        (session.session.activeOrganizationId &&
+          session.session.activeOrganizationId !== organizationId &&
+          claim === session.session.activeOrganizationId)
+      ) {
+        throw shellFailure('shell.session.membershipRemoved')
+      }
+      requireOrgFrom(
+        {
+          ...session,
+          session: { ...session.session, activeOrganizationId: organizationId },
+        },
+        role,
+        { claim },
+      )
     }
 
     const scope = createScope(getDb(), {
@@ -300,5 +338,4 @@ export const loadShell = createServerFn({ method: 'GET' }).handler(
           impersonatedBy === null ? null : await readOperator(impersonatedBy),
       }),
     }
-  },
-)
+  })

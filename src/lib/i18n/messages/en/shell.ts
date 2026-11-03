@@ -65,6 +65,7 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'account.platformConsole': 'Platform console',
   'toaster.label': 'Notifications',
   /* -------------------------------------------------------------- navigation */
   /** Accessible names for the two nav landmarks, neither of which has a heading. */

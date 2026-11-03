@@ -31,6 +31,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'account.platformConsole': 'وحدة تحكم المنصة',
   'toaster.label': 'الإشعارات',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'الأقسام الرئيسية',

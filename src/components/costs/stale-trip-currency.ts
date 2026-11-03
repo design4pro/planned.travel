@@ -2,7 +2,7 @@
  * The state a money dialog keeps after the server refused its save because the trip's budget
  * currency changed while the dialog was open (`costs.refusal.tripCurrencyChanged`).
  *
- * The dialog keeps what the reader typed, the screen refreshes its data, and the digits that were in
+ * The dialog keeps what the reader typed, the screen supplies its current currency, and the digits that were in
  * the old currency are marked until the reader looks at them again. This holds the one piece the
  * dialog cannot derive: which currency it was saving under, so it can tell when the refreshed one
  * has arrived.

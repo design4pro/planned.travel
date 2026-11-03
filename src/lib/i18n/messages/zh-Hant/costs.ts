@@ -186,7 +186,9 @@ const messages = {
   'refusal.rebaseChanged':
     '你確認的過程中行程發生了變化，所以沒有做任何變更。請核對新的金額後再次確認。',
   'refusal.tripCurrencyChanged':
-    '這趟行程的預算貨幣現在是 {to}，所以沒有儲存。頁面已重新整理，請核對金額後再次儲存。',
+    '此行程的預算貨幣現為 {to}，因此未儲存。請重新輸入金額並再次儲存。',
+  'refusal.currencyPending':
+    '預算貨幣已變更，因此未儲存。無法確認目前的貨幣。已保留草稿；請再次嘗試儲存以檢查貨幣，或取消。',
   /* ---------------------------------------- display currency (#844) */
   'display.label': '顯示貨幣',
   'display.indicator.perTrip': '行程自身貨幣',

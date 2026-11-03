@@ -158,13 +158,13 @@ a file and nothing else; the file is built by the same code a feed will use.
 reader (`unfoldIcsLines`, `unescapeIcsText`, `parseIcsProperty`, `parseIcsDate`), which is the strongest
 cheap check available.
 
-**`src/server/calendar/zone.ts` — local time to an instant** (pure; used for legs and transports only,
-the two records that carry their own zone). `zonedToUtc(date, time, zone)` turns a stored wall-clock time
-and an IANA zone into a UTC instant with `Intl.DateTimeFormat(..., { timeZone,
+**`src/lib/zoned-time.ts` — local time to an instant** (pure; the calendar uses it for legs and
+transports only, the two records that carry their own zone). `zonedToUtc(date, time, zone)` turns a
+stored wall-clock time and an IANA zone into a UTC instant with `Intl.DateTimeFormat(..., { timeZone,
 timeZoneName: 'longOffset' })` (numeric offsets `GMT+09:00`, never names, so workerd and WebKit cannot
-disagree, SPEC §9 rule 5; this module runs only in the Worker). A time that does not exist (spring-forward
-gap) takes the offset in force just before the gap; a time that happens twice (autumn overlap) takes the
-first occurrence. A zone `Intl` rejects (`RangeError`) is treated as no zone, and the event is then emitted
+disagree, SPEC §9 rule 5; this pure module is shared with planner chronology since #1585). A time
+that does not exist (spring-forward gap) takes the offset in force just before the gap; a time that
+happens twice (autumn overlap) takes the first occurrence. A zone `Intl` rejects (`RangeError`) is treated as no zone, and the event is then emitted
 floating (below).
 
 **`src/server/calendar/feed.ts` — the builder** (pure over an in-memory `FeedSource`; no SQL).
@@ -617,7 +617,7 @@ url, encoded>&name=<trip title, or `planned.travel` for the workspace link, enco
    failed enable or rotate.
 
 Components, exactly: **Copy link** is a `Button` whose label is the catalogue key `link.copy` (not
-`CopyValue`, whose visible text is the value itself, upper-cased, with a hard-coded English name and no
+`CopyValue`, whose visible text is the value itself, upper-cased, with no
 announcement, and which is not changed here), with a **polite live region** announcing `link.copied` or
 `link.copyFailed`; after a failed copy the link stays on screen and the message tells the person to select
 the address and copy it by hand. The address is text, not an `<input>`, with `dir="ltr"`, `translate="no"`,
@@ -740,7 +740,7 @@ link exposes.
 | Concept                                                                      | Owner module                                                                                                                                                                                 |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | iCalendar text: folding, escaping, value forms                               | `src/server/calendar/ics.ts` (pure writer)                                                                                                                                                   |
-| Wall-clock time + zone → instant (legs, transports)                          | `src/server/calendar/zone.ts` (pure)                                                                                                                                                         |
+| Wall-clock time + zone → instant (legs, transports)                          | `src/lib/zoned-time.ts` (pure)                                                                                                                                                         |
 | What a trip means as events; the privacy projection                          | `src/server/calendar/feed.ts` (`buildCalendar`, pure over a `FeedSource` that is typed as the column projection)                                                                             |
 | Minting and digesting a secret                                               | `src/server/calendar/secret.ts`                                                                                                                                                              |
 | Feed rows, the trip set, the batched column-selected read                    | `src/server/repos/calendar-feeds.ts` (all tenant-scoped SQL; `openFeedScope` builds the scope for a `ResolvedFeed`, declared beside it)                                                      |
@@ -1074,7 +1074,7 @@ Each criterion belongs to the phase named, so every ticket has its own contract.
   membership read) and the implementation run files an issue for the deletion flow.
 - Making the card findable from the trip header or the trips list, and the hard-coded English around it on
   the Files screen: follow-up issues the implementation run files.
-- Fixing `CopyValue` (its hard-coded name and missing announcement affect its other callers).
+- Fixing `CopyValue` (its missing announcement affects its other callers).
 - Share links (`07-S6`) storing their token in plaintext; it is that stage's, and it may adopt
   `hashFeedSecret`.
 - Edge rate limiting of unknown-token floods (a Cloudflare zone rule).

@@ -206,7 +206,9 @@ const messages = {
   'refusal.rebaseChanged':
     'De reis is veranderd terwijl je bevestigde, dus er is niets gewijzigd. Controleer de nieuwe bedragen en bevestig opnieuw.',
   'refusal.tripCurrencyChanged':
-    'De valuta van het budget van deze reis is nu {to}, dus er is niets opgeslagen. De pagina is vernieuwd: controleer het bedrag en sla opnieuw op.',
+    'De budgetvaluta van deze reis is nu {to}, dus dit is niet opgeslagen. Voer het bedrag opnieuw in en sla opnieuw op.',
+  'refusal.currencyPending':
+    'Dit is niet opgeslagen omdat de budgetvaluta is gewijzigd. De huidige valuta kon niet worden bevestigd. Je concept blijft bewaard; probeer opnieuw op te slaan om de valuta te controleren of annuleer.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Weergavevaluta',
   'display.indicator.perTrip': 'Eigen valuta',

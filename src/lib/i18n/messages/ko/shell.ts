@@ -16,6 +16,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'account.platformConsole': '플랫폼 관리 콘솔',
   'toaster.label': '알림',
   'nav.primary': '주요 섹션',
   'nav.mobile': '섹션',

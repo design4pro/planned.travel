@@ -33,6 +33,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'account.platformConsole': 'Konsola platformy',
   'toaster.label': 'Powiadomienia',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Główne sekcje',

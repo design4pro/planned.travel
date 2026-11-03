@@ -348,7 +348,7 @@ export function ExpenseDialog({
   const descriptionId = `expense-description-${useId()}`
   const noticeId = `expense-notice-${useId()}`
 
-  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // The trip's currency changed while this was open and the current currency has arrived: what was typed
   // stays, a currency control still on the old one follows the trip, and a converted figure (which
   // was in the old currency) is dropped and offered again from the trip's rates.
   if (stale.adopt !== null) {
@@ -514,7 +514,7 @@ export function ExpenseDialog({
           >
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error ?? t('costs.refusal.rebaseChanged')}
+                {error ?? t('costs.refusal.currencyPending')}
               </Alert>
             )}
 

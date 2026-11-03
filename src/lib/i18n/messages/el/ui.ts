@@ -26,6 +26,9 @@ import type En from '../en/ui'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'copyValue.copy': 'Αντιγραφή: {label}',
+  'copyValue.copied': 'Αντιγράφηκε: {label}',
+  'statusMenu.current': '{label} - τρέχουσα κατάσταση: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Καθαρισμός',
   'action.clearFilters': 'Καθαρισμός φίλτρων',

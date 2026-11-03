@@ -207,7 +207,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Die Reise hat sich geändert, während du bestätigt hast, deshalb wurde nichts geändert. Prüfe die neuen Beträge und bestätige erneut.',
   'refusal.tripCurrencyChanged':
-    'Die Budgetwährung dieser Reise ist jetzt {to}, deshalb wurde nichts gespeichert. Die Seite wurde aktualisiert: Prüfe den Betrag und speichere erneut.',
+    'Die Budgetwährung dieser Reise ist jetzt {to}, daher wurde nichts gespeichert. Gib den Betrag erneut ein und speichere noch einmal.',
+  'refusal.currencyPending':
+    'Die Budgetwährung hat sich geändert, daher wurde nichts gespeichert. Die aktuelle Währung konnte nicht bestätigt werden. Dein Entwurf bleibt erhalten; versuche erneut zu speichern, um die Währung zu prüfen, oder brich ab.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Anzeigewährung',
   'display.indicator.perTrip': 'Eigene Währung',

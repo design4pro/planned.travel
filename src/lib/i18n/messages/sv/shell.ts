@@ -24,6 +24,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'account.platformConsole': 'Plattformskonsol',
   'toaster.label': 'Aviseringar',
   /* -------------------------------------------------------------- navigation */
   'nav.primary': 'Huvudavsnitt',

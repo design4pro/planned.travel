@@ -117,6 +117,17 @@ describe('workspaceClaimMiddleware', () => {
     })
   })
 
+  it('ignores a delayed refusal after a newer navigation to the same workspace', async () => {
+    setWorkspaceClaim('org_a')
+    const next = vi.fn().mockImplementation(async () => {
+      setWorkspaceClaim('org_a')
+      throw refusal()
+    })
+
+    await expect(middleware({ next })).rejects.toThrow()
+    expect(workspaceClaimState().stale).toBe(false)
+  })
+
   it('hands the caller an error a form cannot mistake for authored copy', async () => {
     setWorkspaceClaim('org_a')
     const next = vi.fn().mockRejectedValue(refusal())

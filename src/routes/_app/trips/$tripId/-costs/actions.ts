@@ -1,7 +1,7 @@
 /**
  * The write path for the costs screen.
  *
- * Every mutation is applied to the screen first and to the server second. The
+ * Mutations in the loaded currency reach the screen first and the server second. The
  * optimistic row is not a guess: it carries the split the editor already computed
  * with the same algorithm the repository uses, so when the loader answers, the
  * figures do not move.
@@ -10,7 +10,7 @@
  * started it can show the reason inline and stay open with the reader's input
  * intact. A toast alone would leave them staring at a list that silently reverted.
  */
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 
@@ -43,6 +43,9 @@ import type {
 } from '#/server/fns/costs'
 
 export interface CostsActions {
+  /** The current currency for this money-dialog session. */
+  readonly currency: string
+  readonly suggestedRate: CostsPayload['suggestedRate']
   /** The payload with any in-flight writes folded in. */
   readonly snapshot: CostsSnapshot
   readonly addExpense: (value: ExpenseFormValue) => Promise<void>
@@ -104,19 +107,50 @@ function optimisticConverted(
   return display.mode === 'per-trip' ? amountMinor : null
 }
 
-const COSTS_ROUTE_ID = '/_app/trips/$tripId/costs'
-
-export function useCostsActions(payload: CostsPayload): CostsActions {
+export function useCostsActions(
+  payload: CostsPayload,
+  moneySession: number | null = null,
+): CostsActions {
   const router = useRouter()
   const t = useTranslate()
   const [ops, setOps] = useState<ReadonlyArray<CostsOp>>([])
   const [savingDisplay, setSavingDisplay] = useState(false)
+
+  const session = useRef({ id: moneySession, tripId: payload.tripId })
+  session.current = { id: moneySession, tripId: payload.tripId }
+  const [probed, setProbed] = useState<{
+    id: number
+    tripId: string
+    currency: string
+  } | null>(null)
+  const currency =
+    probed?.id === moneySession && probed.tripId === payload.tripId
+      ? probed.currency
+      : payload.currency
+  const [deferred, setDeferred] = useState<{
+    needed: boolean
+    keys: ReadonlyArray<string>
+  }>({
+    needed: false,
+    keys: [],
+  })
 
   const snapshot = useMemo(() => applyOps(payload, ops), [payload, ops])
 
   const drop = useCallback((key: string): void => {
     setOps((current) => current.filter((op) => op.key !== key))
   }, [])
+
+  useEffect(() => {
+    if (moneySession !== null || !deferred.needed) return
+    const { keys } = deferred
+    setDeferred({ needed: false, keys: [] })
+    // The dialog has rendered closed. A reconciliation failure cannot undo a committed write.
+    void router
+      .invalidate({ sync: true })
+      .catch(() => undefined)
+      .finally(() => keys.forEach(drop))
+  }, [moneySession, deferred, router, drop])
 
   /**
    * Queue the operation, send it, then reconcile.
@@ -131,33 +165,47 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       send: () => Promise<unknown>,
       failure: string,
     ): Promise<void> => {
-      setOps((current) => [...current, op])
+      const started = session.current
+      // Amounts in a newly probed currency cannot be added to the old loader totals.
+      if (currency === payload.currency) setOps((current) => [...current, op])
+      let committed = false
       try {
         await send()
-        await router.invalidate()
+        committed = true
+        if (started.id !== null) {
+          setDeferred((current) => ({
+            needed: true,
+            keys: [...current.keys, op.key],
+          }))
+          return
+        }
+        await router.invalidate().catch(() => undefined)
       } catch (cause) {
         if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
           // The refused row must not read as saved while the figures are fetched.
           drop(op.key)
-          // The trip's current currency is asked for first, on its own: a reload that fails does not
-          // reject, it swaps the screen (and the open dialog with what was typed) for the error
-          // panel, so the screen is only reloaded once the server has answered. The filter keeps the
-          // root loader out; the trip header loader and the `_app` guard still re-run, exactly as
-          // after every successful save. `sync` makes the promise wait for the loader, where a
-          // background reload would resolve while the old figures are still shown.
+          if (started.id !== null)
+            setDeferred((current) => ({ ...current, needed: true }))
           const live = await loadCosts({ data: { tripId: payload.tripId } })
             .then((fresh) => requireFound(fresh).currency)
             .catch(() => null)
-          if (live !== null) {
-            await router.invalidate({
-              sync: true,
-              filter: (match) => match.routeId === COSTS_ROUTE_ID,
+          if (
+            session.current.id !== started.id ||
+            session.current.tripId !== started.tripId
+          )
+            throw cause
+          if (live !== null && started.id !== null) {
+            setProbed({
+              id: started.id,
+              tripId: started.tripId,
+              currency: live,
             })
           }
           toast.error(
-            live === null || live === payload.currency
+            live === null || live === currency
               ? t('costs.expense.saveFailed')
               : t('costs.refusal.tripCurrencyChanged', { to: live }),
+            { position: 'top-center' },
           )
         } else {
           toast.error(failure, {
@@ -166,10 +214,10 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         }
         throw cause
       } finally {
-        drop(op.key)
+        if (!committed || started.id === null) drop(op.key)
       }
     },
-    [drop, payload.currency, payload.tripId, router, t],
+    [drop, currency, payload.currency, payload.tripId, router, t],
   )
 
   const addExpense = useCallback(
@@ -179,12 +227,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         {
           kind: 'create',
           key,
-          row: optimisticExpense(
-            key,
-            value,
-            payload.currency,
-            payload.displayCurrency,
-          ),
+          row: optimisticExpense(key, value, currency, payload.displayCurrency),
         },
         () =>
           createExpenseFn({
@@ -194,7 +237,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success(t('costs.write.added'), { description: value.title })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
+    [currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const editExpense = useCallback(
@@ -208,7 +251,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           row: optimisticExpense(
             expense.id,
             value,
-            payload.currency,
+            currency,
             payload.displayCurrency,
           ),
         },
@@ -224,7 +267,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
       )
       toast.success(t('costs.write.updated'), { description: value.title })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
+    [currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const removeExpense = useCallback(
@@ -255,7 +298,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
             fromUserId: value.fromUserId,
             toUserId: value.toUserId,
             amountMinor: value.amountMinor,
-            currency: payload.currency,
+            currency,
             convertedMinor: optimisticConverted(
               value.amountMinor,
               payload.displayCurrency,
@@ -269,7 +312,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
           recordPaymentFn({
             data: {
               tripId: payload.tripId,
-              expectedTripCurrency: payload.currency,
+              expectedTripCurrency: currency,
               fromUserId: value.fromUserId,
               toUserId: value.toUserId,
               amountMinor: value.amountMinor,
@@ -286,7 +329,7 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
         description: t('costs.write.paymentRecordedBody'),
       })
     },
-    [payload.currency, payload.displayCurrency, payload.tripId, run, t],
+    [currency, payload.displayCurrency, payload.tripId, run, t],
   )
 
   const removePayment = useCallback(
@@ -339,6 +382,9 @@ export function useCostsActions(payload: CostsPayload): CostsActions {
   )
 
   return {
+    currency,
+    // Loader rates convert into its budget currency, never into a newly probed one.
+    suggestedRate: currency === payload.currency ? payload.suggestedRate : null,
     snapshot,
     addExpense,
     editExpense,

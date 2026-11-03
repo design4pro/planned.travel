@@ -38,7 +38,7 @@ Cut into **three tickets**: **1** the listener in the layout and the planner's m
 | Where does a screen get its write permission?      | From its own loader: `editable` on the planner (`canWritePlan(trip, role)` in `-server/plan.ts`), `canWrite` on notes, files, transports and book, `canConfigure` on collaboration, owner status on people and costs. The layout loader (`loadTripHeader`) carries no reader-role flag.                |
 | Does a role change reach the room?                 | Yes. `setTripRoleFn` (only when the role actually changed), `addTripMemberFn`, `removeTripMemberFn` and `leaveTripFn` call `evictFromRoom` (`-server/people.ts`) → `closeRoomFor` (`src/server/fns/context.ts`) → `closeTripRoomFor`. Archive, restore and a narrowing of visibility call `closeRoom`. |
 | What does the room do with it?                     | Closes that person's sockets (every tab and device) with `1012` / `Room closed`, and records a per-person revocation watermark so a connect minted before the close is refused (`TripRoom.handleClose`, `isRevoked`). It closes a socket older than 15 minutes at its next five-minute alarm.          |
-| What does the browser do with the close?           | `useTripRoom` `onClose` calls `onCommit` (a router invalidation) when the reason is `Room closed`, and `partysocket` reconnects through `serveTripRoom`, which resolves the stored role again.                                                                                                         |
+| What does the browser do with the close?           | `useTripRoom` `onClose` calls `onCommit` (a claim-preserving router refresh on Collab, #1570) when the reason is `Room closed`, and `partysocket` reconnects through `serveTripRoom`, which resolves the stored role again.                                                                                                         |
 | Who runs that hook?                                | Only `PresenceBar`, which only `collab.tsx` renders, after hydration. Every other trip screen holds no socket.                                                                                                                                                                                         |
 | What does a viewer promoted to editor see on Plan? | Nothing until a reload or a navigation that re-runs the loader. No write fails, so the refusal-triggered re-read (#1030, #1067) never runs.                                                                                                                                                            |
 | What does a demoted editor see?                    | Write controls until the first refused write, which re-reads the loader (#1030, #1067). The planner then closes its open form, and shows the refusal as a toast only when the closed form carried one.                                                                                                 |
@@ -85,8 +85,11 @@ effect after hydration, exactly as `collab.tsx` mounts `PresenceBar` today, and 
   reconnect reads the new role at the door but the page does not. The rule applies to the joined (collaboration) hook as
   well, for the same reason; it adds a re-read per reconnect there.
 
-The listener's `onCommit` is `router.invalidate()`. Every active loader under the trip layout re-runs
-(`loadTripHeader` and the screen's own), nothing is built from a frame, and D1 stays the truth.
+The listener's `onCommit` uses the claim-preserving room refresh introduced by #1570, extending its
+loader boundary to the newly covered screens. The shell checks the displayed claim before tenant
+reads; a verified workspace mismatch retains the mounted screen, drafts and document catalogue for
+explicit guarded recovery. Genuine access loss keeps the ordinary denial/not-found handling.
+`loadTripHeader` and the screen's own loader still supply authorized changes; nothing is built from a frame.
 
 ### What each case does
 

@@ -9,7 +9,8 @@
  * Three properties matter more than the feature itself:
  *
  * - **D1 is still the truth.** A commit frame is a *signal*, not data: the hook
- *   invalidates the router and the loader answers. Nothing on screen is ever
+ *   requests a claim-preserving router refresh and the loader answers. A workspace
+ *   mismatch keeps the mounted screen and drafts for explicit recovery. Nothing on screen is ever
  *   assembled from a socket frame, so a dropped connection cannot leave the screen
  *   showing something the database does not agree with.
  * - **It reconnects, and says so.** `partysocket` handles the backoff; the status

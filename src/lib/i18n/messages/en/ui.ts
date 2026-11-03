@@ -37,6 +37,9 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'copyValue.copy': 'Copy {label}',
+  'copyValue.copied': '{label} copied',
+  'statusMenu.current': '{label} — currently {status}',
   /* ------------------------------------------------------------- actions */
   /** Empties a field that already has a value. */
   'action.clear': 'Clear',

@@ -62,6 +62,7 @@ export type {
   PlanOrder,
   PlanTarget,
   TimeOfItem,
+  CompareItemTimes,
   TimelineItem,
 } from './ordering'
 

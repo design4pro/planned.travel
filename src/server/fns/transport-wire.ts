@@ -95,6 +95,13 @@ const optionalTimeZone = z
     'must be an IANA time zone name',
   )
 
+const expectedTripCurrency = z
+  .string()
+  .trim()
+  .regex(/^[A-Za-z]{3}$/)
+  .toUpperCase()
+  .optional()
+
 const transportFields = {
   mode: z.enum(TRANSPORT_MODES),
   status: z.enum(TRANSPORT_STATUSES),
@@ -126,7 +133,11 @@ const transportFields = {
   notes: z.string().trim().max(4000),
 }
 
-export const transportInputSchema = z.object({ tripId, ...transportFields })
+export const transportInputSchema = z.object({
+  tripId,
+  expectedTripCurrency,
+  ...transportFields,
+})
 
 export type TransportInput = z.infer<typeof transportInputSchema>
 
@@ -210,6 +221,7 @@ export const saveTransportSchema = z
 export const saveSearchedConnectionSchema = z
   .object({
     tripId,
+    expectedTripCurrency,
     transportId: z.string().trim().max(64),
     mode: z.enum(TRANSPORT_MODES),
     title: titleText,

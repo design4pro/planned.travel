@@ -24,6 +24,9 @@ import {
   formatTime,
   formatTimeRange,
 } from '../../../-lib/format'
+import { instantAt, TIME_PATTERN } from '#/lib/transport-timing'
+import { zonedToUtc } from '#/lib/zoned-time'
+import { resolveTimeZone } from '#/lib/time'
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 import { planModel } from './plan-model'
 
@@ -34,6 +37,7 @@ import type {
   PlannerNote,
   PlannerTransport,
   TimeOfItem,
+  CompareItemTimes,
 } from '#/components/planner'
 import type { PlanNotesPayload } from '../-server/day-notes'
 import type { PlanBoardDay, PlanBoardPayload } from '../-server/plan'
@@ -125,7 +129,7 @@ function notesOf(payload: PlanNotesPayload): Map<string, PlannerNote> {
 
 /**
  * The `HH:MM` each item carries, by draggable id — `movePlanItem`'s `timeOfItem`, and the clock
- * the merge orders by.
+ * labels shown by the move policy. `comparisonOf` supplies their shared chronology.
  *
  * Read from the payloads rather than from the view models because a row's rendered time can be
  * a *range* (`10:00 – 12:00`) and the clock rule compares single instants. A stop is at its start
@@ -193,9 +197,9 @@ function placementOf(transport: PlannerTransport, time: string | null): number {
  * `after − 1` and unscheduling deletes without renumbering, so ordinals would place a journey by a
  * number the server never wrote.
  *
- * A tie puts the journey after the row it ties with, because the merge's sort is stable and the
+ * A stored-position tie puts the journey after the row it ties with, because the merge is stable and the
  * day's own rows are listed first. That is the resting state of every journey on disk: `sort_order`
- * defaults to `0`, and a journey nobody has dragged sits behind the stop that opens its day.
+ * defaults to `0`, so before time ordering an undragged journey follows the opening stop.
  */
 function timelineOf(
   day: PlanBoardDay,
@@ -238,8 +242,10 @@ export interface PlanBoard {
   readonly journeysByItem: ReadonlyMap<string, PlannerTransport>
   /** Every note the board can show, by draggable id. */
   readonly notesByItem: ReadonlyMap<string, PlannerNote>
-  /** The instant an item carries, for the clock rule. */
+  /** The endpoint-local clock, retained for display and the missing-time rule. */
   readonly timeOfItem: TimeOfItem
+  /** The shared chronological policy for automatic ordering and optimistic moves. */
+  readonly compareItemTimes: CompareItemTimes
   /** The view model for any arrangement — the server's, or an optimistic one. */
   readonly model: (order: PlanOrder, t: Translate) => PlanModel
 }
@@ -262,6 +268,12 @@ export function planBoard(
   const notesByItem = notesOf(notes)
   const times = timesOf(payload, notes, transports)
   const journeysByItem = new Map(transportRows.map((row) => [row.itemId, row]))
+  const compareItemTimes = comparisonOf(
+    payload,
+    transports,
+    journeysByItem,
+    times,
+  )
 
   const journeysByDay = new Map<string, Array<PlannerTransport>>()
   for (const row of transportRows) {
@@ -275,6 +287,7 @@ export function planBoard(
       dayId: day.dayId,
       itemIds: mergeDayTimeline(
         timelineOf(day, notes, journeysByDay.get(day.dayId) ?? [], times),
+        (a, b) => compareItemTimes(a, b, day.dayId),
       ).map((item) => item.id),
     })),
     ideaIds: payload.unscheduledIds.map((placeId) => ideaItemId(placeId)),
@@ -286,7 +299,83 @@ export function planBoard(
     journeysByItem,
     notesByItem,
     timeOfItem: (itemId) => times.get(itemId) ?? null,
+    compareItemTimes,
     model: (order, t) =>
       planModel(payload, order, t, locale, notesByItem, journeysByItem),
+  }
+}
+
+/** Endpoint instants and day-local clocks share a frame only with explicit, valid metadata. */
+function comparisonOf(
+  payload: PlanBoardPayload,
+  transports: PlanTransportsPayload,
+  journeys: ReadonlyMap<string, PlannerTransport>,
+  times: ReadonlyMap<string, string>,
+): CompareItemTimes {
+  const rows = new Map(
+    transports.transports.map((row) => [`${row.kind}:${row.id}`, row]),
+  )
+  const validZone = (zone: string | null | undefined): zone is string =>
+    !!zone && resolveTimeZone(zone) === zone
+  const validDate = (date: string | null | undefined): date is string => {
+    const value = instantAt(date, '00:00')
+    return value !== null && new Date(value).toISOString().slice(0, 10) === date
+  }
+  // Journeys cannot change day; incomplete endpoints keep that whole day's clocks comparable.
+  const wallClockDays = new Set<string>()
+  for (const journey of journeys.values()) {
+    const time = times.get(journey.itemId)
+    if (time === undefined) continue
+    const row = rows.get(`${journey.kind}:${journey.id}`)
+    const arriving = journey.part === 'arriving'
+    const date = arriving ? row?.arrivalDate : row?.departureDate
+    const zone = arriving ? row?.arrivalTimezone : row?.departureTimezone
+    if (
+      !validDate(date) ||
+      !validZone(zone) ||
+      zonedToUtc(date, time, zone) === null
+    )
+      wallClockDays.add(journey.dayId)
+  }
+  return (a, b, dayId) => {
+    const day = payload.days.find((entry) => entry.dayId === dayId)
+    const value = (id: string): number => {
+      const time = times.get(id) ?? ''
+      const wall = Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5))
+      const dayDate = day?.date
+      const tripZone = payload.timezone
+      if (
+        wallClockDays.has(dayId) ||
+        !TIME_PATTERN.test(time) ||
+        !validDate(dayDate) ||
+        !validZone(tripZone)
+      )
+        return wall
+      const midnight = zonedToUtc(dayDate, '00:00', tripZone)?.getTime() ?? null
+      if (midnight === null) return wall
+      const local = zonedToUtc(dayDate, time, tripZone)?.getTime() ?? null
+      const fallback = local === null ? wall : (local - midnight) / 60_000
+      const journey = journeys.get(id)
+      const row =
+        journey === undefined
+          ? undefined
+          : rows.get(`${journey.kind}:${journey.id}`)
+      if (row !== undefined && journey !== undefined) {
+        const arriving = journey.part === 'arriving'
+        const date = arriving ? row.arrivalDate : row.departureDate
+        const zone = arriving ? row.arrivalTimezone : row.departureTimezone
+        if (!validDate(date) || !validZone(zone)) return fallback
+        const instant = zonedToUtc(date, time, zone)?.getTime() ?? null
+        if (instant !== null) return (instant - midnight) / 60_000
+      }
+      return fallback
+    }
+    const difference = value(a) - value(b)
+    if (difference !== 0) return difference
+    // Arrivals lead equal-minute groups; all non-arrival ties retain stored positions.
+    return (
+      Number(journeys.get(b)?.part === 'arriving') -
+      Number(journeys.get(a)?.part === 'arriving')
+    )
   }
 }

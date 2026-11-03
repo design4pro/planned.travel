@@ -348,3 +348,9 @@ Implemented in #616. Two things shipped differently from the design above.
   named for its project with a confirmation number, turns the preference on, and removes both again.
   The mutation check in step 4 was run: without the explicit `focus()` the case goes red in both
   projects, and without `preventDefault()` it goes red in `mobile-safari` only.
+
+## Amendment - localized control names (#1631)
+
+`CopyValue` now uses `useUiCopy` for copy and copied accessible names. The source-catalogue
+branch preserves rendering without an `I18nProvider`; `revealLabel` still arrives translated
+from `MaskedCode`. The component interface, masking and focus behavior are unchanged.

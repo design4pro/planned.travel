@@ -20,6 +20,7 @@
 import { SHELL_STATE_KEYS } from '#/components/layout/session'
 import { CURRENCY_REFUSAL_KEYS } from '#/lib/currency-refusals'
 import { TRANSPORT_REFUSAL_KEYS } from '#/lib/transport-refusals'
+import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 
 import type { PublicFailure, PublicFailureCode } from '#/lib/errors'
@@ -166,13 +167,15 @@ export function classifyFailure(cause: unknown): PublicFailure {
   // is an `AuthRequirementError`, but its message is a catalogue key, not an English sentence. So
   // is the refusal of a save over a Transport that was deleted in the meantime
   // (`src/lib/transport-refusals.ts`): the product working, not an incident, and only that one key.
+  // The edit-trip boundary alone translates TripArchivedError into this exact catalogue key.
   const thrown = cause instanceof Error ? cause.message : cause
   if (
     typeof thrown === 'string' &&
     (SHELL_STATE_KEYS.some((key) => key === thrown) ||
       CURRENCY_REFUSAL_KEYS.some((key) => key === thrown) ||
       TRANSPORT_REFUSAL_KEYS.some((key) => key === thrown) ||
-      thrown === WORKSPACE_CHANGED_KEY)
+      thrown === WORKSPACE_CHANGED_KEY ||
+      thrown === TRIP_ARCHIVED_KEY)
   ) {
     return { kind: 'refusal', message: thrown }
   }

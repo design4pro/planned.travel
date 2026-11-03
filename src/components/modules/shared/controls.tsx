@@ -122,13 +122,17 @@ export function StatusMenu({
   disabled?: boolean
   size?: 'sm' | 'md'
 }) {
+  const t = useUiCopy()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
           disabled={disabled}
-          aria-label={`${label} — currently ${current.label}`}
+          aria-label={t('ui.statusMenu.current', {
+            label,
+            status: current.label,
+          })}
           className={cn(
             'group inline-flex shrink-0 items-center rounded-full focus-ring',
             'transition-[box-shadow,opacity] duration-fast ease-out-quint',
@@ -278,6 +282,7 @@ export function CopyValue({
   /** Absent — the control only copies. `revealLabel` arrives translated. */
   mask?: { readonly glyphs: string; readonly revealLabel: string }
 }) {
+  const t = useUiCopy()
   const [copied, setCopied] = React.useState(false)
   const [revealed, setRevealed] = React.useState(false)
   const hidden = mask !== undefined && !revealed
@@ -299,12 +304,16 @@ export function CopyValue({
     void copyToClipboard(value).then(setCopied)
   }
 
+  const copyLabel = copied
+    ? t('ui.copyValue.copied', { label })
+    : t('ui.copyValue.copy', { label })
+
   // Both states are this one element, so its focus survives the reveal.
   return (
     <button
       type="button"
       data-state={mask && (hidden ? 'masked' : 'revealed')}
-      aria-label={hidden ? mask.revealLabel : copyLabel(label, copied)}
+      aria-label={hidden ? mask.revealLabel : copyLabel}
       onMouseDown={mask && ((event) => event.preventDefault())}
       onClick={(event) => activate(event.currentTarget)}
       onBlur={
@@ -348,8 +357,4 @@ export function CopyValue({
       )}
     </button>
   )
-}
-
-function copyLabel(label: string, copied: boolean): string {
-  return copied ? `${label} copied` : `Copy ${label}`
 }

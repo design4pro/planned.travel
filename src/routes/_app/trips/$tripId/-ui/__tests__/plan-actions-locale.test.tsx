@@ -89,7 +89,7 @@ const STOP_MENU_ENGLISH = [
   'Delete from trip',
 ]
 
-function menu(row: PlannerRow) {
+function menu(row: PlannerRow, onMoveToDay = vi.fn()) {
   return (
     <StopMenu
       row={row}
@@ -97,7 +97,7 @@ function menu(row: PlannerRow) {
       onEditPlace={vi.fn()}
       onEditTiming={vi.fn()}
       onPickPosition={vi.fn()}
-      onMoveToDay={vi.fn()}
+      onMoveToDay={onMoveToDay}
       onUnschedule={vi.fn()}
       onDelete={vi.fn()}
     />
@@ -150,9 +150,37 @@ describe('StopMenu — localised', () => {
       screen.getByRole('menuitem', { name: 'Edytuj miejsce' }),
     ).toBeDefined()
 
-    screen.getByRole('menuitem', { name: 'Przenieś do innego dnia' }).focus()
+    screen
+      .getAllByRole('menuitem', { name: 'Przenieś do innego dnia' })
+      .find((item) => item.getAttribute('aria-haspopup') === 'menu')
+      ?.focus()
     await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('menuitem', { name: 'Dzień 2' })).toBeDefined()
+    await user.keyboard('{Escape}')
+    expect(document.activeElement?.textContent).toContain(
+      'Przenieś do innego dnia',
+    )
+    expect(screen.queryByRole('menuitem', { name: 'Dzień 2' })).toBeNull()
+  })
+  it('expands inline destinations, restores focus on Escape and selects only another day', async () => {
+    const onMove = vi.fn()
+    render(menu(ROW, onMove), 'pl')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button'))
+    const move = screen
+      .getAllByRole('menuitem', { name: 'Przenieś do innego dnia' })
+      .find((item) => !item.hasAttribute('aria-haspopup'))
+    if (move === undefined) throw new Error('Missing inline move trigger')
+    await user.click(move)
+    const destination = screen.getByRole('menuitem', { name: 'Dzień 2' })
+    expect(document.activeElement).toBe(destination)
+    expect(screen.queryByRole('menuitem', { name: 'Dzień 1' })).toBeNull()
+    await user.keyboard('{Escape}')
+    expect(document.activeElement).toBe(move)
+    expect(screen.queryByRole('menuitem', { name: 'Dzień 2' })).toBeNull()
+    await user.keyboard('{Enter}')
+    await user.keyboard('{Enter}')
+    expect(onMove).toHaveBeenCalledExactlyOnceWith('d2')
   })
 })
 

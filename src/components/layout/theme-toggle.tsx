@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Moon, MonitorSmartphone, Sun } from 'lucide-react'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
@@ -57,6 +58,7 @@ function isThemeMode(value: string): value is ThemeMode {
 export function ThemeToggle({ className }: { className?: string }) {
   const { mode, resolved, setMode } = useTheme()
   const t = useTranslate()
+  const labelId = useId()
   const dark = resolved === 'dark'
   const current = OPTIONS.find((option) => option.value === mode) ?? OPTIONS[0]
 
@@ -94,8 +96,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       </MenuTrigger>
 
       <MenuContent className="min-w-48">
-        <MenuLabel>{t('shell.theme.label')}</MenuLabel>
+        <MenuLabel id={labelId} aria-hidden="true">
+          {t('shell.theme.label')}
+        </MenuLabel>
         <MenuRadioGroup
+          aria-labelledby={labelId}
           value={mode}
           onValueChange={(next) => {
             if (isThemeMode(next)) setMode(next)

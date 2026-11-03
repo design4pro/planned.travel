@@ -129,10 +129,6 @@ function shippedSources(): ReadonlyArray<Source> {
 const AWAITING_LOCALISATION: ReadonlySet<string> = new Set([
   // Whole file: every string in the impersonation bar.
   'impersonation-bar.tsx',
-  // ONE string, not the file: the "Platform console" entry. Everything else here is localised and
-  // stays that way. It needs its own key rather than `account.admin`, which names the workspace
-  // panel — keeping the two vocabularies apart is why `isAdmin` was left alone in the first place.
-  'user-menu.tsx',
 ])
 
 const SOURCES = shippedSources()

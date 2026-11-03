@@ -20,6 +20,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/ui'
 
 const messages = {
+  'copyValue.copy': 'Копіювати: {label}',
+  'copyValue.copied': 'Скопійовано: {label}',
+  'statusMenu.current': '{label} - поточний статус: {status}',
   /* ------------------------------------------------------------- actions */
   'action.clear': 'Очистити',
   'action.clearFilters': 'Скинути фільтри',

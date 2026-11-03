@@ -146,7 +146,7 @@ export function PaymentDialog({
   )
   const formId = `payment-form-${useId()}`
 
-  // The trip's currency changed while this was open and the screen has refreshed: what was typed
+  // The trip's currency changed while this was open and the current currency has arrived: what was typed
   // stays, a currency control still on the old one follows the trip, and a converted figure (which
   // was in the old currency) is dropped rather than saved under the new one.
   if (stale.adopt !== null) {
@@ -304,7 +304,7 @@ export function PaymentDialog({
           >
             {error === null && !stale.pending ? null : (
               <Alert tone="danger" title={t('costs.expense.saveFailed')}>
-                {error ?? t('costs.refusal.rebaseChanged')}
+                {error ?? t('costs.refusal.currencyPending')}
               </Alert>
             )}
 
