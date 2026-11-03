@@ -943,7 +943,7 @@ export function TransportDialog({
                     ref={priceRef}
                     value={draft.price}
                     onChange={(event) => {
-                      stale.dismiss()
+                      if (!stale.pending) stale.dismiss()
                       save.reset()
                       set('price', event.target.value)
                     }}

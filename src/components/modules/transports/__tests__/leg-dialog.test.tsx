@@ -558,12 +558,17 @@ it('requires checking a price that followed the old trip currency before retryin
   await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
   submitTheForm()
   expect(save).toHaveBeenCalledTimes(1)
+  fireEvent.change(screen.getByLabelText(/^Price/u), {
+    target: { value: '15.50' },
+  })
+  submitTheForm()
+  expect(save).toHaveBeenCalledTimes(1)
   view.rerender(dialog('GBP'))
   await vi.waitFor(() =>
     expect(document.activeElement).toBe(screen.getByLabelText(/^Price/u)),
   )
   expect((screen.getByLabelText(/^Price/u) as HTMLInputElement).value).toBe(
-    '15',
+    '15.50',
   )
   submitTheForm()
   expect(save).toHaveBeenCalledTimes(1)
