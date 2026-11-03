@@ -203,7 +203,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Resan ändrades medan du bekräftade, så ingenting har ändrats. Kontrollera de nya beloppen och bekräfta igen.',
   'refusal.tripCurrencyChanged':
-    'Budgetvalutan för den här resan är nu {to}, så ingenting sparades. Sidan har uppdaterats: kontrollera beloppet och spara igen.',
+    'Budgetvalutan för den här resan är nu {to}, så detta sparades inte. Ange beloppet på nytt och spara igen.',
+  'refusal.currencyPending':
+    'Detta sparades inte eftersom budgetvalutan ändrades. Den aktuella valutan kunde inte bekräftas. Ditt utkast finns kvar; försök spara igen för att kontrollera valutan eller avbryt.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Visningsvaluta',
   'display.indicator.perTrip': 'Egen valuta',

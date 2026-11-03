@@ -6,7 +6,7 @@ import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
-import { createExpenseFn, loadCosts } from '#/server/fns/costs'
+import { createExpenseFn, loadCosts, recordPaymentFn } from '#/server/fns/costs'
 import { useCostsActions } from '../actions'
 
 import type { ReactNode } from 'react'
@@ -18,7 +18,7 @@ import type { CostsPayload } from '#/server/fns/costs'
 /**
  * The shared write runner when the server refuses a save because the trip's budget currency
  * changed (`costs.refusal.tripCurrencyChanged`): it asks the server for the trip's current currency,
- * refreshes the screen only when that answers, names the currency in the reader's language, and
+ * supplies the dialog currency without reloading, names the currency in the reader's language, and
  * still hands the refusal to the dialog.
  */
 const EN: Catalogue = namespaceCatalogue('costs', Costs)
@@ -66,7 +66,7 @@ const PAYLOAD: CostsPayload = {
   displayChoices: { workspaceCode: 'EUR', rateCodes: [] },
   unconverted: [],
   canWrite: true,
-  suggestedRate: null,
+  suggestedRate: { GBP: { rate: 1.15, observedOn: '2026-04-10' } },
 }
 
 const EXPENSE: ExpenseFormValue = {
@@ -93,7 +93,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 async function refusedAdd(): Promise<unknown> {
-  const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
+  const { result } = renderHook(() => useCostsActions(PAYLOAD, 1), { wrapper })
   let thrown: unknown = null
   await act(async () => {
     await result.current.addExpense(EXPENSE).catch((cause: unknown) => {
@@ -117,21 +117,15 @@ describe('the costs write runner on a stale trip currency', () => {
     )
   })
 
-  it('refreshes the screen synchronously, names the live currency in the toast and rethrows the refusal', async () => {
+  it('adopts the live currency without reloading an open dialog and rethrows the refusal', async () => {
     const thrown = await refusedAdd()
 
-    expect(refresh.invalidate).toHaveBeenCalledWith({
-      sync: true,
-      filter: expect.any(Function),
-    })
-    const options = refresh.invalidate.mock.calls[0]?.[0] as unknown as {
-      filter: (match: { routeId: string }) => boolean
-    }
-    expect(options.filter({ routeId: '/_app/trips/$tripId/costs' })).toBe(true)
-    expect(options.filter({ routeId: '/_app/trips/$tripId' })).toBe(false)
-    expect(options.filter({ routeId: '__root__' })).toBe(false)
+    expect(refresh.invalidate).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledTimes(1)
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('now JPY'))
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('now JPY'),
+      expect.any(Object),
+    )
     expect(thrown).toBeInstanceOf(Error)
     expect(thrown).toHaveProperty(
       'message',
@@ -145,7 +139,10 @@ describe('the costs write runner on a stale trip currency', () => {
     const thrown = await refusedAdd()
 
     expect(refresh.invalidate).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('That did not save')
+    expect(toast.error).toHaveBeenCalledWith(
+      'That did not save',
+      expect.any(Object),
+    )
     expect(thrown).toHaveProperty(
       'message',
       'costs.refusal.tripCurrencyChanged',
@@ -161,7 +158,163 @@ describe('the costs write runner on a stale trip currency', () => {
 
     await refusedAdd()
 
-    expect(toast.error).toHaveBeenCalledWith('That did not save')
+    expect(toast.error).toHaveBeenCalledWith(
+      'That did not save',
+      expect.any(Object),
+    )
+  })
+
+  it('keeps a committed write until close, then reconciles without turning reload failure into save failure', async () => {
+    vi.mocked(createExpenseFn).mockResolvedValue({ expenseId: 'saved' })
+    refresh.invalidate.mockRejectedValue(new Error('loader offline'))
+    const { result, rerender } = renderHook(
+      ({ session }: { session: number | null }) =>
+        useCostsActions(PAYLOAD, session),
+      { wrapper, initialProps: { session: 1 as number | null } },
+    )
+    await act(async () => {
+      await result.current.addExpense(EXPENSE)
+    })
+    expect(refresh.invalidate).not.toHaveBeenCalled()
+    expect(result.current.snapshot.expenses).toHaveLength(1)
+    rerender({ session: null })
+    await vi.waitFor(() => expect(refresh.invalidate).toHaveBeenCalledOnce())
+    expect(refresh.invalidate).toHaveBeenCalledWith({ sync: true })
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(createExpenseFn).toHaveBeenCalledOnce()
+  })
+
+  it('reconciles a write that finishes after the dialog was already closed', async () => {
+    let finish: (value: { readonly expenseId: string }) => void = () => {}
+    vi.mocked(createExpenseFn).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ session }: { session: number | null }) =>
+        useCostsActions(PAYLOAD, session),
+      { wrapper, initialProps: { session: 1 as number | null } },
+    )
+    let pending = Promise.resolve()
+    act(() => {
+      pending = result.current.addExpense(EXPENSE)
+    })
+    rerender({ session: null })
+    expect(refresh.invalidate).not.toHaveBeenCalled()
+    await act(async () => {
+      finish({ expenseId: 'saved' })
+      await pending
+    })
+    await vi.waitFor(() => expect(refresh.invalidate).toHaveBeenCalledOnce())
+    expect(createExpenseFn).toHaveBeenCalledOnce()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('uses the probed currency for the next explicit payment and reconciles a cancelled refusal', async () => {
+    const { result, rerender } = renderHook(
+      ({ session }: { session: number | null }) =>
+        useCostsActions(PAYLOAD, session),
+      { wrapper, initialProps: { session: 1 as number | null } },
+    )
+    await act(async () => {
+      await result.current.addExpense(EXPENSE).catch(() => undefined)
+    })
+    expect(result.current.currency).toBe('JPY')
+    expect(result.current.suggestedRate).toBeNull()
+    vi.mocked(recordPaymentFn).mockResolvedValue({ settlementId: 'saved' })
+    await act(async () => {
+      await result.current.addPayment({
+        fromUserId: 'u-ada',
+        toUserId: 'u-bo',
+        amountMinor: 4000,
+        originalAmountMinor: null,
+        originalCurrency: null,
+        method: 'cash',
+        settledOn: '2026-04-10',
+        note: null,
+      })
+    })
+    expect(result.current.snapshot.settlements).toHaveLength(0)
+    expect(recordPaymentFn).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        expectedTripCurrency: 'JPY',
+        amountMinor: 4000,
+      }),
+    })
+    expect(refresh.invalidate).not.toHaveBeenCalled()
+    rerender({ session: null })
+    await vi.waitFor(() => expect(refresh.invalidate).toHaveBeenCalledOnce())
+  })
+
+  it.each(['failed', 'unchanged'])(
+    'reconciles a cancelled %s probe without adopting an invented currency',
+    async (outcome) => {
+      if (outcome === 'failed')
+        vi.mocked(loadCosts).mockRejectedValue(new Error('offline'))
+      else vi.mocked(loadCosts).mockResolvedValue({ ...PAYLOAD, found: true })
+      const { result, rerender } = renderHook(
+        ({ session }: { session: number | null }) =>
+          useCostsActions(PAYLOAD, session),
+        { wrapper, initialProps: { session: 1 as number | null } },
+      )
+      await act(async () => {
+        await result.current.addExpense(EXPENSE).catch(() => undefined)
+      })
+      expect(result.current.currency).toBe('EUR')
+      expect(refresh.invalidate).not.toHaveBeenCalled()
+      rerender({ session: null })
+      await vi.waitFor(() => expect(refresh.invalidate).toHaveBeenCalledOnce())
+      expect(createExpenseFn).toHaveBeenCalledOnce()
+    },
+  )
+
+  it('can refuse again when the currency changes a second time without retrying either write', async () => {
+    const { result } = renderHook(() => useCostsActions(PAYLOAD, 1), {
+      wrapper,
+    })
+    await act(async () => {
+      await result.current.addExpense(EXPENSE).catch(() => undefined)
+    })
+    expect(result.current.currency).toBe('JPY')
+    vi.mocked(loadCosts).mockResolvedValue({
+      ...PAYLOAD,
+      found: true,
+      currency: 'USD',
+    })
+    await act(async () => {
+      await result.current
+        .addExpense({ ...EXPENSE, currency: 'JPY' })
+        .catch(() => undefined)
+    })
+    expect(result.current.currency).toBe('USD')
+    expect(createExpenseFn).toHaveBeenCalledTimes(2)
+    expect(refresh.invalidate).not.toHaveBeenCalled()
+  })
+
+  it('ignores a probe that settles after a different dialog session opened', async () => {
+    let answer: (payload: OrAbsent<CostsPayload>) => void = () => {}
+    vi.mocked(loadCosts).mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ session }) => useCostsActions(PAYLOAD, session),
+      { wrapper, initialProps: { session: 1 } },
+    )
+    let pending = Promise.resolve()
+    act(() => {
+      pending = result.current.addExpense(EXPENSE).catch(() => undefined)
+    })
+    await vi.waitFor(() => expect(loadCosts).toHaveBeenCalledOnce())
+    rerender({ session: 2 })
+    await act(async () => {
+      answer({ ...PAYLOAD, found: true, currency: 'JPY' })
+      await pending
+    })
+    expect(result.current.currency).toBe('EUR')
+    expect(refresh.invalidate).not.toHaveBeenCalled()
   })
 
   it('does not show the refused row while the live currency is fetched', async () => {
@@ -171,7 +324,9 @@ describe('the costs write runner on a stale trip currency', () => {
         answer = resolve
       }),
     )
-    const { result } = renderHook(() => useCostsActions(PAYLOAD), { wrapper })
+    const { result } = renderHook(() => useCostsActions(PAYLOAD, 1), {
+      wrapper,
+    })
     let pending: Promise<void> = Promise.resolve()
     act(() => {
       pending = result.current.addExpense(EXPENSE).catch(() => undefined)

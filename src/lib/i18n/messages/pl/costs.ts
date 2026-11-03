@@ -214,7 +214,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Wyjazd zmienił się w trakcie potwierdzania, więc nic nie zostało zmienione. Sprawdź nowe kwoty i potwierdź ponownie.',
   'refusal.tripCurrencyChanged':
-    'Waluta budżetu tego wyjazdu to teraz {to}, więc nic nie zostało zapisane. Strona została odświeżona: sprawdź kwotę i zapisz ponownie.',
+    'Waluta budżetu tej podróży to teraz {to}, więc nie zapisano zmian. Wpisz kwotę ponownie i zapisz.',
+  'refusal.currencyPending':
+    'Nie zapisano zmian, ponieważ zmieniła się waluta budżetu. Nie udało się potwierdzić aktualnej waluty. Zachowano wpisane dane; spróbuj zapisać ponownie, aby sprawdzić walutę, lub anuluj.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Waluta wyświetlania',
   'display.indicator.perTrip': 'Waluta wyjazdu',

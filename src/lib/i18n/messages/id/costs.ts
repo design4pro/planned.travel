@@ -203,7 +203,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Perjalanan berubah saat Anda mengonfirmasi, jadi tidak ada yang diubah. Periksa angka barunya, lalu konfirmasi lagi.',
   'refusal.tripCurrencyChanged':
-    'Mata uang anggaran perjalanan ini sekarang {to}, jadi perubahan tidak disimpan. Halaman sudah diperbarui: periksa jumlahnya, lalu simpan lagi.',
+    'Mata uang anggaran perjalanan ini sekarang {to}, jadi perubahan belum disimpan. Masukkan kembali jumlahnya lalu simpan lagi.',
+  'refusal.currencyPending':
+    'Perubahan belum disimpan karena mata uang anggaran berubah. Mata uang saat ini tidak dapat dikonfirmasi. Draf Anda tetap tersimpan; coba simpan lagi untuk memeriksa mata uang atau batalkan.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Mata uang tampilan',
   'display.indicator.perTrip': 'Mata uang sendiri',

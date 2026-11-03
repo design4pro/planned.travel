@@ -473,7 +473,7 @@ describe('the expense dialog’s suggested converted figure', { timeout: 20_000 
       await vi.waitFor(() => expect(document.activeElement).toBe(amountField()))
       expect(screen.getByText('That did not save')).toBeTruthy()
       expect(
-        screen.getByText(/trip changed while you were confirming/),
+        screen.getByText(/current currency could not be confirmed/),
       ).toBeTruthy()
       expect(screen.queryByText(REFUSAL)).toBeNull()
       expect(
@@ -537,7 +537,7 @@ describe('the expense dialog’s suggested converted figure', { timeout: 20_000 
       ).toHaveProperty('disabled', true)
     })
 
-    it('adopts the new currency once when the screen refreshes before the refusal arrives, as it does in the app', async () => {
+    it('adopts the new currency once when it arrives before the refusal is handled', async () => {
       const user = hand()
       let rerender: (ui: ReactElement) => void = () => {}
       const onSubmit = vi

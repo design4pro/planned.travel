@@ -210,7 +210,9 @@ const messages = {
   'refusal.rebaseChanged':
     'El viatge ha canviat mentre ho confirmaves, així que no s’ha canviat res. Revisa les xifres noves i torna a confirmar.',
   'refusal.tripCurrencyChanged':
-    'La moneda del pressupost d’aquest viatge ara és {to}, així que no s’ha desat. La pàgina s’ha actualitzat: revisa l’import i torna a desar.',
+    'La moneda del pressupost d’aquest viatge ara és {to}, per això no s’ha desat. Torna a introduir l’import i desa de nou.',
+  'refusal.currencyPending':
+    'No s’ha desat perquè la moneda del pressupost ha canviat. No s’ha pogut confirmar la moneda actual. Es conserva l’esborrany; prova de desar de nou per comprovar-la o cancel·la.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Moneda de visualització',
   'display.indicator.perTrip': 'Moneda pròpia',

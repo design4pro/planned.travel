@@ -213,7 +213,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Il viaggio è cambiato mentre confermavi, quindi non è stato modificato nulla. Controlla le nuove cifre e conferma di nuovo.',
   'refusal.tripCurrencyChanged':
-    'La valuta del budget di questo viaggio ora è {to}, quindi non è stato salvato nulla. La pagina è stata aggiornata: controlla l’importo e salva di nuovo.',
+    'La valuta del budget di questo viaggio ora è {to}, quindi nulla è stato salvato. Inserisci di nuovo l’importo e salva.',
+  'refusal.currencyPending':
+    'La valuta del budget è cambiata, quindi nulla è stato salvato. Non è stato possibile confermare la valuta attuale. La bozza è conservata; prova a salvare di nuovo per verificarla oppure annulla.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Valuta di visualizzazione',
   'display.indicator.perTrip': 'Valuta propria',

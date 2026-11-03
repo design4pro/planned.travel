@@ -498,8 +498,9 @@ number>.optional(), from: <currency code>.optional() })`; `rate` is required unl
   - Success: the dialog closes, `router.invalidate()`, a toast `rebase.done`.
 - **A stale tab keeps what the traveller typed.** When an expense, payment or planned-item save is
   refused with `costs.refusal.tripCurrencyChanged`, the existing dialog stays open with its input,
-  `router.invalidate()` reloads the data behind it, and the refusal text names the new currency and
-  says to check the amount and save again. What the dialog then shows is stated, because the
+  Costs probes the current currency without invalidating the open expense/payment dialog (#1629);
+  reconciliation runs after it closes. Planned-item recovery retains its own reload path. The refusal
+  text names the new currency and says to re-enter the amount and save again. What the dialog then shows is stated, because the
   expense dialog sets its currency once from the trip when it opens (`expense-dialog.tsx`) and would
   otherwise flip silently: the amount field keeps the typed digits and is marked invalid with the
   refusal text until the traveller edits it; in the expense dialog the currency control is reset to
@@ -576,7 +577,8 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | `rebase.outOfRange`                 | `With this rate an amount on the trip would be too large to store in {to}. Check the rate and which way round it is.`                                                                                             |
 | `rebase.committing`                 | `Changing the budget currency`                                                                                                                                                                                    |
 | `costs.refusal.rebaseChanged`       | `The trip changed while you were confirming, so nothing was changed. Check the new figures and confirm again.`                                                                                                    |
-| `costs.refusal.tripCurrencyChanged` | `The budget currency of this trip is now {to}, so this was not saved. The page has been refreshed: check the amount and save again.`                                                                              |
+| `costs.refusal.tripCurrencyChanged` | `The budget currency of this trip is now {to}, so this was not saved. Re-enter the amount and save again.`                                                                              |
+| `costs.refusal.currencyPending` | `This was not saved because the budget currency changed. The current currency could not be confirmed. Your draft is kept; try saving again to check, or cancel.` |
 | `shell.editTrip.currencyLocked`     | `This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to {current} to save your other changes.`                          |
 | `shell.editTrip.currencyReadonly`   | `The budget currency is changed from the Costs tab.`                                                                                                                                                              |
 | `shell.editTrip.currencyLink`       | `Open the Costs tab`                                                                                                                                                                                              |
@@ -604,7 +606,7 @@ Plural forms use the catalogue's plural mechanism; money and rates come from `fo
 | Row changes between preview and commit                                 | Predicated `UPDATE` plus the final stale check roll the batch back; `rebaseChanged`, the dialog re-previews.                                                             |
 | Double commit (two owners, or a retry after success)                   | The second sees `currency <> old` inside the `CASE` and fails; nothing written.                                                                                          |
 | Editor, viewer, non-member, archived trip                              | `FORBIDDEN` / `NotFoundError` / `TripArchivedError`; nothing written.                                                                                                    |
-| A stale tab saves an expense, payment or planned item after the change | `costs.refusal.tripCurrencyChanged`; the dialog stays open with its input, data refreshes behind it.                                                                     |
+| A stale tab saves an expense, payment or planned item after the change | `costs.refusal.tripCurrencyChanged`; the dialog stays open with its input; Costs reconciles after closing (#1629).                                                                     |
 | Stale write lands in the few ms around a commit                        | One visible old-currency line (see "The window that stays"); edited or deleted by the owner.                                                                             |
 | Old tab or API client sends the unchanged `currency` on a trip edit    | A no-op.                                                                                                                                                                 |
 | Re-basing JPY → EUR → JPY                                              | Every row with a source triple returns to its typed figure; the budget target may differ by rounding.                                                                    |
@@ -791,8 +793,8 @@ develop first.
    the loaded currency; the planned-item functions pass theirs. Grep every other caller of the five
    writers (seed, copy a trip, imports) and confirm none passes the new field.
 5. `-costs/actions.ts` `run()` resolves a refusal key and, for `tripCurrencyChanged`, calls
-   `router.invalidate()` while the dialog stays open. Copy: the two `costs.refusal.*` keys in all 23
-   locales.
+   `loadCosts` and supplies the current currency locally while the dialog stays open (#1629).
+   `router.invalidate()` reconciles after closing. Copy: refusal and pending-recovery keys in all 23 locales.
 6. Isolation `describe` for the commit and the writers: A's re-basing of trip 1 leaves A's second
    trip and B's whole money footprint (trip row incl. `currency` and `budget_target_minor`,
    expenses, shares, settlements, budget items, priced places, reservations, transports, stays)

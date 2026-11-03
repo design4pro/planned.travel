@@ -208,7 +208,9 @@ const messages = {
   'refusal.rebaseChanged':
     'Az utazás megváltozott, miközben megerősítetted, ezért semmi sem módosult. Nézd át az új összegeket, és erősítsd meg újra.',
   'refusal.tripCurrencyChanged':
-    'Az utazás költségvetésének pénzneme mostantól {to}, ezért nem mentődött el. Az oldal frissült: ellenőrizd az összeget, és mentsd újra.',
+    'Az utazás költségkeretének pénzneme most {to}, ezért a mentés nem történt meg. Írd be újra az összeget, majd mentsd el.',
+  'refusal.currencyPending':
+    'A mentés nem történt meg, mert megváltozott a költségkeret pénzneme. A jelenlegi pénznemet nem sikerült megerősíteni. A piszkozat megmaradt; próbáld újra menteni a pénznem ellenőrzéséhez, vagy válaszd a mégse lehetőséget.',
   /* ---------------------------------------- display currency (#844) */
   'display.label': 'Megjelenítési pénznem',
   'display.indicator.perTrip': 'Saját pénznem',
