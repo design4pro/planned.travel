@@ -1,5 +1,5 @@
 /**
- * Low-level R2 byte operations. Quota-bearing writers use storage/admission.ts (ADR 0048).
+ * Low-level R2 byte operations. Quota-bearing writers use storage/admission.ts (ADR 0049).
  *
  * Two callers will reach it and they live on opposite sides of the request boundary: a server
  * function, which has the bucket from `filesBucket()` (`src/server/fns/context.ts`), and the

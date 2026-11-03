@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8463dd4e-2cad-4821-87b8-02491416db9a",
+  "id": "a1cbf2fa-9f9b-49ea-baed-23d864e371a7",
   "prevId": "6af29f03-7770-4b16-981a-b30305a16d45",
   "tables": {
     "account": {
@@ -8558,154 +8558,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "storage_objects": {
-      "name": "storage_objects",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "organization_id": {
-          "name": "organization_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "storage_key": {
-          "name": "storage_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "file_id": {
-          "name": "file_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "size_bytes": {
-          "name": "size_bytes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'document'"
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "needs_fence": {
-          "name": "needs_fence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "storage_objects_key_unq": {
-          "name": "storage_objects_key_unq",
-          "columns": [
-            "storage_key"
-          ],
-          "isUnique": true
-        },
-        "storage_objects_org_trip_idx": {
-          "name": "storage_objects_org_trip_idx",
-          "columns": [
-            "organization_id",
-            "trip_id"
-          ],
-          "isUnique": false
-        },
-        "storage_objects_org_state_expiry_idx": {
-          "name": "storage_objects_org_state_expiry_idx",
-          "columns": [
-            "organization_id",
-            "state",
-            "expires_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "storage_objects_organization_id_organization_id_fk": {
-          "name": "storage_objects_organization_id_organization_id_fk",
-          "tableFrom": "storage_objects",
-          "tableTo": "organization",
-          "columnsFrom": [
-            "organization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "storage_objects_state_chk": {
-          "name": "storage_objects_state_chk",
-          "value": "(\"state\" IS NULL OR \"state\" IN ('reserved', 'writing', 'retained', 'garbage', 'deleted'))"
-        },
-        "storage_objects_kind_chk": {
-          "name": "storage_objects_kind_chk",
-          "value": "(\"kind\" IS NULL OR \"kind\" IN ('document', 'image', 'ticket', 'receipt', 'map', 'other'))"
-        },
-        "storage_objects_size_chk": {
-          "name": "storage_objects_size_chk",
-          "value": "(\"size_bytes\" IS NULL OR \"size_bytes\" >= 0)"
-        }
-      }
-    },
     "subscriptions": {
       "name": "subscriptions",
       "columns": {
@@ -12640,6 +12492,179 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "workspace_deletions": {
+      "name": "workspace_deletions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "initiator": {
+          "name": "initiator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "erasure_id": {
+          "name": "erasure_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "erasure_consumer": {
+          "name": "erasure_consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'requested'"
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "receipt_to": {
+          "name": "receipt_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receipt_name": {
+          "name": "receipt_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "swept_at": {
+          "name": "swept_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "workspace_deletions_live_org_idx": {
+          "name": "workspace_deletions_live_org_idx",
+          "columns": [
+            "organization_id"
+          ],
+          "isUnique": true,
+          "where": "\"workspace_deletions\".\"state\" <> 'refused'"
+        },
+        "workspace_deletions_stale_idx": {
+          "name": "workspace_deletions_stale_idx",
+          "columns": [
+            "state",
+            "updated_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "workspace_deletions_state_chk": {
+          "name": "workspace_deletions_state_chk",
+          "value": "(\"state\" IS NULL OR \"state\" IN ('requested', 'drained', 'rows_deleted', 'audited', 'swept', 'done', 'refused'))"
+        },
+        "workspace_deletions_initiator_chk": {
+          "name": "workspace_deletions_initiator_chk",
+          "value": "(\"initiator\" IS NULL OR \"initiator\" IN ('owner', 'erasure'))"
+        },
+        "workspace_deletions_attribution_chk": {
+          "name": "workspace_deletions_attribution_chk",
+          "value": "(\"workspace_deletions\".\"initiator\" = 'owner' and \"workspace_deletions\".\"requested_by\" is not null and \"workspace_deletions\".\"erasure_id\" is null and \"workspace_deletions\".\"erasure_consumer\" is null) or (\"workspace_deletions\".\"initiator\" = 'erasure' and \"workspace_deletions\".\"requested_by\" is null and \"workspace_deletions\".\"erasure_id\" is not null and \"workspace_deletions\".\"receipt_to\" is null and \"workspace_deletions\".\"receipt_name\" is null)"
+        },
+        "workspace_deletions_attempts_chk": {
+          "name": "workspace_deletions_attempts_chk",
+          "value": "\"workspace_deletions\".\"attempts\" >= 0"
+        }
+      }
     },
     "workspace_participants": {
       "name": "workspace_participants",

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInvitation, listPendingInvitations, addMember } from '../members'
 import { createHarness, subscribeTenant } from './harness'
 import type { Harness, SeededTenant } from './harness'
@@ -181,4 +181,85 @@ it('holds authorization, tenant scope and terminal states on the generic status 
   await expect(
     setInvitationStatus(a.scope, row.id, 'pending'),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' })
+})
+
+it('fences direct members and invitations for this workspace and recovers after refusal', async () => {
+  const {
+    insertWorkspaceDeletion,
+    acquireDeletionLease,
+    transitionWorkspaceDeletion,
+  } = await import('#/server/catalog/workspace-deletions')
+  const b = await h.seedTenant('deletion-foreign')
+  await insertWorkspaceDeletion(h.db, {
+    organizationId: b.organizationId,
+    initiator: 'owner',
+    requestedBy: b.ownerUserId,
+  })
+  await createInvitation(a.scope, { email: 'before@example.com', expiresAt })
+  const row = await insertWorkspaceDeletion(h.db, {
+    organizationId: a.organizationId,
+    initiator: 'owner',
+    requestedBy: a.ownerUserId,
+  })
+  await expect(addMember(a.scope, { userId: b.ownerUserId })).rejects.toThrow(
+    'WORKSPACE_DELETION_PENDING',
+  )
+  await expect(
+    createInvitation(a.scope, { email: 'after@example.com', expiresAt }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  const token = await acquireDeletionLease(h.db, row.id)
+  if (!token) throw new Error('Missing lease')
+  await transitionWorkspaceDeletion(h.db, row.id, token, 'requested', 'refused')
+  await addMember(a.scope, { userId: b.ownerUserId })
+  await createInvitation(a.scope, { email: 'after@example.com', expiresAt })
+})
+
+it('keeps deletion recovery across the migrated workspace cascade without affecting another tenant', async () => {
+  const { insertWorkspaceDeletion, workspaceDeletionPending } =
+    await import('#/server/catalog/workspace-deletions')
+  const { deleteWorkspace } = await import('../members')
+  const db = await createHarness({ ddl: 'migrations' })
+  try {
+    const deletedTenant = await db.seedTenant('cascade-delete')
+    const survivingTenant = await db.seedTenant('cascade-live')
+    await subscribeTenant(survivingTenant.scope, 'crew', 10)
+    await insertWorkspaceDeletion(db.db, {
+      organizationId: deletedTenant.organizationId,
+      initiator: 'owner',
+      requestedBy: deletedTenant.ownerUserId,
+    })
+    await deleteWorkspace(deletedTenant.scope, {
+      departingUserId: deletedTenant.ownerUserId,
+    })
+    expect(
+      await workspaceDeletionPending(db.db, deletedTenant.organizationId),
+    ).toBe(true)
+    expect(
+      await workspaceDeletionPending(db.db, survivingTenant.organizationId),
+    ).toBe(false)
+    expect(
+      await addMember(survivingTenant.scope, {
+        userId: deletedTenant.ownerUserId,
+      }),
+    ).toMatchObject({ userId: deletedTenant.ownerUserId })
+  } finally {
+    db.close()
+  }
+})
+
+
+it.each(['member', 'invitation'] as const)('keeps the %s fence atomic when deletion starts after the early check', async (surface) => {
+  const catalog = await import('#/server/catalog/workspace-deletions')
+  const check = catalog.assertWorkspaceNotDeleting
+  const newcomer = await h.seedTenant('concurrent-newcomer')
+  vi.spyOn(catalog, 'assertWorkspaceNotDeleting').mockImplementationOnce(async (db, organizationId) => {
+    await check(db, organizationId)
+    await catalog.insertWorkspaceDeletion(db, { organizationId, initiator: 'owner', requestedBy: a.ownerUserId })
+  })
+  const writing = surface === 'member'
+    ? addMember(a.scope, { userId: newcomer.ownerUserId })
+    : createInvitation(a.scope, { email: 'racing@example.com', expiresAt })
+  await expect(writing).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  expect(h.sqlite.prepare('select count(*) as n from member where organization_id = ? and user_id = ?').get(a.organizationId, newcomer.ownerUserId)).toEqual({ n: 0 })
+  expect(await listPendingInvitations(a.scope)).toHaveLength(0)
 })

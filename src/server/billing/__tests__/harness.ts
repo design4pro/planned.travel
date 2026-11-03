@@ -213,6 +213,10 @@ export class FakeSubscriptionStore implements SubscriptionStore {
   readonly writes: Array<SubscriptionRecord> = []
   /** Organizations that were deleted: writing a row for one fails like the foreign key does. */
   readonly deletedOrganizations = new Set<string>()
+  readonly deletingOrganizations = new Set<string>()
+  async workspaceDeletionPending(organizationId: string): Promise<boolean> {
+    return this.deletingOrganizations.has(organizationId)
+  }
 
   constructor(seed?: SubscriptionRecord) {
     if (seed !== undefined) this.seed(seed)

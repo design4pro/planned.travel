@@ -84,7 +84,7 @@ Proposed additive tenant tables (generated migrations only):
   garbage bytes plus live reservations without double counting. Before activation, every existing writer spending these shared quotas (attachment uploads,
   cover writes and trip-copy paths included) must use the same atomic admission mechanism.
   The prerequisite in #1784 supplies `repos/storage-admission.ts` and `storage/admission.ts`
-  (ADR 0048); photo writers must reuse this shared admission and cancellation protocol, rather
+  (ADR 0049); photo writers must reuse this shared admission and cancellation protocol, rather
   than checking usage separately or adding a second quota owner. File-count quota counts each
   retained original and derivative as one stored object; temporary reservation reserves two slots.
 

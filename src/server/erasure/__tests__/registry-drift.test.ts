@@ -23,8 +23,8 @@ import {
   findRegistryDrift,
 } from './schema-user-columns'
 
-// Independently counted from the 50 userRef column declarations in schema.ts.
-const EXPECTED_USER_REF_COLUMNS = 50
+// Independently counted from the 51 userRef column declarations in schema.ts.
+const EXPECTED_USER_REF_COLUMNS = 51
 
 function assertUserRefBaseline(source: string): void {
   expect(extractUserRefColumns(source)).toHaveLength(EXPECTED_USER_REF_COLUMNS)
@@ -169,13 +169,13 @@ describe('every entry', () => {
     }
   })
 
-  it('keeps nothing but the platform audit ledger', () => {
+  it('keeps only platform audit evidence and bounded deletion recovery records', () => {
     const kept = ERASURE_REGISTRY.filter(
       (entry) =>
         entry.outcome === 'keep' || entry.alternative?.outcome === 'keep',
     ).map((entry) => entry.table)
     expect(kept.length).toBeGreaterThan(0)
-    expect(new Set(kept)).toEqual(new Set(['platform_audit_log']))
+    expect(new Set(kept)).toEqual(new Set(['platform_audit_log', 'workspace_deletions']))
   })
 
   it('removes the participation anchor after the verification sweep, and nothing else then', () => {
@@ -190,6 +190,7 @@ describe('every entry', () => {
       'staff_api_tokens',
       'platform_audit_log',
       'provider_registry',
+      'workspace_deletions',
       'user',
       'session',
       'account',
@@ -206,7 +207,11 @@ describe('every entry', () => {
       if (expected === undefined) {
         expect(entry.owner, entry.table).toMatch(/^src\/server\/repos\//)
       } else {
-        expect(entry.owner, entry.table).toBe(expected)
+        expect(entry.owner, entry.table).toBe(
+          entry.table === 'workspace_deletions'
+            ? 'src/server/catalog/workspace-deletions.ts'
+            : expected,
+        )
       }
     }
   })

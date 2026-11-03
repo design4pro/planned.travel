@@ -323,7 +323,7 @@ In `file-library.tsx`, on the existing drop `<div>`:
 | The listener and the drop zone                | `file-library.tsx` — the only component that owns the upload queue                                      |
 | Row creation, quota and tenant scoping        | `src/server/repos/files.ts` — unchanged                                                                 |
 
-**The R2 write ordering** (`uploadTripFileFn`) now follows ADR 0048: shared byte and
+**The R2 write ordering** (`uploadTripFileFn`) now follows ADR 0049: shared byte and
 object capacity is reserved atomically before the create-only R2 write, then `recordFile`
 inserts the row and settles the reservation together. A failed publication triggers guarded
 cleanup; capacity stays charged until deletion or a cancellation fence succeeds. The audit

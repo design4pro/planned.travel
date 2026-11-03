@@ -3363,3 +3363,72 @@ export const workspaceParticipants = sqliteTable(
     index('workspace_participants_user_idx').on(t.userId),
   ],
 )
+
+/** Platform deletion state: attribution deliberately survives the workspace cascade. */
+export const WORKSPACE_DELETION_STATES = [
+  'requested',
+  'drained',
+  'rows_deleted',
+  'audited',
+  'swept',
+  'done',
+  'refused',
+] as const
+export const WORKSPACE_DELETION_INITIATORS = ['owner', 'erasure'] as const
+export const workspaceDeletions = sqliteTable(
+  'workspace_deletions',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    organizationId: text('organization_id').notNull(),
+    requestedBy: userRef('requested_by'),
+    initiator: text('initiator', {
+      enum: WORKSPACE_DELETION_INITIATORS,
+    }).notNull(),
+    erasureId: text('erasure_id'),
+    erasureConsumer: text('erasure_consumer'),
+    state: text('state', { enum: WORKSPACE_DELETION_STATES })
+      .notNull()
+      .default('requested'),
+    leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
+    leaseToken: text('lease_token'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    snapshot: text('snapshot', { mode: 'json' })
+      .$type<{
+        plan?: string
+        subscriptionStatus?: string
+        trips?: number
+        fileRows?: number
+        r2ObjectsDeleted?: number
+      }>()
+      .notNull()
+      .default({}),
+    receiptTo: text('receipt_to'),
+    receiptName: text('receipt_name'),
+    requestedAt: integer('requested_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+    sweptAt: integer('swept_at', { mode: 'timestamp_ms' }),
+    doneAt: integer('done_at', { mode: 'timestamp_ms' }),
+  },
+  (t) => [
+    enumCheck(
+      'workspace_deletions_state_chk',
+      t.state,
+      WORKSPACE_DELETION_STATES,
+    ),
+    enumCheck(
+      'workspace_deletions_initiator_chk',
+      t.initiator,
+      WORKSPACE_DELETION_INITIATORS,
+    ),
+    check(
+      'workspace_deletions_attribution_chk',
+      sql`(${t.initiator} = 'owner' and ${t.requestedBy} is not null and ${t.erasureId} is null and ${t.erasureConsumer} is null) or (${t.initiator} = 'erasure' and ${t.requestedBy} is null and ${t.erasureId} is not null and ${t.receiptTo} is null and ${t.receiptName} is null)`,
+    ),
+    check('workspace_deletions_attempts_chk', sql`${t.attempts} >= 0`),
+    uniqueIndex('workspace_deletions_live_org_idx')
+      .on(t.organizationId)
+      .where(sql`${t.state} <> 'refused'`),
+    index('workspace_deletions_stale_idx').on(t.state, t.updatedAt),
+  ],
+)
