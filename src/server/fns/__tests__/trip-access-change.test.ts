@@ -119,6 +119,8 @@ describe('which sockets a trip access change closes', () => {
     ['organization', 'organization', []],
     ['private', 'private', []],
     ['private', 'organization', []],
+    ['public', 'private', []],
+    ['public', 'organization', []],
   ] as const)('visibility %s -> %s closes %j', (from, to, expected) => {
     expect(
       evictionsFor({
