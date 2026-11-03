@@ -122,7 +122,11 @@ it.each([false, true])(
     })
     await expect(
       loadShell({ data: { preserveWorkspace: true } }),
-    ).rejects.toThrow('shell.session.workspaceChanged')
+    ).rejects.toThrow(
+      cleared
+        ? 'shell.session.membershipRemoved'
+        : 'shell.session.workspaceChanged',
+    )
     expect(shared.createScope).not.toHaveBeenCalled()
   },
 )
@@ -152,35 +156,38 @@ it('allows an explicit navigation to adopt the session workspace even with an ol
   ).resolves.toMatchObject({ role: 'owner' })
 })
 
-it('denies a room refresh after active membership removal even when another membership survives', async () => {
-  const harness = await createHarness()
-  shared.db = harness.db as unknown as AuthDb
-  const a = await harness.seedTenant('A')
-  const b = await harness.seedTenant('B')
-  await shared.db
-    .update(member)
-    .set({ organizationId: b.organizationId, role: 'member' })
-    .where(eq(member.userId, a.ownerUserId))
-  shared.claim = a.organizationId
-  shared.session = normaliseSession({
-    user: { id: a.ownerUserId, email: 'person@example.test' },
-    session: {
-      id: 'session',
-      token: 'token',
-      expiresAt: new Date('2030-01-01'),
-      activeOrganizationId: a.organizationId,
-    },
-  })
-  await expect(
-    loadShell({ data: { preserveWorkspace: true } }),
-  ).rejects.toThrow('shell.session.membershipRemoved')
-  expect(shared.createScope).not.toHaveBeenCalled()
-  await expect(loadShell()).resolves.toMatchObject({ role: 'member' })
-  shared.claim = b.organizationId
-  await expect(
-    loadShell({ data: { preserveWorkspace: true } }),
-  ).resolves.toMatchObject({ role: 'member' })
-})
+it.each([false, true])(
+  'denies a room refresh after membership removal even when another membership survives (null active: %s)',
+  async (cleared) => {
+    const harness = await createHarness()
+    shared.db = harness.db as unknown as AuthDb
+    const a = await harness.seedTenant('A')
+    const b = await harness.seedTenant('B')
+    await shared.db
+      .update(member)
+      .set({ organizationId: b.organizationId, role: 'member' })
+      .where(eq(member.userId, a.ownerUserId))
+    shared.claim = a.organizationId
+    shared.session = normaliseSession({
+      user: { id: a.ownerUserId, email: 'person@example.test' },
+      session: {
+        id: 'session',
+        token: 'token',
+        expiresAt: new Date('2030-01-01'),
+        activeOrganizationId: cleared ? null : a.organizationId,
+      },
+    })
+    await expect(
+      loadShell({ data: { preserveWorkspace: true } }),
+    ).rejects.toThrow('shell.session.membershipRemoved')
+    expect(shared.createScope).not.toHaveBeenCalled()
+    await expect(loadShell()).resolves.toMatchObject({ role: 'member' })
+    shared.claim = b.organizationId
+    await expect(
+      loadShell({ data: { preserveWorkspace: true } }),
+    ).resolves.toMatchObject({ role: 'member' })
+  },
+)
 
 it('refreshes an unchanged effective workspace when the session has no explicit active workspace', async () => {
   const harness = await createHarness()
@@ -199,4 +206,32 @@ it('refreshes an unchanged effective workspace when the session has no explicit 
   await expect(
     loadShell({ data: { preserveWorkspace: true } }),
   ).resolves.toMatchObject({ role: 'owner' })
+})
+
+it('keeps mismatch protection when a null-active session still belongs to the displayed workspace', async () => {
+  const harness = await createHarness()
+  shared.db = harness.db as unknown as AuthDb
+  const a = await harness.seedTenant('A')
+  const b = await harness.seedTenant('B')
+  await shared.db.insert(member).values({
+    id: 'second-membership',
+    userId: a.ownerUserId,
+    organizationId: b.organizationId,
+    role: 'member',
+    createdAt: new Date('2040-01-01'),
+  })
+  shared.claim = b.organizationId
+  shared.session = normaliseSession({
+    user: { id: a.ownerUserId, email: 'person@example.test' },
+    session: {
+      id: 'session',
+      token: 'token',
+      expiresAt: new Date('2030-01-01'),
+      activeOrganizationId: null,
+    },
+  })
+  await expect(
+    loadShell({ data: { preserveWorkspace: true } }),
+  ).rejects.toThrow('shell.session.workspaceChanged')
+  expect(shared.createScope).not.toHaveBeenCalled()
 })

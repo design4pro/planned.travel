@@ -9,7 +9,10 @@
  * last membership revoked while the tab was open — are thrown as message *keys*,
  * not as sentences. See {@link shellFailure}.
  */
-import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
+import {
+  parseWorkspaceClaim,
+  WORKSPACE_CLAIM_HEADER,
+} from '#/lib/workspace-claim'
 import { createServerFn } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { z } from 'zod'
@@ -20,6 +23,7 @@ import { resolvePlatformRole } from '#/server/auth/access'
 import { authDb } from '#/server/auth/db'
 import { resolveSessionWorkspace } from '#/server/auth/active-workspace'
 import { getSession } from '#/server/auth/session'
+import { organizationIdsFor } from '#/server/auth/provisioning'
 import {
   isOrganizationRole,
   requireOrgFrom,
@@ -271,11 +275,20 @@ export const loadShell = createServerFn({ method: 'GET' })
     }
 
     if (data?.preserveWorkspace) {
-      // Losing the active membership is revocation, not another tab switching workspace.
+      const parsedClaim = parseWorkspaceClaim(claim)
+      const removedEffectiveWorkspace =
+        !session.session.activeOrganizationId &&
+        parsedClaim.status === 'valid' &&
+        parsedClaim.organizationId !== organizationId &&
+        !(await organizationIdsFor(auth, session.user.id)).includes(
+          parsedClaim.organizationId,
+        )
+      // Losing the displayed membership is revocation, not another tab switching workspace.
       if (
-        session.session.activeOrganizationId &&
-        session.session.activeOrganizationId !== organizationId &&
-        claim === session.session.activeOrganizationId
+        removedEffectiveWorkspace ||
+        (session.session.activeOrganizationId &&
+          session.session.activeOrganizationId !== organizationId &&
+          claim === session.session.activeOrganizationId)
       ) {
         throw shellFailure('shell.session.membershipRemoved')
       }

@@ -24,6 +24,7 @@ let nextId = 0
 const tokens = new Map<number, Refresh>()
 let pending: Refresh | undefined
 const active = new WeakMap<object, Refresh>()
+const queued = new WeakMap<object, Promise<void>>()
 const refreshes = new WeakMap<AbortController, Refresh>()
 
 /** Bind only the first shell read, never a navigation that supersedes it. */
@@ -32,7 +33,10 @@ export async function refreshFromRoom(router: {
     sync: true
     filter: (match: { routeId: string }) => boolean
   }) => Promise<void>
-  subscribe: (event: 'onBeforeLoad', listener: () => void) => () => void
+  subscribe: (
+    event: 'onBeforeLoad' | 'onResolved',
+    listener: () => void,
+  ) => () => void
   readonly state: {
     readonly isLoading: boolean
     readonly matches: ReadonlyArray<{
@@ -49,7 +53,37 @@ export async function refreshFromRoom(router: {
     running.again = true
     return
   }
-  if (pending || router.state.isLoading) return
+  if (pending) return
+  if (router.state.isLoading) {
+    const waiting = queued.get(router)
+    if (waiting) return waiting
+    const routes = router.state.matches.map((match) => match.routeId).join(',')
+    const wait = (async () => {
+      const cancelled = await new Promise<boolean>((resolve) => {
+        const finish = (cancelled: boolean) => {
+          stopResolved()
+          stopNavigation()
+          resolve(cancelled)
+        }
+        const stopResolved = router.subscribe('onResolved', () => finish(false))
+        const stopNavigation = router.subscribe('onBeforeLoad', () =>
+          finish(true),
+        )
+      })
+      queued.delete(router)
+      const generation = workspaceClaimGeneration()
+      await Promise.resolve()
+      if (
+        !cancelled &&
+        workspaceClaimGeneration() === generation &&
+        workspaceClaimState().organizationId === organizationId &&
+        router.state.matches.map((match) => match.routeId).join(',') === routes
+      )
+        await refreshFromRoom(router)
+    })()
+    queued.set(router, wait)
+    return wait
+  }
   const context = router.state.matches.find(
     (match) => match.routeId === '/_app',
   )?.context

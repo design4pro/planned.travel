@@ -497,3 +497,87 @@ it.each(['header', 'collab'])(
     })
   },
 )
+
+it.each(['commit', 'welcome', 'close'])(
+  'rechecks a %s event received during an unrelated same-route load',
+  async (kind) => {
+    const view = await mount()
+    const pending = deferred<string>()
+    let started = false
+    dataRead = () => {
+      started = true
+      return pending.promise
+    }
+    let reload: Promise<void>
+    act(() => {
+      reload = view.router.invalidate({ sync: true })
+    })
+    await waitFor(() => expect(started).toBe(true))
+    dataRead = async () => 'revision 3'
+    act(() => trigger(kind))
+    await act(async () => {
+      pending.resolve('revision 2')
+      await reload
+      await view.refresh()
+    })
+    expect(screen.getByText('revision 3')).toBeTruthy()
+    expect(screen.getByRole('textbox')).toBe(view.field)
+  },
+)
+
+it('rechecks revoked access after a room close during an unrelated load', async () => {
+  const view = await mount()
+  const pending = deferred<string>()
+  let started = false
+  dataRead = () => {
+    started = true
+    return pending.promise
+  }
+  let reload: Promise<void>
+  act(() => {
+    reload = view.router.invalidate({ sync: true })
+  })
+  await waitFor(() => expect(started).toBe(true))
+  headerRead = async () => {
+    throw new Error('Access revoked')
+  }
+  act(() => trigger('close'))
+  await act(async () => {
+    pending.resolve('old response')
+    await reload
+    await view.refresh()
+  })
+  expect(await screen.findByText('Access revoked')).toBeTruthy()
+  expect(screen.queryByRole('textbox')).toBeNull()
+})
+
+it('cancels a queued recheck when a newer deliberate navigation starts', async () => {
+  const view = await mount()
+  const pending = deferred<string>()
+  let started = false
+  dataRead = () => {
+    started = true
+    return pending.promise
+  }
+  let reload: Promise<void>
+  act(() => {
+    reload = view.router.invalidate({ sync: true })
+  })
+  await waitFor(() => expect(started).toBe(true))
+  act(() => trigger('close'))
+  const read = vi.fn(async () => ({ session: { organization: { id: 'B' } } }))
+  shellRead = read
+  session = 'B'
+  await act(async () => {
+    await view.router.navigate({ to: '/dashboard' })
+    pending.resolve('old response')
+    await reload
+    await view.refresh()
+  })
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('heading').textContent).toBe('Dashboard')
+  expect(workspaceClaimState()).toMatchObject({
+    organizationId: 'B',
+    stale: false,
+  })
+})
