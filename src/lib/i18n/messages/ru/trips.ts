@@ -628,6 +628,22 @@ const messages = {
   'invite.refusal.changed': 'Кто-то изменил ссылку. Показана текущая.',
   'invite.announce.recovered':
     'Показаны текущие настройки ссылки. Проверьте их перед следующим изменением.',
+  'plan.dayDetail.label': 'Подробности: {day}',
+  'plan.dayDetail.minimise': 'Свернуть подробности дня',
+  'plan.dayDetail.expand': 'Развернуть подробности дня',
+  'plan.dayDetail.close': 'Закрыть подробности дня',
+  'plan.dayDetail.undated': 'Даты не заданы',
+  'plan.dayDetail.stays': 'Проживание',
+  'plan.dayDetail.addStay': 'Добавить проживание',
+  'plan.dayDetail.noStay': 'На этот день нет проживания',
+  'plan.dayDetail.noConfirmation': 'Нет номера подтверждения',
+  'plan.dayDetail.notes': 'Заметки',
+  'plan.dayDetail.noNotes': 'На этот день нет заметок',
+  'plan.dayDetail.reservations': 'Бронирования',
+  'plan.dayDetail.noReservations': 'На этот день нет бронирований',
+  'plan.dayDetail.readError': 'Не удалось загрузить подробности бронирований.',
+  'plan.dayDetail.retry': 'Повторить',
+  'plan.dayDetail.gone': 'Этот день больше недоступен.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

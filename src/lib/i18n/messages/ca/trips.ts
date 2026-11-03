@@ -617,6 +617,23 @@ const messages = {
   'invite.refusal.changed': 'Algú ha canviat l’enllaç. Es mostra l’actual.',
   'invite.announce.recovered':
     'Es mostren els ajustos actuals de l’enllaç. Revisa’ls abans de fer un altre canvi.',
+  'plan.dayDetail.label': 'Detalls de {day}',
+  'plan.dayDetail.minimise': 'Minimitza els detalls del dia',
+  'plan.dayDetail.expand': 'Amplia els detalls del dia',
+  'plan.dayDetail.close': 'Tanca els detalls del dia',
+  'plan.dayDetail.undated': 'Dates sense definir',
+  'plan.dayDetail.stays': 'Estades',
+  'plan.dayDetail.addStay': 'Afegeix una estada',
+  'plan.dayDetail.noStay': 'Cap estada per a aquest dia',
+  'plan.dayDetail.noConfirmation': 'Sense número de confirmació',
+  'plan.dayDetail.notes': 'Anotacions',
+  'plan.dayDetail.noNotes': 'Cap nota per a aquest dia',
+  'plan.dayDetail.reservations': 'Reserves',
+  'plan.dayDetail.noReservations': 'Cap reserva per a aquest dia',
+  'plan.dayDetail.readError':
+    'No s’han pogut carregar els detalls de les reserves.',
+  'plan.dayDetail.retry': 'Torna-ho a provar',
+  'plan.dayDetail.gone': 'Aquest dia ja no està disponible.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

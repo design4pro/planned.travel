@@ -107,3 +107,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Billing selection hint** - an expiring, tab-local, workspace- and viewer-scoped record of the requested plan, interval and seats used only to describe a billing return. It grants no entitlement and proves no payment; effective and scheduled changes come from authoritative billing state.
 
 - **File preview** - an authenticated, read-only view over Files: an image gallery or a PDF/plain-text reading dialog. Unsupported types download directly.
+
+- **Day detail** - the nonmodal reading of one Day over the planner map: its date, stored title, Stays, Notes and exactly linked Reservations. Expanded and minimised views retain the same Day; opening a Place replaces it. Hover changes map emphasis without opening details.

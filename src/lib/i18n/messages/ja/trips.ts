@@ -585,6 +585,22 @@ const messages = {
     '別の人がリンクを変更しました。現在のリンクを表示しています。',
   'invite.announce.recovered':
     '現在のリンク設定を表示しています。次の変更を行う前に確認してください。',
+  'plan.dayDetail.label': '{day}の詳細',
+  'plan.dayDetail.minimise': '日の詳細を最小化',
+  'plan.dayDetail.expand': '日の詳細を展開',
+  'plan.dayDetail.close': '日の詳細を閉じる',
+  'plan.dayDetail.undated': '日付未設定',
+  'plan.dayDetail.stays': '宿泊',
+  'plan.dayDetail.addStay': '宿泊を追加',
+  'plan.dayDetail.noStay': 'この日の宿泊はありません',
+  'plan.dayDetail.noConfirmation': '確認番号はありません',
+  'plan.dayDetail.notes': 'メモ',
+  'plan.dayDetail.noNotes': 'この日のメモはありません',
+  'plan.dayDetail.reservations': '予約',
+  'plan.dayDetail.noReservations': 'この日の予約はありません',
+  'plan.dayDetail.readError': '予約の詳細を読み込めませんでした。',
+  'plan.dayDetail.retry': '再試行',
+  'plan.dayDetail.gone': 'この日は利用できなくなりました。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

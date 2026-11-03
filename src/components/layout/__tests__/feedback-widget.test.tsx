@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 
 import plShell from '#/lib/i18n/messages/pl/shell'
 import plUi from '#/lib/i18n/messages/pl/ui'
@@ -116,6 +116,62 @@ afterEach(() => {
 })
 
 describe('FeedbackWidget', () => {
+  it('compacts only the short mobile planner and restores its label on resize or navigation', async () => {
+    let short = false
+    const queries: EventTarget[] = []
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => {
+      const events = new EventTarget()
+      queries.push(events)
+      return {
+        get matches() {
+          return query.includes('height') && short
+        },
+        media: query,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: events.addEventListener.bind(events),
+        removeEventListener: events.removeEventListener.bind(events),
+        dispatchEvent: events.dispatchEvent.bind(events),
+      }
+    })
+    route.href = '/trips/t1/plan'
+    const view = await mount({ locale: 'en' })
+    expect((await widgetOptions()).triggerLabel).toBe(
+      enShell['feedback.triggerLabel'],
+    )
+    act(() => {
+      short = true
+      queries.forEach((query) => query.dispatchEvent(new Event('change')))
+    })
+    await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(2))
+    expect(removeFromDom).toHaveBeenCalledTimes(1)
+    expect((await widgetOptions()).triggerLabel).toBe('')
+    expect((await widgetOptions()).triggerAriaLabel).toBe(
+      enShell['feedback.triggerLabel'],
+    )
+    act(() => {
+      short = false
+      queries.forEach((query) => query.dispatchEvent(new Event('change')))
+    })
+    await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(3))
+    expect((await widgetOptions()).triggerLabel).toBe(
+      enShell['feedback.triggerLabel'],
+    )
+    act(() => {
+      short = true
+      queries.forEach((query) => query.dispatchEvent(new Event('change')))
+    })
+    await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(4))
+    route.href = '/trips/t1/book'
+    await view.speak('en')
+    await waitFor(() => expect(createWidget).toHaveBeenCalledTimes(5))
+    expect((await widgetOptions()).triggerLabel).toBe(
+      enShell['feedback.triggerLabel'],
+    )
+    expect(removeFromDom).toHaveBeenCalledTimes(4)
+  })
+
   it('builds the widget in the reader’s language and tags it with the locale', async () => {
     await mount({ locale: 'pl' })
 
@@ -199,6 +255,8 @@ describe('FeedbackWidget', () => {
 
   it.each([
     '/reset-password?token=the-secret',
+    '/trips/t1/plan?token=the-secret',
+    '/trips/t1/plan?redirect=%252Fjoin%252Fthe-secret',
     '/login?callbackURL=%252Freset-password%253Ftoken%253Dthe-secret',
     '/join/the-secret',
     '/login?redirect=%2Fjoin%2Fthe-secret',

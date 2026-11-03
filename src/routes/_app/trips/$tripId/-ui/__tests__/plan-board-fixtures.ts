@@ -1,7 +1,8 @@
 /**
- * Payload builders shared by the board's tests: the three loader reads, with nothing in them
+ * Payload builders shared by the board's tests: planner reads, with nothing in them
  * a case does not name.
  */
+import type { BookingRow } from '#/server/fns/reservations'
 import type { PlanNotesPayload } from '../../-server/day-notes'
 import type {
   PlanBoardDay,
@@ -125,3 +126,32 @@ export const journey = (
 export const transports = (
   entries: ReadonlyArray<PlanTransport> = [],
 ): PlanTransportsPayload => ({ tripId: 't1', transports: entries })
+
+export const booking = (
+  id: string,
+  extra: Partial<BookingRow> = {},
+): BookingRow => ({
+  id,
+  type: 'activity',
+  status: 'confirmed',
+  title: id,
+  provider: null,
+  location: null,
+  confirmationNumber: null,
+  url: null,
+  startDate: null,
+  startTime: null,
+  endDate: null,
+  endTime: null,
+  guests: null,
+  priceMinor: null,
+  currency: null,
+  notes: null,
+  dayId: null,
+  assignmentId: null,
+  hasLedgerLine: false,
+  importedAt: null,
+  transportId: null,
+  stay: null,
+  ...extra,
+})

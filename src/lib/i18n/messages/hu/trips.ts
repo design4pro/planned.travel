@@ -607,6 +607,22 @@ const messages = {
     'Valaki módosította a hivatkozást. Az aktuális látható.',
   'invite.announce.recovered':
     'A hivatkozás aktuális beállításai láthatók. Ellenőrizd őket a következő módosítás előtt.',
+  'plan.dayDetail.label': '{day} részletei',
+  'plan.dayDetail.minimise': 'Nap részleteinek összecsukása',
+  'plan.dayDetail.expand': 'Nap részleteinek kibontása',
+  'plan.dayDetail.close': 'Nap részleteinek bezárása',
+  'plan.dayDetail.undated': 'Nincsenek dátumok',
+  'plan.dayDetail.stays': 'Szállások',
+  'plan.dayDetail.addStay': 'Szállás hozzáadása',
+  'plan.dayDetail.noStay': 'Erre a napra nincs szállás',
+  'plan.dayDetail.noConfirmation': 'Nincs visszaigazolási szám',
+  'plan.dayDetail.notes': 'Jegyzetek',
+  'plan.dayDetail.noNotes': 'Erre a napra nincsenek jegyzetek',
+  'plan.dayDetail.reservations': 'Foglalások',
+  'plan.dayDetail.noReservations': 'Erre a napra nincsenek foglalások',
+  'plan.dayDetail.readError': 'Nem sikerült betölteni a foglalások részleteit.',
+  'plan.dayDetail.retry': 'Újra',
+  'plan.dayDetail.gone': 'Ez a nap már nem érhető el.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

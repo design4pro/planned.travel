@@ -592,6 +592,22 @@ const messages = {
     'Başka biri bağlantıyı değiştirdi. Güncel bağlantı gösteriliyor.',
   'invite.announce.recovered':
     'Güncel bağlantı ayarları gösteriliyor. Yeni bir değişiklikten önce kontrol edin.',
+  'plan.dayDetail.label': '{day} ayrıntıları',
+  'plan.dayDetail.minimise': 'Gün ayrıntılarını küçült',
+  'plan.dayDetail.expand': 'Gün ayrıntılarını genişlet',
+  'plan.dayDetail.close': 'Gün ayrıntılarını kapat',
+  'plan.dayDetail.undated': 'Tarihler belirlenmedi',
+  'plan.dayDetail.stays': 'Konaklamalar',
+  'plan.dayDetail.addStay': 'Konaklama ekle',
+  'plan.dayDetail.noStay': 'Bu gün için konaklama yok',
+  'plan.dayDetail.noConfirmation': 'Onay numarası yok',
+  'plan.dayDetail.notes': 'Notlar',
+  'plan.dayDetail.noNotes': 'Bu gün için not yok',
+  'plan.dayDetail.reservations': 'Rezervasyonlar',
+  'plan.dayDetail.noReservations': 'Bu gün için rezervasyon yok',
+  'plan.dayDetail.readError': 'Rezervasyon ayrıntıları yüklenemedi.',
+  'plan.dayDetail.retry': 'Yeniden dene',
+  'plan.dayDetail.gone': 'Bu gün artık kullanılamıyor.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

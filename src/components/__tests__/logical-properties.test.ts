@@ -96,6 +96,14 @@ const DECIDED_TRANSFORM: Readonly<Record<string, ReadonlyArray<string>>> = {
   // same physical way in Arabic is not distinguishable from one that does not,
   // and mirroring it would buy nothing.
   'src/components/layout/kit.tsx': ['-translate-x-full', 'bg-gradient-to-r'],
+  // Logical start changes the centring edge, so the half translation mirrors too.
+  'src/components/map/category-filter-bar.tsx': ['translate-x-1/2'],
+  // The same mirrored centring for attribution; zero resets the filter's centring
+  // when two logical insets instead define its map-control clearance lane.
+  'src/routes/_app/trips/$tripId/-ui/plan-screen.tsx': [
+    'translate-x-0',
+    'translate-x-1/2',
+  ],
   // A bar that fills from the reading start. `transform-origin` has no logical
   // keyword, so the *track* carries `rtl:-scale-x-100` and turns the whole box
   // round instead — the device `ui/progress.tsx` uses for the same problem.
@@ -105,6 +113,8 @@ const DECIDED_TRANSFORM: Readonly<Record<string, ReadonlyArray<string>>> = {
 /** The mirror that makes an `origin-left` above correct. */
 const TRANSFORM_GUARD: Readonly<Record<string, string>> = {
   'src/components/costs/split-editor.tsx': 'rtl:-scale-x-100',
+  'src/components/map/category-filter-bar.tsx': 'rtl:translate-x-1/2',
+  'src/routes/_app/trips/$tripId/-ui/plan-screen.tsx': 'rtl:translate-x-1/2',
 }
 
 /**

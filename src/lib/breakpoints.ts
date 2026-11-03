@@ -57,3 +57,6 @@ export const MEDIA_MD_DOWN = `(width < ${MD})`
 
 /** Complements `lg:` — true exactly where the `lg` variant applies. */
 export const MEDIA_LG_UP = `(width >= ${LG})`
+
+/** Short planner dock and feedback actor, independent of width. */
+export const MEDIA_SHORT_HEIGHT = '(height < 35rem)'

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Layers, ListTree } from 'lucide-react'
 import { TRIP_SLICE_HEIGHT_CLASS } from '#/lib/atlas/layout'
-import { MEDIA_LG_UP } from '#/lib/breakpoints'
+import { MEDIA_LG_UP, MEDIA_SHORT_HEIGHT } from '#/lib/breakpoints'
 import { useTranslate } from '#/lib/i18n'
 import { cn } from '#/lib/cn'
 import { MAP_CONTROLS_WIDTH } from '#/components/map'
@@ -9,6 +9,7 @@ import { PlannerRail } from '#/components/planner'
 import {
   Button,
   GlassPanel,
+  IconButton,
   SectionLabel,
   Sheet,
   SheetBody,
@@ -48,7 +49,13 @@ function controlsInset(right: number): number {
 }
 
 type PlanVars = React.CSSProperties &
-  Record<'--plan-bar' | '--plan-note' | '--plan-controls', string>
+  Record<
+    | '--plan-bar'
+    | '--plan-note'
+    | '--plan-controls'
+    | '--plan-controls-clearance',
+    string
+  >
 const PLAN_VARS: PlanVars = {
   /** Clears the action bar: 12px inset plus its own height. */
   '--plan-bar': 'calc(5.5rem + var(--safe-bottom))',
@@ -56,6 +63,7 @@ const PLAN_VARS: PlanVars = {
   '--plan-note': 'calc(7.75rem + var(--safe-bottom))',
   /** Where the control column sits on a phone. Overridden per layout below. */
   '--plan-controls': `${CONTROLS.mobile}px`,
+  '--plan-controls-clearance': `${CONTROLS.mobile + MAP_CONTROLS_WIDTH + CONTROLS.besideGap}px`,
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -72,7 +80,7 @@ const PLAN_VARS: PlanVars = {
 const RAILS_VISIBLE_QUERY = MEDIA_LG_UP
 
 /**
- * True on a viewport wide enough for two floating rails.
+ * The viewport bands for floating rails and the compact map dock.
  *
  * The rails and the mobile sheet render the *same* rows, and `@dnd-kit` keys its
  * draggables by row id, so mounting both at once would register every id twice.
@@ -82,27 +90,31 @@ const RAILS_VISIBLE_QUERY = MEDIA_LG_UP
  * `hidden lg:flex`, which keeps them invisible during the single pre-effect frame on a
  * phone. Either way nothing reflows: the rails are absolute overlays.
  */
-function useIsWide(): boolean {
-  const [wide, setWide] = React.useState(true)
-
+function useWorkspaceViewport() {
+  const [viewport, setViewport] = React.useState({ wide: true, short: false })
   React.useEffect(() => {
-    const query = window.matchMedia(RAILS_VISIBLE_QUERY)
-    const read = (): void => setWide(query.matches)
+    const width = window.matchMedia(RAILS_VISIBLE_QUERY)
+    const height = window.matchMedia(MEDIA_SHORT_HEIGHT)
+    const read = () =>
+      setViewport({
+        wide: width.matches,
+        short: !width.matches && height.matches,
+      })
     read()
-    query.addEventListener('change', read)
+    for (const query of [width, height]) query.addEventListener('change', read)
     return () => {
-      query.removeEventListener('change', read)
+      for (const query of [width, height])
+        query.removeEventListener('change', read)
     }
   }, [])
-
-  return wide
+  return viewport
 }
 
 export function usePlanWorkspace(
   tripId: string,
   direction: 'ltr' | 'rtl' = 'ltr',
 ) {
-  const wide = useIsWide()
+  const { wide, short } = useWorkspaceViewport()
   const [leftCollapsed, setLeftCollapsed] = React.useState(false)
   const [rightCollapsed, setRightCollapsed] = React.useState(false)
   const [sheet, setSheet] = React.useState<'itinerary' | 'places' | null>(null)
@@ -127,6 +139,7 @@ export function usePlanWorkspace(
     ...PLAN_VARS,
     visibility: restored ? undefined : 'hidden',
     '--plan-controls': `${controlsRight}px`,
+    '--plan-controls-clearance': `${controlsRight + MAP_CONTROLS_WIDTH + CONTROLS.besideGap}px`,
   }
   const padding = React.useMemo(() => {
     let start = RAIL.gutter * 2
@@ -148,6 +161,7 @@ export function usePlanWorkspace(
 
   return {
     wide,
+    short,
     leftCollapsed,
     setLeftCollapsed,
     rightCollapsed,
@@ -175,6 +189,8 @@ export function PlanWorkspace({
   resizeRightLabel,
   titleRef,
   sheetTitleRef,
+  onSheetCloseAutoFocus,
+  detail,
   children,
 }: {
   readonly layout: ReturnType<typeof usePlanWorkspace>
@@ -191,7 +207,9 @@ export function PlanWorkspace({
   /** A focus target that is always mounted, for when the panels are collapsed or closed. */
   readonly titleRef?: React.Ref<HTMLHeadingElement>
   /** The same for the open mobile sheet: the page behind a modal sheet is hidden from a screen reader. */
+  readonly onSheetCloseAutoFocus?: (event: Event) => void
   readonly sheetTitleRef?: React.Ref<HTMLHeadingElement>
+  readonly detail?: (controls: React.ReactNode) => React.ReactNode
   readonly children: React.ReactNode
 }) {
   const t = useTranslate()
@@ -207,6 +225,42 @@ export function PlanWorkspace({
     setWidths,
     planVars,
   } = layout
+  const compactDetail = layout.short && detail !== undefined
+  const mobileActions = compactDetail ? (
+    <>
+      <IconButton
+        label={t('trips.plan.workspace.days')}
+        icon={<ListTree />}
+        onClick={() => setSheet('itinerary')}
+      />
+      <IconButton
+        label={t('trips.plan.places')}
+        icon={<Layers />}
+        onClick={() => setSheet('places')}
+      />
+    </>
+  ) : (
+    <>
+      <Button
+        variant="secondary"
+        shape="pill"
+        size="sm"
+        icon={<ListTree />}
+        onClick={() => setSheet('itinerary')}
+      >
+        {t('trips.plan.workspace.days')}
+      </Button>
+      <Button
+        variant="primary"
+        shape="pill"
+        size="sm"
+        icon={<Layers />}
+        onClick={() => setSheet('places')}
+      >
+        {t('trips.plan.places')}
+      </Button>
+    </>
+  )
   const root = React.useRef<HTMLDivElement>(null)
   React.useLayoutEffect(() => {
     root.current?.style.setProperty(
@@ -234,6 +288,7 @@ export function PlanWorkspace({
           {tripTitle}
         </h1>
         {children}
+        {detail?.(compactDetail ? mobileActions : null)}
         {/* -------------------------------------------------------- desktop */}
 
         {wide ? (
@@ -285,40 +340,25 @@ export function PlanWorkspace({
             </PlannerRail>
           </>
         ) : (
-          /* --------------------------------------------------------- mobile */
-          <GlassPanel
-            radius="2xl"
-            padding="sm"
-            className="absolute inset-x-3 bottom-3 flex items-center gap-2 pb-safe lg:hidden"
-          >
-            <div className="min-w-0 flex-1">
-              {/* Not a heading: the page's `h1` above already carries this exact
+          !compactDetail && (
+            /* --------------------------------------------------------- mobile */
+            <GlassPanel
+              radius="2xl"
+              padding="sm"
+              className="absolute inset-x-3 bottom-3 flex items-center gap-2 pb-safe lg:hidden"
+            >
+              <div className="min-w-0 flex-1">
+                {/* Not a heading: the page's `h1` above already carries this exact
                   name, and on a phone — the only width this bar exists at — a
                   second one would announce the trip twice. */}
-              <SectionLabel>{tripTitle}</SectionLabel>
-              <p className="mt-0.5 truncate text-caption tabular-nums text-ink-2">
-                {mobileSummary}
-              </p>
-            </div>
-            <Button
-              variant="secondary"
-              shape="pill"
-              size="sm"
-              icon={<ListTree />}
-              onClick={() => setSheet('itinerary')}
-            >
-              {t('trips.plan.workspace.days')}
-            </Button>
-            <Button
-              variant="primary"
-              shape="pill"
-              size="sm"
-              icon={<Layers />}
-              onClick={() => setSheet('places')}
-            >
-              {t('trips.plan.places')}
-            </Button>
-          </GlassPanel>
+                <SectionLabel>{tripTitle}</SectionLabel>
+                <p className="mt-0.5 truncate text-caption tabular-nums text-ink-2">
+                  {mobileSummary}
+                </p>
+              </div>
+              {mobileActions}
+            </GlassPanel>
+          )
         )}
       </div>
       <Sheet
@@ -328,7 +368,11 @@ export function PlanWorkspace({
         // without the sheet running away with the gesture.
         handleOnly
       >
-        <SheetContent side="bottom" className="max-h-[86dvh]">
+        <SheetContent
+          side="bottom"
+          className="max-h-[86dvh]"
+          onCloseAutoFocus={onSheetCloseAutoFocus}
+        >
           <SheetHeader className="pe-14">
             <SheetTitle
               ref={sheetTitleRef}

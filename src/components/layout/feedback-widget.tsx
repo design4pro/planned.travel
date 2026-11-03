@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 
+import { MEDIA_LG_UP, MEDIA_SHORT_HEIGHT } from '#/lib/breakpoints'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { holdsSensitiveLocation } from '#/lib/sentry-scrub'
 import { useTheme } from '#/lib/theme'
@@ -65,14 +66,28 @@ export function FeedbackWidget() {
   const t = useTranslate()
   const locale = useLocale()
   const { resolved } = useTheme()
-  const offered = !useRouterState({
-    select: ({ location }) => holdsSensitiveLocation(location.href),
-  })
+  const href = useRouterState({ select: ({ location }) => location.href })
+  const offered = !holdsSensitiveLocation(href)
+  const planner = /^\/trips\/[^/]+\/plan\/?$/.test(href.split(/[?#]/)[0] ?? '')
+  const [short, setShort] = useState(false)
+  useEffect(() => {
+    if (!REPORTING_ENABLED) return
+    // Match PlanWorkspace's lg: rails; the SDK owns the corresponding actor markup.
+    const wide = window.matchMedia(MEDIA_LG_UP)
+    const height = window.matchMedia(MEDIA_SHORT_HEIGHT)
+    const read = () => setShort(!wide.matches && height.matches)
+    read()
+    for (const query of [wide, height]) query.addEventListener('change', read)
+    return () => {
+      for (const query of [wide, height])
+        query.removeEventListener('change', read)
+    }
+  }, [])
+  const compact = planner && short
 
   /**
-   * `t` is memoised on the locale, so this runs once per language and not once per render. A
-   * language change tears the button down and builds a new one, which is the only way the labels
-   * change: the SDK reads them when the widget is constructed and never again.
+   * Labels and actor width are read at construction. Rebuild on locale or dock changes,
+   * preserving the same SDK form and the cancellation guard for its lazy import.
    */
   useEffect(() => {
     if (!REPORTING_ENABLED || !offered) return
@@ -82,11 +97,12 @@ export function FeedbackWidget() {
 
     void feedback().then((integration) => {
       if (cancelled) return
+      const triggerLabel = t('shell.feedback.triggerLabel')
       widget = integration.createWidget({
         tags: { locale },
-        // No `triggerAriaLabel`: it defaults to `triggerLabel`, which is exactly what WCAG 2.5.3
-        // asks for - the accessible name and the visible one are the same sentence.
-        triggerLabel: t('shell.feedback.triggerLabel'),
+        // Keep the native actor in its side lane beside the short planner dock.
+        triggerLabel: compact ? '' : triggerLabel,
+        ...(compact ? { triggerAriaLabel: triggerLabel } : {}),
         formTitle: t('shell.feedback.formTitle'),
         messageLabel: t('shell.feedback.messageLabel'),
         messagePlaceholder: t('shell.feedback.messagePlaceholder'),
@@ -123,7 +139,7 @@ export function FeedbackWidget() {
       cancelled = true
       widget?.removeFromDom()
     }
-  }, [locale, t, offered])
+  }, [locale, t, offered, compact])
 
   /**
    * Colour comes from our tokens through the custom properties in `styles.css`, which flip with the

@@ -584,6 +584,22 @@ const messages = {
     'Người khác đã đổi liên kết. Đang hiển thị liên kết hiện tại.',
   'invite.announce.recovered':
     'Đang hiển thị cài đặt liên kết hiện tại. Hãy kiểm tra trước khi thay đổi tiếp.',
+  'plan.dayDetail.label': 'Chi tiết {day}',
+  'plan.dayDetail.minimise': 'Thu gọn chi tiết ngày',
+  'plan.dayDetail.expand': 'Mở rộng chi tiết ngày',
+  'plan.dayDetail.close': 'Đóng chi tiết ngày',
+  'plan.dayDetail.undated': 'Chưa đặt ngày',
+  'plan.dayDetail.stays': 'Lưu trú',
+  'plan.dayDetail.addStay': 'Thêm lưu trú',
+  'plan.dayDetail.noStay': 'Không có lưu trú cho ngày này',
+  'plan.dayDetail.noConfirmation': 'Không có mã xác nhận',
+  'plan.dayDetail.notes': 'Ghi chú',
+  'plan.dayDetail.noNotes': 'Không có ghi chú cho ngày này',
+  'plan.dayDetail.reservations': 'Đặt chỗ',
+  'plan.dayDetail.noReservations': 'Không có đặt chỗ cho ngày này',
+  'plan.dayDetail.readError': 'Không thể tải chi tiết đặt chỗ.',
+  'plan.dayDetail.retry': 'Thử lại',
+  'plan.dayDetail.gone': 'Ngày này không còn khả dụng.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
