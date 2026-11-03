@@ -19,17 +19,14 @@ export function converterAmount(
   const amount = parseMoney(toAsciiDigits(text), currency, locale)
   // Reject over-limit fractions even when source rounding lands back on the ceiling.
   const maximum = 1_000_000_000 * 10 ** minorUnitDigits(currency)
+  const digits = toAsciiDigits(text).replace(/\D/g, '').replace(/^0+/, '')
   if (
     amount === maximum &&
-    toAsciiDigits(text)
-      .replace(/\D/g, '')
-      .replace(/^0+|0+$/g, '') !== '1'
+    digits.startsWith('1000000000') &&
+    /[1-9]/.test(digits.slice(10))
   )
     return null
-  return amount !== null &&
-    amount <= 1_000_000_000 * 10 ** minorUnitDigits(currency)
-    ? amount
-    : null
+  return amount !== null && amount <= maximum ? amount : null
 }
 
 export function converterResult(

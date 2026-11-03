@@ -2,6 +2,7 @@ import { FreeRateDisclosure } from '#/components/rates/free-rate-disclosure'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Button, Combobox, Field, Input, Skeleton } from '#/components/ui'
 import { dashboardWidgetPreference } from '#/lib/clock-zones'
+import { cn } from '#/lib/cn'
 import { WIDGETS_IN_SHEET_QUERY } from './dashboard-widgets'
 import { useI18n } from '#/lib/i18n'
 import { ECB_REFERENCE_CURRENCIES, mergeCurrencies } from '#/lib/currency-list'
@@ -34,7 +35,10 @@ export function CurrencyConverter({
   const { t, locale } = useI18n()
   const claim = useWorkspaceClaim()
   const [result, setResult] = useState<PublicRatesResult | null>(null)
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState(
+    state.from !== state.to &&
+      converterAmount(state.amount, state.from, locale) !== null,
+  )
   const [now, setNow] = useState(Date.now)
   const [confirmedAmount, setConfirmedAmount] = useState(state.amount)
   const serial = useRef(0)
@@ -43,7 +47,7 @@ export function CurrencyConverter({
   const id = useId()
   const identity = state.from === state.to
   const amount = converterAmount(state.amount, state.from, locale)
-  const loading = busy || (!identity && amount !== null && result === null)
+  const loading = busy
   const currentAmount = useRef({ minor: amount, text: state.amount })
   currentAmount.current = { minor: amount, text: state.amount }
   const read = useCallback(
@@ -185,6 +189,8 @@ export function CurrencyConverter({
         rates[state.to as keyof typeof rates],
       ))
   const cooldown = (result?.retryAt ?? 0) > now
+  const stale =
+    result?.status === 'available' && (result.freshness === 'stale' || age > 4)
   let status = ''
   if (amount === null || invalidConversion)
     status = t('shell.dashboard.currency.invalid')
@@ -226,11 +232,14 @@ export function CurrencyConverter({
             onChange={(e) => onChange({ ...state, amount: e.target.value })}
             onBlur={() => {
               setConfirmedAmount(state.amount)
-              if (amount !== null)
+              if (amount !== null) {
                 onChange({
                   ...state,
                   amount: toAmountInput(amount, state.from),
                 })
+                if (!result || Date.now() - checked.current >= 3_600_000)
+                  void read()
+              }
             }}
           />
         </Field>
@@ -287,7 +296,7 @@ export function CurrencyConverter({
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className="text-caption text-ink-3"
+          className="min-h-10 text-caption text-ink-3"
         >
           {!loading && conversion && spokenResult ? (
             <span className="sr-only">
@@ -298,8 +307,12 @@ export function CurrencyConverter({
           ) : null}
           {loading ? t('ui.status.loading') : status}
         </p>
-        {!identity && snapshot ? (
-          <>
+        {!identity ? (
+          <div
+            className={cn('flex flex-col gap-3', !snapshot && 'invisible')}
+            aria-hidden={!snapshot}
+            inert={!snapshot}
+          >
             <p className="text-caption text-ink-3">
               {t('shell.dashboard.currency.source')}
               <br />
@@ -307,19 +320,23 @@ export function CurrencyConverter({
                 date: new Intl.DateTimeFormat(locale, {
                   dateStyle: 'medium',
                   timeZone: 'UTC',
-                }).format(new Date(snapshot.effectiveOn)),
+                }).format(new Date(snapshot?.effectiveOn ?? now)),
               })}
             </p>
             <p className="text-caption text-ink-3">
               {t('shell.dashboard.currency.notice')}
             </p>
             <FreeRateDisclosure />
-          </>
+          </div>
         ) : null}
-        {!identity &&
-        result?.status === 'available' &&
-        (result.freshness === 'stale' || age > 4) ? (
-          <p className="text-caption text-ink-3">
+        {!identity ? (
+          <p
+            className={cn(
+              'min-h-10 text-caption text-ink-3',
+              !stale && 'invisible',
+            )}
+            aria-hidden={!stale}
+          >
             {t('shell.dashboard.currency.stale')}
           </p>
         ) : null}
@@ -336,15 +353,19 @@ export function CurrencyConverter({
             >
               {t('shell.dashboard.currency.refresh')}
             </Button>
-            {cooldown ? (
-              <p className="text-caption text-ink-3">
-                {t('shell.dashboard.currency.cooldown', {
-                  time: new Intl.DateTimeFormat(locale, {
-                    timeStyle: 'short',
-                  }).format(new Date(result?.retryAt ?? now)),
-                })}
-              </p>
-            ) : null}
+            <p
+              className={cn(
+                'min-h-10 text-caption text-ink-3',
+                !cooldown && 'invisible',
+              )}
+              aria-hidden={!cooldown}
+            >
+              {t('shell.dashboard.currency.cooldown', {
+                time: new Intl.DateTimeFormat(locale, {
+                  timeStyle: 'short',
+                }).format(new Date(result?.retryAt ?? now)),
+              })}
+            </p>
           </>
         ) : null}
       </div>

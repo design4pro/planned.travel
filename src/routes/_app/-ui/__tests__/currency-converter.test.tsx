@@ -45,8 +45,10 @@ function available(): PublicRatesResult {
 }
 function Harness({
   initial = { amount: '100', from: 'EUR', to: 'USD' },
+  shown = true,
 }: {
   initial?: ConverterState
+  shown?: boolean
 }) {
   const [state, setState] = useState(initial)
   return (
@@ -57,7 +59,7 @@ function Harness({
         ...namespaceCatalogue('ui', Ui),
       }}
     >
-      <CurrencyConverter state={state} onChange={setState} />
+      {shown ? <CurrencyConverter state={state} onChange={setState} /> : null}
     </I18nProvider>
   )
 }
@@ -86,6 +88,41 @@ it('keeps amount edits local, rounds on blur and keeps the typed amount on swap'
   fireEvent.click(screen.getByRole('button', { name: 'Swap currencies' }))
   await waitFor(() => expect(read).toHaveBeenCalledTimes(2))
   expect((amount as HTMLInputElement).value).toBe('1.01')
+})
+it('recovers on a valid committed amount after reopening invalid input without fetching on keystrokes', async () => {
+  const view = render(<Harness />)
+  await screen.findByLabelText('Converted amount')
+  fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
+    target: { value: '' },
+  })
+  view.rerender(<Harness shown={false} />)
+  view.rerender(<Harness />)
+  const amount = screen.getByRole('textbox', { name: 'Amount' })
+  fireEvent.change(amount, { target: { value: '100' } })
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('status').textContent).not.toContain('Loading')
+  fireEvent.blur(amount)
+  await screen.findByLabelText('Converted amount')
+  expect(read).toHaveBeenCalledTimes(2)
+})
+it('revalidates on committing a corrected amount after the hourly read was suppressed', async () => {
+  vi.restoreAllMocks()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(at))
+  render(<Harness />)
+  await act(async () => {})
+  const amount = screen.getByRole('textbox', { name: 'Amount' })
+  fireEvent.change(amount, { target: { value: '' } })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3600000)
+  })
+  expect(read).toHaveBeenCalledTimes(1)
+  fireEvent.change(amount, { target: { value: '2' } })
+  expect(read).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    fireEvent.blur(amount)
+  })
+  expect(read).toHaveBeenCalledTimes(2)
 })
 it('does not request rates or claim provenance for identity, including outside provider coverage', async () => {
   render(<Harness initial={{ amount: '1.234', from: 'KWD', to: 'KWD' }} />)
