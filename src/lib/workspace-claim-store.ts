@@ -194,7 +194,18 @@ export function beginWorkspaceSwitch(): WorkspaceSwitch {
 export async function waitForWorkspaceCalls(
   token: WorkspaceSwitch,
 ): Promise<void> {
-  await token.ready
+  // A stalled prior RPC cancels this intent; it must never activate later when that RPC settles.
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      token.ready,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(workspaceSwitchCancelled()), 10_000)
+      }),
+    ])
+  } finally {
+    clearTimeout(timeout)
+  }
   if (!ownsWorkspaceSwitch(token)) throw workspaceSwitchCancelled()
   if (state.stale) throw new Error(WORKSPACE_CHANGED_KEY)
   if (state.organizationId !== token.organizationId)

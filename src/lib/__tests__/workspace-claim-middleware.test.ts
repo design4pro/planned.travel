@@ -265,6 +265,49 @@ describe('deliberate workspace transition concurrency', () => {
     },
   )
 
+  it.each([false, true])(
+    'cancels a stalled drain without replay and retains late real RPC refusals (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const answer = deferred<unknown>()
+      const transport = vi.fn().mockReturnValue(answer.promise)
+      const earlier = middleware({ next: transport }).catch((error) => error)
+      const token = beginWorkspaceSwitch()
+      vi.useFakeTimers()
+      try {
+        const waiting = waitForWorkspaceCalls(token).catch((error) => error)
+        await vi.advanceTimersByTimeAsync(10_000)
+        expect(await waiting).toMatchObject({ name: 'AbortError' })
+        endWorkspaceSwitch(token)
+        const next = vi.fn().mockResolvedValue('still org_a')
+        await middleware({ next })
+        expect(next).toHaveBeenCalledWith({
+          headers: { [WORKSPACE_CLAIM_HEADER]: 'org_a' },
+        })
+        const newer = beginWorkspaceSwitch()
+        if (refused) answer.reject(refusal())
+        else answer.resolve('saved in org_a')
+        await earlier
+        endWorkspaceSwitch(token)
+        expect(transport).toHaveBeenCalledTimes(1)
+        expect(workspaceClaimState()).toMatchObject({
+          organizationId: 'org_a',
+          switching: true,
+          stale: refused,
+          noticeOpen: refused,
+        })
+        if (refused)
+          await expect(waitForWorkspaceCalls(newer)).rejects.toThrow(
+            WORKSPACE_CHANGED_KEY,
+          )
+        else await expect(waitForWorkspaceCalls(newer)).resolves.toBeUndefined()
+        endWorkspaceSwitch(newer)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it('expires the document capability after consumption, refusal or owner cleanup', async () => {
     setWorkspaceClaim('org_a')
     const token = beginWorkspaceSwitch()
