@@ -99,7 +99,7 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
     label and add it again.
 - Skills: `.agents/skills/om-*` are vendored files, byte-identical to
-  `open-mercato/skills@e886001ab1dea2123af79e52dcd175c36878dab1`, and each `.claude/skills/om-*`
+  `open-mercato/skills@75cf3146fd31aa6fa53af0866c076e5b7a3d9179`, and each `.claude/skills/om-*`
   is a relative symlink to its directory there - this line is the pin, because
   `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
   carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
@@ -464,3 +464,5 @@ Every workflow's skill runs the same way in a local `claude` session, with the d
 `/om-merge-buddy`, `/om-close-fixed-issues`, `/om-brainstorm`. Hand-worked branches go through
 `/om-check-and-commit` and `/om-open-pr`. The hooks are the project's, so nothing depends on the
 host's user-level configuration.
+
+The pinned update includes helper files, with three recorded local repairs preserved: session-secret redaction, gap criterion IDs and UX feedback synchronization. `scripts/agents/skills-upstream.json` records both upstream and local hashes; its test verifies files, symlinks and lock hashes. Descriptor migration retains REST mutations, hold labels and local merge policy. New harness and interactive skills remain operator tools; this update creates no new schedulers.
