@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { registerCollectionExit } from '#/lib/collection-exit'
@@ -20,6 +20,7 @@ import {
   dismissWorkspaceNotice,
   markWorkspaceStale,
   resetWorkspaceClaim,
+  trackWorkspaceCall,
   setWorkspaceClaim,
   workspaceClaimState,
 } from '#/lib/workspace-claim-store'
@@ -296,6 +297,67 @@ describe('workspace names', () => {
 })
 
 describe('switching', () => {
+  it('waits for earlier calls before activating the destination workspace', async () => {
+    setWorkspaceClaim('org_a')
+    const finish = trackWorkspaceCall()
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+    await user.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+    expect(workspaceClaimState().switching).toBe(true)
+    expect(auth.setActive).not.toHaveBeenCalled()
+    finish()
+    await vi.waitFor(() => expect(auth.setActive).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(workspaceClaimState().switching).toBe(false))
+  })
+
+  it.each([false, true])(
+    'releases a switch with a stalled prior RPC and preserves its late refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const finish = trackWorkspaceCall()
+      notify.error.mockImplementation(() => {
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(screen.queryByRole('menu', { hidden: true })).toBeNull()
+        expect(
+          screen
+            .getByRole('button', { name: /account menu/i })
+            .closest('[aria-hidden="true"]'),
+        ).toBeNull()
+      })
+      await mount(sessionOf([ALPHA, BETA]))
+      vi.useFakeTimers()
+      try {
+        fireEvent.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(workspaceClaimState().switching).toBe(true)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+          EN['shell.workspace.switchFailed'],
+        )
+        expect(notify.success).not.toHaveBeenCalled()
+        expect(auth.setActive).not.toHaveBeenCalled()
+        if (refused) markWorkspaceStale('org_a')
+        await act(async () => {
+          finish()
+        })
+        expect(auth.setActive).not.toHaveBeenCalled()
+        expect(router.navigate).not.toHaveBeenCalled()
+        expect(workspaceClaimState()).toMatchObject({
+          organizationId: 'org_a',
+          switching: false,
+          stale: refused,
+        })
+      } finally {
+        finish()
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it('asks before activating a workspace, signing out or creating a workspace', async () => {
     const confirm = vi.fn().mockResolvedValue(false)
     const release = registerCollectionExit(confirm)
@@ -394,7 +456,7 @@ describe('switching', () => {
     expect(notify.error).not.toHaveBeenCalled()
   })
 
-  it('does not refuse itself: the claim is held back while it switches and is the new workspace after', async () => {
+  it('owns the transition while it switches and adopts the new workspace after', async () => {
     setWorkspaceClaim('org_a')
     const seen: Array<boolean> = []
     auth.setActive.mockImplementation(async () => {
@@ -1100,6 +1162,7 @@ describe('creating a workspace', () => {
     })
     expect(workspace.create).toHaveBeenCalledExactlyOnceWith({
       data: { name: 'Lisbon' },
+      fetch: expect.any(Function),
     })
     expect(router.navigate).toHaveBeenCalledWith({
       to: '/dashboard',
@@ -1197,7 +1260,81 @@ describe('creating a workspace', () => {
     },
   )
 
-  it('sends the claim with the create call and holds it back only for the re-read that follows', async () => {
+  it.each([false, true])(
+    'drains earlier work before creation and respects its refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const finish = trackWorkspaceCall()
+      workspace.create.mockResolvedValue({ ok: false, reason: 'role-required' })
+      const { user } = await openDialog()
+      await submit(user, 'Lisbon')
+      expect(workspaceClaimState().switching).toBe(true)
+      expect(workspace.create).not.toHaveBeenCalled()
+      if (refused) markWorkspaceStale('org_a')
+      finish()
+      await screen.findByRole('alert')
+      expect(workspace.create).toHaveBeenCalledTimes(refused ? 0 : 1)
+      expect(router.navigate).not.toHaveBeenCalled()
+      expect(workspaceClaimState()).toMatchObject({
+        switching: false,
+        stale: refused,
+      })
+    },
+  )
+
+  it.each([false, true])(
+    'releases a create dialog with a stalled prior RPC and preserves its late refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const finish = trackWorkspaceCall()
+      const { user, dialog } = await openDialog()
+      await user.type(
+        screen.getByRole('textbox', { name: /Workspace name/ }),
+        'Lisbon',
+      )
+      vi.useFakeTimers()
+      try {
+        fireEvent.submit(dialog.querySelector('form') as HTMLFormElement)
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(workspaceClaimState().switching).toBe(true)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(screen.getByRole('alert').textContent).toContain(
+          EN['shell.workspace.createFailed'],
+        )
+        expect(
+          screen
+            .getByRole('button', { name: 'Create workspace' })
+            .getAttribute('disabled'),
+        ).toBeNull()
+        if (refused) markWorkspaceStale('org_a')
+        await act(async () => {
+          finish()
+        })
+        expect(workspace.create).not.toHaveBeenCalled()
+        expect(router.navigate).not.toHaveBeenCalled()
+        expect(workspaceClaimState()).toMatchObject({
+          organizationId: 'org_a',
+          switching: false,
+          stale: refused,
+        })
+        fireEvent.keyDown(dialog, { key: 'Escape' })
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(screen.queryByRole('dialog')).toBeNull()
+      } finally {
+        finish()
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it('owns the entire create and resync window with an explicit create capability', async () => {
     setWorkspaceClaim('org_a')
     const seen: Array<string> = []
     workspace.create.mockImplementation(async () => {
@@ -1213,7 +1350,7 @@ describe('creating a workspace', () => {
     await submit(user, 'Lisbon')
 
     await vi.waitFor(() => {
-      expect(seen).toEqual(['create:false', 'navigate:true'])
+      expect(seen).toEqual(['create:true', 'navigate:true'])
     })
     await vi.waitFor(() => {
       expect(workspaceClaimState()).toMatchObject({
@@ -1223,7 +1360,7 @@ describe('creating a workspace', () => {
     })
   })
 
-  it('re-reads the shell with the claim held back after a failure whose outcome is unknown', async () => {
+  it('owns shell reconciliation after a failure whose outcome is unknown', async () => {
     setWorkspaceClaim('org_a')
     const seen: Array<boolean> = []
     workspace.create.mockRejectedValue(new Error('D1_ERROR: no such column'))

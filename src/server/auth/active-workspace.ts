@@ -46,7 +46,6 @@ export async function resolveSessionWorkspace(
   )
     return resolved
 
-  // shortcut: provisioning is sequentially idempotent; make it atomic for concurrent recovery in the workspace deletion spec.
   const organizationId = await resolveOrProvisionOrganization(
     db,
     session.user.id,

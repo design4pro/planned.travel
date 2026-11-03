@@ -762,9 +762,10 @@ workspace after confirmed absence. Read failures propagate; banned and impersona
 claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
 recovered membership without repeating departure or updating the session.
 
-The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
-requests, rather than introducing another shared resolver. Implementation: PR #1708.
-
+The shared resolver landed in PR #1708. Issue #1738 completes Phase 3's concurrent recovery:
+`provisionPersonalOrganization` conditions organization, participation anchor and owner membership
+writes on membership absence in one D1 batch; losing requests read the surviving membership.
+Explicit workspace creation keeps its existing batch and limit enforcement.
 
 ## Amendment - deletion ledger prerequisite (#1737)
 

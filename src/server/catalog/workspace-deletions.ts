@@ -101,7 +101,7 @@ export async function acquireDeletionLease(
     .update(ledger)
     .set({
       leaseToken: token,
-      leaseUntil: new Date(now.getTime() + 60_000),
+      leaseUntil: new Date(now.getTime() + 5 * 60_000),
       updatedAt: now,
       attempts: sql`${ledger.attempts} + 1`,
     })
@@ -126,7 +126,7 @@ const checkpointSchema = z.strictObject({
 })
 const nextState = {
   requested: ['drained', 'refused'],
-  drained: ['rows_deleted'],
+  drained: ['rows_deleted', 'refused'],
   rows_deleted: ['audited'],
   audited: ['swept'],
   swept: ['done'],

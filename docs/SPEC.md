@@ -650,8 +650,11 @@ The source workspace id comes from the caller's tenant scope, never from a reque
 statement. A source test pins its writers.
 
 Other auth membership paths retain `src/server/auth/participation.ts`: a write-only `INSERT OR IGNORE`
-of `organization_id` and `user_id`, with no select, update or delete, whose organization id comes from
-the id minted in the same batch or hook data, never a request body. A source test pins the anchor's
+of `organization_id` and `user_id`, with no standalone reads, tenant-data reads, update or delete,
+whose organization id comes from the id minted in the same batch or hook data, never a request body.
+Personal recovery may use `INSERT … SELECT … WHERE` with the identity-membership absence predicate
+supplied by `provisioning.ts`, in the same batch as organization and owner membership creation;
+the helper returns no rows and adds no other read authority. A source test pins the anchor's
 writers, schema, catalog read and erasure registry.
 
 The fourth member is `catalog/tenant-audit-retention.ts`, reached only from

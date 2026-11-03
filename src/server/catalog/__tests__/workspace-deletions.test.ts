@@ -37,7 +37,10 @@ it('protects a live lease and rejects its expired holder after replacement', asy
   const first = await acquireDeletionLease(h.db, row.id, now)
   if (!first) throw new Error('Missing lease')
   expect(await acquireDeletionLease(h.db, row.id, now)).toBeNull()
-  const later = new Date(now.getTime() + 61_000)
+  expect(
+    await acquireDeletionLease(h.db, row.id, new Date(now.getTime() + 299_999)),
+  ).toBeNull()
+  const later = new Date(now.getTime() + 300_000)
   const second = await acquireDeletionLease(h.db, row.id, later)
   if (!second) throw new Error('Missing replacement lease')
   expect(
@@ -227,4 +230,61 @@ it('enforces state, initiator and attribution checks in SQLite itself', async ()
       )
       .run(row.id),
   ).toThrow()
+})
+
+it('refuses after drain under a live lease and lifts the fence for retry', async () => {
+  const row = await insertWorkspaceDeletion(h.db, request, now)
+  const drainToken = await acquireDeletionLease(h.db, row.id, now)
+  if (!drainToken) throw new Error('Missing lease')
+  expect(
+    await transitionWorkspaceDeletion(
+      h.db,
+      row.id,
+      drainToken,
+      'requested',
+      'drained',
+      now,
+    ),
+  ).toBe(true)
+  const refusalToken = await acquireDeletionLease(h.db, row.id, now)
+  if (!refusalToken) throw new Error('Missing refusal lease')
+  expect(
+    await transitionWorkspaceDeletion(
+      h.db,
+      row.id,
+      drainToken,
+      'drained',
+      'refused',
+      now,
+    ),
+  ).toBe(false)
+  expect(await workspaceDeletionPending(h.db, 'alpha')).toBe(true)
+  expect(
+    await transitionWorkspaceDeletion(
+      h.db,
+      row.id,
+      refusalToken,
+      'drained',
+      'refused',
+      now,
+      { lastError: 'has-other-members' },
+    ),
+  ).toBe(true)
+  expect(await workspaceDeletionPending(h.db, 'alpha')).toBe(false)
+  expect(
+    h.sqlite
+      .prepare(
+        'select state, receipt_to, receipt_name, lease_token, lease_until from workspace_deletions where id = ?',
+      )
+      .get(row.id),
+  ).toMatchObject({
+    state: 'refused',
+    receipt_to: null,
+    receipt_name: null,
+    lease_token: null,
+    lease_until: null,
+  })
+  expect((await insertWorkspaceDeletion(h.db, request, now)).id).not.toBe(
+    row.id,
+  )
 })
