@@ -170,8 +170,7 @@ export function ImportBookingsDialog({
   /**
    * Back to the drop target, keeping whatever is still being read.
    *
-   * The job module forgets only the refusals: a reader who takes one file's refusal away has said
-   * nothing about the other four.
+   * Selected Review dismisses only its job; ordinary reset forgets the trip’s refusals.
    *
    * The selection is left alone for the same reason. Nothing with rows in it is forgotten here, so
    * there is nothing stale to clear, and clearing it would untick the rows of a file that stays on
@@ -180,7 +179,11 @@ export function ImportBookingsDialog({
   const reset = (): void => {
     setStage({ kind: 'idle' })
     setRefusals([])
-    jobs.forgetRefused(tripId)
+    if (reviewJobId === undefined) {
+      jobs.forgetRefused(tripId)
+    } else {
+      jobs.dismissReview(tripId, reviewJobId)
+    }
   }
 
   /**

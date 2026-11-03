@@ -694,6 +694,77 @@ describe('review recovery', () => {
     },
   )
 
+  it('recovers only the selected refusal and preserves unrelated jobs across reload', async () => {
+    seed()
+    const otherTrip = {
+      jobId: 'booking-import:trip-2:file-3',
+      tripId: 'trip-2',
+      filename: 'other-trip.pdf',
+    }
+    const otherOwner = {
+      jobId: 'booking-import:trip-1:file-4',
+      tripId: 'trip-1',
+      filename: 'other-owner.pdf',
+    }
+    window.localStorage.setItem(
+      bookImportsKey(USER),
+      JSON.stringify([...readBookImports(USER), otherTrip]),
+    )
+    window.localStorage.setItem(
+      bookImportsKey('other-owner'),
+      JSON.stringify([otherOwner]),
+    )
+    stubs.view.mockResolvedValue({
+      status: 'refused',
+      refusal: { code: 'empty' },
+    } satisfies BookingImportView)
+    const dialog = (
+      <I18nProvider locale="en" messages={EN}>
+        <ImportBookingsDialog
+          tripId="trip-1"
+          userId={USER}
+          open
+          onOpenChange={() => {}}
+          jobId="booking-import:trip-1:file-1"
+        />
+      </I18nProvider>
+    )
+    const result = render(dialog)
+    await waitFor(() =>
+      expect(stubs.view).toHaveBeenCalledWith({
+        data: { tripId: 'trip-1', jobId: 'booking-import:trip-1:file-2' },
+      }),
+    )
+    await act(async () => {})
+    expect(screen.queryByText(/other\.pdf/)).toBeNull()
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Try another file' }),
+    )
+
+    const remaining = [
+      {
+        jobId: 'booking-import:trip-1:file-2',
+        tripId: 'trip-1',
+        filename: 'other.pdf',
+      },
+      otherTrip,
+    ]
+    expect(readBookImports(USER)).toEqual(remaining)
+    expect(readBookImports('other-owner')).toEqual([otherOwner])
+    expect(document.querySelector('[data-part="import-drop"]')).toBeNull()
+    result.unmount()
+    resetBookImportJobs()
+    render(dialog)
+    expect(readBookImports(USER)).toEqual(remaining)
+    expect(readBookImports('other-owner')).toEqual([otherOwner])
+    expect(document.querySelector('[data-part="import-drop"]')).toBeNull()
+    expect(
+      screen.queryByRole('button', { name: 'Try another file' }),
+    ).toBeNull()
+    expect(stubs.upload).not.toHaveBeenCalled()
+    expect(stubs.confirm).not.toHaveBeenCalled()
+  })
+
   it('enables confirmation after restore without another upload', async () => {
     seed()
     stubs.view.mockResolvedValue(READY)
