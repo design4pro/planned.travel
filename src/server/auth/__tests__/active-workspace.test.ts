@@ -4,6 +4,7 @@ import { departMember } from '#/server/fns/member-departure-writes'
 import { auditLogRepository } from '#/server/repos/audit'
 import { listAuditLog, listMembers } from '#/server/repos'
 import { eq } from 'drizzle-orm'
+import { workspaceParticipants } from '#/server/db/schema'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { WORKSPACE_CLAIM_HEADER } from '#/lib/workspace-claim'
 import { authSchema, member, organization } from '#/server/db/auth-schema'
@@ -177,6 +178,31 @@ describe('requireOrg request resolution', () => {
       userId: a.ownerUserId,
       impersonatedBy: 'usr_operator',
     })
+  })
+
+  it('parallel authenticated reloads after deletion recover the same empty personal workspace', async () => {
+    const tenant = await harness.seedTenant('deleted')
+    await db
+      .delete(organization)
+      .where(eq(organization.id, tenant.organizationId))
+    requestSession(tenant.ownerUserId, tenant.organizationId)
+    const results = await Promise.all(
+      Array.from({ length: 8 }, () => requireOrg()),
+    )
+    expect(new Set(results.map((result) => result.organizationId)).size).toBe(1)
+    expect(results[0]).toMatchObject({
+      userId: tenant.ownerUserId,
+      role: 'owner',
+    })
+    expect(await db.select().from(organization)).toHaveLength(1)
+    expect(await db.select().from(member)).toHaveLength(1)
+    expect(await harness.db.select().from(workspaceParticipants)).toHaveLength(
+      1,
+    )
+    expect(await requireOrg()).toEqual(results[0])
+    expect(shared.session.session?.activeOrganizationId).toBe(
+      tenant.organizationId,
+    )
   })
 
   it('recovers a removed only membership and reuses the personal workspace on reload', async () => {
