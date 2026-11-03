@@ -1,11 +1,15 @@
 /**
- * The workspace sweep against a fake bucket: the three key families a workspace owns, the photo keys
+ * The workspace sweep against a fake bucket: the four key families a workspace owns, the photo keys
  * the caller collected, and the isolation between two workspaces that share leading characters.
  */
+import { readFileSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 import {
   sweepWorkspaceObjects,
+  drainWorkspaceObjects,
+  WORKSPACE_KEY_FAMILIES,
   workspaceObjectPrefixes,
 } from '../workspace-objects'
 import { fakeBucket } from './fake-bucket'
@@ -16,6 +20,7 @@ describe('workspaceObjectPrefixes', () => {
       'trips/org-a/',
       'exports/org-a/',
       'avatars/org-a/',
+      'journeys/org-a/',
     ])
   })
 
@@ -146,4 +151,49 @@ describe('sweepWorkspaceObjects', () => {
     ).toBeLessThanOrEqual(1_000)
     expect(bucket.remaining.size).toBe(0)
   })
+})
+
+it('caps a workspace run at 20 batches across all families and resumes', async () => {
+  const keys = Array.from({ length: 20_005 }, (_, i) => `trips/org-a/t/${i}`)
+  const bucket = fakeBucket([
+    ...keys,
+    'journeys/org-a/photo',
+    'trips/org-ab/keep',
+  ])
+  const first = await drainWorkspaceObjects(bucket, 'org-a')
+  expect(first).toEqual({ deleted: 20_000, batches: 20, drained: false })
+  expect(bucket.calls).toHaveLength(20)
+  expect(bucket.listCalls.every((options) => options.limit === 1_000)).toBe(
+    true,
+  )
+  expect((await drainWorkspaceObjects(bucket, 'org-a')).drained).toBe(true)
+  expect([...bucket.remaining]).toEqual(['trips/org-ab/keep'])
+})
+
+it('covers every workspace key family minted in current source', () => {
+  const families = new Set<string>()
+  function scan(directory: string) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === '__tests__') continue
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) scan(path)
+      else if (/\.tsx?$/.test(entry.name)) {
+        const source = readFileSync(path, 'utf8')
+        for (const match of source.matchAll(
+          /([a-z-]+)\/\$\{[^}]*?(?:org|organization)[^}]*\}\//gi,
+        )) {
+          families.add(match[1])
+        }
+      }
+    }
+  }
+  scan('src')
+  expect(families.size).toBeGreaterThanOrEqual(3)
+  expect(
+    [...families].every((family) =>
+      WORKSPACE_KEY_FAMILIES.some((owned) => owned === family),
+    ),
+  ).toBe(true)
+  // Portrait storage is reserved by plan 09; it has no production key mint yet.
+  expect(WORKSPACE_KEY_FAMILIES).toContain('avatars')
 })
