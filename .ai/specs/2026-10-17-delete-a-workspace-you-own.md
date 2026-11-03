@@ -767,7 +767,6 @@ The shared resolver landed in PR #1708. Issue #1738 completes Phase 3's concurre
 writes on membership absence in one D1 batch; losing requests read the surviving membership.
 Explicit workspace creation keeps its existing batch and limit enforcement.
 
-
 ## Implementation preparation - bounded cleanup (#1739)
 
 `repos/members.ts` now owns `drainWorkspace`: at most 20 steps of 100 rows, trips first and then
@@ -783,3 +782,12 @@ The existing numeric `deletePrefix` and `sweepWorkspaceObjects` completion helpe
 storage implementation and retain their calling contracts. The future deletion driver must use the
 bounded drain interfaces, rather than those completion helpers. No deletion action or driver is
 introduced by this preparation slice.
+
+## Amendment - team deletion design (#1744)
+
+The deferred notice-window follow-up is specified in
+[Delete a team workspace after a cancellable notice window](2026-11-03-team-workspace-deletion-notice.md).
+It proposes a fourteen-day cancellable schedule, retains private-trip visibility and depends on this
+specification's deletion infrastructure landing first. It enables no runtime behavior and does not
+change this specification's immediate sole-member or erasure guard. The scheduled branch's exact
+guard, fence, privacy and retention amendments belong to that follow-up's implementation slices.
