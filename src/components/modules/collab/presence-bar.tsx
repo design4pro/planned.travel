@@ -4,15 +4,16 @@
  * This is the only component that opens the realtime socket, and it is mounted by
  * the collaboration screen after hydration — the hook must never run on the
  * server, and keeping that decision in one place is what guarantees it. When a
- * commit arrives it invalidates the router, so the screen's loader answers and
- * every panel updates from the database rather than from a socket frame.
+ * commit arrives it refreshes with this tab's workspace claim, so authorized
+ * changes come from loaders. A workspace mismatch keeps the mounted screen and
+ * unsent text, refuses further tenant operations and offers explicit guarded recovery.
  *
  * The status is stated plainly. A collaborative screen that has quietly stopped
  * listening is worse than one that says it is reconnecting. A tab whose workspace was changed in
  * another tab says the one thing that is true there - live updates stopped here, and a retry cannot
- * fix it - and offers the way out (`workspace-changed`). It is a pill and a button, not a modal: a
- * background socket event must not take focus from a field the reader is typing in, and the
- * reload it offers never starts by itself.
+ * fix it - and offers the way out (`workspace-changed`). A dedicated socket close uses a pill
+ * and button without taking focus; a refused server refresh also uses the shell notice.
+ * Recovery never reloads the page by itself.
  */
 import { useCallback, useEffect, useId, useMemo, useRef } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -23,6 +24,8 @@ import {
   useOpenCurrentWorkspace,
 } from '#/components/layout/use-open-current-workspace'
 import { Avatar, Button, Tooltip } from '#/components/ui'
+import { refreshFromRoom } from '#/lib/room-refresh'
+import { useWorkspaceClaim } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { useTripRoom } from './use-trip-room'
@@ -130,16 +133,18 @@ export function PresenceBar({
   const router = useRouter()
 
   const onCommit = useCallback(() => {
-    void router.invalidate()
+    void refreshFromRoom(router)
   }, [router])
 
   const room = useTripRoom(tripId, { onCommit })
   const people = useMemo(() => uniquePeople(room.peers), [room.peers])
-  const copy = STATUS_COPY[room.status]
+  const { stale } = useWorkspaceClaim()
+  const status = stale ? 'workspace-changed' : room.status
+  const copy = STATUS_COPY[status]
   const unnamed = t('modules.collab.presence.unnamed')
 
   const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
-  const workspaceChanged = room.status === 'workspace-changed'
+  const workspaceChanged = status === 'workspace-changed'
   const captionId = useId()
   const cancelButton = useRef<HTMLButtonElement>(null)
   const openButton = useRef<HTMLButtonElement>(null)
@@ -163,10 +168,10 @@ export function PresenceBar({
           className={cn(
             // Wraps instead of overflowing: a translated title is several times the English one.
             'inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full px-3 py-1 text-caption font-semibold focus-ring',
-            PILL_TONE[room.status],
+            PILL_TONE[status],
           )}
         >
-          <StatusGlyph status={room.status} />
+          <StatusGlyph status={status} />
           {t(copy.labelKey)}
         </span>
       </Tooltip>
@@ -215,7 +220,7 @@ export function PresenceBar({
         </span>
       )}
 
-      {room.status === 'offline' ? (
+      {status === 'offline' ? (
         <Button
           variant="secondary"
           size="sm"

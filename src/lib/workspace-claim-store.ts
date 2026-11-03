@@ -28,6 +28,13 @@ const INITIAL: WorkspaceClaimState = {
 }
 
 let state: WorkspaceClaimState = INITIAL
+// A navigation to the same workspace still supersedes requests made by the previous screen.
+let generation = 0
+
+export function workspaceClaimGeneration(): number {
+  return generation
+}
+
 const listeners = new Set<() => void>()
 
 function commit(next: Partial<WorkspaceClaimState>): void {
@@ -61,6 +68,7 @@ export function workspaceClaimState(): WorkspaceClaimState {
  * `endWorkspaceSwitch` closes it.
  */
 export function setWorkspaceClaim(organizationId: string | null): void {
+  generation += 1
   commit({ organizationId, stale: false, noticeOpen: false })
 }
 
@@ -69,6 +77,7 @@ export function setWorkspaceClaim(organizationId: string | null): void {
  * stale tab could never learn the workspace it is now in.
  */
 export function resumeWorkspaceClaim(): void {
+  generation += 1
   commit({ stale: false, noticeOpen: false })
 }
 
@@ -105,6 +114,7 @@ export function dismissWorkspaceNotice(): void {
 
 /** Around the workspace switcher's own switch-navigate-invalidate sequence. */
 export function beginWorkspaceSwitch(): void {
+  generation += 1
   commit({ switching: true })
 }
 
@@ -114,6 +124,7 @@ export function endWorkspaceSwitch(): void {
 
 /** Test seam. */
 export function resetWorkspaceClaim(): void {
+  generation += 1
   state = INITIAL
   listeners.forEach((listener) => listener())
 }

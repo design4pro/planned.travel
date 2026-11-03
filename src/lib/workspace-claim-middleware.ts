@@ -5,7 +5,8 @@
  * it with the session's (`requireOrg`). Registering it globally is what makes "a tab's data and its
  * chrome cannot disagree" a property of the product rather than of each call site: a new server
  * function cannot forget to send it, and one that must not be checked simply never calls `requireOrg`
- * (`loadShell`, sign-in, invitations, the console).
+ * (shell adoption during navigation, sign-in, invitations, the console). Room shell
+ * refreshes check the original claim before reading tenant content.
  *
  * There is no server half. The header is read where the session already is, in `requireOrg`,
  * because that is the one door every tenant-scoped call passes through.
@@ -32,11 +33,13 @@ import {
 import {
   markWorkspaceStale,
   workspaceClaimState,
+  workspaceClaimGeneration,
 } from './workspace-claim-store'
 
 export const workspaceClaimMiddleware = createMiddleware({
   type: 'function',
 }).client(async ({ next }) => {
+  const generation = workspaceClaimGeneration()
   const { organizationId, stale, switching } = workspaceClaimState()
 
   if (stale) {
@@ -53,7 +56,8 @@ export const workspaceClaimMiddleware = createMiddleware({
     return await next({ headers: { [WORKSPACE_CLAIM_HEADER]: organizationId } })
   } catch (cause) {
     if (isWorkspaceChanged(cause)) {
-      markWorkspaceStale(organizationId)
+      if (workspaceClaimGeneration() === generation)
+        markWorkspaceStale(organizationId)
       throw new Error(WORKSPACE_CHANGED_KEY, { cause })
     }
     throw cause

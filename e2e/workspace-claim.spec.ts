@@ -229,3 +229,105 @@ test('a trip tab whose workspace changed says why live updates stopped and stops
   // Leave the shared session in the first workspace for the rest of the run.
   await switchTo(other, FIRST)
 })
+
+for (const trigger of ['commit', 'catch-up', 'room-close'] as const) {
+  test(`a room ${trigger} preserves a stale tab's mounted draft until explicit recovery`, async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(150_000)
+    await context.clearCookies()
+    expect(await signIn(page, baseURL)).toBe(true)
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+    await switchTo(page, FIRST)
+
+    let notify: (() => void) | undefined
+    await page.routeWebSocket(/\/api\/trip-room\//, (ws) => {
+      const server = ws.connectToServer()
+      server.onMessage((message) => {
+        ws.send(message)
+        if (
+          typeof message === 'string' &&
+          JSON.parse(message).t === 'welcome'
+        ) {
+          const welcome: Record<string, unknown> = JSON.parse(message)
+          notify = () => {
+            if (trigger === 'room-close')
+              ws.close({ code: 1001, reason: 'Room closed' })
+            else if (trigger === 'commit')
+              ws.send(
+                JSON.stringify({ t: 'commit', version: 999, entries: [] }),
+              )
+            else
+              ws.send(
+                JSON.stringify({
+                  ...welcome,
+                  commits: [{ version: 999, entries: [] }],
+                }),
+              )
+          }
+        }
+      })
+    })
+    await page.goto('/trips', { waitUntil: 'domcontentloaded' })
+    const trip = page
+      .locator('a[href^="/trips/"][href$="/plan"]:visible')
+      .first()
+    const href = await trip.getAttribute('href')
+    expect(href).toBeTruthy()
+    await page.goto(href?.replace(/\/plan$/, '/collab') ?? '', {
+      waitUntil: 'domcontentloaded',
+    })
+    await expect(
+      page.getByRole('status').filter({ hasText: /^Live$/ }),
+    ).toBeVisible({ timeout: 30_000 })
+    const composer = page.getByPlaceholder('Say something to the group…')
+    const draft =
+      'Room refresh must keep this exact draft\nincluding this line.'
+    await composer.fill(draft)
+    const mounted = await composer.elementHandle()
+
+    const other = await context.newPage()
+    try {
+      await other.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+      await switchTo(other, SECOND)
+      expect(notify).toBeTruthy()
+      notify?.()
+      const notice = page.getByRole('alertdialog', {
+        name: 'The workspace changed in another tab',
+      })
+      await expect(notice).toBeVisible({ timeout: 30_000 })
+      await expect(composer).toHaveValue(draft)
+      expect(
+        await composer.evaluate(
+          (element, previous) => element === previous,
+          mounted,
+        ),
+      ).toBe(true)
+      await expect(page).toHaveURL(/\/collab$/)
+      await notice.getByRole('button', { name: 'Not now' }).click()
+      await expect(
+        page.getByRole('status').filter({ hasText: 'Live updates stopped' }),
+      ).toBeVisible()
+      await page
+        .getByRole('button', { name: 'Open the current workspace' })
+        .click()
+      await expect(
+        page.getByText('Text you have not sent in this tab will be lost.'),
+      ).toBeVisible()
+      await page.getByRole('button', { name: 'Cancel' }).click()
+      await expect(composer).toHaveValue(draft)
+      await page
+        .getByRole('button', { name: 'Open the current workspace' })
+        .click()
+      await page.waitForTimeout(550)
+      await page.getByRole('button', { name: 'Open anyway' }).click()
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await expectActive(page, SECOND)
+    } finally {
+      await switchTo(other, FIRST)
+      await other.close()
+    }
+  })
+}
