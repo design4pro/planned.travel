@@ -510,12 +510,12 @@ export async function requireTrip(
  * in it.
  *
  * A distinct code rather than `FORBIDDEN`: this is a property of the trip, not of the caller, and
- * the instruction that follows from it - restore the trip - is a different one.
+ * the instruction that follows from it - ask the owner to restore the trip - is a different one.
  */
 export class TripArchivedError extends RepositoryError {
   constructor() {
     super(
-      'This trip is archived. Restore it before making changes.',
+      'This trip is archived. The trip owner must restore it before changes can be made.',
       'TRIP_ARCHIVED',
     )
   }

@@ -49,11 +49,15 @@ import {
   parseMoney,
   toAmountInput,
 } from '#/lib/money'
-import { offeredPeople, parseDay, toDayString } from './data'
+import { findPerson, offeredPeople, parseDay, toDayString } from './data'
 import { SETTLEMENT_METHOD_OPTIONS } from './payment-methods'
 import { useStaleTripCurrency } from './stale-trip-currency'
 
-import type { CostsPerson, SettlementMethod } from '#/server/fns/costs'
+import type {
+  CostsDepartedPerson,
+  CostsPerson,
+  SettlementMethod,
+} from '#/server/fns/costs'
 
 /** Exactly the shape `recordPaymentFn` validates. */
 export interface PaymentFormValue {
@@ -81,6 +85,7 @@ export interface PaymentDialogProps {
   /** Pre-fills the form from a suggested transfer. `null` opens it blank. */
   readonly seed: PaymentSeed | null
   readonly people: ReadonlyArray<CostsPerson>
+  readonly departedPeople?: ReadonlyArray<CostsDepartedPerson>
   /**
    * Who still has a balance on the trip. A member who left the workspace is offered for a payment
    * only while they appear here (or on the seed): the repository accepts exactly those.
@@ -101,6 +106,7 @@ export function PaymentDialog({
   onOpenChange,
   seed,
   people,
+  departedPeople = [],
   withBalance = [],
   viewerUserId,
   currency,
@@ -235,9 +241,9 @@ export function PaymentDialog({
   }
 
   const nameOf = (userId: string): string => {
-    const person = people.find((entry) => entry.userId === userId)
-    if (person?.leftWorkspace === true) return t('costs.person.removed')
-    return person?.name ?? t('costs.rebase.someone')
+    const person = findPerson(people, departedPeople, userId)
+    if (person === undefined) return t('costs.rebase.someone')
+    return person.name ?? t('costs.person.removed')
   }
 
   async function submit(): Promise<void> {

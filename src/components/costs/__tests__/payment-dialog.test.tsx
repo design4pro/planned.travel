@@ -535,3 +535,35 @@ describe('the payment dialog in the reader’s language (#1217)', () => {
     expect(forint).not.toBe('Hungarian forint')
   })
 })
+
+it.each([
+  ['Pia Payer', 'Pia Payer'],
+  [null, 'Removed traveller'],
+] as const)(
+  'names a seeded departed party (%s) without offering new parties',
+  async (name, expected) => {
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <PaymentDialog
+          open
+          onOpenChange={() => {}}
+          seed={{ fromUserId: 'gone', toUserId: 'u1', amountMinor: 100 }}
+          people={PEOPLE}
+          departedPeople={[
+            { userId: 'gone', name, image: null },
+            { userId: 'other', name: 'Not eligible', image: null },
+          ]}
+          viewerUserId="u1"
+          currency="EUR"
+          today="2026-10-12"
+          onSubmit={async () => {}}
+        />
+      </I18nProvider>,
+    )
+    expect(screen.getByText(`${expected} pays Ada`)).toBeTruthy()
+    expect(screen.getByText(expected, { selector: '.sr-only' })).toBeTruthy()
+    await hand().click(screen.getByRole('combobox', { name: 'Paid by' }))
+    expect(screen.queryByRole('option', { name: expected })).toBeNull()
+    expect(screen.queryByRole('option', { name: 'Not eligible' })).toBeNull()
+  },
+)
