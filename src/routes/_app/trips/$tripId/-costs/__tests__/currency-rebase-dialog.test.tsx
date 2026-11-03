@@ -126,6 +126,7 @@ interface Handles {
 
 function open(
   options: {
+    readonly departedPeople?: CurrencyRebaseDialogProps['departedPeople']
     readonly load?: Load
     readonly commit?: Commit
     readonly readCurrency?: () => Promise<string>
@@ -145,7 +146,7 @@ function open(
         onOpenChange={handles.onOpenChange}
         currency="EUR"
         people={PEOPLE}
-        departedPeople={[]}
+        departedPeople={options.departedPeople ?? []}
         loadPreview={handles.loadPreview}
         commit={handles.commit}
         readCurrency={handles.readCurrency}
@@ -1054,3 +1055,29 @@ describe('the currency picker in the reader’s language (#1217)', () => {
     expect(forint).not.toBe('Hungarian forint')
   })
 })
+
+it.each([
+  ['Pia Payer', 'Pia Payer'],
+  [null, 'Someone'],
+] as const)(
+  'names a departed party in leftover lines (%s)',
+  async (name, expected) => {
+    open({
+      departedPeople: [{ userId: 'gone', name, image: null }],
+      load: async () =>
+        preview({
+          balances: {
+            maxMovementMinor: 1,
+            leftovers: [{ userId: 'gone', otherUserId: 'u1', amountMinor: 1 }],
+          },
+        }),
+    })
+    await pick(hand(), 'JPY')
+    await settled()
+    expect(
+      within(result()).getByText(
+        `After the change, ${expected} would owe Ada ¥1.`,
+      ),
+    ).toBeTruthy()
+  },
+)

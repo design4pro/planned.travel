@@ -13,7 +13,8 @@
  *
  * A tab stops after its first refusal: a stale tab that kept polling would send a refused call per
  * tick and count each one in `server_fn.failure`. Once stale, calls fail here with the same refusal
- * until a navigation re-reads the shell (`src/routes/_app/route.tsx`). They do not reopen the
+ * until navigation re-reads the shell or an explicit compatibility check recovers the original
+ * workspace. They do not reopen the
  * notice: a poll or a link preload is not the reader asking, and a dialog that came back every few
  * seconds after "Not now" would pull focus away from whatever they were doing. The surfaces a
  * reader's own action ends in (`useAction`, `messageOf`, `ErrorPanel`) reopen it.
@@ -32,34 +33,39 @@ import {
 } from './workspace-claim'
 import {
   markWorkspaceStale,
+  permitsWorkspaceCall,
+  trackWorkspaceCall,
+  workspaceSwitchCancelled,
   workspaceClaimState,
+  workspaceCallClaim,
   workspaceClaimGeneration,
 } from './workspace-claim-store'
 
 export const workspaceClaimMiddleware = createMiddleware({
   type: 'function',
-}).client(async ({ next }) => {
+}).client(async ({ next, fetch }) => {
   const generation = workspaceClaimGeneration()
-  const { organizationId, stale, switching } = workspaceClaimState()
+  const { stale } = workspaceClaimState()
+  const organizationId = workspaceCallClaim(fetch)
 
   if (stale) {
     throw new Error(WORKSPACE_CHANGED_KEY)
   }
 
-  // No claim before the shell has loaded, on the server, or while this tab is switching workspace
-  // itself: all three behave as a call always did.
-  if (organizationId === null || switching) {
-    return next()
-  }
-
+  if (!permitsWorkspaceCall(fetch)) throw workspaceSwitchCancelled()
+  // Shell-less calls keep their existing behavior; transitions never remove a displayed claim.
+  const finish = trackWorkspaceCall()
   try {
+    if (organizationId === null) return await next()
     return await next({ headers: { [WORKSPACE_CLAIM_HEADER]: organizationId } })
   } catch (cause) {
     if (isWorkspaceChanged(cause)) {
-      if (workspaceClaimGeneration() === generation)
+      if (organizationId !== null && workspaceClaimGeneration() === generation)
         markWorkspaceStale(organizationId)
       throw new Error(WORKSPACE_CHANGED_KEY, { cause })
     }
     throw cause
+  } finally {
+    finish()
   }
 })

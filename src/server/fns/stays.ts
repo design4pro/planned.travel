@@ -3,9 +3,9 @@
  *
  * A stay is one action to the reader and two rows in the database — the `reservations` row carries
  * the confirmation code, the status and the price; the `day_accommodations` row carries the run of
- * days and the times, linked to the booking through `reservation_id`. The two writes go through two
- * repositories, so they cannot share a D1 batch, and every function here states the order it writes
- * them in and what it does when the second one fails.
+ * days and the times, linked to the booking through `reservation_id`. Creation and update commit
+ * both rows in one D1 batch through the paired repository. Deletion keeps its sequential writes
+ * and reports a failure after either step.
  *
  * Each server function is a thin wrapper over a plain function of the same name without `Fn`, kept in
  * `stay-writes.ts`. Outside a Start build a server function runs its handler and discards the answer,

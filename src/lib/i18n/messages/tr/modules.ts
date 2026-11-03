@@ -199,6 +199,8 @@ const messages = {
   'book.import.widget.stalled': 'Bu beklenenden uzun sürüyor',
   'book.import.widget.check': 'Yeniden bak',
   'book.import.widget.dismiss': 'Kapat',
+  'book.import.review.dismissWarning':
+    '“{filename}” kapatılsın mı? Onaylanmamış satırlara bu kayıt üzerinden erişilemeyecek. İncelemeyi kapatmak işi korur. Satırlar artık görünmüyorsa geçici verilerin süresi dolmuş olabilir; işi kapatabilir veya yeniden kontrol edebilirsiniz.',
   'book.import.review.title': 'Okuduklarımız',
   'book.import.review.from': '“{filename}” dosyasından',
   'book.import.review.selectAll': 'Tümünü seç',

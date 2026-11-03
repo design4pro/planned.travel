@@ -210,6 +210,8 @@ const messages = {
   'book.import.widget.stalled': 'Ci sta mettendo più del previsto',
   'book.import.widget.check': 'Guarda di nuovo',
   'book.import.widget.dismiss': 'Chiudi',
+  'book.import.review.dismissWarning':
+    'Ignorare «{filename}»? Le righe non confermate non saranno più accessibili da questo registro. Chiudere la revisione conserva l’attività. Se le righe non compaiono più, i dati temporanei potrebbero essere scaduti; puoi ignorare l’attività o controllare di nuovo.',
   'book.import.review.title': 'Cosa abbiamo letto',
   'book.import.review.from': 'Da «{filename}»',
   'book.import.review.selectAll': 'Seleziona tutto',

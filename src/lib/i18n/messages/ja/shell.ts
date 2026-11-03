@@ -654,6 +654,10 @@ const messages = {
     'このタブには「{name}」が表示されていますが、ワークスペースは別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
   'session.openCurrentWorkspace': '現在のワークスペースを開く',
   'session.workspaceChangedDismiss': '今はしない',
+  'session.workspaceCheck': 'このワークスペースを確認',
+  'session.workspaceCheckPending': 'ワークスペースへのアクセスを確認中…',
+  'session.workspaceCheckFailed':
+    'このワークスペースへのアクセスを確認できませんでした。操作は再実行されていません。もう一度確認できます。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

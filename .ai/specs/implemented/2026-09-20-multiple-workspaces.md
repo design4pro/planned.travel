@@ -356,13 +356,18 @@ read wrongly on the already-checked item.
   function called from the authenticated shell carries the workspace the tab is showing (the
   _workspace claim_, header `x-planned-workspace`), `requireOrg` refuses a call whose claim differs
   from the session's workspace with `workspace-changed` before any role check or write, and the stale
-  tab shows a notice that reloads into the current workspace. A call with no claim (MCP, `/api/*`, a
-  call before the shell loaded) behaves as before. The trip room's WebSocket door reads the claim from
+  tab shows a notice that can reload into the current workspace. Existing unclaimed calls
+  (MCP, a call before the shell loaded) behave as before. The trip room's WebSocket door reads the claim from
   `?workspace=` and answers a mismatch with an accepted-then-closed socket (code 4001), which the
   presence pill shows as `workspace-changed` (#979). Room-triggered commit, catch-up and access-change
   refreshes retain the displayed claim (#1570). The shell checks it before tenant reads; only a
   verified workspace mismatch retains the mounted route snapshot and unsent text. Genuine access
   loss still replaces the screen. Explicit guarded recovery opens the current workspace.
+  Alternatively, an explicit authenticated, read-only compatibility check can resume the original
+  mounted workspace in place when the session matches it again (#1705). This check requires a valid
+  claim and current membership in the original session workspace, never uses membership fallback or
+  provisioning, and never replays a write. Navigation, switching, a newer attempt or refusal, and
+  dismissal invalidate its pending result; ordinary operations remain locally blocked until verified.
 - **KV session cache.** Sessions live in `SESSIONS` KV (`src/server/auth/secondary-storage.ts`), and
   `getSession()` passes `disableCookieCache: true` **as a query parameter**
   (`src/server/auth/session.ts:70`) - the file warns at `:51-52` that the sibling-option spelling is
@@ -573,5 +578,6 @@ workspace after confirmed absence. Read failures propagate; banned and impersona
 claims and explicit pins cannot provision through this fallback. Sequential reloads reuse the
 recovered membership without repeating departure or updating the session.
 
-The workspace deletion spec's remaining Phase 3 work is atomic provisioning under concurrent
-requests, rather than introducing another shared resolver. Implementation: PR #1708.
+The shared resolver landed in PR #1708. Issue #1738 adds atomic personal provisioning under
+concurrent reloads to that resolver; explicit workspace creation retains its existing batch and
+limit enforcement.

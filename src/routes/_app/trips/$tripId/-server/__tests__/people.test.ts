@@ -42,6 +42,7 @@ import {
   memberUserIds,
 } from '#/server/repos/__tests__/harness'
 
+import type * as Observability from '#/server/observability'
 import type * as Repos from '#/server/repos'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope, TripParticipant } from '#/server/repos'
@@ -64,6 +65,8 @@ const stubs = vi.hoisted(() => ({
   onEvict: null as (() => Promise<void>) | null,
   /** When true, the room cannot be reached. */
   roomThrows: false,
+  attempts: 0,
+  warnings: [] as Array<Record<string, unknown>>,
 }))
 
 /**
@@ -79,6 +82,7 @@ vi.mock('cloudflare:workers', () => ({
       idFromName: (name: string) => name,
       get: (tripId: string) => ({
         fetch: async (request: Request): Promise<Response> => {
+          stubs.attempts += 1
           if (stubs.roomThrows) {
             throw new Error('TRIP_ROOM is unreachable')
           }
@@ -93,6 +97,15 @@ vi.mock('cloudflare:workers', () => ({
       }),
     },
   },
+}))
+
+vi.mock('#/server/observability', async (importOriginal) => ({
+  ...(await importOriginal<typeof Observability>()),
+  loggerFromEnv: () => ({
+    warn: (_message: string, fields: Record<string, unknown>) => {
+      stubs.warnings.push(fields)
+    },
+  }),
 }))
 
 vi.mock('#/server/auth/session', () => ({ requireOrg: async () => null }))
@@ -226,6 +239,8 @@ beforeEach(async () => {
   stubs.evictedAtNotify = null
   stubs.onEvict = null
   stubs.roomThrows = false
+  stubs.attempts = 0
+  stubs.warnings = []
 
   const editorId = await tenant.addUser('An editor')
   const viewerId = await tenant.addUser('A reader')
@@ -930,6 +945,13 @@ describe('the trip room after a change of someone’s access', () => {
         (row) => row.id === memberId,
       )?.role,
     ).toBe('editor')
+    expect(stubs.attempts).toBe(1)
+    expect(stubs.warnings).toHaveLength(1)
+    expect(stubs.warnings[0]).toMatchObject({
+      tripId: fixture.tripId,
+      userId: fixture.viewerId,
+      organizationId: tenant.organizationId,
+    })
 
     // The whole room: a narrowing.
     await inRequest(() =>
@@ -945,6 +967,13 @@ describe('the trip room after a change of someone’s access', () => {
     expect(
       (await readTripPeople(owner, fixture.tripId, 'test-key')).visibility,
     ).toBe('private')
+    expect(stubs.attempts).toBe(2)
+    expect(stubs.warnings).toHaveLength(2)
+    expect(stubs.warnings[1]).toMatchObject({
+      tripId: fixture.tripId,
+      organizationId: tenant.organizationId,
+    })
+    expect(stubs.warnings[1]).not.toHaveProperty('userId')
     expect(stubs.evicted).toEqual([])
   })
 

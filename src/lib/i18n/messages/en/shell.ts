@@ -875,6 +875,10 @@ const messages = {
     'This tab is showing {name}, but the workspace was changed in another tab or window. Nothing was saved.',
   'session.openCurrentWorkspace': 'Open the current workspace',
   'session.workspaceChangedDismiss': 'Not now',
+  'session.workspaceCheck': 'Check this workspace',
+  'session.workspaceCheckPending': 'Checking workspace access…',
+  'session.workspaceCheckFailed':
+    'Could not verify access to this workspace. Nothing was retried. You can check again.',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -1155,6 +1155,15 @@ export async function createAccommodation(
   scope: TenantScope,
   input: CreateAccommodationInput,
 ): Promise<DayAccommodation> {
+  const values = await prepareAccommodationCreate(scope, input)
+  return dayAccommodationsRepository.insert(scope, values)
+}
+
+/** Validates the nights before a single write or a stay's atomic pair. */
+export async function prepareAccommodationCreate(
+  scope: TenantScope,
+  input: CreateAccommodationInput,
+) {
   const values = createAccommodationInput.parse(input)
   await requireWritableTrip(scope, values.tripId)
   await assertTripRole(scope, values.tripId, TRIP_WRITE_ROLES)
@@ -1169,7 +1178,7 @@ export async function createAccommodation(
   if (values.reservationId) {
     await requireReservationOfTrip(scope, values.tripId, values.reservationId)
   }
-  return dayAccommodationsRepository.insert(scope, values)
+  return values
 }
 
 export async function updateAccommodation(
@@ -1177,6 +1186,24 @@ export async function updateAccommodation(
   accommodationId: string,
   input: UpdateAccommodationInput,
 ): Promise<DayAccommodation> {
+  const { values } = await prepareAccommodationUpdate(
+    scope,
+    accommodationId,
+    input,
+  )
+  return dayAccommodationsRepository.requireUpdate(
+    scope,
+    accommodationId,
+    values,
+  )
+}
+
+/** The same scoped row and reference guards for standalone and paired updates. */
+export async function prepareAccommodationUpdate(
+  scope: TenantScope,
+  accommodationId: string,
+  input: UpdateAccommodationInput,
+) {
   const values = definedOnly(updateAccommodationInput.parse(input))
   const existing = await dayAccommodationsRepository.requireById(
     scope,
@@ -1196,11 +1223,7 @@ export async function updateAccommodation(
   if (values.reservationId) {
     await requireReservationOfTrip(scope, existing.tripId, values.reservationId)
   }
-  return dayAccommodationsRepository.requireUpdate(
-    scope,
-    accommodationId,
-    values,
-  )
+  return { values, existing }
 }
 
 export async function deleteAccommodation(

@@ -2,10 +2,50 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { tripInviteLinks } from '#/server/db/schema'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { createTripInvite, replaceTripInvite } from '#/server/repos/invites'
-import { createTrip, listTripMembers } from '#/server/repos/trips'
+import { createTrip, listTripMembers, updateTrip } from '#/server/repos/trips'
+import { hashSecret } from '#/server/security/secret'
 import { joinInvite, joinerOf } from '../join'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { JoinDeps } from '../join'
+
+import type * as Observability from '#/server/observability'
+
+const room = vi.hoisted(() => ({
+  requests: [] as Array<{ tripId: string; userId: string }>,
+  warnings: [] as Array<Record<string, unknown>>,
+  throws: false,
+  onClose: null as (() => Promise<void>) | null,
+}))
+vi.mock('cloudflare:workers', () => ({
+  env: {
+    TRIP_ROOM: {
+      idFromName: (name: string) => name,
+      get: (tripId: string) => ({
+        fetch: async (request: Request) => {
+          room.requests.push({
+            tripId,
+            ...((await request.json()) as { userId: string }),
+          })
+          await room.onClose?.()
+          if (room.throws) throw new Error('TRIP_ROOM is unreachable')
+          return new Response(null, { status: 200 })
+        },
+      }),
+    },
+  },
+}))
+vi.mock('#/server/auth/env', () => ({}))
+vi.mock('#/server/auth/session', () => ({ requireOrg: async () => null }))
+vi.mock('#/server/db/client', () => ({ getDb: () => null }))
+vi.mock('#/server/observability', async (importOriginal) => ({
+  ...(await importOriginal<typeof Observability>()),
+  loggerFromEnv: () => ({
+    warn: (_message: string, fields: Record<string, unknown>) => {
+      room.warnings.push(fields)
+    },
+  }),
+}))
+await import('#/server/fns/context')
 
 const KEY = 'a-test-key-that-is-long-enough-for-hkdf'
 
@@ -44,6 +84,10 @@ describe('joinInvite', () => {
   const members = () => listTripMembers(a.scope, tripId)
 
   beforeEach(async () => {
+    room.requests = []
+    room.warnings = []
+    room.throws = false
+    room.onClose = null
     audit.mockClear()
     log.mockClear()
     counters = new Map()
@@ -55,6 +99,67 @@ describe('joinInvite', () => {
     secret =
       (await createTripInvite(a.scope, tripId, { role: 'viewer', key: KEY }))
         .secret ?? ''
+  })
+
+  it('closes only the joiner after the editor membership commits in the link workspace', async () => {
+    const friend = await b.addUser('Both')
+    await a.addMembership(friend)
+    const otherTrip = await createTrip(b.scope, {
+      title: 'Other',
+      currency: 'EUR',
+    })
+    await updateTrip(a.scope, tripId, { visibility: 'organization' })
+    const replacement = await replaceTripInvite(a.scope, tripId, {
+      role: 'editor',
+      expectedRotation: 0,
+      key: KEY,
+    })
+    if (!replacement.ok) throw new Error('Expected invite rotation')
+    secret = replacement.secret ?? ''
+    const seen: Array<string | undefined> = []
+    room.onClose = async () => {
+      seen.push((await members()).find((row) => row.userId === friend)?.role)
+    }
+
+    expect(
+      await joinInvite(
+        deps({ id: friend, activeOrganizationId: b.organizationId }),
+        secret,
+      ),
+    ).toMatchObject({
+      outcome: 'joined',
+      organizationId: a.organizationId,
+      switchWorkspace: true,
+    })
+    expect(seen).toEqual(['editor'])
+    expect(room.requests).toEqual([{ tripId, userId: friend }])
+    expect(await listTripMembers(b.scope, otherTrip.id)).toHaveLength(1)
+  })
+
+  it('keeps the committed join when closing fails, warning with the link workspace and no secret', async () => {
+    const friend = await b.addUser('Both')
+    await a.addMembership(friend)
+    room.throws = true
+    expect(
+      await joinInvite(
+        deps({ id: friend, activeOrganizationId: b.organizationId }),
+        secret,
+      ),
+    ).toMatchObject({ outcome: 'joined' })
+    expect((await members()).find((row) => row.userId === friend)?.role).toBe(
+      'viewer',
+    )
+    expect(room.requests).toEqual([{ tripId, userId: friend }])
+    expect(room.warnings).toHaveLength(1)
+    expect(room.warnings[0]).toMatchObject({
+      tripId,
+      userId: friend,
+      organizationId: a.organizationId,
+    })
+    const written = JSON.stringify([room.warnings, log.mock.calls])
+    expect(written).not.toContain(secret)
+    expect(written).not.toContain(await hashSecret(secret))
+    expect(written).not.toContain(`/join/${secret}`)
   })
 
   it('joins a workspace member and writes an audit row with the link and the role, never the secret', async () => {
@@ -112,8 +217,21 @@ describe('joinInvite', () => {
   it('answers member for a second submit, with no second audit row', async () => {
     const friend = await a.addUser('Friend')
     await joinInvite(deps({ id: friend }), secret)
-    const again = await joinInvite(deps({ id: friend }), secret)
+    const replacement = await replaceTripInvite(a.scope, tripId, {
+      role: 'editor',
+      expectedRotation: 0,
+      key: KEY,
+    })
+    if (!replacement.ok) throw new Error('Expected invite rotation')
+    const again = await joinInvite(
+      deps({ id: friend }),
+      replacement.secret ?? '',
+    )
     expect(again).toMatchObject({ outcome: 'member', tripId })
+    expect(room.requests).toEqual([{ tripId, userId: friend }])
+    expect((await members()).find((row) => row.userId === friend)?.role).toBe(
+      'viewer',
+    )
     expect(audit).toHaveBeenCalledOnce()
   })
 
@@ -122,6 +240,7 @@ describe('joinInvite', () => {
     const answer = await joinInvite(deps({ id: outsider }), secret)
     expect(answer).toEqual({ outcome: 'needs-workspace' })
     expect(await members()).toHaveLength(1)
+    expect(room.requests).toEqual([])
     expect(audit).not.toHaveBeenCalled()
   })
 
@@ -134,6 +253,7 @@ describe('joinInvite', () => {
       await joinInvite(deps({ id: friend, impersonated: true }), secret),
     ).toEqual({ outcome: 'unavailable' })
     expect(await members()).toHaveLength(1)
+    expect(room.requests).toEqual([])
     expect(audit).not.toHaveBeenCalled()
   })
 
@@ -148,6 +268,7 @@ describe('joinInvite', () => {
       outcome: 'unavailable',
     })
     expect(await members()).toHaveLength(1)
+    expect(room.requests).toEqual([])
   })
 
   it('answers unavailable to anything that is not shaped like a secret, before any query', async () => {
@@ -169,6 +290,7 @@ describe('joinInvite', () => {
       await joinInvite({ ...deps({ id: friend }), now }, secret),
     ).toMatchObject({ outcome: 'busy', retryAfter: 30 })
     expect(await members()).toHaveLength(1)
+    expect(room.requests).toEqual([])
 
     for (let n = 0; n < 30; n += 1) {
       const other = await a.addUser(`Other ${n}`)
@@ -206,6 +328,7 @@ describe('joinInvite', () => {
       (await members()).filter((member) => member.userId === friend),
     ).toHaveLength(1)
     expect(audit).toHaveBeenCalledTimes(1)
+    expect(room.requests).toEqual([{ tripId, userId: friend }])
     const [link] = await h.db.select().from(tripInviteLinks)
     expect(link?.useCount).toBe(1)
   })

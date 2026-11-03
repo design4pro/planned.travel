@@ -736,6 +736,36 @@ function filesRoute(tripId: string): RouteCase {
   }
 }
 
+/** Reset only this session owner's fixture feeds, including those left by an interrupted process. */
+async function resetCalendarLinks(page: Page) {
+  await page.getByRole('button', { name: 'Live calendar link' }).click()
+  const dialog = page.getByRole('dialog', {
+    name: 'Live calendar link',
+    exact: true,
+  })
+  for (const name of ['This trip', 'My trips']) {
+    await dialog.getByRole('tab', { name, exact: true }).click()
+    await expect(dialog.locator('[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    await expect(dialog.getByRole('alert')).toHaveCount(0)
+    const off = dialog.getByRole('button', { name: 'Turn off', exact: true })
+    if (await off.isVisible()) {
+      await off.click()
+      await page
+        .getByRole('dialog', { name: 'Turn off this calendar link?' })
+        .getByRole('button', { name: 'Turn off', exact: true })
+        .click()
+    }
+    await expect(
+      dialog.getByRole('button', { name: 'Create a link' }),
+    ).toBeEnabled()
+  }
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+}
+
 /** Whether the page scrolls sideways: the signature of an action that does not fit its screen. */
 async function scrollsSideways(page: Page): Promise<boolean> {
   return page.evaluate(
@@ -1040,6 +1070,8 @@ test.describe('06-S3b - Requesting a trip export', () => {
 
 /** Phase 2: only Chromium mutates the shared fixture; both projects inspect the resting dialog. */
 test.describe('06-S5b — live calendar link', () => {
+  // These journeys share the demo owner's trip and workspace feeds.
+  test.describe.configure({ mode: 'default' })
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)
     expect(await hasSession(page), 'the demo account is provisioned').toBe(true)
@@ -1137,58 +1169,128 @@ test.describe('06-S5b — live calendar link', () => {
   }
 
   test(
+    'recovers both calendar scopes after link creation is interrupted',
+    { tag: '@chromium-only' },
+    async ({ context, page, playwright }) => {
+      const tripId = await tripIdByName(context, PORTO)
+      const cleanup = await context.newPage()
+      const unauthenticated = await playwright.request.newContext()
+      const urls: string[] = []
+      try {
+        await visit(cleanup, filesRoute(tripId), 'light')
+        await resetCalendarLinks(cleanup)
+        await visit(page, filesRoute(tripId), 'light')
+        await page.getByRole('button', { name: 'Live calendar link' }).click()
+        const dialog = page.getByRole('dialog', {
+          name: 'Live calendar link',
+          exact: true,
+        })
+        for (const name of ['This trip', 'My trips']) {
+          await dialog.getByRole('tab', { name, exact: true }).click()
+          await dialog.getByRole('button', { name: 'Create a link' }).click()
+          const address = dialog.getByRole('region', { name: 'Link address' })
+          await expect(address).toBeFocused()
+          const url = (await address.textContent())?.trim() ?? ''
+          expect(url).toMatch(/\/api\/feed\/[A-Za-z0-9_-]{32}\.ics$/)
+          urls.push(url)
+        }
+        // Closing the page bypasses all dialog cleanup, as a killed attempt would.
+        await page.close()
+        for (const url of urls) {
+          expect((await unauthenticated.get(url)).status()).toBe(200)
+        }
+        await resetCalendarLinks(cleanup)
+        for (const url of urls) {
+          expect((await unauthenticated.get(url)).status()).toBe(404)
+        }
+      } finally {
+        try {
+          await resetCalendarLinks(cleanup)
+        } finally {
+          await cleanup.close()
+          await unauthenticated.dispose()
+        }
+      }
+    },
+  )
+
+  test(
     'a keyboard-created link rotates, invalidates the old URL and ends revoked',
     { tag: '@chromium-only' },
     async ({ context, page, playwright }) => {
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
       await page.setViewportSize({ width: 320, height: PHONE_HEIGHT })
       const tripId = await tripIdByName(context, PORTO)
-      await visit(page, filesRoute(tripId), 'light')
-      await page.getByRole('button', { name: 'Live calendar link' }).focus()
-      await page.keyboard.press('Enter')
-      const dialog = page.getByRole('dialog', {
-        name: 'Live calendar link',
-        exact: true,
-      })
-      const create = dialog.getByRole('button', { name: 'Create a link' })
-      await expect(create).toBeVisible()
-      await create.focus()
-      await page.keyboard.press('Enter')
-      const address = dialog.getByRole('region', { name: 'Link address' })
-      await expect(address).toBeFocused()
-      expect(await scrollsSideways(page)).toBe(false)
-      expect(
-        await address.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth,
-        ),
-      ).toBe(true)
-      const tripTab = dialog.getByRole('tab', {
-        name: 'This trip',
-        exact: true,
-      })
-      const workspaceTab = dialog.getByRole('tab', {
-        name: 'My trips',
-        exact: true,
-      })
-      await tripTab.focus()
-      await page.keyboard.press('ArrowRight')
-      await expect(workspaceTab).toBeFocused()
-      await expect(tripTab).toHaveAttribute('aria-selected', 'true')
-      const savedLink = await address.textContent()
-      await page.keyboard.press('Enter')
-      await expect(workspaceTab).toHaveAttribute('aria-selected', 'true')
-      await expect(
-        dialog.getByText(/50 with the latest start dates/),
-      ).toBeVisible()
-      await tripTab.focus()
-      await page.keyboard.press('Enter')
-      await expect(address).toHaveText(savedLink ?? '')
-      await address.focus()
-      const url = (await address.textContent())?.trim()
-      expect(url).toMatch(/\/api\/feed\/[A-Za-z0-9_-]{32}\.ics$/)
-      if (!url) throw new Error('No link address')
+      const cleanup = await context.newPage()
       const unauthenticated = await playwright.request.newContext()
+      let finishRefresh = () => {}
       try {
+        await visit(cleanup, filesRoute(tripId), 'light')
+        await resetCalendarLinks(cleanup)
+        await visit(page, filesRoute(tripId), 'light')
+        await page.getByRole('button', { name: 'Live calendar link' }).focus()
+        await page.keyboard.press('Enter')
+        const dialog = page.getByRole('dialog', {
+          name: 'Live calendar link',
+          exact: true,
+        })
+        const create = dialog.getByRole('button', { name: 'Create a link' })
+        await expect(create).toBeEnabled()
+        const refresh = new Promise<void>((resolve) => {
+          finishRefresh = resolve
+        })
+        await page.route(
+          (url) => callsServerFn(url, 'loadCalendarFeedsFn'),
+          async (request) => {
+            await refresh
+            await request.continue()
+          },
+          { times: 1 },
+        )
+        await create.focus()
+        await page.keyboard.press('Enter')
+        const address = dialog.getByRole('region', { name: 'Link address' })
+        await expect(address).toBeFocused()
+        expect(await scrollsSideways(page)).toBe(false)
+        expect(
+          await address.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true)
+        const tripTab = dialog.getByRole('tab', {
+          name: 'This trip',
+          exact: true,
+        })
+        const workspaceTab = dialog.getByRole('tab', {
+          name: 'My trips',
+          exact: true,
+        })
+        await expect(tripTab).toBeDisabled()
+        finishRefresh()
+        await expect(tripTab).toBeEnabled()
+        await expect(workspaceTab).toBeEnabled()
+        await tripTab.focus()
+        await page.keyboard.press('ArrowRight')
+        await expect(workspaceTab).toBeFocused()
+        await expect(tripTab).toHaveAttribute('aria-selected', 'true')
+        const savedLink = await address.textContent()
+        await page.keyboard.press('Enter')
+        await expect(workspaceTab).toHaveAttribute('aria-selected', 'true')
+        await expect(
+          dialog.getByText(/50 with the latest start dates/),
+        ).toBeVisible()
+        await expect(tripTab).toBeEnabled()
+        await tripTab.focus()
+        await page.keyboard.press('Enter')
+        await expect(address).toHaveText(savedLink ?? '')
+        await expect(dialog.locator('[aria-busy]')).toHaveAttribute(
+          'aria-busy',
+          'false',
+        )
+        await address.focus()
+        const url = (await address.textContent())?.trim()
+        expect(url).toMatch(/\/api\/feed\/[A-Za-z0-9_-]{32}\.ics$/)
+        if (!url) throw new Error('No link address')
         const response = await unauthenticated.get(url)
         expect(response.status()).toBe(200)
         expect(response.headers()['cache-control']).toBe('private, no-store')
@@ -1239,6 +1341,9 @@ test.describe('06-S5b — live calendar link', () => {
         const updated = await unauthenticated.get(newUrl)
         expect(updated.status()).toBe(200)
         expect(await updated.text()).toContain('BEGIN:VCALENDAR')
+        await expect(
+          dialog.getByRole('button', { name: 'Turn off', exact: true }),
+        ).toBeEnabled()
         await page.keyboard.press('Escape')
         await expect(guard).toBeVisible()
         await guard.getByRole('button', { name: 'Keep open' }).click()
@@ -1257,6 +1362,7 @@ test.describe('06-S5b — live calendar link', () => {
         expect((await unauthenticated.get(newUrl)).status()).toBe(404)
         await workspaceTab.click()
         await expect(create).toBeVisible()
+        await expect(create).toBeEnabled()
         await create.focus()
         await page.keyboard.press('Enter')
         await expect(address).toBeFocused()
@@ -1277,23 +1383,13 @@ test.describe('06-S5b — live calendar link', () => {
         await expect(create).toBeFocused()
         expect((await unauthenticated.get(workspaceUrl)).status()).toBe(404)
       } finally {
-        // Even a failed assertion leaves this live credential revoked through the actual UI.
-        if (
-          await dialog
-            .getByRole('button', { name: 'Turn off', exact: true })
-            .isVisible()
-            .catch(() => false)
-        ) {
-          await dialog
-            .getByRole('button', { name: 'Turn off', exact: true })
-            .click()
-          await page
-            .getByRole('dialog', { name: 'Turn off this calendar link?' })
-            .getByRole('button', { name: 'Turn off', exact: true })
-            .click()
-          await expect(create).toBeVisible()
+        finishRefresh()
+        try {
+          await resetCalendarLinks(cleanup)
+        } finally {
+          await cleanup.close()
+          await unauthenticated.dispose()
         }
-        await unauthenticated.dispose()
       }
     },
   )

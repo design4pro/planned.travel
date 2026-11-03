@@ -7,16 +7,23 @@
  */
 import { useSyncExternalStore } from 'react'
 
-import { isWorkspaceChanged } from './workspace-claim'
+import { z } from 'zod'
+
+import {
+  isWorkspaceChanged,
+  parseWorkspaceClaim,
+  WORKSPACE_CLAIM_HEADER,
+  WORKSPACE_CHANGED_KEY,
+} from './workspace-claim'
 
 export interface WorkspaceClaimState {
   /** The workspace the tab is showing, or `null` before the shell has loaded. */
   readonly organizationId: string | null
-  /** A call was refused: the tab sends nothing more until a navigation re-reads the shell. */
+  /** A call was refused: the tab sends nothing more until navigation or explicit compatibility verification. */
   readonly stale: boolean
   /** The notice is showing. "Not now" closes it without clearing `stale`. */
   readonly noticeOpen: boolean
-  /** This tab is switching workspace itself: its own sequence must not refuse it. */
+  /** A deliberate switch/create owns the tab; unrelated calls remain unsent. */
   readonly switching: boolean
 }
 
@@ -30,6 +37,8 @@ const INITIAL: WorkspaceClaimState = {
 let state: WorkspaceClaimState = INITIAL
 // A navigation to the same workspace still supersedes requests made by the previous screen.
 let generation = 0
+// Refusals invalidate recovery without making other in-flight refusals obsolete.
+let recoveryAttempt = 0
 
 export function workspaceClaimGeneration(): number {
   return generation
@@ -63,9 +72,8 @@ export function workspaceClaimState(): WorkspaceClaimState {
 /**
  * The shell was read for this tab: it now shows `organizationId`, and a stale tab is current.
  *
- * It does not end a switch: a link followed while the switcher is still working reads the shell too,
- * and closing the window then would make the switcher's own next call refuse itself. Only
- * `endWorkspaceSwitch` closes it.
+ * An owned shell read updates the claim before its dashboard loader runs, but unrelated calls
+ * stay blocked until `endWorkspaceSwitch` closes the transition.
  */
 export function setWorkspaceClaim(organizationId: string | null): void {
   generation += 1
@@ -89,7 +97,43 @@ export function resumeWorkspaceClaim(): void {
  */
 export function markWorkspaceStale(sentWith: string): void {
   if (state.organizationId !== sentWith) return
+  recoveryAttempt += 1
   commit({ stale: true, noticeOpen: true })
+}
+
+/** Only an explicit authenticated read can reopen this gate without rereading the shell. */
+export async function recoverWorkspaceClaim(): Promise<boolean> {
+  const claim = parseWorkspaceClaim(state.organizationId)
+  if (!state.stale || state.switching || claim.status !== 'valid') return false
+  const startedGeneration = generation
+  const attempt = ++recoveryAttempt
+  try {
+    const response = await fetch('/api/workspace-compatibility', {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+      headers: { [WORKSPACE_CLAIM_HEADER]: claim.organizationId },
+    })
+    if (!response.ok) return false
+    const result = z
+      .object({ organizationId: z.string() })
+      .safeParse(await response.json())
+    if (
+      !result.success ||
+      result.data.organizationId !== claim.organizationId ||
+      generation !== startedGeneration ||
+      recoveryAttempt !== attempt ||
+      state.organizationId !== claim.organizationId ||
+      !state.stale ||
+      state.switching
+    )
+      return false
+    commit({ stale: false, noticeOpen: false })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** The reader did something and it was stopped because the tab is stale: say so again. */
@@ -109,22 +153,185 @@ export function reopenNoticeFor(error: unknown): boolean {
 }
 
 export function dismissWorkspaceNotice(): void {
+  recoveryAttempt += 1
   commit({ noticeOpen: false })
 }
 
-/** Around the workspace switcher's own switch-navigate-invalidate sequence. */
-export function beginWorkspaceSwitch(): void {
-  generation += 1
-  commit({ switching: true })
+/** Local capability for one deliberate transition; never sent as authorization. */
+export interface WorkspaceSwitch {
+  readonly id: number
+  readonly organizationId: string | null
+  readonly fetch: typeof globalThis.fetch
+  readonly ready: Promise<void>
+  expected: ReadonlyArray<string | null>
 }
 
-export function endWorkspaceSwitch(): void {
+let nextSwitchId = 0
+let activeSwitch: WorkspaceSwitch | undefined
+let pendingResync: WorkspaceSwitch | undefined
+let pendingDocument: WorkspaceSwitch | undefined
+const shellSwitches = new WeakMap<AbortController, WorkspaceSwitch>()
+const calls = new Set<Promise<void>>()
+
+/** Register before dispatch so activation waits for earlier claim refusals as well as successes. */
+export function trackWorkspaceCall(): () => void {
+  if (typeof window === 'undefined') return () => {}
+  let finish = () => {}
+  const done = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  calls.add(done)
+  return () => {
+    calls.delete(done)
+    finish()
+  }
+}
+
+export function workspaceSwitchCancelled(): DOMException {
+  return new DOMException('Workspace transition cancelled', 'AbortError')
+}
+
+export function ownsWorkspaceSwitch(token: WorkspaceSwitch): boolean {
+  return activeSwitch === token
+}
+
+/** New unrelated calls are cancelled, never queued for a different workspace. */
+export function permitsWorkspaceCall(
+  fetch: typeof globalThis.fetch | undefined,
+): boolean {
+  return (
+    !state.switching ||
+    (activeSwitch !== undefined && fetch === activeSwitch.fetch)
+  )
+}
+
+/** Creation is bound to the workspace that opened the transition, even if an earlier read settles. */
+export function workspaceCallClaim(
+  fetch: typeof globalThis.fetch | undefined,
+): string | null {
+  if (
+    activeSwitch &&
+    fetch === activeSwitch.fetch &&
+    activeSwitch.expected.length === 0
+  )
+    return activeSwitch.organizationId
+  return state.organizationId
+}
+
+export function beginWorkspaceSwitch(): WorkspaceSwitch {
+  if (activeSwitch) throw workspaceSwitchCancelled()
+  const token: WorkspaceSwitch = {
+    id: ++nextSwitchId,
+    organizationId: state.organizationId,
+    expected: [],
+    ready: Promise.all([...calls]).then(() => undefined),
+    fetch: (...args) => {
+      if (!ownsWorkspaceSwitch(token)) throw workspaceSwitchCancelled()
+      return globalThis.fetch(...args)
+    },
+  }
+  activeSwitch = token
+  // Do not advance generation: a refusal already in flight must still mark the tab stale.
+  commit({ switching: true })
+  return token
+}
+
+export async function waitForWorkspaceCalls(
+  token: WorkspaceSwitch,
+): Promise<void> {
+  // A stalled prior RPC cancels this intent; it must never activate later when that RPC settles.
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      token.ready,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(workspaceSwitchCancelled()), 10_000)
+      }),
+    ])
+  } finally {
+    clearTimeout(timeout)
+  }
+  if (!ownsWorkspaceSwitch(token)) throw workspaceSwitchCancelled()
+  if (state.stale) throw new Error(WORKSPACE_CHANGED_KEY)
+  if (state.organizationId !== token.organizationId)
+    throw workspaceSwitchCancelled()
+}
+
+/** Only the next shell read of this explicit router operation receives the capability. */
+export function prepareWorkspaceResync(
+  token: WorkspaceSwitch,
+  expected: ReadonlyArray<string | null>,
+): void {
+  if (!ownsWorkspaceSwitch(token)) throw workspaceSwitchCancelled()
+  if (state.stale) throw new Error(WORKSPACE_CHANGED_KEY)
+  token.expected = expected
+  pendingResync = token
+}
+
+export function takeWorkspaceResync(
+  controller: AbortController,
+): WorkspaceSwitch | undefined {
+  const token = pendingResync
+  pendingResync = undefined
+  if (token && ownsWorkspaceSwitch(token)) shellSwitches.set(controller, token)
+  const bound = shellSwitches.get(controller)
+  return bound && ownsWorkspaceSwitch(bound) ? bound : undefined
+}
+
+export function workspaceResyncToken(
+  controller: AbortController,
+): number | undefined {
+  const bound = shellSwitches.get(controller)
+  return bound && ownsWorkspaceSwitch(bound) ? bound.id : undefined
+}
+
+export function workspaceSwitchFetch(
+  id: number | undefined,
+): typeof globalThis.fetch | undefined {
+  return activeSwitch && activeSwitch.id === id ? activeSwitch.fetch : undefined
+}
+
+/** The document locale belongs to this invalidation, after its shell confirmed the destination. */
+export function prepareWorkspaceDocument(token: WorkspaceSwitch): void {
+  if (!ownsWorkspaceSwitch(token) || state.stale)
+    throw workspaceSwitchCancelled()
+  pendingDocument = token
+}
+
+/** Only the root loader consumes this one-shot capability; ordinary locale calls remain blocked. */
+export function takeWorkspaceDocumentFetch():
+  typeof globalThis.fetch | undefined {
+  const token = pendingDocument
+  pendingDocument = undefined
+  return token &&
+    ownsWorkspaceSwitch(token) &&
+    !state.stale &&
+    token.expected.includes(state.organizationId)
+    ? token.fetch
+    : undefined
+}
+
+export function finishWorkspaceResync(token: WorkspaceSwitch): void {
+  if (pendingResync === token) pendingResync = undefined
+  if (pendingDocument === token) pendingDocument = undefined
+}
+
+export function endWorkspaceSwitch(
+  token: WorkspaceSwitch | undefined = activeSwitch,
+): void {
+  if (!token || !ownsWorkspaceSwitch(token)) return
+  activeSwitch = undefined
+  finishWorkspaceResync(token)
   commit({ switching: false })
 }
 
 /** Test seam. */
 export function resetWorkspaceClaim(): void {
   generation += 1
+  activeSwitch = undefined
+  pendingResync = undefined
+  pendingDocument = undefined
+  calls.clear()
   state = INITIAL
   listeners.forEach((listener) => listener())
 }

@@ -63,8 +63,8 @@ function registerOne(delayMs?: number): void {
   )
 }
 
-function mount(): void {
-  render(
+function mount() {
+  return render(
     <I18nProvider locale="en" messages={EN}>
       <BookImportWidget userId={USER} />
     </I18nProvider>,
@@ -355,4 +355,26 @@ describe('the global import widget', () => {
       search: { import: 'booking-import:trip-1:file-1' },
     })
   })
+})
+
+it('does not resurrect a ready Review after informed dismissal and reload', async () => {
+  registerOne()
+  stubs.view.mockResolvedValue({
+    status: 'ready',
+    staged: { format: 'document', count: 1, written: [], drafts: [] },
+  } satisfies BookingImportView)
+  const widget = mount()
+  await tick(POLL_INTERVAL_MS)
+  screen.getByRole('button', { name: 'Review' }).click()
+  expect(readBookImports(USER)).toHaveLength(1)
+  await act(async () => {
+    bookImportJobs(USER).dismissReview('trip-1', 'booking-import:trip-1:file-1')
+  })
+  expect(screen.queryByRole('button', { name: 'Review' })).toBeNull()
+  widget.unmount()
+  resetBookImportJobs()
+  mount()
+  await tick(POLL_INTERVAL_MS)
+  expect(readBookImports(USER)).toEqual([])
+  expect(screen.queryByRole('button', { name: 'Review' })).toBeNull()
 })

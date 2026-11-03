@@ -201,6 +201,8 @@ const messages = {
   'book.import.widget.stalled': 'Dit duurt langer dan verwacht',
   'book.import.widget.check': 'Opnieuw kijken',
   'book.import.widget.dismiss': 'Wegdoen',
+  'book.import.review.dismissWarning':
+    '‘{filename}’ verwijderen? Onbevestigde rijen zijn dan niet meer toegankelijk via dit register. Het sluiten van de controle behoudt de taak. Als de rijen niet meer verschijnen, zijn de tijdelijke gegevens mogelijk verlopen; je kunt de taak verwijderen of opnieuw controleren.',
   'book.import.review.title': 'Wat we hebben gelezen',
   'book.import.review.from': 'Uit „{filename}”',
   'book.import.review.selectAll': 'Alles selecteren',

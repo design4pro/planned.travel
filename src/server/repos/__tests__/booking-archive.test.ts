@@ -236,7 +236,7 @@ describe('an archived trip’s bookings and stays', () => {
 
     expect(error).toBeInstanceOf(TripArchivedError)
     expect(error.message).toBe(
-      'This trip is archived. Restore it before making changes.',
+      'This trip is archived. The trip owner must restore it before changes can be made.',
     )
   })
 

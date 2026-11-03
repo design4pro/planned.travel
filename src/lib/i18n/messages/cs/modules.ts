@@ -208,6 +208,8 @@ const messages = {
   'book.import.widget.stalled': 'Trvá to dýl, než jsme čekali',
   'book.import.widget.check': 'Zkusit znovu',
   'book.import.widget.dismiss': 'Zavřít',
+  'book.import.review.dismissWarning':
+    'Zahodit „{filename}“? Nepotvrzené řádky přestanou být dostupné přes tento registr. Zavření kontroly úlohu zachová. Pokud se řádky již nezobrazují, dočasná data mohla vypršet; úlohu můžete zahodit nebo ji znovu zkontrolovat.',
   'book.import.review.title': 'Co jsme přečetli',
   'book.import.review.from': 'Z „{filename}“',
   'book.import.review.selectAll': 'Vybrat vše',

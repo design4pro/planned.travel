@@ -5,6 +5,8 @@
  * plain Node under test and `-server/join.ts` is only the wiring that supplies them. It is the named
  * caller of `joinTripByInviteUnscoped`.
  */
+import { settleTripAccessChange } from '#/server/fns/-lib/trip-access-change'
+import { createScope } from '#/server/repos/base'
 import { spendPublicBudget } from '#/server/public/rate-limit'
 import { joinTripByInviteUnscoped } from '#/server/repos/invites'
 import { hashSecret, isSecretShape } from '#/server/security/secret'
@@ -130,6 +132,10 @@ export async function joinInvite(
     deps.log?.('member', {})
     return answer
   }
+  await settleTripAccessChange(createScope(deps.db, result.context), {
+    kind: 'member-added',
+    member: { tripId: result.tripId, userId: user.id, role: result.role },
+  })
   // After the commit, and never the secret or the digest: the link's id and the role it granted.
   await deps.audit(result.context, {
     action: AUDIT_ACTIONS.TRIP_MEMBER_JOINED,

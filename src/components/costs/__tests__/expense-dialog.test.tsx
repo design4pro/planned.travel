@@ -1076,9 +1076,9 @@ describe('the payer of an expense whose payer has left the trip', () => {
     open(undefined, { expense: FERRY, departedPeople: DEPARTED })
 
     expect(screen.getByRole('combobox', { name: 'Paid by' }).textContent).toBe(
-      'Cy',
+      'Cy · Left the trip',
     )
-    expect(await payerOptions(user)).toContain('Cy')
+    expect(await payerOptions(user)).toContain('Cy · Left the trip')
   })
 
   it('offers them only as the payer, not a departed share holder who did not pay', async () => {
@@ -1096,8 +1096,8 @@ describe('the payer of an expense whose payer has left the trip', () => {
 
     await payerOptions(user)
     await user.click(screen.getByRole('option', { name: /Bo/ }))
-    expect(await payerOptions(user)).toContain('Cy')
-    await user.click(screen.getByRole('option', { name: 'Cy' }))
+    expect(await payerOptions(user)).toContain('Cy · Left the trip')
+    await user.click(screen.getByRole('option', { name: 'Cy · Left the trip' }))
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(onSubmit.mock.calls[0]?.[0].paidBy).toBe('u9')
@@ -1110,7 +1110,7 @@ describe('the payer of an expense whose payer has left the trip', () => {
       departedPeople: [{ userId: 'u9', name: null, image: null }],
     })
 
-    expect(await payerOptions(user)).toContain('Removed traveller')
+    expect(await payerOptions(user)).toContain('Removed traveller · Left the trip')
   })
 
   it('offers a departed person on no new expense', async () => {

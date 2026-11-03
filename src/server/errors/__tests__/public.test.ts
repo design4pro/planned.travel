@@ -209,7 +209,8 @@ describe('authored copy is shown as itself', () => {
   it('recognises the archived-trip refusal, so a stale tab is told why its write did not land', () => {
     expect(classifyFailure(new TripArchivedError())).toEqual({
       kind: 'refusal',
-      message: 'This trip is archived. Restore it before making changes.',
+      message:
+        'This trip is archived. The trip owner must restore it before changes can be made.',
     })
   })
 

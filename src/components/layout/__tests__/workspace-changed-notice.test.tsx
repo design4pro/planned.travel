@@ -41,6 +41,7 @@ afterEach(() => {
     configurable: true,
     value: originalLocation,
   })
+  vi.unstubAllGlobals()
   assign.mockReset()
   resetWorkspaceClaim()
 })
@@ -338,5 +339,77 @@ describe('WorkspaceChangedNotice', () => {
         screen.getByRole('button', { name: 'Open the current workspace' }),
       ).toBeTruthy()
     })
+  })
+})
+
+describe('in-place compatibility recovery', () => {
+  it('keeps the mounted exact unsent text and focus, with no automatic submission or navigation', async () => {
+    const user = userEvent.setup()
+    const submit = vi.fn()
+    const request = vi
+      .fn()
+      .mockResolvedValue(Response.json({ organizationId: 'org_a' }))
+    vi.stubGlobal('fetch', request)
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <form onSubmit={submit}>
+          <textarea
+            aria-label="Draft"
+            defaultValue={'  Exact unsent text\nwith spacing  '}
+          />
+          <button>Save</button>
+        </form>
+        <WorkspaceChangedNotice organizationName="Alpha Travel" />
+      </I18nProvider>,
+    )
+    const draft = screen.getByRole('textbox') as HTMLTextAreaElement
+    draft.focus()
+    refuse()
+    await screen.findByRole('alertdialog')
+    const recover = screen.getByRole('button', { name: 'Check this workspace' })
+    recover.focus()
+    await user.keyboard('{Enter}')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByRole('textbox')).toBe(draft)
+    expect(draft.value).toBe('  Exact unsent text\nwith spacing  ')
+    expect(document.activeElement).toBe(draft)
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(submit).not.toHaveBeenCalled()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('announces pending and failure, keeps dismissal usable and returns focus after a retry', async () => {
+    const user = userEvent.setup()
+    let reject: (error: Error) => void = () => {}
+    const request = vi.fn(
+      () =>
+        new Promise<Response>((_resolve, fail) => {
+          reject = fail
+        }),
+    )
+    vi.stubGlobal('fetch', request)
+    mount()
+    refuse()
+    await user.click(
+      await screen.findByRole('button', { name: 'Check this workspace' }),
+    )
+    expect(screen.getByRole('status').textContent).toContain('Checking')
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Not now' }),
+    )
+    await act(async () => reject(new Error('offline')))
+    expect(screen.getByRole('status').textContent).toContain('Could not verify')
+    expect(workspaceClaimState().stale).toBe(true)
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Check this workspace' }),
+    )
+    await user.keyboard('{Enter}')
+    await act(async () => reject(new Error('offline again')))
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Check this workspace' }),
+    )
+    await user.click(screen.getByRole('button', { name: 'Not now' }))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(workspaceClaimState().stale).toBe(true)
   })
 })
