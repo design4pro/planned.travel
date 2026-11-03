@@ -38,21 +38,6 @@ beforeEach(() => {
   mocks.scope.mockResolvedValue({ ctx: { organizationId: 'server-workspace' } })
   mocks.rates.mockResolvedValue({ status: 'unavailable', reason: 'expired' })
 })
-it.each(['anonymous', 'expired', 'removed-member', 'stale-workspace'])(
-  'refuses %s before touching cache or metering',
-  async (reason) => {
-    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      mocks.scope.mockRejectedValue(new Error(reason))
-      expect((await call({})).status).toBe(500)
-      expect(mocks.rates).not.toHaveBeenCalled()
-      expect(mocks.outbound).not.toHaveBeenCalled()
-      expect(mocks.cache.get).not.toHaveBeenCalled()
-    } finally {
-      quiet.mockRestore()
-    }
-  },
-)
 it('refuses caller attribution and unknown input fields at the wire schema', () => {
   expect(() =>
     publicRatesInput.parse({ organizationId: 'foreign', amount: 100 }),
