@@ -24,6 +24,7 @@ import {
   Skeleton,
   StatCard,
 } from '#/components/ui'
+import { workspaceSwitchFetch } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
@@ -107,7 +108,11 @@ function labelFor(
 }
 
 export const Route = createFileRoute('/_app/dashboard')({
-  loader: () => loadDashboard(),
+  loader: ({ context, abortController }) =>
+    loadDashboard({
+      fetch: workspaceSwitchFetch(context.workspaceTransition),
+      signal: abortController.signal,
+    }),
   pendingComponent: DashboardPending,
   errorComponent: DashboardError,
   component: DashboardPage,

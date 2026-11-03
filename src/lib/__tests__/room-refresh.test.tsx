@@ -407,7 +407,7 @@ it('does not let an old room event supersede a deliberate navigation', async () 
   expect(workspaceClaimState().organizationId).toBe('B')
 })
 
-it('keeps the old screen if this tab starts switching while the shell refresh is in flight', async () => {
+it('keeps an earlier competing-tab mismatch visible while a deliberate switch waits', async () => {
   const view = await mount()
   const pending = deferred<Awaited<ReturnType<typeof shellRead>>>()
   let started = false
@@ -426,7 +426,7 @@ it('keeps the old screen if this tab starts switching while the shell refresh is
   expect(screen.getByRole('textbox')).toBe(view.field)
   expect(workspaceClaimState()).toMatchObject({
     organizationId: 'A',
-    stale: false,
+    stale: true,
     switching: true,
   })
 })
