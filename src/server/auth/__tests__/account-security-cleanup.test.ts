@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { symmetricEncrypt } from 'better-auth/crypto'
 import {
   member,
+  organization,
   securityFence,
   securityCleanup,
   securityOperation,
@@ -158,6 +159,24 @@ describe('durable session and room cleanup', () => {
         (row) => row.id === 'zz-healthy',
       ),
     ).toBe(false)
+  })
+
+  it('retains an account routing target across workspace deletion until acknowledgement', async () => {
+    await sweepAccountSecurity(harness.db, options())
+    await harness.db.delete(organization).where(eq(organization.id, workspace))
+    expect(
+      (await harness.db.select().from(securityRoomCleanup)).map(
+        (row) => row.organizationId,
+      ),
+    ).toEqual([workspace])
+    await acknowledgeAccountRoomEviction(
+      harness.db,
+      id,
+      scope.userId,
+      workspace,
+    )
+    await sweepAccountSecurity(harness.db, options())
+    expect((await operation()).cleanupPending).toBe(false)
   })
 
   it('uses retained participation after membership leaves, without seeing another account', async () => {

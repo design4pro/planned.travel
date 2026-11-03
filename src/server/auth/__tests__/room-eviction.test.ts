@@ -822,7 +822,7 @@ describe('ending one’s own session queues the close of the person’s trip-roo
       const line = String(warnings.mock.calls[0]?.[0])
       expect(JSON.parse(line)).toMatchObject({
         event: 'room-eviction.other-sessions.unread',
-        reason: 'Error',
+        reason: source === 'durable' ? 'TypeError' : 'Error',
       })
       expect(line).not.toContain(String(token))
       expect(line).not.toContain(failure.message)

@@ -18,7 +18,7 @@
 import { describe, expect, it } from 'vitest'
 import { is } from 'drizzle-orm'
 import { SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core'
-import { authSchema } from '#/server/db/auth-schema'
+import { authSchema, accountSecuritySchema } from '#/server/db/auth-schema'
 import * as domainSchema from '#/server/db/schema'
 
 /**
@@ -35,6 +35,13 @@ const GLOBAL_TABLES: ReadonlyArray<string> = [
   'account',
   'organization',
   'passkey',
+  // Account-only metadata (ADR 0048); room routing ids intentionally carry organization_id.
+  'account_security',
+  'account_security_fence',
+  'account_security_operation',
+  'account_security_cleanup',
+  'session_authority',
+  'verification_authority',
   'session',
   'two_factor',
   'user',
@@ -58,6 +65,7 @@ const GLOBAL_TABLES: ReadonlyArray<string> = [
 function declaredTables() {
   const exported: Array<unknown> = Object.values({
     ...authSchema,
+    ...accountSecuritySchema,
     ...domainSchema,
   })
   return exported

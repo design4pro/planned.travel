@@ -746,6 +746,9 @@ capability for pending ids and encrypted cleanup references only. Arbitrary acco
 generic query/table APIs are forbidden. See ADR 0048 and `docs/account-session-authority.md` for
 closed projections, authority and writer coverage. This exception grants no tenant-content access
 and does not widen any existing Unscoped function.
+The account-owned `account_security_room_cleanup.organization_id` is a routing target, not tenant
+content: it deliberately survives workspace deletion until queue acknowledgement, and cascades
+only with its account operation. Workspace deletion must not erase pending account cleanup.
 
 ## 6. Repo conventions
 
