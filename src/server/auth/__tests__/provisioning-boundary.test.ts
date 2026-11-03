@@ -79,7 +79,10 @@ describe('src/server/auth/provisioning.ts', () => {
 
 describe('docs/SPEC.md §6', () => {
   it('names the provisioning module as a stated exception, with the tables it touches', () => {
-    expect(spec).toContain('The stated exceptions are three, and closed')
+    expect(spec).toContain('The other stated exceptions are three, and closed')
+    expect(spec).toContain(
+      'The account-auth repository is the separately bounded fourth exception above',
+    )
     expect(spec).toContain('`src/server/auth/provisioning.ts`')
     expect(spec).toContain(
       'reads `user` and reads and writes `organization` and `member`',
