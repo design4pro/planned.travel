@@ -206,8 +206,16 @@ export function CostsScreen({
         data.people,
         data.viewerUserId,
         t('costs.person.removed'),
+        data.departedPeople,
       ),
-    [snapshot.expenses, filters, data.people, data.viewerUserId, t],
+    [
+      snapshot.expenses,
+      filters,
+      data.people,
+      data.departedPeople,
+      data.viewerUserId,
+      t,
+    ],
   )
 
   const visibleMinor = visible.reduce(
@@ -309,6 +317,7 @@ export function CostsScreen({
       expensesCsv({
         rows: visible,
         people: data.people,
+        departedPeople: data.departedPeople,
         viewerUserId: data.viewerUserId,
         display: data.displayCurrency,
         t,
@@ -322,6 +331,7 @@ export function CostsScreen({
     })
   }, [
     data.displayCurrency,
+    data.departedPeople,
     data.people,
     data.today,
     data.viewerUserId,
@@ -621,6 +631,7 @@ export function CostsScreen({
           }}
           seed={session.seed}
           people={data.people}
+          departedPeople={data.departedPeople}
           withBalance={data.balances
             .filter((row) => row.balanceMinor !== 0)
             .map((row) => row.userId)}

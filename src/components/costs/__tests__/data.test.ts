@@ -1141,3 +1141,129 @@ describe('displayCurrencyChoices', () => {
     expect(choices.enabled).toEqual([{ code: 'QAR', reason: 'workspace' }])
   })
 })
+
+describe('departed payer lookup consumers', () => {
+  const t = namespaceTranslate('costs', DeCosts)
+  const departedPeople = [
+    { userId: 'u-gone', name: 'Pia Payer', image: null },
+    { userId: 'u-unnamed', name: null, image: null },
+    { userId: 'u-left', name: 'Hidden profile', image: null },
+    { userId: 'u-rafal', name: 'Stale profile', image: null },
+  ]
+  const people = [
+    ...PEOPLE,
+    {
+      userId: 'u-left',
+      name: 'Hidden profile',
+      email: '',
+      image: null,
+      role: 'member',
+      leftWorkspace: true,
+    },
+  ]
+
+  it('searches departed names case-insensitively with the existing filters', () => {
+    const row = expense({ paidBy: 'u-gone' })
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: 'PIA payer' },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      ),
+    ).toEqual([row])
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: 'PIA', category: 'accommodation' },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      ),
+    ).toEqual([])
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: 'PIA', day: '1900-01-01' },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      ),
+    ).toEqual([])
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: 'PIA', view: 'paid' },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      ),
+    ).toEqual([])
+    expect(
+      filterExpenses(
+        [row],
+        { ...ALL, q: 'PIA', view: 'owed' },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      ),
+    ).toEqual([])
+  })
+
+  it('localizes unnamed people, masks workspace leavers and prefers current names', () => {
+    const rows = ['u-gone', 'u-unnamed', 'u-left', 'u-rafal', 'unknown'].map(
+      (paidBy) => expense({ paidBy }),
+    )
+    const search = (q: string) =>
+      filterExpenses(
+        rows,
+        { ...ALL, q },
+        people,
+        'u-rafal',
+        t('costs.person.removed'),
+        departedPeople,
+      )
+    expect(search('Entfernte Reisende')).toEqual([rows[1], rows[2]])
+    expect(search('Hidden profile')).toEqual([])
+    expect(search('Stale profile')).toEqual([])
+    expect(search('Rafal')).toEqual([rows[3]])
+    const csv = expensesCsv({
+      rows,
+      people,
+      departedPeople,
+      viewerUserId: 'u-rafal',
+      display: { mode: 'per-trip', code: 'JPY' },
+      t,
+    })
+    expect(csv).toContain('"Pia Payer"')
+    expect(csv.match(/"Entfernte Reisende"/g)).toHaveLength(3)
+    expect(csv).toContain('"Rafal"')
+    expect(csv).not.toMatch(/Hidden profile|Stale profile/)
+  })
+
+  it.each([
+    'Pia, "Payer"',
+    '=1+1',
+    '+SUM(1)',
+    '@name',
+    '\tformula',
+    '\rformula',
+  ])('escapes and guards the departed CSV payer %j', (name) => {
+    const csv = expensesCsv({
+      rows: [expense({ paidBy: 'u-gone' })],
+      people: PEOPLE,
+      departedPeople: [{ userId: 'u-gone', name, image: null }],
+      viewerUserId: 'u-rafal',
+      display: { mode: 'per-trip', code: 'JPY' },
+      t,
+    })
+    const guarded = /^[=+@\t\r]/.test(name) ? "'" + name : name
+    expect(csv).toContain('"' + guarded.replace(/"/g, '""') + '"')
+  })
+})

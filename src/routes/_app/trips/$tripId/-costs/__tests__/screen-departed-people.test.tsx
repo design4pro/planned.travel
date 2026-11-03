@@ -14,9 +14,15 @@ import Shell from '#/lib/i18n/messages/en/shell'
 import Trips from '#/lib/i18n/messages/en/trips'
 import Ui from '#/lib/i18n/messages/en/ui'
 import { CostsScreen } from '../screen'
+import { downloadCsv } from '#/components/costs/data'
 
 import type { Catalogue } from '#/lib/i18n'
 import type { CostsPayload } from '#/server/fns/costs'
+
+vi.mock(import('#/components/costs/data'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  downloadCsv: vi.fn(),
+}))
 
 /**
  * A traveller who has left the trip is named the same way everywhere the costs screen names a
@@ -185,13 +191,13 @@ const DATA: CostsPayload = {
   suggestedRate: null,
 }
 
-function mount(): void {
+function mount(q?: string): void {
   render(
     <I18nProvider locale="en" messages={EN}>
       <CostsScreen
         data={DATA}
         filters={{
-          q: undefined,
+          q,
           category: undefined,
           day: undefined,
           view: 'all',
@@ -244,4 +250,51 @@ describe('a departed traveller on the costs screen', () => {
     expect(within(dialog).getByText(/Otto Owed/)).toBeTruthy()
     expect(dialog.textContent).not.toContain('removed traveller')
   })
+})
+
+it('finds a departed payer from the screen payload by name', () => {
+  mount('PIA payer')
+  expect(screen.getByText('Ferry')).toBeTruthy()
+  expect(screen.queryByText('Museum')).toBeNull()
+})
+
+it('exports the departed payer from the screen payload', async () => {
+  mount()
+  await userEvent
+    .setup({ delay: null })
+    .click(screen.getByRole('button', { name: /Export/ }))
+  expect(downloadCsv).toHaveBeenCalledWith(
+    expect.any(String),
+    expect.stringContaining('"Pia Payer"'),
+  )
+})
+
+it('names a departed party when opening a suggested payment', async () => {
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <CostsScreen
+        data={{
+          ...DATA,
+          suggestions: [
+            { fromUserId: 'u-ada', toUserId: 'u-pia', amountMinor: 4000 },
+          ],
+        }}
+        filters={{
+          q: undefined,
+          category: undefined,
+          day: undefined,
+          view: 'all',
+        }}
+        onFiltersChange={() => undefined}
+      />
+    </I18nProvider>,
+  )
+  await userEvent
+    .setup({ delay: null })
+    .click(screen.getByRole('button', { name: /^Settle$/ }))
+  expect(
+    within(await screen.findByRole('dialog')).getByText(
+      'Ada Lovelace pays Pia Payer',
+    ),
+  ).toBeTruthy()
 })
