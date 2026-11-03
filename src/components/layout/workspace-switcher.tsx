@@ -124,6 +124,7 @@ export function useWorkspaceSwitch({
     switching.current = true
     setPendingId(organizationId)
     const transition = beginWorkspaceSwitch()
+    let failedBeforeActivation = false
     try {
       await waitForWorkspaceCalls(transition)
       const failure = await authClient.organization
@@ -162,8 +163,8 @@ export function useWorkspaceSwitch({
       }
       if (failure) return
     } catch (cause) {
-      reopenNoticeFor(cause)
-      return
+      if (reopenNoticeFor(cause)) return
+      failedBeforeActivation = true
     } finally {
       endWorkspaceSwitch(transition)
       switching.current = false
@@ -172,6 +173,10 @@ export function useWorkspaceSwitch({
         setPendingId(null)
         onSettled()
       })
+    }
+    if (failedBeforeActivation) {
+      toast.error(t('shell.workspace.switchFailed'))
+      return
     }
     toast.success(
       t('shell.workspace.switched', { name: `\u2068${chosenName}\u2069` }),

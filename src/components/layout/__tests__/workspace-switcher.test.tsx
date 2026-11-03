@@ -314,6 +314,15 @@ describe('switching', () => {
     async (refused) => {
       setWorkspaceClaim('org_a')
       const finish = trackWorkspaceCall()
+      notify.error.mockImplementation(() => {
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(screen.queryByRole('menu', { hidden: true })).toBeNull()
+        expect(
+          screen
+            .getByRole('button', { name: /account menu/i })
+            .closest('[aria-hidden="true"]'),
+        ).toBeNull()
+      })
       await mount(sessionOf([ALPHA, BETA]))
       vi.useFakeTimers()
       try {
@@ -326,6 +335,10 @@ describe('switching', () => {
           await vi.advanceTimersByTimeAsync(10_000)
         })
         expect(workspaceClaimState().switching).toBe(false)
+        expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+          EN['shell.workspace.switchFailed'],
+        )
+        expect(notify.success).not.toHaveBeenCalled()
         expect(auth.setActive).not.toHaveBeenCalled()
         if (refused) markWorkspaceStale('org_a')
         await act(async () => {
