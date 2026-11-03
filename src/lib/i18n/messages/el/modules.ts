@@ -204,6 +204,8 @@ const messages = {
   'book.import.widget.stalled': 'Αυτό αργεί πιο πολύ απ’ όσο περιμέναμε',
   'book.import.widget.check': 'Δες πάλι',
   'book.import.widget.dismiss': 'Κλείσ’ το',
+  'book.import.review.dismissWarning':
+    'Απόρριψη του «{filename}»; Οι μη επιβεβαιωμένες γραμμές δεν θα είναι πλέον προσβάσιμες από αυτό το μητρώο. Το κλείσιμο του ελέγχου διατηρεί την εργασία. Αν οι γραμμές δεν εμφανίζονται πια, τα προσωρινά δεδομένα μπορεί να έχουν λήξει· μπορείς να απορρίψεις την εργασία ή να ελέγξεις ξανά.',
   'book.import.review.title': 'Τι διαβάσαμε',
   'book.import.review.from': 'Από το «{filename}»',
   'book.import.review.selectAll': 'Διάλεξε όλα',

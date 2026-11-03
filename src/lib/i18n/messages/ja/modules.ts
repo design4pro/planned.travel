@@ -194,6 +194,8 @@ const messages = {
   'book.import.widget.stalled': '思ったより時間がかかっています',
   'book.import.widget.check': 'もう一度確認',
   'book.import.widget.dismiss': '閉じる',
+  'book.import.review.dismissWarning':
+    '「{filename}」を閉じますか？未確定の行はこの一覧からアクセスできなくなります。確認画面を閉じるだけなら処理は保持されます。行が表示されなくなった場合、一時データの有効期限が切れた可能性があります。処理を一覧から削除するか、再確認できます。',
   'book.import.review.title': '読み取った内容',
   'book.import.review.from': '「{filename}」より',
   'book.import.review.selectAll': 'すべて選ぶ',

@@ -201,6 +201,8 @@ const messages = {
   'book.import.widget.stalled': 'Ez a várhatónál hosszabb ideig tart',
   'book.import.widget.check': 'Nézd meg újra',
   'book.import.widget.dismiss': 'Eltüntetés',
+  'book.import.review.dismissWarning':
+    'Elveted ezt: „{filename}”? A meg nem erősített sorok többé nem érhetők el ebből a nyilvántartásból. Az ellenőrzés bezárása megtartja a feladatot. Ha a sorok már nem jelennek meg, az ideiglenes adatok lejárhattak; elvetheted a feladatot, vagy újra ellenőrizheted.',
   'book.import.review.title': 'Amit elolvastunk',
   'book.import.review.from': 'Innen: „{filename}”',
   'book.import.review.selectAll': 'Mindet kijelöli',

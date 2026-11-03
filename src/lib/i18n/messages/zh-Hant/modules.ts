@@ -183,6 +183,8 @@ const messages = {
   'book.import.widget.stalled': '這比預想的久',
   'book.import.widget.check': '再看一次',
   'book.import.widget.dismiss': '關掉',
+  'book.import.review.dismissWarning':
+    '忽略「{filename}」？未確認的列將無法再透過此清單存取。關閉審核視窗會保留工作。如果列不再顯示，暫存資料可能已過期；你可以忽略工作或再次檢查。',
   'book.import.review.title': '我們讀到的內容',
   'book.import.review.from': '來自「{filename}」',
   'book.import.review.selectAll': '全選',

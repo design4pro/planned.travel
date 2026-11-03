@@ -191,6 +191,8 @@ const messages = {
   'book.import.widget.stalled': '생각보다 오래 걸리고 있습니다',
   'book.import.widget.check': '다시 확인',
   'book.import.widget.dismiss': '닫기',
+  'book.import.review.dismissWarning':
+    '“{filename}” 작업을 목록에서 삭제할까요? 확인하지 않은 행은 이 목록을 통해 접근할 수 없게 됩니다. 검토 창만 닫으면 작업은 유지됩니다. 행이 더 이상 표시되지 않으면 임시 데이터가 만료되었을 수 있습니다. 작업을 목록에서 삭제하거나 다시 확인할 수 있습니다.',
   'book.import.review.title': '읽어 낸 내용',
   'book.import.review.from': '“{filename}”에서',
   'book.import.review.selectAll': '전부 선택',

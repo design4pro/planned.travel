@@ -211,6 +211,8 @@ const messages = {
   'book.import.widget.stalled': 'هذا يطول أكثر من المتوقع',
   'book.import.widget.check': 'تحقّق مرة أخرى',
   'book.import.widget.dismiss': 'إخفاء',
+  'book.import.review.dismissWarning':
+    'هل تريد تجاهل «{filename}»؟ ستصبح الصفوف غير المؤكدة غير متاحة عبر هذا السجل. إغلاق المراجعة يبقي المهمة. إذا لم تعد الصفوف تظهر، فربما انتهت صلاحية البيانات المؤقتة؛ يمكنك تجاهل المهمة أو التحقق مجددًا.',
   'book.import.review.title': 'ما قرأناه',
   'book.import.review.from': 'من «{filename}»',
   'book.import.review.selectAll': 'تحديد الكل',

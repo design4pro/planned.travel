@@ -209,6 +209,8 @@ const messages = {
   'book.import.widget.stalled': 'C’est plus long que prévu',
   'book.import.widget.check': 'Revérifier',
   'book.import.widget.dismiss': 'Masquer',
+  'book.import.review.dismissWarning':
+    'Ignorer « {filename} » ? Les lignes non confirmées ne seront plus accessibles depuis ce registre. Fermer la vérification conserve la tâche. Si les lignes ne s’affichent plus, les données temporaires ont peut-être expiré ; vous pouvez ignorer la tâche ou vérifier à nouveau.',
   'book.import.review.title': 'Ce que nous avons lu',
   'book.import.review.from': 'De « {filename} »',
   'book.import.review.selectAll': 'Tout sélectionner',

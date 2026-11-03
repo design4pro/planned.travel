@@ -197,6 +197,8 @@ const messages = {
   'book.import.widget.stalled': 'Ini lebih lama dari perkiraan',
   'book.import.widget.check': 'Periksa lagi',
   'book.import.widget.dismiss': 'Tutup',
+  'book.import.review.dismissWarning':
+    'Abaikan “{filename}”? Baris yang belum dikonfirmasi tidak akan dapat diakses melalui daftar ini. Menutup tinjauan tetap menyimpan tugas. Jika baris tidak lagi muncul, data sementara mungkin telah kedaluwarsa; Anda dapat mengabaikan tugas atau memeriksa lagi.',
   'book.import.review.title': 'Yang kami baca',
   'book.import.review.from': 'Dari “{filename}”',
   'book.import.review.selectAll': 'Pilih semua',
