@@ -78,6 +78,99 @@ function enabled(name: string): boolean {
 }
 
 describe('the trip action menu', () => {
+  it.each([
+    {
+      copyPending: true,
+      isArchived: false,
+      role: 'owner',
+      reason: 'Wait for the copy to finish.',
+    },
+    {
+      copyPending: false,
+      isArchived: true,
+      role: 'owner',
+      reason: 'Restore this trip to edit it.',
+    },
+    {
+      copyPending: true,
+      isArchived: true,
+      role: 'owner',
+      reason: 'Wait for the copy to finish.',
+    },
+    { copyPending: false, isArchived: false, role: 'owner', reason: null },
+    { copyPending: false, isArchived: true, role: 'viewer', reason: null },
+    {
+      copyPending: true,
+      isArchived: true,
+      role: 'viewer',
+      reason: 'Wait for the copy to finish.',
+    },
+  ] as const)(
+    'describes the visible reason for %j',
+    async ({ reason, ...state }) => {
+      await openMenu(tripCard(state))
+      const menu = screen.getByRole('menu')
+      const id = menu.getAttribute('aria-describedby')
+      if (reason) {
+        expect(id).toBeTruthy()
+        expect(menu.contains(document.getElementById(id ?? ''))).toBe(true)
+        expect(document.getElementById(id ?? '')?.textContent).toBe(reason)
+        expect(
+          screen.queryByText(
+            reason === 'Wait for the copy to finish.'
+              ? 'Restore this trip to edit it.'
+              : 'Wait for the copy to finish.',
+          ),
+        ).toBeNull()
+      } else {
+        expect(id).toBeNull()
+      }
+    },
+  )
+
+  it('gives mounted menu instances distinct reason IDs and returns focus on Escape', async () => {
+    const user = userEvent.setup()
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <Menu
+          trip={tripCard({
+            id: 'shared-trip',
+            title: 'First',
+            copyPending: true,
+          })}
+        />
+        <Menu
+          trip={tripCard({
+            id: 'shared-trip',
+            title: 'Second',
+            isArchived: true,
+          })}
+        />
+      </I18nProvider>,
+    )
+    const ids: string[] = []
+    for (const title of ['First', 'Second']) {
+      const trigger = screen.getByRole('button', {
+        name: `Actions for ${title}`,
+      })
+      trigger.focus()
+      await user.keyboard('{Enter}')
+      const menu = screen.getByRole('menu')
+      const id = menu.getAttribute('aria-describedby')
+      expect(id).toBeTruthy()
+      expect(menu.contains(document.getElementById(id ?? ''))).toBe(true)
+      ids.push(id ?? '')
+      await user.keyboard('{ArrowDown}')
+      expect(document.activeElement?.getAttribute('role')).toBe('menuitem')
+      expect(document.activeElement?.getAttribute('aria-disabled')).not.toBe(
+        'true',
+      )
+      await user.keyboard('{Escape}')
+      expect(document.activeElement).toBe(trigger)
+    }
+    expect(new Set(ids).size).toBe(2)
+  })
+
   /**
    * Every reader may copy a trip they can see (PRD #104 decision 6), so Copy is not an owner's
    * privilege — it is the first of the two items a viewer has, above the star. Edit, archive and
