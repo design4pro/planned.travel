@@ -737,6 +737,10 @@ const messages = {
     'Bu sekme {name} çalışma alanını gösteriyor, ancak çalışma alanı başka bir sekmede veya pencerede değiştirildi. Hiçbir şey kaydedilmedi.',
   'session.openCurrentWorkspace': 'Geçerli çalışma alanını aç',
   'session.workspaceChangedDismiss': 'Şimdi değil',
+  'session.workspaceCheck': 'Bu çalışma alanını kontrol et',
+  'session.workspaceCheckPending': 'Çalışma alanına erişim kontrol ediliyor…',
+  'session.workspaceCheckFailed':
+    'Bu çalışma alanına erişim doğrulanamadı. Hiçbir işlem tekrarlanmadı. Yeniden kontrol edebilirsiniz.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

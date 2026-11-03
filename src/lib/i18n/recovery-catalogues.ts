@@ -55,6 +55,11 @@ export const RECOVERY_CATALOGUES = {
       'تعرض علامة التبويب هذه {name}، لكن مساحة العمل تغيّرت في علامة تبويب أو نافذة أخرى. لم يتم حفظ أي شيء.',
     'shell.session.openCurrentWorkspace': 'افتح مساحة العمل الحالية',
     'shell.session.workspaceChangedDismiss': 'ليس الآن',
+    'shell.session.workspaceCheck': 'التحقق من مساحة العمل هذه',
+    'shell.session.workspaceCheckPending':
+      'جارٍ التحقق من الوصول إلى مساحة العمل…',
+    'shell.session.workspaceCheckFailed':
+      'تعذّر تأكيد الوصول إلى مساحة العمل هذه. لم تُكرَّر أي عملية. يمكنك التحقق مرة أخرى.',
     'ui.status.working': 'جارٍ التنفيذ',
     'ui.action.remove': 'إزالة',
   },
@@ -111,6 +116,11 @@ export const RECOVERY_CATALOGUES = {
       'Aquesta pestanya mostra {name}, però l’espai de treball s’ha canviat en una altra pestanya o finestra. No s’ha desat res.',
     'shell.session.openCurrentWorkspace': 'Obre l’espai de treball actual',
     'shell.session.workspaceChangedDismiss': 'Ara no',
+    'shell.session.workspaceCheck': 'Comprova aquest espai de treball',
+    'shell.session.workspaceCheckPending':
+      'S’està comprovant l’accés a l’espai de treball…',
+    'shell.session.workspaceCheckFailed':
+      'No s’ha pogut verificar l’accés a aquest espai de treball. No s’ha repetit cap operació. Pots tornar-ho a comprovar.',
     'ui.status.working': 'S’està desant',
     'ui.action.remove': 'Suprimeix',
   },
@@ -166,6 +176,11 @@ export const RECOVERY_CATALOGUES = {
       'Tato karta zobrazuje {name}, ale prostor byl změněn v jiné kartě nebo okně. Nic se neuložilo.',
     'shell.session.openCurrentWorkspace': 'Otevřít aktuální prostor',
     'shell.session.workspaceChangedDismiss': 'Teď ne',
+    'shell.session.workspaceCheck': 'Ověřit tento pracovní prostor',
+    'shell.session.workspaceCheckPending':
+      'Ověřování přístupu k pracovnímu prostoru…',
+    'shell.session.workspaceCheckFailed':
+      'Přístup k tomuto pracovnímu prostoru se nepodařilo ověřit. Žádná operace nebyla zopakována. Můžete to zkusit znovu.',
     'ui.status.working': 'Zpracování',
     'ui.action.remove': 'Odebrat',
   },
@@ -224,6 +239,11 @@ export const RECOVERY_CATALOGUES = {
       'Dieser Tab zeigt {name}, aber der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
     'shell.session.openCurrentWorkspace': 'Aktuellen Arbeitsbereich öffnen',
     'shell.session.workspaceChangedDismiss': 'Jetzt nicht',
+    'shell.session.workspaceCheck': 'Diesen Arbeitsbereich prüfen',
+    'shell.session.workspaceCheckPending':
+      'Zugriff auf den Arbeitsbereich wird geprüft…',
+    'shell.session.workspaceCheckFailed':
+      'Der Zugriff auf diesen Arbeitsbereich konnte nicht bestätigt werden. Es wurde nichts erneut ausgeführt. Du kannst es noch einmal prüfen.',
     'ui.status.working': 'Wird gespeichert',
     'ui.action.remove': 'Entfernen',
   },
@@ -282,6 +302,11 @@ export const RECOVERY_CATALOGUES = {
     'shell.session.openCurrentWorkspace':
       'Άνοιγμα του τρέχοντος χώρου εργασίας',
     'shell.session.workspaceChangedDismiss': 'Όχι τώρα',
+    'shell.session.workspaceCheck': 'Έλεγχος αυτού του χώρου εργασίας',
+    'shell.session.workspaceCheckPending':
+      'Έλεγχος πρόσβασης στον χώρο εργασίας…',
+    'shell.session.workspaceCheckFailed':
+      'Δεν ήταν δυνατή η επιβεβαίωση πρόσβασης σε αυτόν τον χώρο εργασίας. Καμία ενέργεια δεν επαναλήφθηκε. Μπορείτε να ελέγξετε ξανά.',
     'ui.status.working': 'Σε εξέλιξη',
     'ui.action.remove': 'Αφαίρεση',
   },
@@ -338,6 +363,10 @@ export const RECOVERY_CATALOGUES = {
       'This tab is showing {name}, but the workspace was changed in another tab or window. Nothing was saved.',
     'shell.session.openCurrentWorkspace': 'Open the current workspace',
     'shell.session.workspaceChangedDismiss': 'Not now',
+    'shell.session.workspaceCheck': 'Check this workspace',
+    'shell.session.workspaceCheckPending': 'Checking workspace access…',
+    'shell.session.workspaceCheckFailed':
+      'Could not verify access to this workspace. Nothing was retried. You can check again.',
     'ui.status.working': 'Working',
     'ui.action.remove': 'Remove',
   },
@@ -394,6 +423,11 @@ export const RECOVERY_CATALOGUES = {
       'Esta pestaña muestra {name}, pero el espacio de trabajo se cambió en otra pestaña o ventana. No se guardó nada.',
     'shell.session.openCurrentWorkspace': 'Abrir el espacio de trabajo actual',
     'shell.session.workspaceChangedDismiss': 'Ahora no',
+    'shell.session.workspaceCheck': 'Comprobar este espacio de trabajo',
+    'shell.session.workspaceCheckPending':
+      'Comprobando el acceso al espacio de trabajo…',
+    'shell.session.workspaceCheckFailed':
+      'No se pudo verificar el acceso a este espacio de trabajo. No se repitió ninguna operación. Puedes volver a comprobarlo.',
     'ui.status.working': 'Guardando',
     'ui.action.remove': 'Quitar',
   },
@@ -453,6 +487,11 @@ export const RECOVERY_CATALOGUES = {
       'Cet onglet affiche {name}, mais l’espace de travail a été changé dans un autre onglet ou une autre fenêtre. Rien n’a été enregistré.',
     'shell.session.openCurrentWorkspace': 'Ouvrir l’espace de travail actuel',
     'shell.session.workspaceChangedDismiss': 'Pas maintenant',
+    'shell.session.workspaceCheck': 'Vérifier cet espace de travail',
+    'shell.session.workspaceCheckPending':
+      'Vérification de l’accès à l’espace de travail…',
+    'shell.session.workspaceCheckFailed':
+      'Impossible de confirmer l’accès à cet espace de travail. Aucune opération n’a été relancée. Vous pouvez vérifier à nouveau.',
     'ui.status.working': 'Enregistrement',
     'ui.action.remove': 'Retirer',
   },
@@ -509,6 +548,11 @@ export const RECOVERY_CATALOGUES = {
       'Ez a lap ezt a munkaterületet mutatja: {name}. A munkaterületet azonban egy másik lapon vagy ablakban megváltoztatták. Semmi sem lett mentve.',
     'shell.session.openCurrentWorkspace': 'Az aktuális munkaterület megnyitása',
     'shell.session.workspaceChangedDismiss': 'Most nem',
+    'shell.session.workspaceCheck': 'Munkaterület ellenőrzése',
+    'shell.session.workspaceCheckPending':
+      'Munkaterület-hozzáférés ellenőrzése…',
+    'shell.session.workspaceCheckFailed':
+      'Nem sikerült ellenőrizni a hozzáférést ehhez a munkaterülethez. Egyetlen művelet sem ismétlődött meg. Újra ellenőrizheted.',
     'ui.status.working': 'Feldolgozás',
     'ui.action.remove': 'Eltávolítás',
   },
@@ -568,6 +612,10 @@ export const RECOVERY_CATALOGUES = {
       'Tab ini menampilkan {name}, tetapi ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
     'shell.session.openCurrentWorkspace': 'Buka ruang kerja saat ini',
     'shell.session.workspaceChangedDismiss': 'Nanti saja',
+    'shell.session.workspaceCheck': 'Periksa ruang kerja ini',
+    'shell.session.workspaceCheckPending': 'Memeriksa akses ruang kerja…',
+    'shell.session.workspaceCheckFailed':
+      'Akses ke ruang kerja ini tidak dapat diverifikasi. Tidak ada tindakan yang diulangi. Anda dapat memeriksa lagi.',
     'ui.status.working': 'Memproses',
     'ui.action.remove': 'Hapus',
   },
@@ -625,6 +673,11 @@ export const RECOVERY_CATALOGUES = {
       'Questa scheda mostra {name}, ma lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
     'shell.session.openCurrentWorkspace': 'Apri lo spazio di lavoro attuale',
     'shell.session.workspaceChangedDismiss': 'Non ora',
+    'shell.session.workspaceCheck': 'Verifica questo spazio di lavoro',
+    'shell.session.workspaceCheckPending':
+      'Verifica dell’accesso allo spazio di lavoro…',
+    'shell.session.workspaceCheckFailed':
+      'Impossibile verificare l’accesso a questo spazio di lavoro. Nessuna operazione è stata ripetuta. Puoi verificare di nuovo.',
     'ui.status.working': 'Salvataggio',
     'ui.action.remove': 'Rimuovi',
   },
@@ -682,6 +735,11 @@ export const RECOVERY_CATALOGUES = {
       'このタブには「{name}」が表示されていますが、ワークスペースは別のタブまたはウィンドウで切り替えられました。何も保存されていません。',
     'shell.session.openCurrentWorkspace': '現在のワークスペースを開く',
     'shell.session.workspaceChangedDismiss': '今はしない',
+    'shell.session.workspaceCheck': 'このワークスペースを確認',
+    'shell.session.workspaceCheckPending':
+      'ワークスペースへのアクセスを確認中…',
+    'shell.session.workspaceCheckFailed':
+      'このワークスペースへのアクセスを確認できませんでした。操作は再実行されていません。もう一度確認できます。',
     'ui.status.working': '処理中',
     'ui.action.remove': '削除',
   },
@@ -737,6 +795,10 @@ export const RECOVERY_CATALOGUES = {
       '이 탭에는 {name}이(가) 표시되어 있지만, 워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
     'shell.session.openCurrentWorkspace': '현재 워크스페이스 열기',
     'shell.session.workspaceChangedDismiss': '나중에',
+    'shell.session.workspaceCheck': '이 워크스페이스 확인',
+    'shell.session.workspaceCheckPending': '워크스페이스 접근 권한 확인 중…',
+    'shell.session.workspaceCheckFailed':
+      '이 워크스페이스의 접근 권한을 확인할 수 없습니다. 어떤 작업도 다시 실행되지 않았습니다. 다시 확인할 수 있습니다.',
     'ui.status.working': '처리 중',
     'ui.action.remove': '삭제',
   },
@@ -793,6 +855,11 @@ export const RECOVERY_CATALOGUES = {
       'Dit tabblad toont {name}, maar de werkruimte is gewijzigd in een ander tabblad of venster. Er is niets opgeslagen.',
     'shell.session.openCurrentWorkspace': 'Open de huidige werkruimte',
     'shell.session.workspaceChangedDismiss': 'Niet nu',
+    'shell.session.workspaceCheck': 'Deze werkruimte controleren',
+    'shell.session.workspaceCheckPending':
+      'Toegang tot de werkruimte wordt gecontroleerd…',
+    'shell.session.workspaceCheckFailed':
+      'De toegang tot deze werkruimte kon niet worden bevestigd. Er is niets opnieuw uitgevoerd. Je kunt opnieuw controleren.',
     'ui.status.working': 'Bezig met opslaan',
     'ui.action.remove': 'Verwijderen',
   },
@@ -850,6 +917,11 @@ export const RECOVERY_CATALOGUES = {
       'Ta karta pokazuje przestrzeń {name}, ale przestrzeń została zmieniona w innej karcie lub oknie. Nic nie zostało zapisane.',
     'shell.session.openCurrentWorkspace': 'Otwórz bieżącą przestrzeń',
     'shell.session.workspaceChangedDismiss': 'Nie teraz',
+    'shell.session.workspaceCheck': 'Sprawdź tę przestrzeń',
+    'shell.session.workspaceCheckPending':
+      'Sprawdzanie dostępu do przestrzeni…',
+    'shell.session.workspaceCheckFailed':
+      'Nie udało się potwierdzić dostępu do tej przestrzeni. Żadna operacja nie została ponowiona. Możesz sprawdzić ponownie.',
     'ui.status.working': 'Przetwarzanie',
     'ui.action.remove': 'Usuń',
   },
@@ -907,6 +979,11 @@ export const RECOVERY_CATALOGUES = {
       'Esta aba mostra {name}, mas o espaço de trabalho foi alterado em outra aba ou janela. Nada foi salvo.',
     'shell.session.openCurrentWorkspace': 'Abrir o espaço de trabalho atual',
     'shell.session.workspaceChangedDismiss': 'Agora não',
+    'shell.session.workspaceCheck': 'Verificar este espaço de trabalho',
+    'shell.session.workspaceCheckPending':
+      'Verificando o acesso ao espaço de trabalho…',
+    'shell.session.workspaceCheckFailed':
+      'Não foi possível verificar o acesso a este espaço de trabalho. Nenhuma operação foi repetida. Você pode verificar novamente.',
     'ui.status.working': 'Salvando',
     'ui.action.remove': 'Remover',
   },
@@ -963,6 +1040,11 @@ export const RECOVERY_CATALOGUES = {
       'Эта вкладка показывает «{name}», но пространство было изменено в другой вкладке или окне. Ничего не сохранено.',
     'shell.session.openCurrentWorkspace': 'Открыть текущее пространство',
     'shell.session.workspaceChangedDismiss': 'Не сейчас',
+    'shell.session.workspaceCheck': 'Проверить это рабочее пространство',
+    'shell.session.workspaceCheckPending':
+      'Проверка доступа к рабочему пространству…',
+    'shell.session.workspaceCheckFailed':
+      'Не удалось подтвердить доступ к этому рабочему пространству. Ни одно действие не было повторено. Можно проверить ещё раз.',
     'ui.status.working': 'Выполняется',
     'ui.action.remove': 'Убрать',
   },
@@ -1019,6 +1101,11 @@ export const RECOVERY_CATALOGUES = {
       'Den här fliken visar {name}, men arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
     'shell.session.openCurrentWorkspace': 'Öppna den aktuella arbetsytan',
     'shell.session.workspaceChangedDismiss': 'Inte nu',
+    'shell.session.workspaceCheck': 'Kontrollera den här arbetsytan',
+    'shell.session.workspaceCheckPending':
+      'Kontrollerar åtkomst till arbetsytan…',
+    'shell.session.workspaceCheckFailed':
+      'Det gick inte att bekräfta åtkomsten till den här arbetsytan. Ingen åtgärd upprepades. Du kan kontrollera igen.',
     'ui.status.working': 'Sparar',
     'ui.action.remove': 'Ta bort',
   },
@@ -1076,6 +1163,11 @@ export const RECOVERY_CATALOGUES = {
       'Bu sekme {name} çalışma alanını gösteriyor, ancak çalışma alanı başka bir sekmede veya pencerede değiştirildi. Hiçbir şey kaydedilmedi.',
     'shell.session.openCurrentWorkspace': 'Geçerli çalışma alanını aç',
     'shell.session.workspaceChangedDismiss': 'Şimdi değil',
+    'shell.session.workspaceCheck': 'Bu çalışma alanını kontrol et',
+    'shell.session.workspaceCheckPending':
+      'Çalışma alanına erişim kontrol ediliyor…',
+    'shell.session.workspaceCheckFailed':
+      'Bu çalışma alanına erişim doğrulanamadı. Hiçbir işlem tekrarlanmadı. Yeniden kontrol edebilirsiniz.',
     'ui.status.working': 'İşleniyor',
     'ui.action.remove': 'Kaldır',
   },
@@ -1131,6 +1223,11 @@ export const RECOVERY_CATALOGUES = {
       'Ця вкладка показує «{name}», але простір було змінено в іншій вкладці або вікні. Нічого не збережено.',
     'shell.session.openCurrentWorkspace': 'Відкрити поточний простір',
     'shell.session.workspaceChangedDismiss': 'Не зараз',
+    'shell.session.workspaceCheck': 'Перевірити цей робочий простір',
+    'shell.session.workspaceCheckPending':
+      'Перевірка доступу до робочого простору…',
+    'shell.session.workspaceCheckFailed':
+      'Не вдалося підтвердити доступ до цього робочого простору. Жодну дію не було повторено. Можна перевірити ще раз.',
     'ui.status.working': 'Виконується',
     'ui.action.remove': 'Прибрати',
   },
@@ -1189,6 +1286,11 @@ export const RECOVERY_CATALOGUES = {
       'Tab này đang hiển thị {name}, nhưng không gian làm việc đã được đổi ở một tab hoặc cửa sổ khác. Chưa có gì được lưu.',
     'shell.session.openCurrentWorkspace': 'Mở không gian làm việc hiện tại',
     'shell.session.workspaceChangedDismiss': 'Để sau',
+    'shell.session.workspaceCheck': 'Kiểm tra không gian làm việc này',
+    'shell.session.workspaceCheckPending':
+      'Đang kiểm tra quyền truy cập không gian làm việc…',
+    'shell.session.workspaceCheckFailed':
+      'Không thể xác minh quyền truy cập không gian làm việc này. Không thao tác nào được thực hiện lại. Bạn có thể kiểm tra lại.',
     'ui.status.working': 'Đang xử lý',
     'ui.action.remove': 'Gỡ bỏ',
   },
@@ -1239,6 +1341,10 @@ export const RECOVERY_CATALOGUES = {
       '此标签页显示的是“{name}”，但工作区已在另一个标签页或窗口中切换。没有保存任何内容。',
     'shell.session.openCurrentWorkspace': '打开当前工作区',
     'shell.session.workspaceChangedDismiss': '暂不',
+    'shell.session.workspaceCheck': '检查此工作空间',
+    'shell.session.workspaceCheckPending': '正在检查工作空间访问权限…',
+    'shell.session.workspaceCheckFailed':
+      '无法确认此工作空间的访问权限。未重新执行任何操作。你可以再次检查。',
     'ui.status.working': '处理中',
     'ui.action.remove': '移除',
   },
@@ -1289,6 +1395,10 @@ export const RECOVERY_CATALOGUES = {
       '此分頁顯示的是「{name}」，但工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
     'shell.session.openCurrentWorkspace': '開啟目前的工作區',
     'shell.session.workspaceChangedDismiss': '暫不',
+    'shell.session.workspaceCheck': '檢查此工作空間',
+    'shell.session.workspaceCheckPending': '正在檢查工作空間存取權限…',
+    'shell.session.workspaceCheckFailed':
+      '無法確認此工作空間的存取權限。未重新執行任何操作。你可以再次檢查。',
     'ui.status.working': '處理中',
     'ui.action.remove': '移除',
   },

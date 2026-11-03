@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { registerCollectionExit } from '#/lib/collection-exit'
@@ -308,6 +308,55 @@ describe('switching', () => {
     await vi.waitFor(() => expect(auth.setActive).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(workspaceClaimState().switching).toBe(false))
   })
+
+  it.each([false, true])(
+    'releases a switch with a stalled prior RPC and preserves its late refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const finish = trackWorkspaceCall()
+      notify.error.mockImplementation(() => {
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(screen.queryByRole('menu', { hidden: true })).toBeNull()
+        expect(
+          screen
+            .getByRole('button', { name: /account menu/i })
+            .closest('[aria-hidden="true"]'),
+        ).toBeNull()
+      })
+      await mount(sessionOf([ALPHA, BETA]))
+      vi.useFakeTimers()
+      try {
+        fireEvent.click(screen.getByRole('menuitemradio', { name: BETA.name }))
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(workspaceClaimState().switching).toBe(true)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+          EN['shell.workspace.switchFailed'],
+        )
+        expect(notify.success).not.toHaveBeenCalled()
+        expect(auth.setActive).not.toHaveBeenCalled()
+        if (refused) markWorkspaceStale('org_a')
+        await act(async () => {
+          finish()
+        })
+        expect(auth.setActive).not.toHaveBeenCalled()
+        expect(router.navigate).not.toHaveBeenCalled()
+        expect(workspaceClaimState()).toMatchObject({
+          organizationId: 'org_a',
+          switching: false,
+          stale: refused,
+        })
+      } finally {
+        finish()
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it('asks before activating a workspace, signing out or creating a workspace', async () => {
     const confirm = vi.fn().mockResolvedValue(false)
@@ -1230,6 +1279,58 @@ describe('creating a workspace', () => {
         switching: false,
         stale: refused,
       })
+    },
+  )
+
+  it.each([false, true])(
+    'releases a create dialog with a stalled prior RPC and preserves its late refusal (%s)',
+    async (refused) => {
+      setWorkspaceClaim('org_a')
+      const finish = trackWorkspaceCall()
+      const { user, dialog } = await openDialog()
+      await user.type(
+        screen.getByRole('textbox', { name: /Workspace name/ }),
+        'Lisbon',
+      )
+      vi.useFakeTimers()
+      try {
+        fireEvent.submit(dialog.querySelector('form') as HTMLFormElement)
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(workspaceClaimState().switching).toBe(true)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(10_000)
+        })
+        expect(workspaceClaimState().switching).toBe(false)
+        expect(screen.getByRole('alert').textContent).toContain(
+          EN['shell.workspace.createFailed'],
+        )
+        expect(
+          screen
+            .getByRole('button', { name: 'Create workspace' })
+            .getAttribute('disabled'),
+        ).toBeNull()
+        if (refused) markWorkspaceStale('org_a')
+        await act(async () => {
+          finish()
+        })
+        expect(workspace.create).not.toHaveBeenCalled()
+        expect(router.navigate).not.toHaveBeenCalled()
+        expect(workspaceClaimState()).toMatchObject({
+          organizationId: 'org_a',
+          switching: false,
+          stale: refused,
+        })
+        fireEvent.keyDown(dialog, { key: 'Escape' })
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(screen.queryByRole('dialog')).toBeNull()
+      } finally {
+        finish()
+        vi.useRealTimers()
+      }
     },
   )
 

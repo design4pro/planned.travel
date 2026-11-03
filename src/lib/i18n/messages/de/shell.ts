@@ -777,6 +777,11 @@ const messages = {
     'Dieser Tab zeigt {name}, aber der Arbeitsbereich wurde in einem anderen Tab oder Fenster gewechselt. Es wurde nichts gespeichert.',
   'session.openCurrentWorkspace': 'Aktuellen Arbeitsbereich öffnen',
   'session.workspaceChangedDismiss': 'Jetzt nicht',
+  'session.workspaceCheck': 'Diesen Arbeitsbereich prüfen',
+  'session.workspaceCheckPending':
+    'Zugriff auf den Arbeitsbereich wird geprüft…',
+  'session.workspaceCheckFailed':
+    'Der Zugriff auf diesen Arbeitsbereich konnte nicht bestätigt werden. Es wurde nichts erneut ausgeführt. Du kannst es noch einmal prüfen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

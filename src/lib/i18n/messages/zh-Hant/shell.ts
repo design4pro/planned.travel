@@ -609,6 +609,10 @@ const messages = {
   'session.workspaceChangedBody': '此分頁顯示的是「{name}」，但工作區已在另一個分頁或視窗中切換。沒有儲存任何內容。',
   'session.openCurrentWorkspace': '開啟目前的工作區',
   'session.workspaceChangedDismiss': '暫不',
+  'session.workspaceCheck': '檢查此工作空間',
+  'session.workspaceCheckPending': '正在檢查工作空間存取權限…',
+  'session.workspaceCheckFailed':
+    '無法確認此工作空間的存取權限。未重新執行任何操作。你可以再次檢查。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

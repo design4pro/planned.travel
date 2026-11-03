@@ -93,8 +93,10 @@ claim only narrows access: the tenant context still comes from the session alone
 socket states the same claim as `?workspace=` on its URL, because a browser cannot set a header on a
 WebSocket (#979, §5).
 
-Deliberate workspace switching and creation first drain calls already in flight, then cancel new
-unrelated server-function calls locally without replaying them. A tab-local fetch capability admits
+Deliberate workspace switching and creation cancel new unrelated server-function calls locally
+without replaying them and wait up to ten seconds for calls already in flight. A stalled call cancels
+the transition before activation or creation, releases pending controls, and retains its original
+claim and late refusal handling; settling it later never resumes the cancelled intent. A tab-local fetch capability admits
 only the create call and its own shell/dashboard resynchronization and one document-locale read;
 every dispatched call retains the displayed claim. Creation validates the original workspace, while
 shell resynchronization checks

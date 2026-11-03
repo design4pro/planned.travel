@@ -213,13 +213,11 @@ export async function readWorkspaceShell<
   if (transition) {
     if (
       !ownsWorkspaceSwitch(transition) ||
-      workspaceClaimGeneration() !== generation
+      workspaceClaimGeneration() !== generation ||
+      workspaceClaimState().stale
     )
       throw workspaceSwitchCancelled()
-    if (
-      workspaceClaimState().stale ||
-      !transition.expected.includes(organizationId)
-    ) {
+    if (!transition.expected.includes(organizationId)) {
       const displayed = workspaceClaimState().organizationId
       if (displayed !== null) markWorkspaceStale(displayed)
       throw new Error(WORKSPACE_CHANGED_KEY)

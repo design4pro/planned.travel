@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import {
   Button,
@@ -13,6 +13,9 @@ import { useTranslate } from '#/lib/i18n'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import {
   dismissWorkspaceNotice,
+  recoverWorkspaceClaim,
+  workspaceClaimGeneration,
+  workspaceClaimState,
   useWorkspaceClaim,
 } from '#/lib/workspace-claim-store'
 
@@ -27,7 +30,8 @@ import {
  * Another tab switched workspace, and this tab's call was refused before anything was read or
  * written (`src/lib/workspace-claim.ts`). It is an `alertdialog`: it interrupts, because the reader
  * pressed something and nothing happened, and it explains rather than recovering on their behalf.
- * Nothing reloads automatically. Collection-detail drafts clear on lost workspace access;
+ * An explicit compatibility check can resume this workspace in place. Nothing reloads automatically.
+ * Collection-detail drafts clear on lost workspace access;
  * "Not now" closes this notice without recovering the workspace. It comes back when the reader acts again (`useAction`, `messageOf`), not on a poll or
  * a link preload, which would pull focus away from what they are doing.
  *
@@ -50,6 +54,17 @@ export function WorkspaceChangedNotice({
   const currentWorkspace = useOpenCurrentWorkspace({ guardUnsentText: true })
   const dismiss = useRef<HTMLButtonElement>(null)
   const opener = useRef<Element | null>(null)
+  const recoveryButton = useRef<HTMLButtonElement>(null)
+  const [recovery, setRecovery] = useState<'idle' | 'pending' | 'failed'>(
+    'idle',
+  )
+  const recoveryRun = useRef(0)
+
+  useEffect(() => {
+    if (recovery === 'failed' && document.activeElement === dismiss.current) {
+      recoveryButton.current?.focus()
+    }
+  }, [recovery])
 
   // The confirmation takes focus to the safe choice, so Enter pressed twice backs out.
   const { confirming } = currentWorkspace
@@ -62,8 +77,26 @@ export function WorkspaceChangedNotice({
   // rather than only the "Not now" press.
   const { cancel } = currentWorkspace
   useEffect(() => {
-    if (!noticeOpen) cancel()
+    if (!noticeOpen) {
+      cancel()
+      recoveryRun.current += 1
+      setRecovery('idle')
+    }
   }, [noticeOpen, cancel])
+  const recover = async () => {
+    const run = ++recoveryRun.current
+    const generation = workspaceClaimGeneration()
+    cancel()
+    dismiss.current?.focus()
+    setRecovery('pending')
+    const recovered = await recoverWorkspaceClaim()
+    if (run !== recoveryRun.current || !workspaceClaimState().noticeOpen) return
+    if (generation !== workspaceClaimGeneration()) {
+      setRecovery('idle')
+      return
+    }
+    setRecovery(recovered ? 'idle' : 'failed')
+  }
   const closeNotice = () => {
     cancel()
     dismissWorkspaceNotice()
@@ -126,7 +159,15 @@ export function WorkspaceChangedNotice({
             </span>
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter>
+        <p role="status" className="px-5 text-body text-ink-2 sm:px-6">
+          {recovery === 'pending'
+            ? t('shell.session.workspaceCheckPending')
+            : null}
+          {recovery === 'failed'
+            ? t('shell.session.workspaceCheckFailed')
+            : null}
+        </p>
+        <DialogFooter className="sm:flex-wrap">
           <Button
             ref={dismiss}
             variant="secondary"
@@ -137,11 +178,22 @@ export function WorkspaceChangedNotice({
             {t('shell.session.workspaceChangedDismiss')}
           </Button>
           <Button
+            ref={recoveryButton}
+            className={CURRENT_WORKSPACE_BUTTON_CLASS}
+            variant="secondary"
+            shape="pill"
+            onClick={recover}
+            disabled={currentWorkspace.opening || recovery === 'pending'}
+          >
+            {t('shell.session.workspaceCheck')}
+          </Button>
+          <Button
             variant={currentWorkspace.confirming ? 'danger' : 'primary'}
             shape="pill"
             className={CURRENT_WORKSPACE_BUTTON_CLASS}
             onClick={currentWorkspace.open}
             loading={currentWorkspace.opening}
+            disabled={recovery === 'pending'}
           >
             {currentWorkspace.confirming
               ? t('modules.presence.workspaceChanged.confirm')

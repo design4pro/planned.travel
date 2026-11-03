@@ -21,7 +21,7 @@
  * function that hands it `requiresTitle` re-derives the rule on the write, so a browser that skipped
  * the dialog gains nothing.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import {
   Archive,
@@ -708,6 +708,9 @@ export interface TripActionsMenuProps {
  */
 export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
   const t = useTranslate()
+  const reasonId = useId()
+  const hasReason =
+    trip.copyPending || (trip.isArchived && trip.role === 'owner')
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [copying, setCopying] = useState(false)
@@ -758,7 +761,10 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
           />
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent>
+        <DropdownMenuContent
+          aria-describedby={hasReason ? reasonId : undefined}
+          className="max-w-[calc(100vw-2rem)]"
+        >
           {/*
             Why the items below are dimmed, said in words rather than left to be inferred from a
             menu that has gone quiet. A label rather than a tooltip on each disabled item: a
@@ -766,14 +772,14 @@ export function TripActionsMenu({ trip, favourite }: TripActionsMenuProps) {
             ever reach a reader with a pointer.
           */}
           {trip.copyPending ? (
-            <DropdownMenuLabel>
+            <DropdownMenuLabel id={reasonId}>
               {t('shell.trips.card.copyingReason')}
             </DropdownMenuLabel>
           ) : null}
 
           {/* Edit is off on an archived trip, whose details the repository refuses to write (#1040). */}
           {trip.isArchived && trip.role === 'owner' && !trip.copyPending ? (
-            <DropdownMenuLabel>
+            <DropdownMenuLabel id={reasonId}>
               {t('shell.trips.card.archivedReason')}
             </DropdownMenuLabel>
           ) : null}
