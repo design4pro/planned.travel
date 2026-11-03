@@ -158,13 +158,13 @@ a file and nothing else; the file is built by the same code a feed will use.
 reader (`unfoldIcsLines`, `unescapeIcsText`, `parseIcsProperty`, `parseIcsDate`), which is the strongest
 cheap check available.
 
-**`src/server/calendar/zone.ts` — local time to an instant** (pure; used for legs and transports only,
-the two records that carry their own zone). `zonedToUtc(date, time, zone)` turns a stored wall-clock time
-and an IANA zone into a UTC instant with `Intl.DateTimeFormat(..., { timeZone,
+**`src/lib/zoned-time.ts` — local time to an instant** (pure; the calendar uses it for legs and
+transports only, the two records that carry their own zone). `zonedToUtc(date, time, zone)` turns a
+stored wall-clock time and an IANA zone into a UTC instant with `Intl.DateTimeFormat(..., { timeZone,
 timeZoneName: 'longOffset' })` (numeric offsets `GMT+09:00`, never names, so workerd and WebKit cannot
-disagree, SPEC §9 rule 5; this module runs only in the Worker). A time that does not exist (spring-forward
-gap) takes the offset in force just before the gap; a time that happens twice (autumn overlap) takes the
-first occurrence. A zone `Intl` rejects (`RangeError`) is treated as no zone, and the event is then emitted
+disagree, SPEC §9 rule 5; this pure module is shared with planner chronology since #1585). A time
+that does not exist (spring-forward gap) takes the offset in force just before the gap; a time that
+happens twice (autumn overlap) takes the first occurrence. A zone `Intl` rejects (`RangeError`) is treated as no zone, and the event is then emitted
 floating (below).
 
 **`src/server/calendar/feed.ts` — the builder** (pure over an in-memory `FeedSource`; no SQL).
@@ -740,7 +740,7 @@ link exposes.
 | Concept                                                                      | Owner module                                                                                                                                                                                 |
 | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | iCalendar text: folding, escaping, value forms                               | `src/server/calendar/ics.ts` (pure writer)                                                                                                                                                   |
-| Wall-clock time + zone → instant (legs, transports)                          | `src/server/calendar/zone.ts` (pure)                                                                                                                                                         |
+| Wall-clock time + zone → instant (legs, transports)                          | `src/lib/zoned-time.ts` (pure)                                                                                                                                                         |
 | What a trip means as events; the privacy projection                          | `src/server/calendar/feed.ts` (`buildCalendar`, pure over a `FeedSource` that is typed as the column projection)                                                                             |
 | Minting and digesting a secret                                               | `src/server/calendar/secret.ts`                                                                                                                                                              |
 | Feed rows, the trip set, the batched column-selected read                    | `src/server/repos/calendar-feeds.ts` (all tenant-scoped SQL; `openFeedScope` builds the scope for a `ResolvedFeed`, declared beside it)                                                      |

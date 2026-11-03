@@ -187,6 +187,7 @@ export interface PlanBoardCategory {
 }
 
 export interface PlanBoardPayload {
+  readonly timezone?: string | null
   readonly tripId: string
   /**
    * The acting user may write the plan: owner or editor, and the trip is not
@@ -251,6 +252,7 @@ export async function readPlanBoard(
 
   return {
     tripId: trip.id,
+    timezone: trip.timezone,
     editable: canWritePlan(trip, role),
     archived: trip.isArchived,
     unscheduledIds: unscheduled.map((place) => place.id),

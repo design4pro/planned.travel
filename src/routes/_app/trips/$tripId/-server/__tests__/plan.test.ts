@@ -175,6 +175,7 @@ beforeEach(async () => {
     startDate: '2026-10-05',
     endDate: '2026-10-07',
     currency: 'EUR',
+    timezone: 'Europe/Vienna',
   })
   await addTripMember(owner, {
     tripId: trip.id,
@@ -222,7 +223,11 @@ describe('readPlanBoard', () => {
   it('lets an owner write the plan', async () => {
     const payload = await readPlanBoard(owner, fixture.tripId)
 
-    expect(payload).toMatchObject({ editable: true, archived: false })
+    expect(payload).toMatchObject({
+      editable: true,
+      archived: false,
+      timezone: 'Europe/Vienna',
+    })
   })
 
   it('lets an editor write the plan', async () => {

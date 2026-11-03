@@ -306,14 +306,18 @@ export interface TimelineItem {
  *   board changes for a trip that never opens the time field.
  * - An untimed row stays attached to the timed row above it instead of floating to
  *   the top, because it inherits rather than sorting as "no time".
- * - It is stable and idempotent. Positions decide every tie, so merging an
+ * - It is stable and idempotent. Positions decide every unresolved tie, so merging an
  *   already-merged day is a fixed point and no reader ever watches a list settle.
+ *
+ * An optional comparator reads the timed anchors by id, so endpoint dates/zones and arrival
+ * ties follow the same policy as moves without detaching untimed rows from their anchors.
  *
  * Pure, and generic over whatever the caller hangs off the item, so the screen can
  * merge view models and the tests can merge three-field literals.
  */
 export function mergeDayTimeline<TItem extends TimelineItem>(
   items: ReadonlyArray<TItem>,
+  compareTimes?: (a: string, b: string) => number,
 ): Array<TItem> {
   // `sort` is stable, so items sharing a position keep the order they arrived in.
   const byPosition = [...items].sort((a, b) => a.position - b.position)
@@ -322,15 +326,27 @@ export function mergeDayTimeline<TItem extends TimelineItem>(
     item: TItem
     order: number
     inherited: string | null
+    anchor: string | null
   }> = []
   let carried: string | null = null
+  let anchor: string | null = null
   for (const [order, item] of byPosition.entries()) {
-    if (item.time !== null) carried = item.time
-    walked.push({ item, order, inherited: carried })
+    if (item.time !== null) {
+      carried = item.time
+      anchor = item.id
+    }
+    walked.push({ item, order, inherited: carried, anchor })
   }
 
   return walked
     .sort((a, b) => {
+      if (
+        compareTimes !== undefined &&
+        a.anchor !== null &&
+        b.anchor !== null
+      ) {
+        return compareTimes(a.anchor, b.anchor) || a.order - b.order
+      }
       if (a.inherited === b.inherited) return a.order - b.order
       // The head of the day — everything above the first time — sorts first.
       if (a.inherited === null) return -1
@@ -378,7 +394,11 @@ function placeOf(
 /** Resolves the `HH:MM` a row carries, or `null` for a row that carries none. */
 export type TimeOfItem = (itemId: string) => string | null
 
+/** Compares timed items in the destination day; display clocks stay separate. */
+export type CompareItemTimes = (a: string, b: string, dayId: string) => number
+
 export interface MoveOptions {
+  readonly compareItemTimes?: CompareItemTimes
   /**
    * Resolves the place behind a scheduled stop, so the "one place per day" rule
    * can be checked before the write instead of after it fails.
@@ -406,13 +426,18 @@ export interface MoveOptions {
 function contradictsClock(
   remaining: ReadonlyArray<string>,
   index: number,
-  time: string,
+  itemId: string,
+  dayId: string,
   timeOfItem: TimeOfItem,
+  compare?: CompareItemTimes,
 ): boolean {
+  const time = timeOfItem(itemId)
+  if (time === null) return false
   return remaining.some((id, at) => {
     const other = timeOfItem(id)
     if (other === null) return false
-    return at < index ? other > time : other < time
+    const difference = compare?.(id, itemId, dayId) ?? other.localeCompare(time)
+    return at < index ? difference > 0 : difference < 0
   })
 }
 
@@ -483,10 +508,15 @@ export function movePlanItem(
     target.container !== IDEAS_CONTAINER &&
     options.timeOfItem !== undefined
   ) {
-    const time = options.timeOfItem(itemId)
     if (
-      time !== null &&
-      contradictsClock(remaining, index, time, options.timeOfItem)
+      contradictsClock(
+        remaining,
+        index,
+        itemId,
+        target.container,
+        options.timeOfItem,
+        options.compareItemTimes,
+      )
     ) {
       return { ok: false, reason: 'timed' }
     }
