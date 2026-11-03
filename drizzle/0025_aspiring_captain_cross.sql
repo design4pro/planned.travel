@@ -1,1 +1,0 @@
-ALTER TABLE `account_security_cleanup` ADD `attempted_at` integer DEFAULT 0 NOT NULL;

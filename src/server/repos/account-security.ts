@@ -1,5 +1,5 @@
 /**
- * Closed account-auth repository (ADR 0048), never tenant content. Production callers:
+ * Closed account-auth repository (ADR 0049), never tenant content. Production callers:
  * auth/account-authority.ts, auth/factor-management.ts and auth/account-security-cleanup.ts.
  * The last caller has only bounded pending-work discovery and account-bound cleanup operations.
  */

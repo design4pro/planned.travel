@@ -72,7 +72,7 @@ describe('the console directory reaches no tenant layer', () => {
 
   it('reaches only the closed auth-layer repositories and the primitives', () => {
     // #1009: recipient invitation consumption. #1174: the insert-if-absent of a new account's own
-    // language. ADR 0048 adds the account-only authority capability. The barrel and `settings.ts` stay out of reach.
+    // language. ADR 0049 adds the account-only authority capability. The barrel and `settings.ts` stay out of reach.
     const reached = graph.modules.filter((file) =>
       file.startsWith(`${TENANT_REPOS}/`),
     )

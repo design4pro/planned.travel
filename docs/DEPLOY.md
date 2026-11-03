@@ -241,10 +241,10 @@ other way needs the command by hand.
 > (`--verify --remote --env staging` in the staging workflow.) Until that lands, a deploy whose
 > catalogue load silently did nothing is still only visible by running the command above.
 
-You should see **69 domain tables + 9 Better Auth tables + 7 account-authority tables** (`user`, `session`, `account`,
+You should see **70 domain tables + 9 Better Auth tables + 7 account-authority tables** (`user`, `session`, `account`,
 `verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). The counts are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
-69; the same command over `auth-schema.ts` prints 16 (9 native + 7 account authority). Migration `0005` moved the
+70; the same command over `auth-schema.ts` prints 16 (9 native + 7 account authority). Migration `0005` moved the
 domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`; `0007` moved it from 60
 by adding `provider_registry` and `provider_usage`, both purely `CREATE TABLE` + `CREATE INDEX`.
 
@@ -2481,7 +2481,7 @@ live rule and pre-Worker enforcement before clearing the ACCESS merge prerequisi
 would duplicate those records. Tail consumers and account/zone Logpush jobs were absent at the
 control readback; any newly added collector needs a separate bearer-path assessment.
 
-## Account session authority rollout (ADR 0048)
+## Account session authority rollout (ADR 0049)
 
 Apply additive migrations before deploying the revision-aware Worker. In expand mode (the optional
 `ACCOUNT_SECURITY_ENFORCEMENT` variable is absent), authority metadata is dual-written, existing

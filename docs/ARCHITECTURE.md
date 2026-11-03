@@ -65,7 +65,7 @@ It is the single biggest latency lever for the authenticated app, and it costs n
    KV namespace (`src/server/auth/secondary-storage.ts`). A KV hot read at the edge is
    sub-millisecond. KV is only a hint: the request first captures the primary account entry fence,
    then validates native session ownership, expiry, ban and session revision against primary D1
-   before accepting it (ADR 0048). A restored KV blob never restores authority.
+   before accepting it (ADR 0049). A restored KV blob never restores authority.
 4. **Tenant context.** `src/server/auth/tenant.ts` resolves the active organization and
    membership, producing the `TenantScope` that every repository call requires.
 5. **Loaders.** Route loaders call server functions in `src/server/fns/**`, which validate input
@@ -233,13 +233,15 @@ entry rule. These are architectural paths; some surfaces remain planned. Bounded
 another catalog member. Better Auth's own tables reached through its adapter (the passkey plugin's
 user-keyed `passkey` table) are not application SQL and not a fourth path (SPEC §6).
 
-The closed account-auth repository `src/server/repos/account-security.ts` (ADR 0048) is an
+The closed account-auth repository `src/server/repos/account-security.ts` (ADR 0049) is an
 additional repository capability, scoped to a native account proof rather than a workspace. It
 contains no tenant content; the auth boundary alone mints its branded account scope. Primary
 revision reads and conditional native session/trust writes cannot use KV as authority.
 
-- `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
-  `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three
+- `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists thirteen: eleven carry no
+  `organization_id`; `provider_usage` and the deletion recovery ledger use it only for attribution.
+  The latter is owned by `catalog/workspace-deletions.ts`, with rare-path reader guards and no
+  production writer until the deletion driver lands (ADR 0048). Catalog is one of the three
   closed exceptions outside repos (SPEC §6; the others are the `…Unscoped` shape and the identity-table SQL of `src/server/auth/provisioning.ts`), with exactly four members (these tables, bounded reminder discovery,
   the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with

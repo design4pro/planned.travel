@@ -1,4 +1,4 @@
-# 0048. Account session authority is primary and account scoped
+# 0049. Account session authority is primary and account scoped
 
 Status: accepted
 Date: 2026-11-03

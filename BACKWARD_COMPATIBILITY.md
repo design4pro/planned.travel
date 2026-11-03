@@ -130,7 +130,7 @@ When a breaking change is unavoidable, the PR body carries a **Compatibility** s
 surface, the breaking change, the deployment sequence, and the follow-up PR that completes the
 contraction. The reviewer labels the PR `risk-high` and `needs-qa`.
 
-## Account-authority rollout (#1758, ADR 0048)
+## Account-authority rollout (#1758, ADR 0049)
 
 The account-security schema expands additively. Deploy revision-aware writers/readers with action/enforcement off, run the bounded primary backfill through the existing reminder cron, and retire every unversioned Worker before requesting `ACCOUNT_SECURITY_ENFORCEMENT=active`. D1 validates live legacy metadata and owns the irreversible cutover bit. Missing metadata after activation requires a new sign-in; legacy trust lineage cannot bypass TOTP, while Google/Apple/passkey exemptions remain. Do not roll back to a Worker that ignores this authority. Use a forward fix or another revision-aware release.
 

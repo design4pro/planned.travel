@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "541edce4-543f-4374-93f2-c354212fa22b",
-  "prevId": "4b5bf3ec-357e-47bb-b787-e816b8559995",
+  "id": "2092507c-7c6c-4e1e-9ff4-2cc42ef438b2",
+  "prevId": "a1cbf2fa-9f9b-49ea-baed-23d864e371a7",
   "tables": {
     "account": {
       "name": "account",
@@ -172,9 +172,38 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "deletion_id": {
+          "name": "deletion_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "deletion_started_at": {
+          "name": "deletion_started_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "account_security_last_fence_idx": {
+          "name": "account_security_last_fence_idx",
+          "columns": [
+            "last_fence"
+          ],
+          "isUnique": false
+        },
+        "account_security_deletion_idx": {
+          "name": "account_security_deletion_idx",
+          "columns": [
+            "deletion_started_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "account_security_user_id_user_id_fk": {
           "name": "account_security_user_id_user_id_fk",
@@ -628,6 +657,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "attempted_at": {
+          "name": "attempted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         }
       },
       "indexes": {
@@ -690,6 +727,20 @@
           "notNull": true,
           "autoincrement": false,
           "default": false
+        },
+        "anchor_backfill_run_id": {
+          "name": "anchor_backfill_run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "anchor_backfill_at": {
+          "name": "anchor_backfill_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
@@ -846,6 +897,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "attempted_at": {
+          "name": "attempted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         }
       },
       "indexes": {},
@@ -1384,6 +1443,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "factor_verified": {
+          "name": "factor_verified",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         },
         "expires_at": {
           "name": "expires_at",
@@ -12962,6 +13029,179 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "workspace_deletions": {
+      "name": "workspace_deletions",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "initiator": {
+          "name": "initiator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "erasure_id": {
+          "name": "erasure_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "erasure_consumer": {
+          "name": "erasure_consumer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'requested'"
+        },
+        "lease_until": {
+          "name": "lease_until",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "lease_token": {
+          "name": "lease_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "receipt_to": {
+          "name": "receipt_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "receipt_name": {
+          "name": "receipt_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "swept_at": {
+          "name": "swept_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "done_at": {
+          "name": "done_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "workspace_deletions_live_org_idx": {
+          "name": "workspace_deletions_live_org_idx",
+          "columns": [
+            "organization_id"
+          ],
+          "isUnique": true,
+          "where": "\"workspace_deletions\".\"state\" <> 'refused'"
+        },
+        "workspace_deletions_stale_idx": {
+          "name": "workspace_deletions_stale_idx",
+          "columns": [
+            "state",
+            "updated_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "workspace_deletions_state_chk": {
+          "name": "workspace_deletions_state_chk",
+          "value": "(\"state\" IS NULL OR \"state\" IN ('requested', 'drained', 'rows_deleted', 'audited', 'swept', 'done', 'refused'))"
+        },
+        "workspace_deletions_initiator_chk": {
+          "name": "workspace_deletions_initiator_chk",
+          "value": "(\"initiator\" IS NULL OR \"initiator\" IN ('owner', 'erasure'))"
+        },
+        "workspace_deletions_attribution_chk": {
+          "name": "workspace_deletions_attribution_chk",
+          "value": "(\"workspace_deletions\".\"initiator\" = 'owner' and \"workspace_deletions\".\"requested_by\" is not null and \"workspace_deletions\".\"erasure_id\" is null and \"workspace_deletions\".\"erasure_consumer\" is null) or (\"workspace_deletions\".\"initiator\" = 'erasure' and \"workspace_deletions\".\"requested_by\" is null and \"workspace_deletions\".\"erasure_id\" is not null and \"workspace_deletions\".\"receipt_to\" is null and \"workspace_deletions\".\"receipt_name\" is null)"
+        },
+        "workspace_deletions_attempts_chk": {
+          "name": "workspace_deletions_attempts_chk",
+          "value": "\"workspace_deletions\".\"attempts\" >= 0"
+        }
+      }
     },
     "workspace_participants": {
       "name": "workspace_participants",

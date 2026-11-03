@@ -1,3 +1,4 @@
+import { assertWorkspaceNotDeleting } from '#/server/catalog/workspace-deletions'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, twoFactor } from 'better-auth/plugins'
@@ -637,7 +638,14 @@ function buildAuth() {
           // the join; an anchor left behind by a join that then fails is harmless. The organization
           // id comes from what the library resolved or from the invitation row, never from a body.
           organizationHooks: {
+            beforeCreateInvitation: async ({ organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
+            },
+            beforeAcceptInvitation: async ({ organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
+            },
             beforeAddMember: async ({ member, organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
               await recordParticipation(authDb(), workspace.id, member.userId)
             },
           },

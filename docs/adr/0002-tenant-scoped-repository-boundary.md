@@ -25,4 +25,4 @@ The Decision and the amendment above speak of application SQL. Better Auth's own
 
 ### Amendment, 2026-11-03 - one bounded account-auth repository
 
-ADR 0048 adds the fourth closed application-SQL exception: `repos/account-security.ts`, with account-auth capabilities minted by the auth boundary, named production callers and separate bounded system cleanup/acknowledgement capabilities. It can reach only the named account/session/security records and the global revocation-fence scalar. It cannot reach organization/member rows or tenant content, and does not expand FU-3 or provisioning. The earlier three-exception wording remains historical.
+ADR 0049 adds the fourth closed application-SQL exception: `repos/account-security.ts`, with account-auth capabilities minted by the auth boundary, named production callers and separate bounded system cleanup/acknowledgement capabilities. It can reach only the named account/session/security records and the global revocation-fence scalar. It cannot reach organization/member rows or tenant content, and does not expand FU-3 or provisioning. The earlier three-exception wording remains historical.

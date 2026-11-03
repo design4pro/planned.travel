@@ -35,7 +35,7 @@ const GLOBAL_TABLES: ReadonlyArray<string> = [
   'account',
   'organization',
   'passkey',
-  // Account-only metadata (ADR 0048); room routing ids intentionally carry organization_id.
+  // Account-only metadata (ADR 0049); room routing ids intentionally carry organization_id.
   'account_security',
   'account_security_fence',
   'account_security_operation',

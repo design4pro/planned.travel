@@ -1,6 +1,6 @@
 # Account session authority inventory
 
-Issue: #1758. Design checkpoint for ADR 0048; not evidence that runtime enforcement is implemented.
+Issue: #1758. Design checkpoint for ADR 0049; not evidence that runtime enforcement is implemented.
 
 ## Ownership and public surfaces
 

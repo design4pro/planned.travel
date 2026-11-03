@@ -13,6 +13,8 @@
  * because a billing webhook has no session. They touch billing rows and nothing else.
  */
 
+import { workspaceDeletionPending } from '#/server/catalog/workspace-deletions'
+
 import {
   isBillingInterval,
   isPlanId,
@@ -145,6 +147,8 @@ const FREE_CEILINGS: StoredCeilings = ceilingsForPlan('free', 1)
 
 export function createSubscriptionStore(db: Database): SubscriptionStore {
   return {
+    workspaceDeletionPending: (organizationId) =>
+      workspaceDeletionPending(db, organizationId),
     async findByOrganization(organizationId) {
       const row = await findSubscriptionByOrganizationUnscoped(db, organizationId)
       return row === null ? null : recordFromRow(row)
