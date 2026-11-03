@@ -17,10 +17,10 @@ Design only: a current workspace owner may schedule deletion of a workspace that
 
 The parent is [Delete a workspace you own](2026-10-17-delete-a-workspace-you-own.md), implemented through epic #1736. It explicitly defers team deletion to this ticket. Removing members first is available after #1008, but is not this notice workflow.
 
-Verified at this branch's starting HEAD:
+Verified against develop after bounded cleanup #1739 (PR #1817):
 
 - `src/server/repos/members.ts` owns `deleteWorkspace(scope, { departingUserId? })`. It uses `assertCanAdminister`, so administrators are currently admitted. Its final statement atomically refuses any member other than `departingUserId`, and refuses `livePaidSubscription()`.
-- The parent driver `src/server/workspace-deletion/`, its ledger, owner request function, join fence and bounded drain are **designed, not implemented**. This design depends on them landing and being verified before its producers ship. It does not create an alternative cascade to work around that dependency.
+- The bounded cleanup preparation is implemented: `repos/members.ts` exposes `drainWorkspace`, and `storage/workspace-objects.ts` exposes `drainWorkspaceObjects`, each with a finite budget and resumable `drained` result. Their current guards preserve sole-member deletion. The parent driver `src/server/workspace-deletion/`, its ledger, owner request function and join fence remain **designed, not implemented**. This design depends on them landing and being verified before its producers ship; reuse the bounded drain interfaces with the exact scheduled-branch guard amendment below, never an alternative cascade or an unbounded completion helper.
 - `src/server/repos/billing.ts` defines `livePaidSubscription`: a provider subscription in a blocking status whose `cancelAtPeriodEnd` is false. An already-ending subscription is not blocking under that predicate. Preserve that rule and the parent's provider reconciliation, without automatic cancellation or refunds in the schedule flow.
 - ADR 0007 forbids showing a non-member even a count or aggregate of another person's private trip. Membership and ownership changes already have atomic guards in `repos/members.ts`; the new schedule must compose with them, including multi-token stored owner roles.
 
