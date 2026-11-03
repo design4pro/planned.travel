@@ -26,6 +26,7 @@ import { Route as AppNotificationsRouteImport } from './routes/_app/notification
 import { Route as AppPasskeysRouteImport } from './routes/_app/passkeys'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
 import { Route as AppVacayRouteImport } from './routes/_app/vacay'
+import { Route as ApiWorkspaceCompatibilityRouteImport } from './routes/api/workspace-compatibility'
 import { Route as JoinTokenRouteImport } from './routes/join/$token'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
@@ -152,6 +153,12 @@ const AppVacayRoute = AppVacayRouteImport.update({
   path: '/vacay',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiWorkspaceCompatibilityRoute =
+  ApiWorkspaceCompatibilityRouteImport.update({
+    id: '/api/workspace-compatibility',
+    path: '/api/workspace-compatibility',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const JoinTokenRoute = JoinTokenRouteImport.update({
   id: '/join/$token',
   path: '/join/$token',
@@ -379,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/notifications': typeof AppNotificationsRoute
   '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
+  '/api/workspace-compatibility': typeof ApiWorkspaceCompatibilityRoute
   '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -436,6 +444,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AppNotificationsRoute
   '/passkeys': typeof AppPasskeysRoute
   '/vacay': typeof AppVacayRoute
+  '/api/workspace-compatibility': typeof ApiWorkspaceCompatibilityRoute
   '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -495,6 +504,7 @@ export interface FileRoutesById {
   '/_app/notifications': typeof AppNotificationsRoute
   '/_app/passkeys': typeof AppPasskeysRoute
   '/_app/vacay': typeof AppVacayRoute
+  '/api/workspace-compatibility': typeof ApiWorkspaceCompatibilityRoute
   '/join/$token': typeof JoinTokenRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -556,6 +566,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/passkeys'
     | '/vacay'
+    | '/api/workspace-compatibility'
     | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
@@ -613,6 +624,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/passkeys'
     | '/vacay'
+    | '/api/workspace-compatibility'
     | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
@@ -671,6 +683,7 @@ export interface FileRouteTypes {
     | '/_app/notifications'
     | '/_app/passkeys'
     | '/_app/vacay'
+    | '/api/workspace-compatibility'
     | '/join/$token'
     | '/legal/privacy'
     | '/legal/terms'
@@ -724,6 +737,7 @@ export interface RootRouteChildren {
   authResetPasswordRoute: typeof authResetPasswordRoute
   authTwoFactorRoute: typeof authTwoFactorRoute
   authVerifyEmailRoute: typeof authVerifyEmailRoute
+  ApiWorkspaceCompatibilityRoute: typeof ApiWorkspaceCompatibilityRoute
   JoinTokenRoute: typeof JoinTokenRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
@@ -858,6 +872,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/vacay'
       preLoaderRoute: typeof AppVacayRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/api/workspace-compatibility': {
+      id: '/api/workspace-compatibility'
+      path: '/api/workspace-compatibility'
+      fullPath: '/api/workspace-compatibility'
+      preLoaderRoute: typeof ApiWorkspaceCompatibilityRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/join/$token': {
       id: '/join/$token'
@@ -1281,6 +1302,7 @@ const rootRouteChildren: RootRouteChildren = {
   authResetPasswordRoute: authResetPasswordRoute,
   authTwoFactorRoute: authTwoFactorRoute,
   authVerifyEmailRoute: authVerifyEmailRoute,
+  ApiWorkspaceCompatibilityRoute: ApiWorkspaceCompatibilityRoute,
   JoinTokenRoute: JoinTokenRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,

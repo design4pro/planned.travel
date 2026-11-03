@@ -709,6 +709,10 @@ const messages = {
     'Tab ini menampilkan {name}, tetapi ruang kerja diubah di tab atau jendela lain. Tidak ada yang disimpan.',
   'session.openCurrentWorkspace': 'Buka ruang kerja saat ini',
   'session.workspaceChangedDismiss': 'Nanti saja',
+  'session.workspaceCheck': 'Periksa ruang kerja ini',
+  'session.workspaceCheckPending': 'Memeriksa akses ruang kerja…',
+  'session.workspaceCheckFailed':
+    'Akses ke ruang kerja ini tidak dapat diverifikasi. Tidak ada tindakan yang diulangi. Anda dapat memeriksa lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -745,6 +745,10 @@ const messages = {
     'Den här fliken visar {name}, men arbetsytan ändrades i en annan flik eller ett annat fönster. Inget sparades.',
   'session.openCurrentWorkspace': 'Öppna den aktuella arbetsytan',
   'session.workspaceChangedDismiss': 'Inte nu',
+  'session.workspaceCheck': 'Kontrollera den här arbetsytan',
+  'session.workspaceCheckPending': 'Kontrollerar åtkomst till arbetsytan…',
+  'session.workspaceCheckFailed':
+    'Det gick inte att bekräfta åtkomsten till den här arbetsytan. Ingen åtgärd upprepades. Du kan kontrollera igen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

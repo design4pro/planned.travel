@@ -802,6 +802,10 @@ const messages = {
     'Ця вкладка показує «{name}», але простір було змінено в іншій вкладці або вікні. Нічого не збережено.',
   'session.openCurrentWorkspace': 'Відкрити поточний простір',
   'session.workspaceChangedDismiss': 'Не зараз',
+  'session.workspaceCheck': 'Перевірити цей робочий простір',
+  'session.workspaceCheckPending': 'Перевірка доступу до робочого простору…',
+  'session.workspaceCheckFailed':
+    'Не вдалося підтвердити доступ до цього робочого простору. Жодну дію не було повторено. Можна перевірити ще раз.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

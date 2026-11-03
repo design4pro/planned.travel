@@ -13,7 +13,8 @@
  *
  * A tab stops after its first refusal: a stale tab that kept polling would send a refused call per
  * tick and count each one in `server_fn.failure`. Once stale, calls fail here with the same refusal
- * until a navigation re-reads the shell (`src/routes/_app/route.tsx`). They do not reopen the
+ * until navigation re-reads the shell or an explicit compatibility check recovers the original
+ * workspace. They do not reopen the
  * notice: a poll or a link preload is not the reader asking, and a dialog that came back every few
  * seconds after "Not now" would pull focus away from whatever they were doing. The surfaces a
  * reader's own action ends in (`useAction`, `messageOf`, `ErrorPanel`) reopen it.

@@ -12,6 +12,7 @@ import {
   parseWorkspaceClaim,
 } from '#/lib/workspace-claim'
 import { authDb } from './db'
+import { membershipRoleFor } from './provisioning'
 import { getAuth } from './index'
 import { resolveSessionWorkspace } from './active-workspace'
 import {
@@ -120,4 +121,28 @@ export async function requireOrg(
 
   // The header is spread last: a caller's options cannot switch the comparison off.
   return requireOrgFrom(effective, role, { ...options, claim })
+}
+
+/** Read-only recovery never resolves a fallback workspace or provisions membership. */
+export async function verifyWorkspaceCompatibility(): Promise<{
+  organizationId: string
+}> {
+  const session = await getSession()
+  const claim = getRequest().headers.get(WORKSPACE_CLAIM_HEADER)
+  const parsed = parseWorkspaceClaim(claim)
+  const user = requireUserFrom(session)
+  const organizationId = session?.session.activeOrganizationId
+  if (
+    parsed.status !== 'valid' ||
+    !organizationId ||
+    parsed.organizationId !== organizationId
+  ) {
+    throw new AuthRequirementError('workspace-changed', WORKSPACE_CHANGED_KEY)
+  }
+  const role = await membershipRoleFor(authDb(), {
+    userId: user.id,
+    organizationId,
+  })
+  const verified = requireOrgFrom(session, role, { claim })
+  return { organizationId: verified.organizationId }
 }
