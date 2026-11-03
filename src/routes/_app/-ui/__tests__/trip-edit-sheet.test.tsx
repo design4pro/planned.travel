@@ -374,8 +374,19 @@ describe('an edit sheet left open on an archived trip', () => {
       server.update.mockRejectedValue(
         refusedWith('shell.trips.card.archivedReason'),
       )
-      router.invalidate.mockRejectedValue(new Error('offline'))
-      await save(locale, locale === 'en' ? EN : PL)
+      // Refresh removes the archived list row that owns this sheet.
+      router.invalidate.mockImplementation(async () => cleanup())
+      await save(locale, locale === 'en' ? EN : PL, false)
+      const name = screen.getByRole('textbox', {
+        name: (locale === 'en' ? Shell : Pl)['newTrip.name'],
+      })
+      await userEvent.clear(name)
+      await userEvent.type(name, 'Unsaved draft')
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: (locale === 'en' ? Shell : Pl)['editTrip.submit'],
+        }),
+      )
       const alert = await screen.findByRole('alert')
       expect(alert.textContent).toContain(
         (locale === 'en' ? Shell : Pl)['trips.card.archivedReason'],
@@ -387,7 +398,8 @@ describe('an edit sheet left open on an archived trip', () => {
           name: (locale === 'en' ? Shell : Pl)['editTrip.retry'],
         }),
       ).toBeNull()
-      expect(router.invalidate).toHaveBeenCalledTimes(1)
+      expect(router.invalidate).not.toHaveBeenCalled()
+      expect((name as HTMLInputElement).value).toBe('Unsaved draft')
     },
   )
 

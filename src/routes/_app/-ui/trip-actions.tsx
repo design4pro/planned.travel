@@ -243,10 +243,13 @@ export function TripEditSheet({
             : messageOf(cause, t('shell.editTrip.error')),
         )
       }
-      // Any other refusal may mean the reader's role changed under this sheet: read the trip again
-      // so `trip.role` follows. The currency refusal has its own message, and any other failure
-      // keeps the trip it has.
-      if (refusal === null && readPublicFailure(cause).kind === 'refusal') {
+      // Refresh permission refusals, but keep an archived trip's unsaved sheet: a reload removes
+      // its list row and the editor it owns. Currency refusals also keep their current trip.
+      if (
+        !archived &&
+        refusal === null &&
+        readPublicFailure(cause).kind === 'refusal'
+      ) {
         try {
           await router.invalidate()
         } catch {
