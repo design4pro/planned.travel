@@ -301,7 +301,7 @@ export function DayDetail({
                 </Button>
               </div>
             ) : null}
-            {loading ? (
+            {loading && model.reservations.length === 0 ? (
               <div className="space-y-2">
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-5 w-1/2" />

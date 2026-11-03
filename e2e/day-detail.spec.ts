@@ -395,7 +395,7 @@ test('Reservation loading preserves panel geometry and the shift probe detects m
   page,
 }) => {
   let release = () => {}
-  const held = new Promise<void>((resolve) => {
+  let held = new Promise<void>((resolve) => {
     release = resolve
   })
   await page.route(
@@ -487,23 +487,99 @@ test('Reservation loading preserves panel geometry and the shift probe detects m
       .filter((entry) => entry.panel)
       .reduce((sum, entry) => sum + entry.value, 0),
   ).toBe(0)
-  await panel.locator('header').evaluate((node) => {
-    node.style.marginTop = '40px'
+  const noteText = `Refresh ${Date.now().toString().slice(-5)}`
+  await page
+    .locator('[data-planner-day]')
+    .nth(1)
+    .getByRole('button', { name: /^Add a note for / })
+    .click()
+  const editor = page.getByRole('dialog')
+  await editor.getByRole('textbox', { name: /^Note/ }).fill(noteText)
+  const row = panel.locator('section[aria-busy] li').first()
+  await row.evaluate((node) => node.scrollIntoView({ block: 'center' }))
+  const position = () =>
+    row.evaluate((node) => {
+      const box = node.getBoundingClientRect()
+      const section = node.closest('section')!.getBoundingClientRect()
+      return { y: box.y, inset: box.y - section.y, height: box.height }
+    })
+  const knownPosition = await position()
+  held = new Promise<void>((resolve) => {
+    release = resolve
   })
-  await expect
-    .poll(() =>
-      page.evaluate(() =>
+  try {
+    await editor.getByRole('button', { name: 'Save note', exact: true }).click()
+    await expect(editor).toHaveCount(0)
+    try {
+      await expect(panel.locator('section[aria-busy]')).toHaveAttribute(
+        'aria-busy',
+        'true',
+      )
+      expect(await position()).toEqual(knownPosition)
+    } finally {
+      release()
+    }
+    await expect(panel.locator('section[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    expect(await position()).toEqual(knownPosition)
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    )
+    const refreshed = await page.evaluate(
+      () =>
         (
           window as unknown as {
             dayDetailShifts: Array<{ value: number; panel: boolean }>
           }
-        ).dayDetailShifts.some((entry) => entry.panel && entry.value > 0),
-      ),
+        ).dayDetailShifts,
     )
-    .toBe(true)
-  await panel.locator('header').evaluate((node) => {
-    node.style.marginTop = ''
-  })
+    await test
+      .info()
+      .attach('background-layout-shifts', {
+        body: JSON.stringify(refreshed),
+        contentType: 'application/json',
+      })
+    expect(
+      refreshed
+        .filter((entry) => entry.panel)
+        .reduce((sum, entry) => sum + entry.value, 0),
+    ).toBe(0)
+    await panel.locator('header').evaluate((node) => {
+      node.style.marginTop = '40px'
+    })
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          (
+            window as unknown as {
+              dayDetailShifts: Array<{ value: number; panel: boolean }>
+            }
+          ).dayDetailShifts.some((entry) => entry.panel && entry.value > 0),
+        ),
+      )
+      .toBe(true)
+    await panel.locator('header').evaluate((node) => {
+      node.style.marginTop = ''
+    })
+  } finally {
+    release()
+    const savedNote = page
+      .locator('[data-planner-note]')
+      .filter({ hasText: noteText })
+    const remove = savedNote.getByRole('button', { name: 'Delete note' })
+    await remove.focus()
+    await remove.press('Enter')
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: 'Delete note', exact: true })
+      .click()
+    await expect(savedNote).toHaveCount(0)
+  }
 })
 
 test('overlapping Stays keep their actual windows and chronological order', async ({
