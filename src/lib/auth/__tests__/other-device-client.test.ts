@@ -3,6 +3,7 @@ import {
   registerOtherDeviceRevocation,
   settleOtherDeviceRevocation,
 } from '../client'
+
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()

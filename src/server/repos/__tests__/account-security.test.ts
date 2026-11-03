@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
 import {
   accountSecurity,
   securityFence,
@@ -107,6 +108,26 @@ beforeEach(async () => {
 afterEach(() => harness.close())
 
 describe('account revocation through the atomic repository interface', () => {
+  it('rechecks session freshness at the winning D1 claim after a request waited in the queue', async () => {
+    await registration(first, 'delayed-operation', 'current')
+    await harness.db
+      .update(session)
+      .set({ createdAt: new Date(now - 309000) })
+      .where(eq(session.id, 'current'))
+    const before = await footprint()
+    expect(
+      await commitRevocation(first, {
+        id: 'delayed-operation',
+        sessionId: 'current',
+        token: 'fixture-current',
+        intent: 'delayed-operation',
+        claim: 'delayed-claim',
+        now: now - 10000,
+      }),
+    ).toBe(false)
+    expect(await footprint()).toEqual(before)
+  })
+
   it('retains the current token and separates accounts and their workspaces', async () => {
     await registration(first, 'op', 'current')
     expect(await commit(first, 'op', 'current')).toBe(true)

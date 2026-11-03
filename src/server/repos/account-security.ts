@@ -296,16 +296,17 @@ export async function commitRevocation(
   },
 ): Promise<boolean> {
   const { id, sessionId, token, intent, claim, now } = input
+  const effectiveNow = sql`max(${now}, cast(unixepoch('subsec') * 1000 as integer))`
   const winning = sql`exists(select 1 from account_security_operation o where o.id = ${id} and o.user_id = ${scope.userId} and o.claim = ${claim} and o.committed_at is null)`
   await atomic(scope.db, [
     scope.db.run(sql`update account_security_operation set claim = ${claim}
       where id = ${id} and user_id = ${scope.userId} and session_id = ${sessionId} and intent = ${intent}
-      and claim is null and committed_at is null and expires_at > max(${now}, cast(unixepoch('subsec') * 1000 as integer))
+      and claim is null and committed_at is null and expires_at > ${effectiveNow}
       and exists(select 1 from account_security a join session_authority m on m.user_id = a.user_id and m.revision = a.revision
         join session s on s.id = m.session_id where a.user_id = ${scope.userId} and a.revision = account_security_operation.revision and a.deletion_id is null and a.revision < ${Number.MAX_SAFE_INTEGER - 1}
         and s.id = ${sessionId} and s.token = ${token} and s.impersonated_by is null
-        and exists(select 1 from user u where u.id = s.user_id and (u.banned = 0 or (u.ban_expires is not null and u.ban_expires <= ${now})))
-        and s.created_at > ${now - 300_000} and s.created_at <= ${now} and s.expires_at > ${now})
+        and exists(select 1 from user u where u.id = s.user_id and (u.banned = 0 or (u.ban_expires is not null and u.ban_expires <= ${effectiveNow})))
+        and s.created_at > ${effectiveNow} - 300000 and s.created_at <= ${effectiveNow} and s.expires_at > ${effectiveNow})
       and exists(select 1 from account_security_fence where id = 1 and cutover = 1 and ready = 1 and anchor_backfill_run_id is not null and value < ${Number.MAX_SAFE_INTEGER - 1})`),
     scope.db.run(
       sql`update account_security_fence set value = value + 1 where id = 1 and ${winning}`,
@@ -317,7 +318,7 @@ export async function commitRevocation(
       .run(sql`update session_authority set revision = (select revision from account_security where user_id = ${scope.userId})
       where session_id = ${sessionId} and user_id = ${scope.userId} and ${winning}`),
     scope.db
-      .run(sql`update account_security_operation set committed_at = ${now}, cleanup_pending = 1, rooms_pending = 1
+      .run(sql`update account_security_operation set committed_at = ${effectiveNow}, cleanup_pending = 1, rooms_pending = 1
       where id = ${id} and user_id = ${scope.userId} and claim = ${claim} and committed_at is null`),
   ])
   const outcome = await operationFor(scope, id)
