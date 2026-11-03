@@ -845,6 +845,10 @@ const messages = {
     'تعرض علامة التبويب هذه {name}، لكن مساحة العمل تغيّرت في علامة تبويب أو نافذة أخرى. لم يتم حفظ أي شيء.',
   'session.openCurrentWorkspace': 'افتح مساحة العمل الحالية',
   'session.workspaceChangedDismiss': 'ليس الآن',
+  'session.workspaceCheck': 'التحقق من مساحة العمل هذه',
+  'session.workspaceCheckPending': 'جارٍ التحقق من الوصول إلى مساحة العمل…',
+  'session.workspaceCheckFailed':
+    'تعذّر تأكيد الوصول إلى مساحة العمل هذه. لم تُكرَّر أي عملية. يمكنك التحقق مرة أخرى.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

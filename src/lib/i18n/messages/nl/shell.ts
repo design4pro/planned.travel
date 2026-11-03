@@ -766,6 +766,11 @@ const messages = {
     'Dit tabblad toont {name}, maar de werkruimte is gewijzigd in een ander tabblad of venster. Er is niets opgeslagen.',
   'session.openCurrentWorkspace': 'Open de huidige werkruimte',
   'session.workspaceChangedDismiss': 'Niet nu',
+  'session.workspaceCheck': 'Deze werkruimte controleren',
+  'session.workspaceCheckPending':
+    'Toegang tot de werkruimte wordt gecontroleerd…',
+  'session.workspaceCheckFailed':
+    'De toegang tot deze werkruimte kon niet worden bevestigd. Er is niets opnieuw uitgevoerd. Je kunt opnieuw controleren.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

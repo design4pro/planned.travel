@@ -784,6 +784,11 @@ const messages = {
     'Esta aba mostra {name}, mas o espaço de trabalho foi alterado em outra aba ou janela. Nada foi salvo.',
   'session.openCurrentWorkspace': 'Abrir o espaço de trabalho atual',
   'session.workspaceChangedDismiss': 'Agora não',
+  'session.workspaceCheck': 'Verificar este espaço de trabalho',
+  'session.workspaceCheckPending':
+    'Verificando o acesso ao espaço de trabalho…',
+  'session.workspaceCheckFailed':
+    'Não foi possível verificar o acesso a este espaço de trabalho. Nenhuma operação foi repetida. Você pode verificar novamente.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -640,6 +640,10 @@ const messages = {
     '이 탭에는 {name}이(가) 표시되어 있지만, 워크스페이스가 다른 탭이나 창에서 바뀌었어요. 저장된 내용은 없어요.',
   'session.openCurrentWorkspace': '현재 워크스페이스 열기',
   'session.workspaceChangedDismiss': '나중에',
+  'session.workspaceCheck': '이 워크스페이스 확인',
+  'session.workspaceCheckPending': '워크스페이스 접근 권한 확인 중…',
+  'session.workspaceCheckFailed':
+    '이 워크스페이스의 접근 권한을 확인할 수 없습니다. 어떤 작업도 다시 실행되지 않았습니다. 다시 확인할 수 있습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

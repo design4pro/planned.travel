@@ -7,12 +7,19 @@
  */
 import { useSyncExternalStore } from 'react'
 
-import { isWorkspaceChanged, WORKSPACE_CHANGED_KEY } from './workspace-claim'
+import { z } from 'zod'
+
+import {
+  isWorkspaceChanged,
+  parseWorkspaceClaim,
+  WORKSPACE_CLAIM_HEADER,
+  WORKSPACE_CHANGED_KEY,
+} from './workspace-claim'
 
 export interface WorkspaceClaimState {
   /** The workspace the tab is showing, or `null` before the shell has loaded. */
   readonly organizationId: string | null
-  /** A call was refused: the tab sends nothing more until a navigation re-reads the shell. */
+  /** A call was refused: the tab sends nothing more until navigation or explicit compatibility verification. */
   readonly stale: boolean
   /** The notice is showing. "Not now" closes it without clearing `stale`. */
   readonly noticeOpen: boolean
@@ -30,6 +37,8 @@ const INITIAL: WorkspaceClaimState = {
 let state: WorkspaceClaimState = INITIAL
 // A navigation to the same workspace still supersedes requests made by the previous screen.
 let generation = 0
+// Refusals invalidate recovery without making other in-flight refusals obsolete.
+let recoveryAttempt = 0
 
 export function workspaceClaimGeneration(): number {
   return generation
@@ -88,8 +97,43 @@ export function resumeWorkspaceClaim(): void {
  */
 export function markWorkspaceStale(sentWith: string): void {
   if (state.organizationId !== sentWith) return
-  generation += 1
+  recoveryAttempt += 1
   commit({ stale: true, noticeOpen: true })
+}
+
+/** Only an explicit authenticated read can reopen this gate without rereading the shell. */
+export async function recoverWorkspaceClaim(): Promise<boolean> {
+  const claim = parseWorkspaceClaim(state.organizationId)
+  if (!state.stale || state.switching || claim.status !== 'valid') return false
+  const startedGeneration = generation
+  const attempt = ++recoveryAttempt
+  try {
+    const response = await fetch('/api/workspace-compatibility', {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10_000),
+      headers: { [WORKSPACE_CLAIM_HEADER]: claim.organizationId },
+    })
+    if (!response.ok) return false
+    const result = z
+      .object({ organizationId: z.string() })
+      .safeParse(await response.json())
+    if (
+      !result.success ||
+      result.data.organizationId !== claim.organizationId ||
+      generation !== startedGeneration ||
+      recoveryAttempt !== attempt ||
+      state.organizationId !== claim.organizationId ||
+      !state.stale ||
+      state.switching
+    )
+      return false
+    commit({ stale: false, noticeOpen: false })
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** The reader did something and it was stopped because the tab is stale: say so again. */
@@ -109,6 +153,7 @@ export function reopenNoticeFor(error: unknown): boolean {
 }
 
 export function dismissWorkspaceNotice(): void {
+  recoveryAttempt += 1
   commit({ noticeOpen: false })
 }
 

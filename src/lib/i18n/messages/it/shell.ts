@@ -788,6 +788,11 @@ const messages = {
     'Questa scheda mostra {name}, ma lo spazio di lavoro è stato cambiato in un’altra scheda o finestra. Non è stato salvato nulla.',
   'session.openCurrentWorkspace': 'Apri lo spazio di lavoro attuale',
   'session.workspaceChangedDismiss': 'Non ora',
+  'session.workspaceCheck': 'Verifica questo spazio di lavoro',
+  'session.workspaceCheckPending':
+    'Verifica dell’accesso allo spazio di lavoro…',
+  'session.workspaceCheckFailed':
+    'Impossibile verificare l’accesso a questo spazio di lavoro. Nessuna operazione è stata ripetuta. Puoi verificare di nuovo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

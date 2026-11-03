@@ -787,6 +787,11 @@ const messages = {
     'Esta pestaña muestra {name}, pero el espacio de trabajo se cambió en otra pestaña o ventana. No se guardó nada.',
   'session.openCurrentWorkspace': 'Abrir el espacio de trabajo actual',
   'session.workspaceChangedDismiss': 'Ahora no',
+  'session.workspaceCheck': 'Comprobar este espacio de trabajo',
+  'session.workspaceCheckPending':
+    'Comprobando el acceso al espacio de trabajo…',
+  'session.workspaceCheckFailed':
+    'No se pudo verificar el acceso a este espacio de trabajo. No se repitió ninguna operación. Puedes volver a comprobarlo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
