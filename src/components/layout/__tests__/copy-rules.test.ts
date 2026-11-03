@@ -57,6 +57,7 @@ const APP_FILES = [
   join('-ui', 'trip-hero-strip.tsx'),
   join('-ui', 'dashboard-widgets.tsx'),
   join('-ui', 'timezone-clock.tsx'),
+  join('-ui', 'currency-converter.tsx'),
   join('-ui', 'new-trip-dialog.tsx'),
   join('-ui', 'trip-form.tsx'),
   join('-ui', 'trip-cover-field.tsx'),
@@ -101,6 +102,15 @@ function shippedSources(): ReadonlyArray<Source> {
       text: readFileSync(join(APP_DIR, relative), 'utf8'),
     })
   }
+
+  // The source notice is shared by the shell and the paid entry pages.
+  files.push({
+    name: 'rates/free-rate-disclosure.tsx',
+    text: readFileSync(
+      join(LAYOUT_DIR, '..', 'rates', 'free-rate-disclosure.tsx'),
+      'utf8',
+    ),
+  })
 
   for (const name of LIB_FILES) {
     files.push({ name, text: readFileSync(join(LIB_DIR, name), 'utf8') })

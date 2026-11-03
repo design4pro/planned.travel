@@ -771,6 +771,25 @@ const messages = {
     'Toegang tot de werkruimte wordt gecontroleerd…',
   'session.workspaceCheckFailed':
     'De toegang tot deze werkruimte kon niet worden bevestigd. Er is niets opnieuw uitgevoerd. Je kunt opnieuw controleren.',
+  'dashboard.currency.label': 'Valutaomrekenaar',
+  'dashboard.currency.amount': 'Bedrag',
+  'dashboard.currency.from': 'Bronvaluta',
+  'dashboard.currency.to': 'Doelvaluta',
+  'dashboard.currency.swap': 'Valuta’s omwisselen',
+  'dashboard.currency.refresh': 'Koersen vernieuwen',
+  'dashboard.currency.result': 'Omgerekend bedrag',
+  'dashboard.currency.invalid': 'Voer een bedrag van 0 tot 1.000.000.000 in.',
+  'dashboard.currency.unsupported': 'Dit valutapaar is niet beschikbaar.',
+  'dashboard.currency.stale': 'Deze referentiekoersen zijn mogelijk verouderd.',
+  'dashboard.currency.blocked': 'De limiet van de koersdienst is bereikt.',
+  'dashboard.currency.failed': 'De koersen konden niet worden vernieuwd.',
+  'dashboard.currency.cooldown': 'Probeer het opnieuw na {time}.',
+  'dashboard.currency.source': 'ECB-referentiekoersen via Frankfurter',
+  'dashboard.currency.notice':
+    'Informatieve berekening; geen transactieaanbod.',
+  'dashboard.currency.free':
+    'ECB-referentiekoersen zijn gratis beschikbaar bij de ECB.',
+  'dashboard.currency.date': 'Koersdatum: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

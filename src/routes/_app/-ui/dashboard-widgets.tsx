@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { PanelRight, SlidersHorizontal } from 'lucide-react'
 
 import {
@@ -40,7 +46,7 @@ import type { ReactNode } from 'react'
  * switched off. `/dashboard` already shipped a right rail holding the bookings
  * list, the trip pipeline and the storage meter, so if the clock were the only
  * thing the menu governed, switching it off would leave three panels standing in
- * a column the ticket says is gone. All four are therefore one widget set. Their
+ * a column the ticket says is gone. They therefore share one widget set with the converter. Their
  * bodies are untouched — only where they are mounted moved.
  *
  * ## Why the menu lives in the header and not in the column
@@ -55,6 +61,7 @@ const WIDGET_LABEL: Record<DashboardWidgetId, MessageKey> = {
   bookings: 'shell.dashboard.bookings.label',
   tripMix: 'shell.dashboard.pipeline.label',
   storage: 'shell.dashboard.storage.label',
+  currency: 'shell.dashboard.currency.label',
 }
 
 export interface DashboardWidgets {
@@ -264,5 +271,36 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
         </SheetBody>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** A cross-tab hide returns focus; closing the sheet keeps its own focus contract. */
+export function DashboardWidget({
+  id,
+  children,
+}: {
+  id: DashboardWidgetId
+  children: ReactNode
+}) {
+  const root = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const element = root.current
+    return () => {
+      if (
+        element?.contains(document.activeElement) &&
+        !dashboardWidgetPreference.read().shown.includes(id)
+      ) {
+        document
+          .querySelector<HTMLButtonElement>(
+            '[data-part="dashboard-widgets-menu"]',
+          )
+          ?.focus()
+      }
+    }
+  }, [id])
+  return (
+    <div ref={root} data-part={`dashboard-widget-${id}`}>
+      {children}
+    </div>
   )
 }

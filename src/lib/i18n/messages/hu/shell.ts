@@ -768,6 +768,26 @@ const messages = {
   'session.workspaceCheckPending': 'Munkaterület-hozzáférés ellenőrzése…',
   'session.workspaceCheckFailed':
     'Nem sikerült ellenőrizni a hozzáférést ehhez a munkaterülethez. Egyetlen művelet sem ismétlődött meg. Újra ellenőrizheted.',
+  'dashboard.currency.label': 'Pénznemváltó',
+  'dashboard.currency.amount': 'Összeg',
+  'dashboard.currency.from': 'Forrás pénzneme',
+  'dashboard.currency.to': 'Cél pénzneme',
+  'dashboard.currency.swap': 'Pénznemek felcserélése',
+  'dashboard.currency.refresh': 'Árfolyamok frissítése',
+  'dashboard.currency.result': 'Átváltott összeg',
+  'dashboard.currency.invalid':
+    'Adjon meg 0 és 1 000 000 000 közötti összeget.',
+  'dashboard.currency.unsupported': 'Ez a pénznempár nem érhető el.',
+  'dashboard.currency.stale': 'Ezek a referenciaárfolyamok elavultak lehetnek.',
+  'dashboard.currency.blocked': 'Az árfolyamszolgáltatás korlátja elérve.',
+  'dashboard.currency.failed': 'Az árfolyamokat nem sikerült frissíteni.',
+  'dashboard.currency.cooldown': 'Próbálja újra {time} után.',
+  'dashboard.currency.source':
+    'EKB-referenciaárfolyamok a Frankfurter közvetítésével',
+  'dashboard.currency.notice': 'Tájékoztató számítás; nem tranzakciós ajánlat.',
+  'dashboard.currency.free':
+    'Az EKB-referenciaárfolyamok ingyenesen elérhetők az EKB-nál.',
+  'dashboard.currency.date': 'Árfolyam dátuma: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

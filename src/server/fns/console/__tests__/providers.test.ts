@@ -19,6 +19,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLogger, createMemorySink } from '#/server/observability'
 import { createPlatformTables } from '#/server/catalog/__tests__/platform-tables'
+import { createPublicRates } from '#/server/rates/public-rates'
+import { resetProviderLimitMemo } from '#/server/metering/outbound'
+import type { PublicRatesRuntime } from '#/server/rates/public-rates'
 import { providerRegistry } from '#/server/db/schema'
 import type { PlatformTables } from '#/server/catalog/__tests__/platform-tables'
 import type { AuthSession } from '#/server/auth/tenant'
@@ -105,7 +108,7 @@ vi.mock('../context', async (importOriginal) => {
   }
 })
 
-const { saveProviderLimit } = await import('../providers')
+const { saveProviderLimit, readProviders } = await import('../providers')
 const { ConsoleActionError } = await import('../errors')
 
 let tables: PlatformTables
@@ -187,6 +190,7 @@ describe('saveProviderLimit', () => {
   it.each([
     ['met-norway', 'MET Norway'],
     ['nasa-power', 'NASA POWER'],
+    ['frankfurter', 'Frankfurter (ECB)'],
   ] as const)(
     'saves a ceiling for the weather provider %s, which is metered with its client',
     async (slug, label) => {
@@ -261,4 +265,93 @@ describe('saveProviderLimit', () => {
     // The message is the advice, so it must survive the translation between layers.
     expect(String((rejection as Error).message)).toContain('polar')
   })
+})
+
+it('reports public-rate attempts, malformed successes and blocked demand only for initiating workspaces', async () => {
+  let now = Date.now()
+  const values = new Map<string, string>()
+  const pending: Promise<unknown>[] = []
+  const fetch = vi.fn<typeof globalThis.fetch>(async () =>
+    Response.json([
+      {
+        date: new Date(now).toISOString().slice(0, 10),
+        base: 'EUR',
+        quote: 'EUR',
+        rate: 1,
+      },
+      {
+        date: new Date(now).toISOString().slice(0, 10),
+        base: 'EUR',
+        quote: 'USD',
+        rate: 1.25,
+      },
+    ]),
+  )
+  const runtime: PublicRatesRuntime = {
+    now: () => now,
+    fetch,
+    sleep: async () => {},
+    cache: {
+      get: async (key) => values.get(key) ?? null,
+      put: async (key, value) => {
+        values.set(key, value)
+      },
+    },
+    outbound: {
+      db: tables.db,
+      now: () => new Date(now),
+      logger: createLogger({ sink: createMemorySink() }),
+      waitUntil: (promise) => {
+        pending.push(promise)
+      },
+    },
+  }
+  resetProviderLimitMemo()
+  const rates = createPublicRates()
+  await Promise.all([
+    rates(runtime, 'workspace-a'),
+    rates(runtime, 'workspace-b'),
+  ])
+  await Promise.all(pending)
+  await rates(runtime, 'workspace-b')
+  expect(fetch).toHaveBeenCalledTimes(1)
+  now += 3600000
+  fetch.mockImplementation(async () => Response.json({ invalid: true }))
+  await rates(runtime, 'workspace-b')
+  await Promise.all(pending)
+  await saveProviderLimit({
+    ...INPUT,
+    slug: 'frankfurter',
+    label: 'Frankfurter (ECB)',
+    policy: 'block',
+    callLimit: 0,
+  })
+  resetProviderLimitMemo()
+  now += 3600000
+  expect(await rates(runtime, 'workspace-c')).toMatchObject({
+    status: 'available',
+    reason: 'provider-blocked',
+  })
+  await Promise.all(pending)
+  const panel = (await readProviders()).providers.find(
+    (row) => row.slug === 'frankfurter',
+  )
+  expect(panel).toMatchObject({
+    integrated: true,
+    monthToDate: 2,
+    errors: 1,
+    blocked: 1,
+  })
+  expect(panel?.workspaces).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ organizationId: 'workspace-a', calls: 1 }),
+      expect.objectContaining({ organizationId: 'workspace-b', calls: 1 }),
+    ]),
+  )
+  expect(fetch).toHaveBeenCalledTimes(2)
+  shared.role.current = 'user'
+  await expect(readProviders()).rejects.toThrow()
+  await expect(
+    saveProviderLimit({ ...INPUT, slug: 'frankfurter' }),
+  ).rejects.toThrow()
 })

@@ -824,6 +824,25 @@ const messages = {
   'session.workspaceCheckPending': 'Sprawdzanie dostępu do przestrzeni…',
   'session.workspaceCheckFailed':
     'Nie udało się potwierdzić dostępu do tej przestrzeni. Żadna operacja nie została ponowiona. Możesz sprawdzić ponownie.',
+  'dashboard.currency.label': 'Przelicznik walut',
+  'dashboard.currency.amount': 'Kwota',
+  'dashboard.currency.from': 'Waluta źródłowa',
+  'dashboard.currency.to': 'Waluta docelowa',
+  'dashboard.currency.swap': 'Zamień waluty',
+  'dashboard.currency.refresh': 'Odśwież kursy',
+  'dashboard.currency.result': 'Przeliczona kwota',
+  'dashboard.currency.invalid': 'Wpisz kwotę od 0 do 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Ta para walut jest niedostępna.',
+  'dashboard.currency.stale': 'Te kursy referencyjne mogą być nieaktualne.',
+  'dashboard.currency.blocked': 'Osiągnięto limit usługi kursów.',
+  'dashboard.currency.failed': 'Nie udało się odświeżyć kursów.',
+  'dashboard.currency.cooldown': 'Spróbuj ponownie po {time}.',
+  'dashboard.currency.source': 'Kursy referencyjne EBC przez Frankfurter',
+  'dashboard.currency.notice':
+    'Obliczenie informacyjne; nie jest ofertą transakcji.',
+  'dashboard.currency.free':
+    'Kursy referencyjne EBC są dostępne bezpłatnie w EBC.',
+  'dashboard.currency.date': 'Data kursu: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

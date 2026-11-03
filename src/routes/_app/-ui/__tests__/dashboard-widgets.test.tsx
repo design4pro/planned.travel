@@ -3,7 +3,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { I18nProvider } from '#/lib/i18n'
@@ -11,6 +11,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import {
+  DashboardWidget,
   DashboardWidgetsMenu,
   WIDGETS_IN_SHEET_QUERY,
   useDashboardWidgets,
@@ -34,12 +35,13 @@ const EN: Catalogue = {
   ...namespaceCatalogue('ui', Ui),
 }
 
-/** The four widgets, in the order the column stacks them. */
+/** The five widgets, in the order the column stacks them. */
 const LABELS = [
   'World clock',
   'Upcoming reservations',
   'Trip pipeline',
   'Storage',
+  'Currency converter',
 ]
 
 /**
@@ -86,7 +88,7 @@ describe('the dashboard’s widget menu', () => {
         .getAllByRole('menuitemcheckbox')
         .map((item) => item.textContent.trim()),
     ).toEqual(LABELS)
-    expect(shown()).toBe('clock bookings tripMix storage')
+    expect(shown()).toBe('clock bookings tripMix storage currency')
   })
 
   it('folds a widget away and remembers it for the next visit', async () => {
@@ -95,13 +97,13 @@ describe('the dashboard’s widget menu', () => {
     await user.click(
       screen.getByRole('menuitemcheckbox', { name: 'Trip pipeline' }),
     )
-    expect(shown()).toBe('clock bookings storage')
+    expect(shown()).toBe('clock bookings storage currency')
 
     // The record, not the render: a second mount of a brand new tree reads the
     // browser back and draws the same column.
     cleanup()
     render(<Harness />)
-    expect(shown()).toBe('clock bookings storage')
+    expect(shown()).toBe('clock bookings storage currency')
   })
 
   /**
@@ -120,7 +122,7 @@ describe('the dashboard’s widget menu', () => {
       screen.getByRole('menuitemcheckbox', { name: 'Trip pipeline' }),
     )
 
-    expect(shown()).toBe('clock bookings tripMix storage')
+    expect(shown()).toBe('clock bookings tripMix storage currency')
   })
 
   /**
@@ -142,10 +144,14 @@ describe('the dashboard’s widget menu', () => {
       screen.getByRole('menuitemcheckbox', { name: 'Upcoming reservations' }),
     )
 
+    await user.click(
+      screen.getByRole('menuitemcheckbox', { name: 'Currency converter' }),
+    )
+
     // Every widget off — the state that collapses the column — and the menu is
     // still there, which is the only way anything comes back.
     expect(shown()).toBe('')
-    expect(screen.getAllByRole('menuitemcheckbox')).toHaveLength(4)
+    expect(screen.getAllByRole('menuitemcheckbox')).toHaveLength(5)
   })
 })
 
@@ -209,4 +215,38 @@ describe('the surface the widgets are mounted on', () => {
     const wide = render(<Probe />)
     expect(wide.container.textContent).toBe('false')
   })
+})
+
+it('returns focus to the menu when another tab hides a focused widget', async () => {
+  function FocusHarness() {
+    const widgets = useDashboardWidgets()
+    return (
+      <I18nProvider locale="en" messages={EN}>
+        <DashboardWidgetsMenu widgets={widgets} />
+        {widgets.isShown('currency') ? (
+          <DashboardWidget id="currency">
+            <input aria-label="Amount" />
+          </DashboardWidget>
+        ) : null}
+      </I18nProvider>
+    )
+  }
+  render(<FocusHarness />)
+  screen.getByRole('textbox', { name: 'Amount' }).focus()
+  act(() => {
+    localStorage.setItem(
+      'planned.dashboard-widgets',
+      JSON.stringify({ shown: [], zones: [] }),
+    )
+    window.dispatchEvent(
+      new StorageEvent('storage', {
+        key: 'planned.dashboard-widgets',
+        storageArea: localStorage,
+      }),
+    )
+  })
+  expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Choose widgets' }),
+  )
 })
