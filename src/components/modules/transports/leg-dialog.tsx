@@ -32,7 +32,9 @@
  * instead closes the invalid action and refreshes the desk capability before another write is
  * offered; retrying that refresh repeats a read, never the refused save.
  *
- * **The one refusal that stays in the dialog** is "this transport no longer exists" (deleted in
+ * A stale trip-currency refusal also keeps the draft and refreshes the loaded currency.
+ *
+ * **Another refusal that stays in the dialog** is "this transport no longer exists" (deleted in
  * another tab or by another member). It is a state, not an error: the alert says so on either tab,
  * the draft stays editable, Save is off because it could only be refused again, and Close ends the
  * dialog. The loaders are re-run so the list behind it drops the transport.
@@ -57,6 +59,9 @@ import {
   Textarea,
 } from '#/components/ui'
 import { cn } from '#/lib/cn'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
+import { currencyCode } from '#/lib/money'
+import { useStaleTripCurrency } from '#/components/costs/stale-trip-currency'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { mintId } from '#/lib/ids'
 import { transportRefusalOf } from '#/lib/transport-refusals'
@@ -224,11 +229,18 @@ export function TransportDialog({
     currentOpen.current = draftId
   }, [draftId])
   const closeRef = useRef<HTMLButtonElement>(null)
+  const priceRef = useRef<HTMLInputElement>(null)
+  const openedFor = useRef<string | null>(null)
+  const identity = `${tripId}:${transport?.id ?? 'new'}`
 
   useEffect(() => {
     if (!open) {
+      openedFor.current = null
       return
     }
+    if (openedFor.current === identity) return
+    openedFor.current = identity
+    stale.dismiss()
     setDraft(
       transport === undefined
         ? emptyTransportDraft(currency)
@@ -239,7 +251,7 @@ export function TransportDialog({
     setFillMode('form')
     setGoneIn(null)
     setDraftId(mintId())
-  }, [open, transport, currency])
+  }, [open, identity, transport, currency])
 
   /**
    * The precondition on the second mode, and the reason it is a precondition.
@@ -259,6 +271,15 @@ export function TransportDialog({
    * re-run instead, so the list behind the dialog stops offering the deleted transport.
    */
   function onSaveError(cause: unknown): void {
+    if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+      void router.invalidate()
+      if (open && draftId === currentOpen.current) {
+        stale.refuse(currencyCode(currency))
+      } else {
+        save.reset()
+      }
+      return
+    }
     if (transportRefusalOf(cause) === null) {
       onWriteError?.(cause)
       return
@@ -283,19 +304,25 @@ export function TransportDialog({
     }
   }, [gone])
 
+  function refusalSentence(cause: unknown): string | null {
+    return currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged'
+      ? t('costs.refusal.rebaseChanged')
+      : goneSentence(cause)
+  }
+
   const save = useAction(
     saveTransportFn,
     editing
       ? {
           onError: onSaveError,
-          refusal: goneSentence,
+          refusal: refusalSentence,
           fallback: t('modules.transports.error.saveFallback'),
           success: t('modules.transports.toast.updated'),
           failure: t('modules.transports.toast.updateFailed'),
         }
       : {
           onError: onSaveError,
-          refusal: goneSentence,
+          refusal: refusalSentence,
           fallback: t('modules.transports.error.saveFallback'),
           success: t('modules.transports.toast.added'),
           description: t('modules.transports.toast.addedBody'),
@@ -303,13 +330,41 @@ export function TransportDialog({
         },
   )
 
+  const stale = useStaleTripCurrency(
+    currency,
+    save.pending,
+    () => priceRef.current,
+  )
+  const adopt = stale.adopt
+  if (adopt !== null) {
+    stale.adopted()
+    setDraft((current) =>
+      transport?.currency == null &&
+      currencyCode(current.currency) === adopt.from
+        ? { ...current, currency: adopt.to }
+        : current,
+    )
+  }
+  const priceBlocked =
+    stale.pending ||
+    (stale.messageFor !== null &&
+      draft.price.trim() !== '' &&
+      transport?.currency == null)
+  const staleMessage =
+    stale.messageFor === null
+      ? null
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
+  const saveError =
+    staleMessage ??
+    (stale.pending ? t('costs.refusal.rebaseChanged') : save.error)
+
   /** The last failure belongs to the open it happened in: reopening starts clean. */
   const resetSave = save.reset
   useEffect(() => {
     if (open) {
       resetSave()
     }
-  }, [open, transport, resetSave])
+  }, [open, identity, resetSave])
 
   const errors = useMemo(
     () => validateTransportDraft(draft, days),
@@ -373,7 +428,7 @@ export function TransportDialog({
     setTouched(true)
     // Enter in a field submits the form without the button, which is only `loading`: a second
     // call while one is in flight would race the first on the same id.
-    if (invalid || save.pending || gone) {
+    if (invalid || save.pending || gone || priceBlocked) {
       return
     }
     /*
@@ -385,6 +440,7 @@ export function TransportDialog({
       data: {
         ...transportPayload(draft, chain, tripId),
         transportId,
+        expectedTripCurrency: currencyCode(currency),
         intent: editing ? 'edit' : 'create',
         ...chainPayload(chain),
       },
@@ -461,6 +517,7 @@ export function TransportDialog({
           {searchable && fillMode === 'search' ? (
             <ConnectionSearch
               tripId={tripId}
+              tripCurrency={currency}
               transportId={editing ? transport.id : undefined}
               journey={editing ? transport : undefined}
               days={days}
@@ -478,9 +535,9 @@ export function TransportDialog({
               }}
             >
               {gone ? <TransportGoneAlert /> : null}
-              {!gone && save.error !== null ? (
+              {!gone && saveError !== null ? (
                 <Alert tone="danger" title={t('modules.form.saveError')}>
-                  {save.error}
+                  {saveError}
                 </Alert>
               ) : null}
 
@@ -859,11 +916,18 @@ export function TransportDialog({
                 </Field>
                 <Field
                   label={t('modules.field.price')}
-                  error={errorFor('price')}
+                  error={
+                    (priceBlocked ? staleMessage : null) ?? errorFor('price')
+                  }
                 >
                   <Input
+                    ref={priceRef}
                     value={draft.price}
-                    onChange={(event) => set('price', event.target.value)}
+                    onChange={(event) => {
+                      stale.dismiss()
+                      save.reset()
+                      set('price', event.target.value)
+                    }}
                     inputMode="decimal"
                     placeholder="0.00"
                     trailing={
@@ -929,7 +993,7 @@ export function TransportDialog({
               form={formId}
               variant="primary"
               shape="pill"
-              disabled={gone || (touched && invalid)}
+              disabled={gone || priceBlocked || (touched && invalid)}
               loading={save.pending}
               loadingLabel={t('modules.transports.action.saving')}
             >

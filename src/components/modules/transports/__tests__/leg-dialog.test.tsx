@@ -11,6 +11,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
+import Costs from '#/lib/i18n/messages/en/costs'
 import { TransportDialog } from '../leg-dialog'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -28,6 +29,7 @@ const EN: Catalogue = {
   ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('ui', Ui),
+  ...namespaceCatalogue('costs', Costs),
 }
 
 // The real module reaches `cloudflare:workers`, and the real `useRouter` needs a router above it.
@@ -442,5 +444,133 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     await vi.waitFor(() => expect(onWriteError).toHaveBeenCalledWith(other))
     expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
     expect(saveButton().getAttribute('disabled')).toBeNull()
+  })
+})
+
+it('keeps the draft and chain across a stale-currency refusal and retries with the refreshed budget currency', async () => {
+  const onWriteError = vi.fn()
+  const close = vi.fn()
+  const refusal = new Error(
+    encodePublicFailure({
+      kind: 'refusal',
+      message: 'costs.refusal.tripCurrencyChanged',
+    }),
+  )
+  save.mockRejectedValueOnce(refusal)
+  const transport = {
+    ...TRANSPORT,
+    currency: 'USD',
+    priceMinor: 1500,
+    departureName: 'Lisboa',
+    arrivalName: 'Porto',
+    legs: [],
+  }
+  const dialog = (currency: string) => (
+    <I18nProvider locale="en" messages={EN}>
+      <TransportDialog
+        tripId="trip-1"
+        transport={{ ...transport }}
+        days={[]}
+        canSearchConnections={false}
+        currency={currency}
+        open
+        onOpenChange={close}
+        onWriteError={onWriteError}
+      />
+    </I18nProvider>
+  )
+  const view = render(dialog('EUR'))
+  fireEvent.change(screen.getByLabelText(/^Name/u), {
+    target: { value: 'My typed train' },
+  })
+  fireEvent.change(screen.getByLabelText(/^Notes/u), {
+    target: { value: 'Keep my notes' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Break this into legs' }))
+  submitTheForm()
+  await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+  await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  expect(save.mock.calls[0]?.[0].data).toMatchObject({
+    expectedTripCurrency: 'EUR',
+    currency: 'USD',
+  })
+  expect(onWriteError).not.toHaveBeenCalled()
+  expect(close).not.toHaveBeenCalled()
+  view.rerender(dialog('GBP'))
+  await vi.waitFor(() =>
+    expect(screen.getByLabelText(/^Name/u).getAttribute('value')).toBe(
+      'My typed train',
+    ),
+  )
+  expect((screen.getByLabelText(/^Notes/u) as HTMLTextAreaElement).value).toBe(
+    'Keep my notes',
+  )
+  expect(screen.getByRole('alert').textContent).toContain('GBP')
+  submitTheForm()
+  await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+  expect(save.mock.calls[1]?.[0].data.stations).toEqual(
+    save.mock.calls[0]?.[0].data.stations,
+  )
+  expect(save.mock.calls[1]?.[0].data.legs).toEqual(
+    save.mock.calls[0]?.[0].data.legs,
+  )
+  expect(save.mock.calls[1]?.[0].data).toMatchObject({
+    expectedTripCurrency: 'GBP',
+    title: 'My typed train',
+    currency: 'USD',
+    priceMinor: 1500,
+  })
+})
+
+it('requires checking a price that followed the old trip currency before retrying', async () => {
+  save.mockRejectedValueOnce(
+    new Error(
+      encodePublicFailure({
+        kind: 'refusal',
+        message: 'costs.refusal.tripCurrencyChanged',
+      }),
+    ),
+  )
+  const dialog = (currency: string) => (
+    <I18nProvider locale="en" messages={EN}>
+      <TransportDialog
+        tripId="trip-1"
+        days={[]}
+        currency={currency}
+        canSearchConnections={false}
+        open
+        onOpenChange={() => {}}
+      />
+    </I18nProvider>
+  )
+  const view = render(dialog('EUR'))
+  fireEvent.change(screen.getByLabelText(/^Name/u), {
+    target: { value: 'New train' },
+  })
+  fireEvent.change(screen.getByLabelText(/^Price/u), {
+    target: { value: '15' },
+  })
+  submitTheForm()
+  await vi.waitFor(() => expect(router.invalidate).toHaveBeenCalled())
+  submitTheForm()
+  expect(save).toHaveBeenCalledTimes(1)
+  view.rerender(dialog('GBP'))
+  await vi.waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByLabelText(/^Price/u)),
+  )
+  expect((screen.getByLabelText(/^Price/u) as HTMLInputElement).value).toBe(
+    '15',
+  )
+  submitTheForm()
+  expect(save).toHaveBeenCalledTimes(1)
+  fireEvent.change(screen.getByLabelText(/^Price/u), {
+    target: { value: '16' },
+  })
+  submitTheForm()
+  await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+  expect(save.mock.calls[1]?.[0].data).toMatchObject({
+    expectedTripCurrency: 'GBP',
+    currency: 'GBP',
+    priceMinor: 1600,
   })
 })

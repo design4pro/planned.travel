@@ -20,7 +20,7 @@ import { assertQuota, createTenantRepository, createTenantTableAccess, resolveQu
 import { runBatch } from './batch'
 import { categoriesRepository } from './categories'
 import { NotFoundError } from './context'
-import { TRIP_WRITE_ROLES, assertTripRole, requireTrip } from './trips'
+import { TRIP_WRITE_ROLES, assertExpectedTripCurrency, assertTripRole, requireTrip } from './trips'
 import {
   countryCodeSchema,
   currencySchema,
@@ -42,14 +42,23 @@ import type { OpeningHours } from '#/server/db/schema'
 import type { Place, Tag } from '#/server/db/types'
 import type { TenantScope } from './base'
 
-async function requirePlaceWriteRole(scope: TenantScope, tripId: string): Promise<void> {
-  await requireTrip(scope, tripId)
+async function requirePlaceWriteRole(
+  scope: TenantScope,
+  tripId: string,
+  expectedTripCurrency?: string,
+): Promise<void> {
+  const trip = await requireTrip(scope, tripId)
   await assertTripRole(scope, tripId, TRIP_WRITE_ROLES)
+  assertExpectedTripCurrency(trip, expectedTripCurrency)
 }
 
-async function requireEditablePlace(scope: TenantScope, placeId: string): Promise<Place> {
+async function requireEditablePlace(
+  scope: TenantScope,
+  placeId: string,
+  expectedTripCurrency?: string,
+): Promise<Place> {
   const place = await placesRepository.requireById(scope, placeId)
-  await requirePlaceWriteRole(scope, place.tripId)
+  await requirePlaceWriteRole(scope, place.tripId, expectedTripCurrency)
   return place
 }
 
@@ -83,6 +92,12 @@ const openingHoursSchema: z.ZodType<OpeningHours> = z.array(
 )
 
 const placeFields = {
+  expectedTripCurrency: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{3}$/)
+    .toUpperCase()
+    .optional(),
   name: titleSchema,
   categoryId: idSchema.nullish(),
   description: longTextSchema.nullish(),
@@ -306,8 +321,8 @@ export async function countTripPlaces(scope: TenantScope, tripId: string): Promi
  * so places added in the same millisecond keep a stable, meaningful order.
  */
 export async function createPlace(scope: TenantScope, input: CreatePlaceInput): Promise<Place> {
-  const values = createPlaceInput.parse(input)
-  await requirePlaceWriteRole(scope, values.tripId)
+  const { expectedTripCurrency, ...values } = createPlaceInput.parse(input)
+  await requirePlaceWriteRole(scope, values.tripId, expectedTripCurrency)
   if (values.categoryId) {
     await categoriesRepository.requireById(scope, values.categoryId)
   }
@@ -333,8 +348,10 @@ export async function updatePlace(
   placeId: string,
   input: UpdatePlaceInput,
 ): Promise<Place> {
-  const values = definedOnly(updatePlaceInput.parse(input))
-  await requireEditablePlace(scope, placeId)
+  const { expectedTripCurrency, ...values } = definedOnly(
+    updatePlaceInput.parse(input),
+  )
+  await requireEditablePlace(scope, placeId, expectedTripCurrency)
   if (values.categoryId) {
     await categoriesRepository.requireById(scope, values.categoryId)
   }

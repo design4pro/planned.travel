@@ -32,8 +32,11 @@
  * nothing. The mode filter is not — it changes the question, so it is part of the query and part
  * of the cache key.
  */
-import { Fragment, useEffect, useId, useMemo, useState } from 'react'
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ArrowRight, ChevronDown, Search } from 'lucide-react'
+import { useRouter } from '@tanstack/react-router'
+import { useStaleTripCurrency } from '#/components/costs/stale-trip-currency'
+import { currencyRefusalOf } from '#/lib/currency-refusals'
 
 import {
   Alert,
@@ -48,7 +51,7 @@ import { cn } from '#/lib/cn'
 import { HERE_CREDITS } from '#/lib/geo/credits'
 import { formatNumber } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
-import { formatMoney } from '#/lib/money'
+import { currencyCode, formatMoney } from '#/lib/money'
 import { CHAIN_MAX_LEGS } from '#/lib/transport-chain'
 import {
   saveSearchedConnectionFn,
@@ -817,6 +820,7 @@ export function SearchOutcome({
 
 export interface ConnectionSearchProps {
   tripId: string
+  tripCurrency: string
   /** The journey whose route is being replaced. Absent when this saves a new one. */
   transportId?: string
   /** The journey being re-searched: the date field opens on the day it is anchored to. */
@@ -835,6 +839,7 @@ export interface ConnectionSearchProps {
 
 export function ConnectionSearch({
   tripId,
+  tripCurrency,
   transportId,
   journey,
   days,
@@ -844,6 +849,8 @@ export function ConnectionSearch({
 }: ConnectionSearchProps) {
   const t = useTranslate()
   const goneSentence = useGoneSentence()
+  const router = useRouter()
+  const refusalRef = useRef<HTMLDivElement>(null)
   const dated = useMemo(() => datedDays(days), [days])
   const [origin, setOrigin] = useState<StationMatch | null>(null)
   const [destination, setDestination] = useState<StationMatch | null>(null)
@@ -872,9 +879,30 @@ export function ConnectionSearch({
     ),
     failure: t('modules.transports.connection.saveFailed'),
     fallback: t('modules.transports.error.saveFallback'),
-    refusal: goneSentence,
-    onError: onWriteError,
+    refusal: (cause) =>
+      currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged'
+        ? t('costs.refusal.rebaseChanged')
+        : goneSentence(cause),
+    onError: (cause) => {
+      if (currencyRefusalOf(cause) === 'costs.refusal.tripCurrencyChanged') {
+        stale.refuse(currencyCode(tripCurrency))
+        void router.invalidate()
+      } else {
+        onWriteError?.(cause)
+      }
+    },
   })
+
+  const stale = useStaleTripCurrency(
+    tripCurrency,
+    save.pending,
+    () => refusalRef.current,
+  )
+  if (stale.adopt !== null) stale.adopted()
+  const saveError =
+    stale.messageFor === null
+      ? save.error
+      : t('costs.refusal.tripCurrencyChanged', { to: stale.messageFor })
 
   /**
    * A picked stop as the query wants it, or `null`.
@@ -926,6 +954,7 @@ export function ConnectionSearch({
     const saved = await save.run({
       data: {
         tripId,
+        expectedTripCurrency: currencyCode(tripCurrency),
         transportId: transportId ?? '',
         mode: connectionMode(connection),
         title: t('modules.transports.connection.title', {
@@ -1061,7 +1090,7 @@ export function ConnectionSearch({
           results={results}
           expanded={expanded}
           saving={save.pending}
-          saveBlocked={transportGone}
+          saveBlocked={transportGone || stale.pending}
           onToggle={(id) =>
             setExpanded((current) => (current === id ? null : id))
           }
@@ -1080,12 +1109,14 @@ export function ConnectionSearch({
 
       {transportGone ? <TransportGoneAlert /> : null}
 
-      {!transportGone && save.error !== null ? (
+      {!transportGone && saveError !== null ? (
         <Alert
           tone="danger"
+          ref={refusalRef}
+          tabIndex={-1}
           title={t('modules.transports.connection.saveError')}
         >
-          {save.error}
+          {saveError}
         </Alert>
       ) : null}
     </div>
