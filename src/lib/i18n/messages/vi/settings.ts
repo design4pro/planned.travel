@@ -758,6 +758,13 @@ const messages = {
   'twoFactor.off.pending': 'Đang tắt',
   'twoFactor.off.cancel': 'Giữ bật',
   'twoFactor.off.done': 'Xác thực hai yếu tố đã tắt',
+  "security.other.label": "Đăng xuất các thiết bị khác",
+  "security.other.description": "Các thiết bị khác phải đăng nhập lại. Kết nối sẽ đóng bất đồng bộ; trình duyệt tin cậy, Google, Apple và khóa truy cập vẫn dùng được.",
+  "security.other.committed": "Các thiết bị khác đã đăng xuất. Thiết bị này vẫn đăng nhập.",
+  "security.other.refused": "Thao tác này không thay đổi gì. Hãy đăng nhập lại rồi xác nhận trong vòng năm phút.",
+  "security.other.unknown": "Chưa rõ kết quả. Hãy kiểm tra trạng thái trước khi bắt đầu thao tác khác.",
+  "security.other.pending": "Các phiên khác đã bị thu hồi. Kết nối có thể cần thêm thời gian để đóng.",
+  "security.other.check": "Kiểm tra trạng thái",
 } satisfies TranslationOf<typeof En>
 
 export default messages

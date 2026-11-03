@@ -39,6 +39,7 @@
  * failure names the trip, the workspace and the person by id and never a name or an email.
  */
 
+import { acknowledgeAccountRoomEviction } from '#/server/auth/account-authority'
 import { drizzle } from 'drizzle-orm/d1'
 import { closeTripRoomFor } from '#/server/do'
 import { createScope, reachableTripIds } from '#/server/repos'
@@ -140,6 +141,7 @@ export function createTripRoomEvictHandler(
         `${failed} of ${tripIds.length} trip rooms could not be told to close a person's sockets`,
       )
     }
+    if (payload.accountSecurityOperationId) await acknowledgeAccountRoomEviction(databaseFor(binding), payload.accountSecurityOperationId, userId, organizationId)
     return { rooms: tripIds.length, failed }
   }
 }

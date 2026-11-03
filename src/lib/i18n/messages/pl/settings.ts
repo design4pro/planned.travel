@@ -795,6 +795,13 @@ const messages = {
   'twoFactor.off.pending': 'Wyłączanie',
   'twoFactor.off.cancel': 'Pozostaw włączone',
   'twoFactor.off.done': 'Uwierzytelnianie dwuskładnikowe jest wyłączone',
+  "security.other.label": "Wyloguj inne urządzenia",
+  "security.other.description": "Na innych urządzeniach trzeba zalogować się ponownie. Połączenia zamykają się z opóźnieniem; zaufane przeglądarki, Google, Apple i klucze dostępu pozostają dostępne.",
+  "security.other.committed": "Inne urządzenia są wylogowane. To urządzenie pozostaje zalogowane.",
+  "security.other.refused": "Ta operacja nie wprowadziła zmian. Zaloguj się ponownie i potwierdź w ciągu pięciu minut.",
+  "security.other.unknown": "Wynik jest nieznany. Sprawdź stan przed rozpoczęciem kolejnej operacji.",
+  "security.other.pending": "Inne sesje zostały unieważnione. Zamykanie połączeń może potrwać dłużej.",
+  "security.other.check": "Sprawdź stan",
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -572,3 +572,35 @@ export async function registerPasskey(): Promise<PasskeyRegistrationResult> {
     }
   }
 }
+
+export type OtherDeviceOutcome = { readonly status: 'committed' | 'refused' | 'unknown'; readonly cleanupPending: boolean }
+
+/** The receipt stays in an HttpOnly cookie; only the non-secret operation id reaches this client. */
+export async function otherDeviceAvailability(): Promise<boolean> {
+  const value = await requestAuth('GET', '/account-security/availability')
+  return typeof value === 'object' && value !== null && 'available' in value && value.available === true
+}
+
+export async function registerOtherDeviceRevocation(intent: string): Promise<string> {
+  const value = await requestAuth('POST', '/account-security/register', { intent })
+  if (typeof value !== 'object' || value === null || !('id' in value) || typeof value.id !== 'string' || !/^[0-9a-f-]{36}$/.test(value.id)) throw new Error('InvalidOperationRegistration')
+  return value.id
+}
+
+export async function settleOtherDeviceRevocation(id: string, intent: string | null): Promise<OtherDeviceOutcome> {
+  try {
+    const value = intent === null
+      ? await requestAuth('GET', `/account-security/status?id=${encodeURIComponent(id)}`)
+      : await requestAuth('POST', '/account-security/commit', { id, intent, confirm: true })
+    if (typeof value !== 'object' || value === null || !('status' in value)) return { status: 'unknown', cleanupPending: false }
+    if (value.status === 'refused') return { status: 'refused', cleanupPending: false }
+    if (value.status === 'committed' && 'cleanupPending' in value && typeof value.cleanupPending === 'boolean') return { status: 'committed', cleanupPending: value.cleanupPending }
+    return { status: 'unknown', cleanupPending: false }
+  } catch (cause) {
+    if (intent !== null && typeof cause === 'object' && cause !== null && 'authFailure' in cause) {
+      const failure = cause.authFailure
+      if (typeof failure === 'object' && failure !== null && 'status' in failure && typeof failure.status === 'number' && failure.status >= 400 && failure.status < 500) return { status: 'refused', cleanupPending: false }
+    }
+    return { status: 'unknown', cleanupPending: false }
+  }
+}

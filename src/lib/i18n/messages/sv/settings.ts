@@ -763,6 +763,13 @@ const messages = {
   'twoFactor.off.pending': 'Stänger av',
   'twoFactor.off.cancel': 'Behåll på',
   'twoFactor.off.done': 'Tvåfaktorsautentisering är avstängd',
+  "security.other.label": "Logga ut andra enheter",
+  "security.other.description": "Andra enheter måste logga in igen. Anslutningar stängs asynkront; betrodda webbläsare, Google, Apple och passnycklar är fortfarande tillgängliga.",
+  "security.other.committed": "Andra enheter är utloggade. Den här enheten förblir inloggad.",
+  "security.other.refused": "Åtgärden ändrade ingenting. Logga in igen och bekräfta inom fem minuter.",
+  "security.other.unknown": "Resultatet är okänt. Kontrollera status innan du startar en ny åtgärd.",
+  "security.other.pending": "Andra sessioner har återkallats. Det kan ta längre tid att stänga anslutningar.",
+  "security.other.check": "Kontrollera status",
 } satisfies TranslationOf<typeof En>
 
 export default messages

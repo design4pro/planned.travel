@@ -18,6 +18,7 @@ import { useLocale, useTranslate } from '#/lib/i18n'
 import { loadSecurity } from '../-server/settings'
 import { formatDate } from '../-lib/format'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
+import { OtherDeviceSessions } from './-ui/other-device-sessions'
 import { RouteError } from './-ui/route-error'
 
 import type { ReactNode } from 'react'
@@ -223,6 +224,7 @@ function SecurityPage() {
               </p>
             }
           />
+          <OtherDeviceSessions />
           <SettingsRow
             label={t('settings.security.signOut.label')}
             hint={t('settings.security.signOut.hint')}

@@ -781,6 +781,13 @@ const messages = {
   'twoFactor.off.pending': 'Wird ausgeschaltet',
   'twoFactor.off.cancel': 'Eingeschaltet lassen',
   'twoFactor.off.done': 'Zwei-Faktor-Authentifizierung ist ausgeschaltet',
+  "security.other.label": "Andere Geräte abmelden",
+  "security.other.description": "Andere Geräte müssen sich erneut anmelden. Verbindungen werden zeitversetzt geschlossen; vertrauenswürdige Browser, Google, Apple und Passkeys bleiben verfügbar.",
+  "security.other.committed": "Andere Geräte sind abgemeldet. Dieses Gerät bleibt angemeldet.",
+  "security.other.refused": "Dieser Vorgang hat nichts geändert. Melde dich erneut an und bestätige innerhalb von fünf Minuten.",
+  "security.other.unknown": "Das Ergebnis ist unbekannt. Prüfe den Status, bevor du einen weiteren Vorgang startest.",
+  "security.other.pending": "Andere Sitzungen sind widerrufen. Das Schließen der Verbindungen kann länger dauern.",
+  "security.other.check": "Status prüfen",
 } satisfies TranslationOf<typeof En>
 
 export default messages

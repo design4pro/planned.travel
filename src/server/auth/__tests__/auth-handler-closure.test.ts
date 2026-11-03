@@ -74,6 +74,7 @@ const shared = vi.hoisted(() => {
     current: new Request('http://localhost:3000'),
   }
   return {
+    enforced: false,
     db,
     request,
     kv: new Map<string, string>(),
@@ -82,6 +83,7 @@ const shared = vi.hoisted(() => {
 })
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => shared.enforced,
   APP_NAME: 'planned.travel',
   appUrl: () => BASE_URL,
   appleBundleIdentifier: () => undefined,
@@ -137,6 +139,7 @@ const { WORKSPACE_LIMIT, createOrganizationFor } = await import(
   '../provisioning'
 )
 const { getSession } = await import('../session')
+const { backfillLegacyAuthority } = await import('#/server/repos/account-security')
 
 /* -------------------------------------------------------------------------------------------------
  * The database
@@ -2778,5 +2781,36 @@ describe('two-factor setup protects a working factor', () => {
     const own = await person()
     await enrol(own.cookie)
     expect(stored(other.id)).toEqual(before)
+  })
+})
+
+
+describe('authoritative other-device revocation', () => {
+  it('refuses a revoked device even when its old KV session blob reappears', async () => {
+    const email = 'authority-stale-cache@planned.travel'
+    await createAccount(email)
+    const first = await signIn(email)
+    const firstCookie = sessionCookie(first)
+    const firstBody = await first.json() as { token: string }
+    const blob = shared.kv.get(firstBody.token)
+    expect(blob).toBeDefined()
+    const current = await signIn(email)
+    const currentCookie = sessionCookie(current)
+    await backfillLegacyAuthority(repositoryDatabase, Date.now())
+    shared.enforced = true
+    const intent = crypto.randomUUID()
+    const registered = await post('/account-security/register', { intent }, currentCookie)
+    expect(registered.status).toBe(200)
+    const { id } = await registered.json() as { id: string }
+    const receipt = registered.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ')
+    const revoked = await post('/account-security/commit', { id, intent, confirm: true }, `${currentCookie}; ${receipt}`)
+    expect(revoked.status).toBe(200)
+    expect(await revoked.json()).toMatchObject({ status: 'committed' })
+    shared.kv.set(firstBody.token, blob ?? '')
+    const stale = await get(`${AUTH_BASE}/get-session`, firstCookie)
+    expect(stale.status).toBe(200)
+    expect(await stale.json() === null).toBe(true)
+    const retained = await get(`${AUTH_BASE}/get-session`, currentCookie)
+    expect(await retained.json()).not.toBeNull()
   })
 })

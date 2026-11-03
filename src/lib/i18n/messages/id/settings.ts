@@ -758,6 +758,13 @@ const messages = {
   'twoFactor.off.pending': 'Menonaktifkan',
   'twoFactor.off.cancel': 'Tetap aktifkan',
   'twoFactor.off.done': 'Autentikasi dua faktor nonaktif',
+  "security.other.label": "Keluar dari perangkat lain",
+  "security.other.description": "Perangkat lain harus masuk lagi. Koneksi ditutup secara asinkron; browser tepercaya, Google, Apple, dan kunci sandi tetap tersedia.",
+  "security.other.committed": "Perangkat lain telah keluar. Perangkat ini tetap masuk.",
+  "security.other.refused": "Operasi ini tidak mengubah apa pun. Masuk lagi, lalu konfirmasi dalam lima menit.",
+  "security.other.unknown": "Hasil belum diketahui. Periksa status sebelum memulai operasi lain.",
+  "security.other.pending": "Sesi lain telah dicabut. Koneksi mungkin memerlukan waktu lebih lama untuk ditutup.",
+  "security.other.check": "Periksa status",
 } satisfies TranslationOf<typeof En>
 
 export default messages

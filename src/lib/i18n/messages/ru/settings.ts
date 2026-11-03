@@ -794,6 +794,13 @@ const messages = {
   'twoFactor.off.pending': 'Отключение',
   'twoFactor.off.cancel': 'Оставить включённой',
   'twoFactor.off.done': 'Двухфакторная аутентификация отключена',
+  "security.other.label": "Выйти на других устройствах",
+  "security.other.description": "На других устройствах потребуется войти заново. Соединения закрываются асинхронно; доверенные браузеры, Google, Apple и ключи доступа остаются доступны.",
+  "security.other.committed": "На других устройствах выполнен выход. Это устройство остаётся в системе.",
+  "security.other.refused": "Эта операция ничего не изменила. Войдите заново и подтвердите в течение пяти минут.",
+  "security.other.unknown": "Результат неизвестен. Проверьте состояние перед новой операцией.",
+  "security.other.pending": "Другие сеансы отозваны. Закрытие соединений может занять больше времени.",
+  "security.other.check": "Проверить состояние",
 } satisfies TranslationOf<typeof En>
 
 export default messages

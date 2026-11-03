@@ -42,6 +42,14 @@ floor guard script; the review now does.
   must not be removable. The stated exceptions are three, and closed (SPEC §6): `src/server/auth/provisioning.ts` (Better Auth identity tables `user`, `organization`, `member` only, never imported from the tenant schema, with the participation anchor written through `auth/participation.ts`; a fourth table is a blocker), the `…Unscoped` shape below and `src/server/catalog` (global tables, one
   reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and one ids-only tenant audit retention
   discovery read, docs/SPEC.md §5 and §6). The one other writer is `src/server/auth/participation.ts`, the auth layer's write-only `INSERT OR IGNORE` into `workspace_participants` (SPEC §5, ADR 0043): it is no precedent for any other table. SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- **The account-auth exception is closed** (ADR 0048, SPEC §5/§6): only `repos/account-security.ts`,
+  with branded account capabilities from `auth/account-authority.ts`, the named callers and bounded
+  scheduled-cleanup capability. No tenant content, organization/member access, client account selector,
+  arbitrary query API or expansion of FU-3. Proof revisions cannot be upgraded; acceptance/refresh/trust
+  read primary authority, with missing metadata or errors refusing after cutover. Account and workspace
+  isolation tests, winning-claim-gated real batch rollback/CAS tests, and complete installed-library
+  acceptance/writer inventory are mandatory. Contract and ADR need independent security approval
+  before runtime implementation; the actual diff needs independent review before completion.
 - Better Auth's own tables reached through its adapter (`ctx.context.adapter`, as the passkey plugin does for the user-keyed `passkey` table) are not application SQL and not an exception: SPEC §6. Raw SQL against an auth table outside `auth/provisioning.ts` is still a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation
   must be invisible to the call. No test, blocker.

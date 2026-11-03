@@ -12,6 +12,7 @@
  */
 import {
   index,
+  primaryKey,
   integer,
   sqliteTable,
   text,
@@ -278,8 +279,68 @@ export const invitation = sqliteTable(
   ],
 )
 
+/** Global ordering scalar; enforcement requires the provisioned singleton after cutover. */
+export const securityFence = sqliteTable('account_security_fence', {
+  id: integer('id').primaryKey(),
+  value: integer('value').notNull(),
+  ready: integer('ready', { mode: 'boolean' }).notNull().default(false),
+  cutover: integer('cutover', { mode: 'boolean' }).notNull().default(false),
+})
+
+export const accountSecurity = sqliteTable('account_security', {
+  userId: text('user_id').primaryKey().references(() => user.id, { onDelete: 'cascade' }),
+  revision: integer('revision').notNull(),
+  trustRevision: integer('trust_revision').notNull(),
+  lastFence: integer('last_fence').notNull(),
+})
+
+export const sessionAuthority = sqliteTable('session_authority', {
+  sessionId: text('session_id').primaryKey().references(() => session.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  revision: integer('revision').notNull(),
+  method: text('method').notNull(),
+  proofAt: integer('proof_at').notNull(),
+}, (table) => [index('session_authority_user_idx').on(table.userId)])
+
+export const verificationAuthority = sqliteTable('verification_authority', {
+  identifier: text('identifier').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  revision: integer('revision').notNull(),
+  trustRevision: integer('trust_revision').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+}, (table) => [index('verification_authority_user_idx').on(table.userId)])
+
+export const securityOperation = sqliteTable('account_security_operation', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  sessionId: text('session_id').notNull(),
+  intent: text('intent').notNull(),
+  receiptDigest: text('receipt_digest').notNull(),
+  revision: integer('revision').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  committedAt: integer('committed_at'),
+  claim: text('claim'),
+  attemptedAt: integer('attempted_at').notNull().default(0),
+  cleanupPending: integer('cleanup_pending', { mode: 'boolean' }).notNull(),
+  roomsPending: integer('rooms_pending', { mode: 'boolean' }).notNull(),
+  roomsRecorded: integer('rooms_recorded', { mode: 'boolean' }).notNull().default(false),
+}, (table) => [index('security_operation_user_idx').on(table.userId), index('security_operation_pending_idx').on(table.cleanupPending)])
+
+export const securityCleanup = sqliteTable('account_security_cleanup', {
+  id: text('id').primaryKey(),
+  operationId: text('operation_id').notNull().references(() => securityOperation.id, { onDelete: 'cascade' }),
+  encryptedToken: text('encrypted_token').notNull(),
+}, (table) => [index('security_cleanup_operation_idx').on(table.operationId)])
+
+/** Durable queue acknowledgements contain routing ids only, never workspace content. */
+export const securityRoomCleanup = sqliteTable('account_security_room_cleanup', {
+  operationId: text('operation_id').notNull().references(() => securityOperation.id, { onDelete: 'cascade' }),
+  organizationId: text('organization_id').notNull(),
+}, (table) => [primaryKey({ columns: [table.operationId, table.organizationId] })])
+
 /** Every Better Auth table, in the shape the Drizzle adapter expects. */
 export const authSchema = {
+  securityFence, accountSecurity, sessionAuthority, verificationAuthority, securityOperation, securityCleanup, securityRoomCleanup,
   user,
   session,
   account,

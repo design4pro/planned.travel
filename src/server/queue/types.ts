@@ -264,6 +264,7 @@ export type TripCopyPayload = z.infer<typeof tripCopyPayloadSchema>
  */
 export const tripRoomEvictPayloadSchema = z.strictObject({
   userId: z.string().min(1).max(64),
+  accountSecurityOperationId: z.string().uuid().optional(),
 })
 
 export type TripRoomEvictPayload = z.infer<typeof tripRoomEvictPayloadSchema>
