@@ -12,6 +12,7 @@
  */
 import {
   index,
+  primaryKey,
   integer,
   sqliteTable,
   text,
@@ -19,8 +20,10 @@ import {
 } from 'drizzle-orm/sqlite-core'
 
 const id = () => text('id').primaryKey()
-const createdAt = () => integer('created_at', { mode: 'timestamp_ms' }).notNull()
-const updatedAt = () => integer('updated_at', { mode: 'timestamp_ms' }).notNull()
+const createdAt = () =>
+  integer('created_at', { mode: 'timestamp_ms' }).notNull()
+const updatedAt = () =>
+  integer('updated_at', { mode: 'timestamp_ms' }).notNull()
 
 /** Roles recognised by the organization plugin, most privileged first. */
 export const ORGANIZATION_ROLES = ['owner', 'admin', 'member'] as const
@@ -204,7 +207,9 @@ export const passkey = sqliteTable(
     counter: integer('counter').notNull().default(0),
     /** `singleDevice` or `multiDevice`, derived from the backup-eligible flag. */
     deviceType: text('device_type').notNull(),
-    backedUp: integer('backed_up', { mode: 'boolean' }).notNull().default(false),
+    backedUp: integer('backed_up', { mode: 'boolean' })
+      .notNull()
+      .default(false),
     /** Comma-joined authenticator transports reported at registration. */
     transports: text('transports'),
     aaguid: text('aaguid'),
@@ -278,6 +283,122 @@ export const invitation = sqliteTable(
   ],
 )
 
+/** Global ordering scalar; enforcement requires the provisioned singleton after cutover. */
+export const securityFence = sqliteTable('account_security_fence', {
+  id: integer('id').primaryKey(),
+  value: integer('value').notNull(),
+  ready: integer('ready', { mode: 'boolean' }).notNull().default(false),
+  cutover: integer('cutover', { mode: 'boolean' }).notNull().default(false),
+  anchorBackfillRunId: text('anchor_backfill_run_id'),
+  anchorBackfillAt: integer('anchor_backfill_at'),
+})
+
+export const accountSecurity = sqliteTable(
+  'account_security',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    trustRevision: integer('trust_revision').notNull(),
+    lastFence: integer('last_fence').notNull(),
+    deletionId: text('deletion_id'),
+    deletionStartedAt: integer('deletion_started_at'),
+  },
+  (table) => [
+    index('account_security_last_fence_idx').on(table.lastFence),
+    index('account_security_deletion_idx').on(table.deletionStartedAt),
+  ],
+)
+
+export const sessionAuthority = sqliteTable(
+  'session_authority',
+  {
+    sessionId: text('session_id')
+      .primaryKey()
+      .references(() => session.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    method: text('method').notNull(),
+    proofAt: integer('proof_at').notNull(),
+  },
+  (table) => [index('session_authority_user_idx').on(table.userId)],
+)
+
+export const verificationAuthority = sqliteTable(
+  'verification_authority',
+  {
+    identifier: text('identifier').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    revision: integer('revision').notNull(),
+    trustRevision: integer('trust_revision').notNull(),
+    factorVerified: integer('factor_verified', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (table) => [index('verification_authority_user_idx').on(table.userId)],
+)
+
+export const securityOperation = sqliteTable(
+  'account_security_operation',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id').notNull(),
+    intent: text('intent').notNull(),
+    receiptDigest: text('receipt_digest').notNull(),
+    revision: integer('revision').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+    committedAt: integer('committed_at'),
+    claim: text('claim'),
+    attemptedAt: integer('attempted_at').notNull().default(0),
+    cleanupPending: integer('cleanup_pending', { mode: 'boolean' }).notNull(),
+    roomsPending: integer('rooms_pending', { mode: 'boolean' }).notNull(),
+    roomsRecorded: integer('rooms_recorded', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+  },
+  (table) => [
+    index('security_operation_user_idx').on(table.userId),
+    index('security_operation_pending_idx').on(table.cleanupPending),
+  ],
+)
+
+export const securityCleanup = sqliteTable(
+  'account_security_cleanup',
+  {
+    id: text('id').primaryKey(),
+    operationId: text('operation_id')
+      .notNull()
+      .references(() => securityOperation.id, { onDelete: 'cascade' }),
+    encryptedToken: text('encrypted_token').notNull(),
+    attemptedAt: integer('attempted_at').notNull().default(0),
+  },
+  (table) => [index('security_cleanup_operation_idx').on(table.operationId)],
+)
+
+/** Durable queue acknowledgements contain routing ids only, never workspace content. */
+export const securityRoomCleanup = sqliteTable(
+  'account_security_room_cleanup',
+  {
+    operationId: text('operation_id')
+      .notNull()
+      .references(() => securityOperation.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').notNull(),
+    attemptedAt: integer('attempted_at').notNull().default(0),
+  },
+  (table) => [
+    primaryKey({ columns: [table.operationId, table.organizationId] }),
+  ],
+)
+
 /** Every Better Auth table, in the shape the Drizzle adapter expects. */
 export const authSchema = {
   user,
@@ -298,3 +419,14 @@ export type PasskeyRow = typeof passkey.$inferSelect
 export type OrganizationRow = typeof organization.$inferSelect
 export type MemberRow = typeof member.$inferSelect
 export type InvitationRow = typeof invitation.$inferSelect
+
+/** Application-owned account authority is never exposed as native adapter models. */
+export const accountSecuritySchema = {
+  securityFence,
+  accountSecurity,
+  sessionAuthority,
+  verificationAuthority,
+  securityOperation,
+  securityCleanup,
+  securityRoomCleanup,
+}

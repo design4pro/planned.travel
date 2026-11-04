@@ -780,6 +780,18 @@ const messages = {
   'twoFactor.off.pending': 'Disattivazione',
   'twoFactor.off.cancel': 'Mantieni attiva',
   'twoFactor.off.done': 'L’autenticazione a due fattori è disattivata',
+  'security.other.label': 'Disconnetti gli altri dispositivi',
+  'security.other.description':
+    'Gli altri dispositivi dovranno accedere di nuovo. Le connessioni si chiudono in modo asincrono; browser attendibili, Google, Apple e passkey restano disponibili.',
+  'security.other.committed':
+    'Gli altri dispositivi sono disconnessi. Questo dispositivo resta connesso.',
+  'security.other.refused':
+    'Questa operazione non ha apportato modifiche. Accedi di nuovo e conferma entro cinque minuti.',
+  'security.other.unknown':
+    'Il risultato è sconosciuto. Controlla lo stato prima di avviare un’altra operazione.',
+  'security.other.pending':
+    'Le altre sessioni sono revocate. La chiusura delle connessioni potrebbe richiedere più tempo.',
+  'security.other.check': 'Controlla stato',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -23,6 +23,7 @@ import { VerifyEmail } from '../templates/verify-email'
 import type { TransactionalEmailMessage } from '#/server/auth/email'
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => false,
   APP_NAME: 'planned.travel',
   appUrl: () => 'https://planned.travel',
   taskQueue: () => {
