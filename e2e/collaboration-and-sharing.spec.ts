@@ -161,21 +161,6 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         ],
       }
     }
-    await creation
-      .getByRole('button', { name: 'Create trip', exact: true })
-      .click()
-    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
-    await settle(page, {
-      name: 'new-trip-plan',
-      path: new URL(page.url()).pathname,
-      ready: '[data-plan-loaded]',
-      map: true,
-    })
-    await page.waitForLoadState('networkidle')
-    const peoplePath = new URL(page.url()).pathname.replace(
-      /\/plan$/,
-      '/people',
-    )
     const anonymous = await browser.newContext({
       storageState: { cookies: [], origins: [] },
     })
@@ -205,7 +190,23 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         }
       }).observe({ type: 'layout-shift' })
     })
+    const failures: unknown[] = []
     try {
+      await creation
+        .getByRole('button', { name: 'Create trip', exact: true })
+        .click()
+      await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+      await settle(page, {
+        name: 'new-trip-plan',
+        path: new URL(page.url()).pathname,
+        ready: '[data-plan-loaded]',
+        map: true,
+      })
+      await page.waitForLoadState('networkidle')
+      const peoplePath = new URL(page.url()).pathname.replace(
+        /\/plan$/,
+        '/people',
+      )
       await visit(
         page,
         { name: 'people', path: peoplePath, ready: 'main' },
@@ -366,21 +367,39 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         ),
       ).toBe(0)
       expect(report().fatal).toEqual([])
+    } catch (error) {
+      failures.push(error)
     } finally {
-      await anonymous.close()
-      // This journey owns the new empty trip, including its link. Remove only its own fixture.
-      await page.goto(`${baseURL}/trips`)
-      await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
-      await page
-        .getByRole('button', { name: `Actions for ${title}`, exact: true })
-        .click()
-      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
-      const deletion = page.getByRole('dialog')
-      await deletion
-        .getByRole('button', { name: 'Delete permanently', exact: true })
-        .click()
-      await expect(deletion).toBeHidden()
+      try {
+        await anonymous.close()
+      } catch (error) {
+        failures.push(error)
+      }
+      try {
+        // Delete only this journey's uniquely named trip, if creation succeeded.
+        await page.goto(`${baseURL}/trips`)
+        await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
+        const actions = page.getByRole('button', {
+          name: `Actions for ${title}`,
+          exact: true,
+        })
+        if ((await actions.count()) > 0) {
+          await actions.click()
+          await page
+            .getByRole('menuitem', { name: 'Delete', exact: true })
+            .click()
+          const deletion = page.getByRole('dialog')
+          await deletion
+            .getByRole('button', { name: 'Delete permanently', exact: true })
+            .click()
+          await expect(deletion).toBeHidden()
+        }
+      } catch (error) {
+        failures.push(error)
+      }
     }
+    if (failures.length > 0)
+      throw new AggregateError(failures, 'Invite journey or cleanup failed')
     const verdict = report()
     await test.info().attach('console-report', {
       body: JSON.stringify(verdict),
