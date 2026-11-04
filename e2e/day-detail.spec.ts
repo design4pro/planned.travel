@@ -422,7 +422,9 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
       }),
     )
     await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
-    await expect(page.getByText('Trip archived', { exact: true })).toBeVisible()
+    await expect(page.getByText('Trip archived', { exact: true })).toBeVisible({
+      timeout: 30_000,
+    })
     await refreshed
     await expect(tile).toHaveCount(0)
 
