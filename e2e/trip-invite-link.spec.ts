@@ -38,10 +38,10 @@ test.describe('07-S10d - a trip invite link that does not work', () => {
   test('turns a run of misses from one address into a 429 with Retry-After, still not cacheable or indexable', async ({
     request,
   }) => {
-    // The miss budget is 20 a minute (docs/ACCESS.md §3.6); 30 attempts cross it with room to spare.
+    // Within the 60s test budget, 41 misses exceed 20 in at least one minute bucket.
     const headersOut = ownAddress()
     let refused = null
-    for (let attempt = 0; attempt < 30 && !refused; attempt += 1) {
+    for (let attempt = 0; attempt < 41 && !refused; attempt += 1) {
       const response = await request.get(`/join/no-such-link-${attempt}`, {
         headers: headersOut,
         maxRedirects: 0,
