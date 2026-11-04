@@ -1,9 +1,19 @@
 import { nanoid } from 'nanoid'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { z } from 'zod'
-import { APIError, createAuthMiddleware, isAPIError } from 'better-auth/api'
+import {
+  APIError,
+  createAuthMiddleware,
+  getSession,
+  isAPIError,
+} from 'better-auth/api'
 import {
   AccountAuthorityError,
+  factorSnapshot,
+  reserveFactorAttempt,
+  factorRetryAfter,
+  resetFactorAttempts,
+  consumeNativeBackup,
   acceptedSession,
   initializeAccount,
   deleteNativeSessionRows,
@@ -21,6 +31,10 @@ import {
   reservedAccountDeletions,
   pruneAccountSecurityMetadata,
 } from '#/server/repos/account-security'
+import type {
+  FactorReservation,
+  FactorSnapshot,
+} from '#/server/repos/account-security'
 import { hashSecret } from '#/server/security/secret'
 import { accountScopeBrand } from './account-authority-lib/scope'
 import type {
@@ -35,6 +49,12 @@ import type {
 } from 'better-auth'
 
 interface RequestAuthority {
+  nativeFactor?: {
+    scope: AccountAuthScope
+    proof: ProofRevision
+    snapshot: NonNullable<FactorSnapshot['factor']>
+    reservation: FactorReservation
+  }
   readonly fence: number
   readonly enforced: boolean
   readonly proofs: Map<string, ProofRevision>
@@ -210,10 +230,98 @@ export function createAccountAuthority(
     state.deletionReservations.set(userId, id)
   }
 
+  function upgradeRequired(): never {
+    throw APIError.from('FORBIDDEN', {
+      code: 'CLIENT_UPGRADE_REQUIRED',
+      message: 'settings.twoFactor.security.upgrade',
+    })
+  }
+  const nativeManagement = new Set([
+    '/two-factor/enable',
+    '/two-factor/disable',
+    '/two-factor/generate-backup-codes',
+    '/two-factor/get-totp-uri',
+    '/two-factor/send-otp',
+    '/two-factor/verify-otp',
+  ])
+  const nativeVerificationPaths = new Set([
+    '/two-factor/verify-totp',
+    '/two-factor/verify-backup-code',
+  ])
   const plugin: BetterAuthPlugin = {
     id: 'account-authority',
     hooks: {
+      after: [
+        {
+          matcher: (ctx) => nativeVerificationPaths.has(ctx.path ?? ''),
+          handler: createAuthMiddleware(async (ctx) => {
+            const attempt = authority.getStore()?.nativeFactor
+            if (attempt && !isAPIError(ctx.context.returned))
+              await resetFactorAttempts(
+                attempt.scope,
+                attempt.proof.revision,
+                attempt.reservation,
+              )
+          }),
+        },
+      ],
       before: [
+        {
+          matcher: (ctx) =>
+            nativeManagement.has(ctx.path ?? '') ||
+            nativeVerificationPaths.has(ctx.path ?? ''),
+          handler: createAuthMiddleware(async (ctx) => {
+            if (!enforced()) return
+            if (nativeManagement.has(ctx.path ?? '')) upgradeRequired()
+            const result = await getSession()({
+              ...ctx,
+              method: 'GET',
+              asResponse: false,
+              headers: ctx.headers ?? new Headers(),
+              returnHeaders: true,
+              returnStatus: false,
+              query: { disableCookieCache: true },
+            })
+            if (result.response) upgradeRequired()
+            const cookie = ctx.context.createAuthCookie('two_factor')
+            const identifier = await ctx.getSignedCookie(
+              cookie.name,
+              ctx.context.secret,
+            )
+            if (!identifier) return
+            const challenge =
+              await ctx.context.internalAdapter.findVerificationValue(
+                identifier,
+              )
+            if (!challenge) return
+            const bound = await bind(challenge.value)
+            const snapshot = (await factorSnapshot(bound.scope)).factor
+            if (!snapshot?.verified) throw new AccountAuthorityError()
+            const reservation = await reserveFactorAttempt(
+              bound.scope,
+              bound.proof.revision,
+              'active',
+              Date.now(),
+            )
+            if (!reservation) {
+              throw new APIError(
+                'TOO_MANY_REQUESTS',
+                {
+                  code: 'ACCOUNT_TEMPORARILY_LOCKED',
+                  message: 'settings.security.other.refused',
+                },
+                {
+                  'retry-after': String(
+                    await factorRetryAfter(bound.scope, 'active', Date.now()),
+                  ),
+                },
+              )
+            }
+            const state = authority.getStore()
+            if (!state) throw new AccountAuthorityError()
+            state.nativeFactor = { ...bound, snapshot, reservation }
+          }),
+        },
         {
           matcher: (ctx) => ctx.path === '/revoke-other-sessions',
           handler: createAuthMiddleware(async () => {
@@ -403,6 +511,8 @@ export function createAccountAuthority(
             boundary(
               async () => {
                 await installed
+                if (property === 'viewBackupCodes' && enforced())
+                  upgradeRequired()
                 return Reflect.apply(method, target, args)
               },
               property === 'signInEmail',
@@ -468,6 +578,66 @@ export function createAccountAuthority(
     }
     return new Proxy(guarded, {
       get(target, property, receiver) {
+        if (property === 'findOne')
+          return async (input: Parameters<DBAdapter['findOne']>[0]) => {
+            const row = await adapter.findOne(input)
+            const attempt = authority.getStore()?.nativeFactor
+            if (input.model !== 'twoFactor' || !attempt || !row) return row
+            const factor = z
+              .object({
+                id: z.string(),
+                userId: z.string(),
+                secret: z.string(),
+                backupCodes: z.string(),
+              })
+              .passthrough()
+              .parse(row)
+            if (
+              factor.id !== attempt.snapshot.id ||
+              factor.userId !== attempt.scope.userId ||
+              factor.secret !== attempt.snapshot.secret ||
+              factor.backupCodes !== attempt.snapshot.backupCodes
+            )
+              throw new AccountAuthorityError()
+            return { ...factor, failedVerificationCount: 0, lockedUntil: null }
+          }
+        if (property === 'update' || property === 'incrementOne')
+          return async (
+            input:
+              | Parameters<DBAdapter['update']>[0]
+              | Parameters<DBAdapter['incrementOne']>[0],
+          ) => {
+            if (input.model !== 'twoFactor' || !enforced()) {
+              if ('increment' in input) return adapter.incrementOne(input)
+              return adapter.update(input)
+            }
+            const attempt = authority.getStore()?.nativeFactor
+            if (!attempt) throw new AccountAuthorityError()
+            const values =
+              'increment' in input ? (input.set ?? {}) : input.update
+            if ('backupCodes' in values) {
+              if (typeof values.backupCodes !== 'string')
+                throw new AccountAuthorityError()
+              return consumeNativeBackup(
+                attempt.scope,
+                attempt.proof,
+                attempt.snapshot,
+                values.backupCodes,
+              )
+            }
+            if (
+              Object.keys(values).some(
+                (key) =>
+                  key !== 'failedVerificationCount' && key !== 'lockedUntil',
+              )
+            )
+              throw new AccountAuthorityError()
+            return {
+              ...attempt.snapshot,
+              failedVerificationCount: 0,
+              lockedUntil: null,
+            }
+          }
         if (property !== 'create')
           return Reflect.get(target, property, receiver)
         return async (input: Parameters<DBAdapter['create']>[0]) => {

@@ -702,7 +702,7 @@ const messages = {
   'twoFactor.password.pending': 'Nastavování',
   'twoFactor.password.invalid': 'Toto heslo není správné.',
   'twoFactor.key.intro':
-    'V telefonu potřebujete ověřovací aplikaci. Přidejte do ní tento klíč a vraťte se sem. Dvoufaktorové ověřování ještě není zapnuté.',
+    'Přidejte tento nový klíč do ověřovací aplikace a potvrďte kód. Současný způsob přihlašování se do potvrzení nezmění.',
   'twoFactor.key.matrixLabel':
     'Kód pro nastavení. Stejný klíč je dostupný jako text',
   'twoFactor.key.matrixFailed':
@@ -715,21 +715,18 @@ const messages = {
   'twoFactor.key.open': 'Otevřít v ověřovací aplikaci',
   'twoFactor.key.startOver': 'Začít znovu',
   'twoFactor.key.startOverHint':
-    'Nový začátek vytvoří nový klíč. Klíč, který jste již přidali do aplikace, přestane fungovat.',
+    'Zahození tohoto nastavení nezmění současný způsob přihlašování.',
   'twoFactor.key.next': 'Klíč je přidaný',
   'twoFactor.code.label': 'Kód z aplikace',
-  'twoFactor.code.hint': 'Šest číslic, které aplikace právě zobrazuje.',
   'twoFactor.code.submit': 'Zapnout dvoufaktorové ověřování',
   'twoFactor.code.pending': 'Kontrola',
   'twoFactor.code.invalid':
     'Kód nesouhlasí. Zkontrolujte čas v telefonu a zadejte nejnovější kód z aplikace.',
-  'twoFactor.code.unclear':
-    'Nepodařilo se zjistit, zda to fungovalo. Zadejte nejnovější kód a zkuste to znovu.',
   'twoFactor.rateLimited.title': 'Příliš mnoho pokusů za krátkou dobu',
   'twoFactor.rateLimited.password':
-    'Počkejte přibližně deset sekund a zkuste to znovu. Zadané údaje zůstaly zachovány.',
+    'Počkejte, až bude tato akce znovu dostupná, a zkuste to znovu. Zadané údaje se neztratily.',
   'twoFactor.rateLimited.code':
-    'Počkejte až minutu a zkuste to znovu. Zadané údaje zůstaly zachovány.',
+    'Počkejte, až bude tato akce znovu dostupná, a zkuste to znovu. Zadané údaje se neztratily.',
   'twoFactor.codes.title': 'Vaše záložní kódy',
   'twoFactor.codes.body':
     'Každý kód funguje jednou, pokud ztratíte telefon. Zobrazují se jen nyní, proto je bezpečně uložte.',
@@ -762,21 +759,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Dvoufaktorové ověřování vyžaduje heslo k tomuto účtu. Další stránka požádá o e-mail a pošle odkaz k nastavení. Nastavení hesla vás všude odhlásí. Přihlaste se znovu a vraťte se sem.',
   'twoFactor.nopassword.action': 'Nastavit heslo',
-  'twoFactor.setup.action': 'Znovu zobrazit nastavovací klíč',
-  'twoFactor.setup.title': 'Nastavovací klíč',
-  'twoFactor.setup.body':
-    'Přidejte tento klíč do dalšího zařízení. Klíč na ostatních zařízeních bude dál fungovat.',
-  'twoFactor.setup.done': 'Hotovo',
-  'twoFactor.setup.confirm': 'Zobrazit klíč',
   'twoFactor.setup.pending': 'Ověřování',
   'twoFactor.off.action': 'Vypnout dvoufaktorové ověřování',
   'twoFactor.off.title': 'Vypnout dvoufaktorové ověřování?',
   'twoFactor.off.body':
-    'Kdokoli s vaším heslem se bude moci přihlásit bez kódu. Vaše ostatní přihlášená zařízení zůstanou přihlášená.',
+    'Kdokoli s vaším heslem se bude moci přihlásit bez kódu.',
   'twoFactor.off.confirm': 'Vypnout',
   'twoFactor.off.pending': 'Vypínání',
   'twoFactor.off.cancel': 'Ponechat zapnuté',
-  'twoFactor.off.done': 'Dvoufaktorové ověřování je vypnuté',
   'security.other.label': 'Odhlásit ostatní zařízení',
   'security.other.description':
     'Na ostatních zařízeních je nutné se znovu přihlásit. Spojení se uzavírají asynchronně; důvěryhodné prohlížeče, Google, Apple a přístupové klíče zůstávají dostupné.',
@@ -789,6 +779,26 @@ const messages = {
   'security.other.pending':
     'Ostatní relace byly zneplatněny. Uzavření spojení může trvat déle.',
   'security.other.check': 'Zkontrolovat stav',
+  'twoFactor.security.effect':
+    'Tato změna odhlásí ostatní zařízení a zruší dosavadní důvěru v prohlížeče. Toto zařízení získá novou relaci.',
+  'twoFactor.security.currentStep':
+    'Použijte aktuální kód z autentizátoru. Pokud jste jej už použili ke změně zabezpečení, počkejte na nový.',
+  'twoFactor.security.invalidProof':
+    'Kód je neplatný nebo už použitý. Zadejte nový kód z autentizátoru nebo nepoužitý záložní kód.',
+  'twoFactor.security.replace': 'Vyměnit autentizátor',
+  'twoFactor.security.codesLost':
+    'Změna byla dokončena, ale nové záložní kódy už nelze zobrazit. Přihlaste se znovu a zkontrolujte nastavení.',
+  'twoFactor.security.changed': 'Nastavení zabezpečení se změnilo.',
+  'twoFactor.security.fresh':
+    'Přihlaste se znovu a potvrďte změnu zabezpečení do pěti minut.',
+  'twoFactor.security.expired':
+    'Platnost nastavení vypršela. Začněte znovu; aktivní autentizátor se nezměnil.',
+  'twoFactor.security.stale':
+    'Stav zabezpečení se změnil. Před další změnou jej znovu načtěte.',
+  'twoFactor.security.upgrade':
+    'Obnovte stránku a použijte nové bezpečnostní kontroly.',
+  'twoFactor.security.unavailable':
+    'Změny zabezpečení nejsou dostupné. Obnovte stránku a zkuste to znovu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

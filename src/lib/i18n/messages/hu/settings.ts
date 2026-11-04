@@ -694,7 +694,7 @@ const messages = {
   'twoFactor.password.pending': 'Beállítás folyamatban',
   'twoFactor.password.invalid': 'Ez a jelszó helytelen.',
   'twoFactor.key.intro':
-    'A telefonodon hitelesítő alkalmazásra van szükség. Add hozzá ezt a kulcsot, majd térj vissza ide. A kétlépcsős hitelesítés még nincs bekapcsolva.',
+    'Adja hozzá ezt az új kulcsot a hitelesítő alkalmazáshoz, majd erősítsen meg egy kódot. A jelenlegi bejelentkezési mód a megerősítésig változatlan marad.',
   'twoFactor.key.matrixLabel':
     'Beállítási kód. Ugyanez a kulcs szövegként is elérhető',
   'twoFactor.key.matrixFailed':
@@ -707,21 +707,18 @@ const messages = {
   'twoFactor.key.open': 'Megnyitás a hitelesítő alkalmazásban',
   'twoFactor.key.startOver': 'Újrakezdés',
   'twoFactor.key.startOverHint':
-    'Az újrakezdés új kulcsot hoz létre. Az alkalmazáshoz már hozzáadott kulcs nem fog működni.',
+    'A beállítás elvetése nem változtatja meg a jelenlegi bejelentkezési módot.',
   'twoFactor.key.next': 'Hozzáadtam',
   'twoFactor.code.label': 'Kód az alkalmazásból',
-  'twoFactor.code.hint': 'Az alkalmazásban most látható hat számjegy.',
   'twoFactor.code.submit': 'Kétlépcsős hitelesítés bekapcsolása',
   'twoFactor.code.pending': 'Ellenőrzés',
   'twoFactor.code.invalid':
     'A kód nem egyezik. Ellenőrizd a telefon óráját, és írd be az alkalmazás legfrissebb kódját.',
-  'twoFactor.code.unclear':
-    'Nem tudjuk, hogy sikerült-e. Írd be a legfrissebb kódot az újrapróbáláshoz.',
   'twoFactor.rateLimited.title': 'Túl sok próbálkozás rövid idő alatt',
   'twoFactor.rateLimited.password':
-    'Várj körülbelül tíz másodpercet, majd próbáld újra. A beírt adatok megmaradtak.',
+    'Várja meg, amíg ez a művelet újra elérhető lesz, majd próbálja újra. A beírt adatok megmaradtak.',
   'twoFactor.rateLimited.code':
-    'Várj legfeljebb egy percet, majd próbáld újra. A beírt adatok megmaradtak.',
+    'Várja meg, amíg ez a művelet újra elérhető lesz, majd próbálja újra. A beírt adatok megmaradtak.',
   'twoFactor.codes.title': 'A tartalékkódjaid',
   'twoFactor.codes.body':
     'Minden kód egyszer használható, ha elveszíted a telefonod. Csak most láthatók, ezért tárold őket biztonságosan.',
@@ -754,21 +751,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Ehhez a fiókhoz jelszó szükséges a kétlépcsős hitelesítéshez. A következő oldal elkéri az e-mail-címed, és beállítási hivatkozást küld. A jelszó beállítása mindenhol kijelentkeztet. Jelentkezz be újra, és térj vissza ide.',
   'twoFactor.nopassword.action': 'Jelszó beállítása',
-  'twoFactor.setup.action': 'Beállítási kulcs megjelenítése újra',
-  'twoFactor.setup.title': 'Beállítási kulcs',
-  'twoFactor.setup.body':
-    'Add hozzá ezt a kulcsot egy másik eszközhöz. A többi eszközödön lévő kulcs továbbra is működik.',
-  'twoFactor.setup.done': 'Kész',
-  'twoFactor.setup.confirm': 'Kulcs megjelenítése',
   'twoFactor.setup.pending': 'Ellenőrzés',
   'twoFactor.off.action': 'Kétlépcsős hitelesítés kikapcsolása',
   'twoFactor.off.title': 'Kikapcsolod a kétlépcsős hitelesítést?',
   'twoFactor.off.body':
-    'Aki ismeri a jelszavadat, kód nélkül is bejelentkezhet. A többi bejelentkezett eszközöd bejelentkezve marad.',
+    'Bárki, aki ismeri a jelszavát, kód nélkül bejelentkezhet.',
   'twoFactor.off.confirm': 'Kikapcsolás',
   'twoFactor.off.pending': 'Kikapcsolás folyamatban',
   'twoFactor.off.cancel': 'Maradjon bekapcsolva',
-  'twoFactor.off.done': 'A kétlépcsős hitelesítés ki van kapcsolva',
   'security.other.label': 'Más eszközök kijelentkeztetése',
   'security.other.description':
     'A többi eszközön újra be kell jelentkezni. A kapcsolatok késleltetve zárulnak le; a megbízható böngészők, a Google, az Apple és a hozzáférési kulcsok elérhetők maradnak.',
@@ -781,6 +771,26 @@ const messages = {
   'security.other.pending':
     'A többi munkamenet visszavonva. A kapcsolatok lezárása tovább tarthat.',
   'security.other.check': 'Állapot ellenőrzése',
+  'twoFactor.security.effect':
+    'Ez a módosítás kijelentkezteti a többi eszközt, és megszünteti a böngészők korábbi megbízhatóságát. Ez az eszköz új munkamenetet kap.',
+  'twoFactor.security.currentStep':
+    'Használja a hitelesítő aktuális kódját. Ha már használta biztonsági módosításhoz, várjon új kódra.',
+  'twoFactor.security.invalidProof':
+    'A kód érvénytelen vagy már felhasználták. Adjon meg új hitelesítőkódot vagy fel nem használt tartalék kódot.',
+  'twoFactor.security.replace': 'Hitelesítő cseréje',
+  'twoFactor.security.codesLost':
+    'A módosítás kész, de az új tartalék kódok nem jeleníthetők meg újra. Jelentkezzen be újra a beállítások ellenőrzéséhez.',
+  'twoFactor.security.changed': 'A biztonsági beállítások megváltoztak.',
+  'twoFactor.security.fresh':
+    'Jelentkezzen be újra, majd öt percen belül erősítse meg a biztonsági módosítást.',
+  'twoFactor.security.expired':
+    'A beállítás lejárt. Kezdje újra; az aktív hitelesítő nem változott.',
+  'twoFactor.security.stale':
+    'A biztonsági állapot megváltozott. Újabb módosítás előtt töltse be újra.',
+  'twoFactor.security.upgrade':
+    'Frissítse az oldalt az új biztonsági ellenőrzések használatához.',
+  'twoFactor.security.unavailable':
+    'A biztonsági módosítások nem érhetők el. Töltse be újra az oldalt.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

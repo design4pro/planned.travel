@@ -705,7 +705,7 @@ const messages = {
   'twoFactor.password.pending': 'Configurazione in corso',
   'twoFactor.password.invalid': 'La password non è corretta.',
   'twoFactor.key.intro':
-    'Serve un’app di autenticazione sul telefono. Aggiungi questa chiave e torna qui. I due fattori non sono ancora attivi.',
+    "Aggiungi questa nuova chiave all'app di autenticazione, poi conferma un codice. Il metodo di accesso attuale non cambia fino alla conferma.",
   'twoFactor.key.matrixLabel':
     'Codice di configurazione. La stessa chiave è disponibile come testo',
   'twoFactor.key.matrixFailed':
@@ -718,21 +718,18 @@ const messages = {
   'twoFactor.key.open': 'Apri nella tua app di autenticazione',
   'twoFactor.key.startOver': 'Ricomincia',
   'twoFactor.key.startOverHint':
-    'Ricominciare crea una nuova chiave. Una chiave già aggiunta a un’app smetterà di funzionare.',
+    'Annullare questa configurazione non cambia il metodo di accesso attuale.',
   'twoFactor.key.next': 'L’ho aggiunta',
   'twoFactor.code.label': 'Codice dell’app',
-  'twoFactor.code.hint': 'Le sei cifre mostrate ora dall’app.',
   'twoFactor.code.submit': 'Attiva i due fattori',
   'twoFactor.code.pending': 'Verifica in corso',
   'twoFactor.code.invalid':
     'Il codice non corrisponde. Controlla l’ora sul telefono e inserisci il codice più recente dell’app.',
-  'twoFactor.code.unclear':
-    'Non sappiamo se l’operazione è riuscita. Inserisci il codice più recente per riprovare.',
   'twoFactor.rateLimited.title': 'Troppi tentativi ravvicinati',
   'twoFactor.rateLimited.password':
-    'Attendi circa dieci secondi e riprova. I dati inseriti sono conservati.',
+    'Attendi che questa azione sia di nuovo disponibile, poi riprova. I dati inseriti sono stati conservati.',
   'twoFactor.rateLimited.code':
-    'Attendi fino a un minuto e riprova. I dati inseriti sono conservati.',
+    'Attendi che questa azione sia di nuovo disponibile, poi riprova. I dati inseriti sono stati conservati.',
   'twoFactor.codes.title': 'I tuoi codici di riserva',
   'twoFactor.codes.body':
     'Ogni codice funziona una volta se perdi il telefono. Vengono mostrati solo ora: conservali al sicuro.',
@@ -765,21 +762,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'I due fattori richiedono una password per questo account. La pagina seguente chiede l’e-mail e invia un link per impostarla. Verrai disconnesso ovunque. Accedi di nuovo e torna qui.',
   'twoFactor.nopassword.action': 'Imposta una password',
-  'twoFactor.setup.action': 'Mostra di nuovo la chiave di configurazione',
-  'twoFactor.setup.title': 'Chiave di configurazione',
-  'twoFactor.setup.body':
-    'Aggiungi questa chiave su un altro dispositivo. La chiave sugli altri dispositivi continuerà a funzionare.',
-  'twoFactor.setup.done': 'Fatto',
-  'twoFactor.setup.confirm': 'Mostra chiave',
   'twoFactor.setup.pending': 'Verifica in corso',
   'twoFactor.off.action': 'Disattiva l’autenticazione a due fattori',
   'twoFactor.off.title': 'Disattivare l’autenticazione a due fattori?',
   'twoFactor.off.body':
-    'Chiunque conosca la tua password potrà accedere senza un codice. Gli altri dispositivi connessi resteranno connessi.',
+    'Chiunque conosca la tua password potrà accedere senza codice.',
   'twoFactor.off.confirm': 'Disattiva',
   'twoFactor.off.pending': 'Disattivazione',
   'twoFactor.off.cancel': 'Mantieni attiva',
-  'twoFactor.off.done': 'L’autenticazione a due fattori è disattivata',
   'security.other.label': 'Disconnetti gli altri dispositivi',
   'security.other.description':
     'Gli altri dispositivi dovranno accedere di nuovo. Le connessioni si chiudono in modo asincrono; browser attendibili, Google, Apple e passkey restano disponibili.',
@@ -792,6 +782,26 @@ const messages = {
   'security.other.pending':
     'Le altre sessioni sono revocate. La chiusura delle connessioni potrebbe richiedere più tempo.',
   'security.other.check': 'Controlla stato',
+  'twoFactor.security.effect':
+    'Questa modifica disconnette gli altri dispositivi e rimuove l’attendibilità precedente dei browser. Questo dispositivo riceve una nuova sessione.',
+  'twoFactor.security.currentStep':
+    'Usa il codice attuale dell’autenticatore. Attendi un nuovo codice se lo hai già usato per una modifica di sicurezza.',
+  'twoFactor.security.invalidProof':
+    'Il codice non è valido o è già stato usato. Inserisci un nuovo codice dell’autenticatore o un codice di backup inutilizzato.',
+  'twoFactor.security.replace': 'Sostituisci autenticatore',
+  'twoFactor.security.codesLost':
+    'La modifica è completata, ma i nuovi codici di backup non possono essere mostrati di nuovo. Accedi nuovamente per controllare le impostazioni.',
+  'twoFactor.security.changed': 'Le impostazioni di sicurezza sono cambiate.',
+  'twoFactor.security.fresh':
+    'Accedi nuovamente e conferma la modifica di sicurezza entro cinque minuti.',
+  'twoFactor.security.expired':
+    'Questa configurazione è scaduta. Ricomincia; l’autenticatore attivo non è cambiato.',
+  'twoFactor.security.stale':
+    'Lo stato di sicurezza è cambiato. Ricaricalo prima di un’altra modifica.',
+  'twoFactor.security.upgrade':
+    'Aggiorna la pagina per usare i nuovi controlli di sicurezza.',
+  'twoFactor.security.unavailable':
+    'Le modifiche di sicurezza non sono disponibili. Ricarica per verificare di nuovo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -353,6 +353,9 @@ export const securityOperation = sqliteTable(
       .references(() => user.id, { onDelete: 'cascade' }),
     sessionId: text('session_id').notNull(),
     intent: text('intent').notNull(),
+    kind: text('kind').notNull().default('revoke-others'),
+    refusedAt: integer('refused_at'),
+    factorEnabled: integer('factor_enabled', { mode: 'boolean' }),
     receiptDigest: text('receipt_digest').notNull(),
     revision: integer('revision').notNull(),
     expiresAt: integer('expires_at').notNull(),
@@ -369,6 +372,55 @@ export const securityOperation = sqliteTable(
     index('security_operation_user_idx').on(table.userId),
     index('security_operation_pending_idx').on(table.cleanupPending),
   ],
+)
+
+/** Encrypted setup material has no authority until its operation commits. */
+export const factorProposal = sqliteTable(
+  'factor_proposal',
+  {
+    digest: text('digest').primaryKey(),
+    operationId: text('operation_id')
+      .notNull()
+      .unique()
+      .references(() => securityOperation.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    payload: text('payload').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (table) => [
+    index('factor_proposal_expiry_idx').on(table.expiresAt),
+    index('factor_proposal_user_idx').on(table.userId),
+  ],
+)
+
+/** Reservations spend an attempt before verification; versions never reset with the count. */
+export const factorBudget = sqliteTable(
+  'factor_budget',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    domain: text('domain').notNull(),
+    version: integer('version').notNull().default(0),
+    attempts: integer('attempts').notNull().default(0),
+    recoveryAt: integer('recovery_at').notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.domain] })],
+)
+
+/** Plaintext-secret digests keep replay history stable across ciphertext/set rotations. */
+export const factorReplay = sqliteTable(
+  'factor_replay',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    secretDigest: text('secret_digest').notNull(),
+    step: integer('step').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.secretDigest] })],
 )
 
 export const securityCleanup = sqliteTable(
@@ -429,4 +481,7 @@ export const accountSecuritySchema = {
   securityOperation,
   securityCleanup,
   securityRoomCleanup,
+  factorProposal,
+  factorBudget,
+  factorReplay,
 }

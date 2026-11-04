@@ -772,7 +772,10 @@ non-impersonated initiating session. Allowed production callers are `auth/accoun
 capability for pending ids and encrypted cleanup references only. Arbitrary account selectors and
 generic query/table APIs are forbidden. See ADR 0049 and `docs/account-session-authority.md` for
 closed projections, authority and writer coverage. This exception grants no tenant-content access
-and does not widen any existing Unscoped function.
+and does not widen any existing Unscoped function. The #1759 amendment additionally permits
+credential-only id/password-hash version projections, encrypted native factor/set state, the
+user factor-enabled flag, and account-owned encrypted proposals, attempt budgets and replay
+steps, exactly as enumerated in ADR 0049. Plaintext proofs and provider tokens are excluded.
 The account-owned `account_security_room_cleanup.organization_id` is a routing target, not tenant
 content: it deliberately survives workspace deletion until queue acknowledgement, and cascades
 only with its account operation. Workspace deletion must not erase pending account cleanup.

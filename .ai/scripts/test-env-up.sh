@@ -8,6 +8,7 @@
 #                      (BSD-only stat -f and a src/server path mismatch made it a no-op on Linux)
 #   2026-09-15 repair: wait for a free port instead of failing at once; a pool that stays full
 #                      exits 75 with TEST_ENV_STATUS=unavailable, not 1 (issue #324, free-port.mjs)
+#   2026-11-04 align owned APP_URL with the selected QA origin before every fresh boot
 set -eu
 
 # ── Project variables ────────────────────────────────────────────────────────
@@ -107,12 +108,6 @@ fi
 # A reused PID or a server from another checkout is never ours to terminate.
 node "$PROCESS_HELPER" stop
 
-# ── Precondition: provisioned checkout ───────────────────────────────────────
-if ! bash "$BOOTSTRAP" --check >/dev/null 2>&1; then
-  echo "==> checkout not provisioned; running $BOOTSTRAP --profile worktree --no-seed"
-  bash "$BOOTSTRAP" --profile worktree --no-seed
-fi
-
 # ── Port ─────────────────────────────────────────────────────────────────────
 # Waits for a slot rather than failing the moment the pool is full, and exits 75
 # (not 1) when none frees in time: the suite was not executed, which the caller
@@ -123,6 +118,9 @@ PORT=$(node .ai/scripts/free-port.mjs "$HOST" "$PORT_MIN" "$PORT_MAX") || {
   exit "$status"
 }
 BASE_URL="http://$HOST:$PORT"
+
+# A complete checkout can still carry another server's APP_URL; reconcile it before boot.
+bash "$BOOTSTRAP" --profile worktree --no-seed --port "$PORT" --host "$HOST"
 
 # ── App start + health wait ──────────────────────────────────────────────────
 # E2E=1 turns the devtools console relay off in vite.config.ts (a Worker

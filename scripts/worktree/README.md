@@ -26,6 +26,7 @@ a 500 on `/login` looks like a code defect and is a missing file.
 | --------------------------- | ----------------------------------------------------------------------------------- |
 | `--profile worktree\|cloud` | Which environment this is. Default `worktree`. See the table below.                 |
 | `--port N`                  | Serve on this port instead of the allocated one.                                    |
+| `--host localhost\|127.0.0.1` | Local origin and bind host; defaults to `localhost`. Explicit host refuses a conflicting user-owned `APP_URL`. |
 | `--check`                   | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight. |
 | `--if-needed`               | Exit 0 immediately when nothing is missing. What the SessionStart hook passes.      |
 | `--no-seed`                 | Stop after the schema; start no server and seed nothing.                            |
@@ -53,8 +54,11 @@ generous timeout because the first run in a fresh worktree installs dependencies
 
 That script is the third profile and deliberately stays separate. It starts the app for the
 validation gate's e2e step, takes a port from 3030-3040 because `playwright.config.ts` insists on
-the reserved range outside CI, and treats provisioning as this script's job rather than repeating
-it. Folding it in here would couple the e2e gate to a convenience script. Use it for automated
+the reserved range outside CI, and passes its selected port and `127.0.0.1` host to this script
+before every fresh boot.
+That reconciles owned `APP_URL` even when all fixtures already exist; a conflicting user-owned
+origin stops startup without changing the file. Provisioning remains this script's job. Folding it
+in here would couple the e2e gate to a convenience script. Use it for automated
 rounds, this one for working on the app.
 
 ## The port, and why not 3000

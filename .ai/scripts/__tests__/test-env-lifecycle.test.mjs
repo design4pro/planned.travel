@@ -213,6 +213,58 @@ exec "${process.execPath}" "$@"`,
     )
     expect(live(child.pid)).toBe(false)
   })
+  it.each([0, 1])(
+    'aligns the selected origin before boot when provisioning check returns %s',
+    async (checkStatus) => {
+      writeFileSync(join(root, 'fixture-origin'), 'http://localhost:3001')
+      writeFileSync(
+        join(root, 'scripts/worktree/bootstrap.sh'),
+        `#!/bin/sh
+if [ "$1" = --check ]; then exit ${checkStatus}; fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --profile) shift 2 ;;
+    --no-seed) shift ;;
+    --port) port="$2"; shift 2 ;;
+    --host) host="$2"; shift 2 ;;
+    *) exit 2 ;;
+  esac
+done
+[ -n "$host" ] && [ -n "$port" ] || exit 2
+printf 'http://%s:%s' "$host" "$port" > fixture-origin
+`,
+      )
+      writeFileSync(
+        join(root, 'node_modules/vite/bin/vite.js'),
+        "const fs = require('node:fs'); fs.copyFileSync('fixture-origin', 'boot-origin'); setInterval(() => {}, 1000)",
+      )
+      await run()
+      const descriptor = JSON.parse(
+        readFileSync(join(root, '.ai/qa/test-env.json'), 'utf8'),
+      )
+      expect(descriptor.baseUrl).toBe('http://127.0.0.1:3030')
+      await expect.poll(() => existsSync(join(root, 'boot-origin'))).toBe(true)
+      expect(readFileSync(join(root, 'boot-origin'), 'utf8')).toBe(
+        descriptor.baseUrl,
+      )
+    },
+  )
+
+  it('does not start or seed when provisioning refuses the selected origin', async () => {
+    writeFileSync(
+      join(root, 'scripts/worktree/bootstrap.sh'),
+      '#!/bin/sh\nexit 1\n',
+    )
+    writeFileSync(
+      join(root, 'scripts/seed/seed.mjs'),
+      "import { writeFileSync } from 'node:fs'; writeFileSync('seed-ran', '')",
+    )
+    await expect(run()).rejects.toThrow()
+    expect(existsSync(join(root, '.ai/qa/dev-server.pid'))).toBe(false)
+    expect(existsSync(join(root, 'seed-ran'))).toBe(false)
+    expect(existsSync(join(root, '.ai/qa/test-env.json'))).toBe(false)
+  })
+
   it.each(['--force', '--force-rebuild'])(
     'replaces its predecessor under %s instead of leaking it',
     async (flag) => {

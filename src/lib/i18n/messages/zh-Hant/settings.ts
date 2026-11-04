@@ -587,7 +587,7 @@ const messages = {
   'twoFactor.password.pending': '正在設定',
   'twoFactor.password.invalid': '密碼不正確。',
   'twoFactor.key.intro':
-    '你需要在手機上安裝身分驗證應用程式。加入此金鑰後，回到本頁。雙重身分驗證尚未啟用。',
+    '將此新金鑰新增至驗證器，然後確認驗證碼。確認前，目前的登入方式保持不變。',
   'twoFactor.key.matrixLabel': '設定碼。同一金鑰也以文字形式提供',
   'twoFactor.key.matrixFailed':
     '無法為此金鑰產生代碼。請在應用程式中輸入設定金鑰。',
@@ -597,19 +597,18 @@ const messages = {
   'twoFactor.key.copyFailed': '瀏覽器無法複製金鑰。請選取並手動複製。',
   'twoFactor.key.open': '在身分驗證應用程式中開啟',
   'twoFactor.key.startOver': '重新開始',
-  'twoFactor.key.startOverHint':
-    '重新開始會產生新金鑰。你已加入應用程式的金鑰將失效。',
+  'twoFactor.key.startOverHint': '放棄此設定不會變更目前的登入方式。',
   'twoFactor.key.next': '我已加入',
   'twoFactor.code.label': '應用程式的驗證碼',
-  'twoFactor.code.hint': '應用程式目前顯示的六位數字。',
   'twoFactor.code.submit': '啟用雙重身分驗證',
   'twoFactor.code.pending': '正在檢查',
   'twoFactor.code.invalid':
     '驗證碼不符。請檢查手機時間，然後輸入應用程式顯示的最新驗證碼。',
-  'twoFactor.code.unclear': '無法確定是否成功。請輸入最新驗證碼再試一次。',
   'twoFactor.rateLimited.title': '短時間內嘗試次數過多',
-  'twoFactor.rateLimited.password': '請等待約十秒後再試。你輸入的內容已保留。',
-  'twoFactor.rateLimited.code': '請等待最多一分鐘後再試。你輸入的內容已保留。',
+  'twoFactor.rateLimited.password':
+    '請等待此操作再次可用後重試。您輸入的內容已保留。',
+  'twoFactor.rateLimited.code':
+    '請等待此操作再次可用後重試。您輸入的內容已保留。',
   'twoFactor.codes.title': '你的備用碼',
   'twoFactor.codes.body':
     '遺失手機時，每個備用碼可使用一次。它們只在此時顯示，請妥善保存。',
@@ -641,21 +640,13 @@ const messages = {
   'twoFactor.nopassword.body':
     '此帳號需要密碼才能使用雙重身分驗證。下一頁會要求填寫電子郵件並傳送設定密碼的連結。設定密碼會登出所有裝置。請重新登入後回到這裡。',
   'twoFactor.nopassword.action': '設定密碼',
-  'twoFactor.setup.action': '再次顯示設定金鑰',
-  'twoFactor.setup.title': '設定金鑰',
-  'twoFactor.setup.body':
-    '將此金鑰新增至另一台裝置。其他裝置上已有的金鑰仍可使用。',
-  'twoFactor.setup.done': '完成',
-  'twoFactor.setup.confirm': '顯示金鑰',
   'twoFactor.setup.pending': '正在檢查',
   'twoFactor.off.action': '關閉雙重驗證',
   'twoFactor.off.title': '要關閉雙重驗證嗎？',
-  'twoFactor.off.body':
-    '任何知道你密碼的人都可以無需驗證碼登入。你已登入的其他裝置將保持登入狀態。',
+  'twoFactor.off.body': '任何知道您密碼的人都將能夠在沒有驗證碼的情況下登入。',
   'twoFactor.off.confirm': '關閉',
   'twoFactor.off.pending': '正在關閉',
   'twoFactor.off.cancel': '保持開啟',
-  'twoFactor.off.done': '雙重驗證已關閉',
   'security.other.label': '登出其他裝置',
   'security.other.description':
     '其他裝置需要重新登入。連線會非同步關閉；受信任的瀏覽器、Google、Apple 和通行密鑰仍可使用。',
@@ -666,6 +657,22 @@ const messages = {
   'security.other.pending':
     '其他工作階段已撤銷。連線可能需要更長時間才能關閉。',
   'security.other.check': '檢查狀態',
+  'twoFactor.security.effect':
+    '此變更會登出其他裝置並撤銷先前的瀏覽器信任。此裝置將取得新的工作階段。',
+  'twoFactor.security.currentStep':
+    '請使用驗證器目前的驗證碼。如果已用它變更過安全設定，請等待新驗證碼。',
+  'twoFactor.security.invalidProof':
+    '此驗證碼無效或已使用。請輸入新的驗證器驗證碼或未使用的備用碼。',
+  'twoFactor.security.replace': '更換驗證器',
+  'twoFactor.security.codesLost':
+    '變更已完成，但無法再次顯示新的備用碼。請重新登入以檢查設定。',
+  'twoFactor.security.changed': '安全設定已變更。',
+  'twoFactor.security.fresh': '請重新登入，然後在五分鐘內確認此安全變更。',
+  'twoFactor.security.expired':
+    '此設定已過期。請重新開始；目前的驗證器未變更。',
+  'twoFactor.security.stale': '安全狀態已變更。開始另一項變更前請重新載入。',
+  'twoFactor.security.upgrade': '請重新整理頁面以使用更新後的安全檢查。',
+  'twoFactor.security.unavailable': '暫時無法變更安全設定。請重新載入後再試。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

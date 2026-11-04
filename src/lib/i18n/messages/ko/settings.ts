@@ -627,7 +627,7 @@ const messages = {
   'twoFactor.password.pending': '설정 중',
   'twoFactor.password.invalid': '비밀번호가 올바르지 않습니다.',
   'twoFactor.key.intro':
-    '휴대전화에 인증 앱이 필요합니다. 이 키를 추가한 다음 여기로 돌아오세요. 2단계 인증은 아직 켜지지 않았습니다.',
+    '이 새 키를 인증 앱에 추가한 다음 코드를 확인하세요. 확인 전까지 현재 로그인 방식은 변경되지 않습니다.',
   'twoFactor.key.matrixLabel':
     '설정 코드. 동일한 키를 텍스트로도 확인할 수 있습니다',
   'twoFactor.key.matrixFailed':
@@ -640,21 +640,18 @@ const messages = {
   'twoFactor.key.open': '인증 앱에서 열기',
   'twoFactor.key.startOver': '처음부터 다시 시작',
   'twoFactor.key.startOverHint':
-    '다시 시작하면 새 키가 생성됩니다. 앱에 이미 추가한 키는 더 이상 작동하지 않습니다.',
+    '이 설정을 취소해도 현재 로그인 방식은 변경되지 않습니다.',
   'twoFactor.key.next': '추가했습니다',
   'twoFactor.code.label': '앱의 코드',
-  'twoFactor.code.hint': '앱에 현재 표시된 여섯 자리 숫자입니다.',
   'twoFactor.code.submit': '2단계 인증 켜기',
   'twoFactor.code.pending': '확인 중',
   'twoFactor.code.invalid':
     '코드가 일치하지 않습니다. 휴대전화 시간을 확인하고 앱의 최신 코드를 입력하세요.',
-  'twoFactor.code.unclear':
-    '성공 여부를 확인하지 못했습니다. 최신 코드를 입력하여 다시 시도하세요.',
   'twoFactor.rateLimited.title': '짧은 시간에 너무 많이 시도했습니다',
   'twoFactor.rateLimited.password':
-    '약 10초 후에 다시 시도하세요. 입력한 내용은 유지됩니다.',
+    '이 작업을 다시 사용할 수 있을 때까지 기다린 후 재시도하세요. 입력한 내용은 유지됩니다.',
   'twoFactor.rateLimited.code':
-    '최대 1분 후에 다시 시도하세요. 입력한 내용은 유지됩니다.',
+    '이 작업을 다시 사용할 수 있을 때까지 기다린 후 재시도하세요. 입력한 내용은 유지됩니다.',
   'twoFactor.codes.title': '백업 코드',
   'twoFactor.codes.body':
     '휴대전화를 잃어버리면 각 코드를 한 번 사용할 수 있습니다. 지금만 표시되므로 안전한 곳에 보관하세요.',
@@ -687,21 +684,14 @@ const messages = {
   'twoFactor.nopassword.body':
     '2단계 인증을 사용하려면 이 계정에 비밀번호가 필요합니다. 다음 페이지에서 이메일을 입력하면 설정 링크가 전송됩니다. 비밀번호를 설정하면 모든 곳에서 로그아웃됩니다. 다시 로그인한 후 여기로 돌아오세요.',
   'twoFactor.nopassword.action': '비밀번호 설정',
-  'twoFactor.setup.action': '설정 키 다시 보기',
-  'twoFactor.setup.title': '설정 키',
-  'twoFactor.setup.body':
-    '이 키를 다른 기기에 추가하세요. 다른 기기에 등록된 키도 계속 사용할 수 있습니다.',
-  'twoFactor.setup.done': '완료',
-  'twoFactor.setup.confirm': '키 보기',
   'twoFactor.setup.pending': '확인 중',
   'twoFactor.off.action': '2단계 인증 끄기',
   'twoFactor.off.title': '2단계 인증을 끄시겠어요?',
   'twoFactor.off.body':
-    '비밀번호를 아는 사람은 누구나 코드 없이 로그인할 수 있습니다. 로그인된 다른 기기는 로그인 상태를 유지합니다.',
+    '비밀번호를 아는 사람은 누구나 코드 없이 로그인할 수 있게 됩니다.',
   'twoFactor.off.confirm': '끄기',
   'twoFactor.off.pending': '끄는 중',
   'twoFactor.off.cancel': '켜진 상태로 유지',
-  'twoFactor.off.done': '2단계 인증이 꺼졌습니다',
   'security.other.label': '다른 기기에서 로그아웃',
   'security.other.description':
     '다른 기기는 다시 로그인해야 합니다. 연결은 비동기적으로 종료되며 신뢰하는 브라우저, Google, Apple 및 패스키는 계속 사용할 수 있습니다.',
@@ -714,6 +704,26 @@ const messages = {
   'security.other.pending':
     '다른 세션이 무효화되었습니다. 연결 종료에는 시간이 더 걸릴 수 있습니다.',
   'security.other.check': '상태 확인',
+  'twoFactor.security.effect':
+    '이 변경으로 다른 기기가 로그아웃되고 기존 브라우저 신뢰가 해제됩니다. 이 기기에는 새 세션이 발급됩니다.',
+  'twoFactor.security.currentStep':
+    '인증 앱의 현재 코드를 사용하세요. 보안 변경에 이미 사용했다면 새 코드를 기다리세요.',
+  'twoFactor.security.invalidProof':
+    '잘못되었거나 이미 사용한 코드입니다. 새 인증 코드 또는 사용하지 않은 백업 코드를 입력하세요.',
+  'twoFactor.security.replace': '인증 앱 교체',
+  'twoFactor.security.codesLost':
+    '변경이 완료되었지만 새 백업 코드는 다시 표시할 수 없습니다. 다시 로그인하여 설정을 확인하세요.',
+  'twoFactor.security.changed': '보안 설정이 변경되었습니다.',
+  'twoFactor.security.fresh':
+    '다시 로그인한 다음 5분 안에 이 보안 변경을 확인하세요.',
+  'twoFactor.security.expired':
+    '설정 시간이 만료되었습니다. 다시 시작하세요. 기존 인증 앱은 변경되지 않았습니다.',
+  'twoFactor.security.stale':
+    '보안 상태가 변경되었습니다. 다른 변경을 시작하기 전에 새로 고치세요.',
+  'twoFactor.security.upgrade':
+    '페이지를 새로 고쳐 업데이트된 보안 검사를 사용하세요.',
+  'twoFactor.security.unavailable':
+    '보안 변경을 사용할 수 없습니다. 새로 고쳐 다시 확인하세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

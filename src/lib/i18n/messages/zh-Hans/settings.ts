@@ -583,7 +583,7 @@ const messages = {
   'twoFactor.password.pending': '正在设置',
   'twoFactor.password.invalid': '密码不正确。',
   'twoFactor.key.intro':
-    '你需要在手机上安装身份验证应用。添加此密钥后，回到本页面。双重身份验证尚未启用。',
+    '将此新密钥添加到验证器，然后确认验证码。确认前，当前登录方式保持不变。',
   'twoFactor.key.matrixLabel': '设置码。同一密钥也以文本形式提供',
   'twoFactor.key.matrixFailed':
     '无法为此密钥生成代码。请在应用中输入设置密钥。',
@@ -593,19 +593,18 @@ const messages = {
   'twoFactor.key.copyFailed': '浏览器无法复制密钥。请选中并手动复制。',
   'twoFactor.key.open': '在身份验证应用中打开',
   'twoFactor.key.startOver': '重新开始',
-  'twoFactor.key.startOverHint':
-    '重新开始会生成新密钥。你已经添加到应用的密钥将失效。',
+  'twoFactor.key.startOverHint': '放弃此设置不会更改当前登录方式。',
   'twoFactor.key.next': '我已添加',
   'twoFactor.code.label': '应用中的验证码',
-  'twoFactor.code.hint': '应用当前显示的六位数字。',
   'twoFactor.code.submit': '启用双重身份验证',
   'twoFactor.code.pending': '正在检查',
   'twoFactor.code.invalid':
     '验证码不匹配。请检查手机时间，然后输入应用显示的最新验证码。',
-  'twoFactor.code.unclear': '无法确定是否成功。请输入最新验证码重试。',
   'twoFactor.rateLimited.title': '短时间内尝试次数过多',
-  'twoFactor.rateLimited.password': '请等待约十秒后重试。你输入的内容已保留。',
-  'twoFactor.rateLimited.code': '请等待最多一分钟后重试。你输入的内容已保留。',
+  'twoFactor.rateLimited.password':
+    '请等待此操作再次可用后重试。您输入的内容已保留。',
+  'twoFactor.rateLimited.code':
+    '请等待此操作再次可用后重试。您输入的内容已保留。',
   'twoFactor.codes.title': '你的备用码',
   'twoFactor.codes.body':
     '丢失手机时，每个备用码可使用一次。它们只在此时显示，请妥善保管。',
@@ -637,21 +636,13 @@ const messages = {
   'twoFactor.nopassword.body':
     '此账户需要密码才能使用双重身份验证。下一页面会要求填写邮箱并发送设置密码的链接。设置密码会退出所有设备上的登录。请重新登录后返回这里。',
   'twoFactor.nopassword.action': '设置密码',
-  'twoFactor.setup.action': '再次显示设置密钥',
-  'twoFactor.setup.title': '设置密钥',
-  'twoFactor.setup.body':
-    '将此密钥添加到另一台设备。其他设备上已有的密钥仍可使用。',
-  'twoFactor.setup.done': '完成',
-  'twoFactor.setup.confirm': '显示密钥',
   'twoFactor.setup.pending': '正在检查',
   'twoFactor.off.action': '关闭双重验证',
   'twoFactor.off.title': '要关闭双重验证吗？',
-  'twoFactor.off.body':
-    '任何知道你密码的人都可以无需验证码登录。你已登录的其他设备将保持登录状态。',
+  'twoFactor.off.body': '任何知道您密码的人都将能够在没有验证码的情况下登录。',
   'twoFactor.off.confirm': '关闭',
   'twoFactor.off.pending': '正在关闭',
   'twoFactor.off.cancel': '保持开启',
-  'twoFactor.off.done': '双重验证已关闭',
   'security.other.label': '退出其他设备',
   'security.other.description':
     '其他设备需要重新登录。连接会异步关闭；受信任的浏览器、Google、Apple 和通行密钥仍可使用。',
@@ -661,6 +652,21 @@ const messages = {
   'security.other.unknown': '结果未知。请先检查状态，再开始其他操作。',
   'security.other.pending': '其他会话已撤销。连接可能需要更长时间才能关闭。',
   'security.other.check': '检查状态',
+  'twoFactor.security.effect':
+    '此更改会退出其他设备并撤销之前的浏览器信任。此设备将获得新的会话。',
+  'twoFactor.security.currentStep':
+    '请使用验证器的当前验证码。如果已用它更改过安全设置，请等待新验证码。',
+  'twoFactor.security.invalidProof':
+    '此验证码无效或已使用。请输入新的验证器验证码或未使用的备用码。',
+  'twoFactor.security.replace': '更换验证器',
+  'twoFactor.security.codesLost':
+    '更改已完成，但无法再次显示新的备用码。请重新登录以检查设置。',
+  'twoFactor.security.changed': '安全设置已更改。',
+  'twoFactor.security.fresh': '请重新登录，然后在五分钟内确认此安全更改。',
+  'twoFactor.security.expired': '此设置已过期。请重新开始；当前验证器未更改。',
+  'twoFactor.security.stale': '安全状态已更改。开始另一项更改前请重新加载。',
+  'twoFactor.security.upgrade': '请刷新页面以使用更新后的安全检查。',
+  'twoFactor.security.unavailable': '暂时无法更改安全设置。请重新加载后再试。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -219,6 +219,12 @@ The operation receives a restricted HttpOnly receipt before a destructive reques
 
 A committed result can still have cleanup pending. Encrypted retry references and durable workspace targets survive failures; the existing room-eviction worker acknowledges successful closure rather than publication alone. Status reconciliation needs only the restricted receipt and works for fifteen minutes after commit. An unknown result offers status checks, not a blind destructive retry.
 
+### 2.2b Factor lifecycle changes
+
+After cutover, a fresh non-impersonated self session and current password may prepare an encrypted enable proposal. Replacing an active authenticator, disabling it or replacing backup codes additionally requires current TOTP or an unused old backup code. Confirmation of the proposed new secret activates enable/replacement. The winning atomic commit revokes every old session and trusted browser, including the initiating session, then issues one replacement current session. Cancellation or an expired/stale proposal preserves the active factor. No workspace or platform role can bypass this account-only proof.
+
+Management always registers a restricted receipt before mutation. Lost responses expose only status recovery, followed by sign-in when the replacement cookie was lost. Native password-only mutation and active-key export, OTP siblings, signed-in verification and server-only backup redisplay refuse with `CLIENT_UPGRADE_REQUIRED`; proposal key display and revision-bound sessionless TOTP/backup login remain supported. Google, Apple and passkey exemptions are unchanged. See `docs/account-session-authority.md` for shared budgets, replay/CAS and the complete endpoint inventory.
+
 ### 2.3 `catalog`, `pack`, `source`, `share`
 
 | Statement         | `admin` | `curator` | `user` |

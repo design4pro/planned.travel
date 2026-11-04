@@ -68,6 +68,37 @@ export const LINK_INCOMPLETE = alert(
 )
 
 const BY_CODE: Record<string, AuthMessage | undefined> = {
+  CLIENT_UPGRADE_REQUIRED: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.upgrade',
+    'warning',
+  ),
+  FACTOR_FRESH_SESSION_REQUIRED: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.fresh',
+    'warning',
+  ),
+  FACTOR_SETUP_EXPIRED: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.expired',
+    'warning',
+  ),
+  FACTOR_STATE_CHANGED: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.stale',
+    'warning',
+  ),
+  FACTOR_PROOF_USED: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.invalidProof',
+    'warning',
+  ),
+  FACTOR_OUTCOME_UNKNOWN: alert(
+    'auth.error.unexpected.title',
+    'settings.twoFactor.security.codesLost',
+    'warning',
+  ),
+
   INVALID_EMAIL_OR_PASSWORD: alert(
     'auth.error.credentials.title',
     'auth.error.credentials.detail',

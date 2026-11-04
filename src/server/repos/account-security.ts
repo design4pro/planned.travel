@@ -8,6 +8,11 @@ import type { SQLWrapper } from 'drizzle-orm'
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core'
 import {
   accountSecurity,
+  account,
+  twoFactor,
+  factorProposal,
+  factorBudget,
+  factorReplay,
   securityCleanup,
   securityFence,
   securityOperation,
@@ -28,6 +33,317 @@ export class AccountAuthorityError extends Error {
   constructor() {
     super('Account authority could not be established.')
   }
+}
+
+export interface FactorReservation {
+  domain: 'active' | 'proposal'
+  version: number
+  recoveryAt: number
+}
+
+export async function factorSnapshot(scope: AccountAuthScope) {
+  const [identity] = await scope.db
+    .select({ enabled: user.twoFactorEnabled })
+    .from(user)
+    .where(eq(user.id, scope.userId))
+  const credentials = await scope.db
+    .select({ id: account.id, password: account.password })
+    .from(account)
+    .where(
+      and(
+        eq(account.userId, scope.userId),
+        eq(account.providerId, 'credential'),
+      ),
+    )
+    .limit(2)
+  const factors = await scope.db
+    .select()
+    .from(twoFactor)
+    .where(eq(twoFactor.userId, scope.userId))
+    .limit(2)
+  if (!identity || credentials.length > 1 || factors.length > 1)
+    throw new AccountAuthorityError()
+  return {
+    enabled: identity.enabled,
+    credential: credentials.at(0) ?? null,
+    factor: factors.at(0) ?? null,
+  }
+}
+
+export type FactorSnapshot = Awaited<ReturnType<typeof factorSnapshot>>
+
+/** Reserve before crypto so concurrent and crashed attempts still spend the account allowance. */
+export async function reserveFactorAttempt(
+  scope: AccountAuthScope,
+  revision: number,
+  domain: FactorReservation['domain'],
+  now: number,
+): Promise<FactorReservation | null> {
+  await scope.db
+    .run(sql`insert into factor_budget (user_id, domain, version, attempts, recovery_at)
+    select ${scope.userId}, ${domain}, 0,
+      case when ${domain} = 'active' then coalesce((select case when locked_until > ${now} then 8 when locked_until is not null then 0 else min(failed_verification_count, 8) end from two_factor where user_id = ${scope.userId}), 0) else 0 end,
+      case when ${domain} = 'active' then coalesce((select case when locked_until > ${now} then locked_until else ${now} + 900000 end from two_factor where user_id = ${scope.userId}), ${now} + 900000) else ${now} + 900000 end
+    where exists(select 1 from account_security where user_id = ${scope.userId} and revision = ${revision} and deletion_id is null)
+    on conflict(user_id, domain) do nothing`)
+  const [reserved] = await scope.db
+    .update(factorBudget)
+    .set({
+      version: sql`${factorBudget.version} + 1`,
+      attempts: sql`case when ${factorBudget.recoveryAt} <= ${now} then 1 else ${factorBudget.attempts} + 1 end`,
+      recoveryAt: sql`case when ${factorBudget.recoveryAt} <= ${now} or ${factorBudget.attempts} = 7 then ${now} + 900000 else ${factorBudget.recoveryAt} end`,
+    })
+    .where(
+      and(
+        eq(factorBudget.userId, scope.userId),
+        eq(factorBudget.domain, domain),
+        sql`(${factorBudget.attempts} < 8 or ${factorBudget.recoveryAt} <= ${now}) and ${factorBudget.version} < ${Number.MAX_SAFE_INTEGER - 1}`,
+        sql`exists(select 1 from account_security where user_id = ${scope.userId} and revision = ${revision} and deletion_id is null)`,
+      ),
+    )
+    .returning({
+      version: factorBudget.version,
+      recoveryAt: factorBudget.recoveryAt,
+    })
+  return reserved ? { domain, ...reserved } : null
+}
+
+export async function factorRetryAfter(
+  scope: AccountAuthScope,
+  domain: FactorReservation['domain'],
+  now: number,
+): Promise<number> {
+  const [budget] = await scope.db
+    .select({ recoveryAt: factorBudget.recoveryAt })
+    .from(factorBudget)
+    .where(
+      and(
+        eq(factorBudget.userId, scope.userId),
+        eq(factorBudget.domain, domain),
+      ),
+    )
+  return Math.max(1, Math.ceil(((budget?.recoveryAt ?? now) - now) / 1000))
+}
+
+export async function resetFactorAttempts(
+  scope: AccountAuthScope,
+  revision: number,
+  reservation: FactorReservation,
+): Promise<void> {
+  await scope.db
+    .update(factorBudget)
+    .set({
+      attempts: 0,
+      recoveryAt: 0,
+      version: sql`${factorBudget.version} + 1`,
+    })
+    .where(
+      and(
+        eq(factorBudget.userId, scope.userId),
+        eq(factorBudget.domain, reservation.domain),
+        eq(factorBudget.version, reservation.version),
+        sql`exists(select 1 from account_security where user_id = ${scope.userId} and revision = ${revision} and deletion_id is null)`,
+      ),
+    )
+}
+
+export async function stageFactorProposal(
+  scope: AccountAuthScope,
+  input: {
+    digest: string
+    operationId: string
+    payload: string
+    expiresAt: number
+    now: number
+  },
+): Promise<void> {
+  await scope.db
+    .run(sql`insert into factor_proposal (digest, operation_id, user_id, payload, expires_at)
+    select ${input.digest}, id, user_id, ${input.payload}, min(expires_at, ${input.expiresAt}) from account_security_operation
+    where id = ${input.operationId} and user_id = ${scope.userId} and kind in ('enable', 'replace')
+    and committed_at is null and refused_at is null and claim is null and expires_at > ${input.now}
+    and not exists(select 1 from factor_proposal where operation_id = ${input.operationId})`)
+  if (!(await readFactorProposal(scope, input.operationId, input.digest)))
+    throw new AccountAuthorityError()
+}
+
+export async function readFactorProposal(
+  scope: AccountAuthScope,
+  operationId: string,
+  digest: string,
+) {
+  const [proposal] = await scope.db
+    .select()
+    .from(factorProposal)
+    .where(
+      and(
+        eq(factorProposal.userId, scope.userId),
+        eq(factorProposal.operationId, operationId),
+        eq(factorProposal.digest, digest),
+      ),
+    )
+  return proposal ?? null
+}
+
+export async function refuseFactorOperation(
+  scope: AccountAuthScope,
+  id: string,
+  now: number,
+): Promise<void> {
+  await atomic(scope.db, [
+    scope.db.run(
+      sql`update account_security_operation set refused_at = ${now} where id = ${id} and user_id = ${scope.userId} and claim is null and committed_at is null and refused_at is null`,
+    ),
+    scope.db.run(
+      sql`delete from factor_proposal where operation_id = ${id} and user_id = ${scope.userId} and exists(select 1 from account_security_operation where id = ${id} and user_id = ${scope.userId} and refused_at is not null)`,
+    ),
+  ])
+}
+
+/** The native backup verifier shares the same encrypted-set CAS as management. */
+export async function consumeNativeBackup(
+  scope: AccountAuthScope,
+  proof: ProofRevision,
+  snapshot: NonNullable<FactorSnapshot['factor']>,
+  encryptedCodes: string,
+) {
+  const [changed] = await scope.db
+    .update(twoFactor)
+    .set({ backupCodes: encryptedCodes })
+    .where(
+      and(
+        eq(twoFactor.userId, scope.userId),
+        eq(twoFactor.id, snapshot.id),
+        eq(twoFactor.secret, snapshot.secret),
+        eq(twoFactor.backupCodes, snapshot.backupCodes),
+        sql`exists(select 1 from account_security where user_id = ${scope.userId} and revision = ${proof.revision} and deletion_id is null)`,
+      ),
+    )
+    .returning()
+  return changed ?? null
+}
+
+export interface FactorCommit {
+  id: string
+  intent: string
+  kind: 'enable' | 'replace' | 'disable' | 'backup'
+  sessionId: string
+  token: string
+  receiptDigest: string
+  claim: string
+  now: number
+  expected: FactorSnapshot
+  proposed: { id: string; secret: string; backupCodes: string } | null
+  proposalDigest?: string
+  reservations: Array<FactorReservation>
+  replay: Array<{ digest: string; step: number }>
+  newSession: { id: string; token: string; expiresAt: number }
+}
+
+/** Only the winning claim may publish factor authority, proof consumption or a replacement session. */
+export async function commitFactor(
+  scope: AccountAuthScope,
+  input: FactorCommit,
+): Promise<boolean> {
+  if (
+    !input.expected.credential?.password ||
+    input.reservations.length < 1 ||
+    input.reservations.length > 2 ||
+    input.replay.length > 2
+  )
+    throw new AccountAuthorityError()
+  if (
+    (input.kind === 'enable' || input.kind === 'replace') &&
+    !input.proposalDigest
+  )
+    throw new AccountAuthorityError()
+  if (
+    (input.kind === 'disable') !== (input.proposed === null) ||
+    (input.kind === 'enable') === input.expected.enabled ||
+    (input.kind !== 'enable' && !input.expected.factor?.verified)
+  )
+    throw new AccountAuthorityError()
+  const { id, claim, now, expected, proposed } = input
+  const credential = expected.credential
+  if (!credential?.password) throw new AccountAuthorityError()
+  const clock = sql`max(${now}, cast(unixepoch('subsec') * 1000 as integer))`
+  const winning = sql`exists(select 1 from account_security_operation where id = ${id} and user_id = ${scope.userId} and claim = ${claim} and committed_at is null and refused_at is null)`
+  const factorMatches = expected.factor
+    ? sql`exists(select 1 from two_factor f where f.user_id = ${scope.userId} and f.id = ${expected.factor.id} and f.secret = ${expected.factor.secret} and f.backup_codes = ${expected.factor.backupCodes} and f.verified = ${expected.factor.verified ? 1 : 0})`
+    : sql`not exists(select 1 from two_factor where user_id = ${scope.userId})`
+  const reservations = input.reservations.map(
+    (entry) =>
+      sql`exists(select 1 from factor_budget b where b.user_id = ${scope.userId} and b.domain = ${entry.domain} and b.version = ${entry.version} and b.recovery_at = ${entry.recoveryAt} and b.recovery_at > ${clock})`,
+  )
+  const replay = input.replay.map(
+    (entry) =>
+      sql`not exists(select 1 from factor_replay r where r.user_id = ${scope.userId} and r.secret_digest = ${entry.digest} and r.step >= ${entry.step})`,
+  )
+  const proposal = input.proposalDigest
+    ? sql`exists(select 1 from factor_proposal p where p.operation_id = ${id} and p.user_id = ${scope.userId} and p.digest = ${input.proposalDigest} and p.expires_at > ${clock})`
+    : sql`1 = 1`
+  const statements: [BatchStatement, ...Array<BatchStatement>] = [
+    scope.db.run(sql`update account_security_operation set claim = ${claim}
+      where id = ${id} and user_id = ${scope.userId} and session_id = ${input.sessionId} and intent = ${input.intent} and kind = ${input.kind} and receipt_digest = ${input.receiptDigest}
+      and claim is null and committed_at is null and refused_at is null and expires_at > ${clock}
+      and exists(select 1 from account_security a join session_authority m on m.user_id = a.user_id and m.revision = a.revision join session s on s.id = m.session_id join user u on u.id = a.user_id
+        where a.user_id = ${scope.userId} and a.revision = account_security_operation.revision and a.deletion_id is null and a.revision < ${Number.MAX_SAFE_INTEGER - 1} and a.trust_revision < ${Number.MAX_SAFE_INTEGER - 1}
+        and s.id = ${input.sessionId} and s.token = ${input.token} and s.impersonated_by is null and s.created_at > ${clock} - 300000 and s.created_at <= ${clock} and s.expires_at > ${clock}
+        and u.two_factor_enabled = ${expected.enabled ? 1 : 0} and (u.banned = 0 or (u.ban_expires is not null and u.ban_expires <= ${clock})))
+      and exists(select 1 from account c where c.user_id = ${scope.userId} and c.provider_id = 'credential' and c.id = ${credential.id} and c.password = ${credential.password})
+      and exists(select 1 from account_security_fence where id = 1 and cutover = 1 and ready = 1 and anchor_backfill_run_id is not null and value < ${Number.MAX_SAFE_INTEGER - 1})
+      and ${factorMatches} and ${proposal} and ${and(...reservations, ...replay)}`),
+    scope.db.run(
+      sql`delete from two_factor where user_id = ${scope.userId} and ${winning}`,
+    ),
+  ]
+  if (proposed)
+    statements.push(
+      scope.db
+        .run(sql`insert into two_factor (id, user_id, secret, backup_codes, verified, failed_verification_count, locked_until)
+    select ${proposed.id}, ${scope.userId}, ${proposed.secret}, ${proposed.backupCodes}, 1, 0, null where ${winning}`),
+    )
+  statements.push(
+    scope.db.run(
+      sql`update user set two_factor_enabled = ${proposed ? 1 : 0}, updated_at = ${clock} where id = ${scope.userId} and ${winning}`,
+    ),
+    scope.db.run(
+      sql`update account_security_fence set value = value + 1 where id = 1 and ${winning}`,
+    ),
+    scope.db.run(
+      sql`update account_security set revision = revision + 1, trust_revision = trust_revision + 1, last_fence = (select value from account_security_fence where id = 1) where user_id = ${scope.userId} and ${winning}`,
+    ),
+    scope.db
+      .run(sql`insert into session (id, token, user_id, active_organization_id, ip_address, user_agent, impersonated_by, created_at, updated_at, expires_at)
+      select ${input.newSession.id}, ${input.newSession.token}, user_id, active_organization_id, ip_address, user_agent, null, ${clock}, ${clock}, ${input.newSession.expiresAt}
+      from session where id = ${input.sessionId} and user_id = ${scope.userId} and ${winning}`),
+    scope.db
+      .run(sql`insert into session_authority (session_id, user_id, revision, method, proof_at)
+      select ${input.newSession.id}, user_id, revision, 'factor-management', ${clock} from account_security where user_id = ${scope.userId} and ${winning}`),
+  )
+  for (const entry of input.replay)
+    statements.push(
+      scope.db
+        .run(sql`insert into factor_replay (user_id, secret_digest, step) select ${scope.userId}, ${entry.digest}, ${entry.step} where ${winning}
+    on conflict(user_id, secret_digest) do update set step = excluded.step`),
+    )
+  for (const entry of input.reservations)
+    statements.push(
+      scope.db.run(
+        sql`update factor_budget set attempts = 0, recovery_at = 0, version = version + 1 where user_id = ${scope.userId} and domain = ${entry.domain} and version = ${entry.version} and ${winning}`,
+      ),
+    )
+  statements.push(
+    scope.db.run(
+      sql`delete from factor_proposal where operation_id = ${id} and user_id = ${scope.userId} and ${winning}`,
+    ),
+    scope.db.run(
+      sql`update account_security_operation set committed_at = ${clock}, factor_enabled = ${proposed ? 1 : 0}, cleanup_pending = 1, rooms_pending = 1 where id = ${id} and user_id = ${scope.userId} and claim = ${claim} and committed_at is null and refused_at is null`,
+    ),
+  )
+  await atomic(scope.db, statements)
+  const outcome = await operationFor(scope, id)
+  return outcome?.claim === claim && outcome.committedAt !== null
 }
 
 async function atomic(
@@ -192,7 +508,7 @@ export async function acceptedSession(
           gt(session.expiresAt, new Date(now)),
           sql`${session.createdAt} <= ${now}`,
           sql`(${user.banned} = 0 or (${user.banExpires} is not null and ${user.banExpires} <= ${now}))`,
-          sql`typeof(${accountSecurity.revision}) = 'integer' and ${accountSecurity.revision} >= 0 and ${accountSecurity.revision} < ${Number.MAX_SAFE_INTEGER} and typeof(${sessionAuthority.proofAt}) = 'integer' and ${sessionAuthority.proofAt} >= 0 and ${sessionAuthority.proofAt} <= ${now} and ${sessionAuthority.method} in ('native', 'legacy')`,
+          sql`typeof(${accountSecurity.revision}) = 'integer' and ${accountSecurity.revision} >= 0 and ${accountSecurity.revision} < ${Number.MAX_SAFE_INTEGER} and typeof(${sessionAuthority.proofAt}) = 'integer' and ${sessionAuthority.proofAt} >= 0 and ${sessionAuthority.proofAt} <= ${now} and ${sessionAuthority.method} in ('native', 'legacy', 'factor-management')`,
         ),
       )
     return row?.session ?? null
@@ -259,16 +575,32 @@ export async function registerRevocation(
     receiptDigest: string
     revision: number
     expiresAt: number
+    kind?: FactorCommit['kind'] | 'revoke-others'
   },
 ): Promise<void> {
+  const now = sql`max(${Date.now()}, cast(unixepoch('subsec') * 1000 as integer))`
   await scope.db
-    .run(sql`insert into account_security_operation (id, user_id, session_id, intent, receipt_digest, revision, expires_at, committed_at, claim, attempted_at, cleanup_pending, rooms_pending, rooms_recorded)
-    select ${input.id}, s.user_id, s.id, ${input.intent}, ${input.receiptDigest}, a.revision, ${input.expiresAt}, null, null, 0, 0, 0, 0
+    .run(sql`insert into account_security_operation (id, user_id, session_id, intent, receipt_digest, revision, expires_at, committed_at, claim, attempted_at, cleanup_pending, rooms_pending, rooms_recorded, kind)
+    select ${input.id}, s.user_id, s.id, ${input.intent}, ${input.receiptDigest}, a.revision, min(${input.expiresAt}, s.created_at + 300000), null, null, 0, 0, 0, 0, ${input.kind ?? 'revoke-others'}
     from session s join account_security a on a.user_id = s.user_id join session_authority m on m.session_id = s.id and m.revision = a.revision
     where s.id = ${input.sessionId} and s.user_id = ${scope.userId} and a.revision = ${input.revision}
-    and s.impersonated_by is null and s.created_at > ${input.expiresAt - 600000} and s.expires_at > ${input.expiresAt - 300000}
-    and not exists(select 1 from account_security_operation o where o.user_id = s.user_id and o.session_id = s.id and o.committed_at is null and o.expires_at > ${input.expiresAt - 300000})`)
-  if (!(await operationFor(scope, input.id))) throw new AccountAuthorityError()
+    and s.impersonated_by is null and s.created_at > ${now} - 300000 and s.created_at <= ${now} and s.expires_at > ${now}
+    and not exists(select 1 from account_security_operation duplicate where duplicate.user_id = s.user_id and duplicate.intent = ${input.intent})
+    and not exists(select 1 from account_security_operation o where o.user_id = s.user_id and o.session_id = s.id and o.committed_at is null and o.refused_at is null and o.expires_at > ${now})`)
+  const operation = await operationFor(scope, input.id)
+  if (
+    !operation ||
+    operation.receiptDigest !== input.receiptDigest ||
+    operation.intent !== input.intent ||
+    operation.kind !== (input.kind ?? 'revoke-others') ||
+    operation.sessionId !== input.sessionId ||
+    operation.revision !== input.revision ||
+    operation.claim !== null ||
+    operation.committedAt !== null ||
+    operation.refusedAt !== null ||
+    operation.expiresAt <= Date.now()
+  )
+    throw new AccountAuthorityError()
 }
 
 export async function operationFor(scope: AccountAuthScope, id: string) {
@@ -301,7 +633,7 @@ export async function commitRevocation(
   await atomic(scope.db, [
     scope.db.run(sql`update account_security_operation set claim = ${claim}
       where id = ${id} and user_id = ${scope.userId} and session_id = ${sessionId} and intent = ${intent}
-      and claim is null and committed_at is null and expires_at > ${effectiveNow}
+      and kind = 'revoke-others' and refused_at is null and claim is null and committed_at is null and expires_at > ${effectiveNow}
       and exists(select 1 from account_security a join session_authority m on m.user_id = a.user_id and m.revision = a.revision
         join session s on s.id = m.session_id where a.user_id = ${scope.userId} and a.revision = account_security_operation.revision and a.deletion_id is null and a.revision < ${Number.MAX_SAFE_INTEGER - 1}
         and s.id = ${sessionId} and s.token = ${token} and s.impersonated_by is null
@@ -475,6 +807,9 @@ export async function receiptStatus(
   const [row] = await db
     .select({
       committedAt: securityOperation.committedAt,
+      refusedAt: securityOperation.refusedAt,
+      kind: securityOperation.kind,
+      factorEnabled: securityOperation.factorEnabled,
       cleanupPending: securityOperation.cleanupPending,
       expiresAt: securityOperation.expiresAt,
     })
@@ -493,20 +828,25 @@ export async function pendingRegistration(
   scope: AccountAuthScope,
   sessionId: string,
   now: number,
-): Promise<boolean> {
+) {
   const [row] = await scope.db
-    .select({ id: securityOperation.id })
+    .select({
+      id: securityOperation.id,
+      intent: securityOperation.intent,
+      kind: securityOperation.kind,
+      revision: securityOperation.revision,
+    })
     .from(securityOperation)
     .where(
       and(
         eq(securityOperation.userId, scope.userId),
         eq(securityOperation.sessionId, sessionId),
         gt(securityOperation.expiresAt, now),
-        sql`${securityOperation.committedAt} is null`,
+        sql`${securityOperation.committedAt} is null and ${securityOperation.refusedAt} is null`,
       ),
     )
     .limit(1)
-  return row !== undefined
+  return row ?? null
 }
 
 /** Native adapter deletion only; a pending operation keeps its durable source in the same statement. */
@@ -902,10 +1242,34 @@ export async function pruneAccountSecurityMetadata(
 ): Promise<void> {
   await atomic(db, [
     db.run(
+      sql`delete from factor_replay where rowid in (select rowid from factor_replay where step < ${Math.floor(now / 30000) - 1} limit 200)`,
+    ),
+    db.run(
+      sql`delete from factor_proposal where digest in (select digest from factor_proposal where expires_at <= ${now} order by expires_at limit 200)`,
+    ),
+    db.run(
       sql`delete from verification_authority where identifier in (select identifier from verification_authority where expires_at <= ${now} order by expires_at, identifier limit 200)`,
     ),
     db.run(
       sql`delete from account_security_operation where id in (select id from account_security_operation where cleanup_pending = 0 and expires_at + 900000 <= ${now} and (committed_at is null or committed_at + 900000 <= ${now}) order by expires_at, id limit 200)`,
     ),
   ])
+}
+
+export async function factorStepUsed(
+  scope: AccountAuthScope,
+  digest: string,
+  step: number,
+): Promise<boolean> {
+  const [row] = await scope.db
+    .select({ step: factorReplay.step })
+    .from(factorReplay)
+    .where(
+      and(
+        eq(factorReplay.userId, scope.userId),
+        eq(factorReplay.secretDigest, digest),
+      ),
+    )
+    .limit(1)
+  return row !== undefined && row.step >= step
 }
