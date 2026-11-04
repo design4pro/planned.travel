@@ -25,6 +25,7 @@
 import { sql } from 'drizzle-orm'
 import {
   check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -967,6 +968,7 @@ export const places = sqliteTable(
     index('places_org_country_idx').on(t.organizationId, t.countryCode),
     index('places_trip_sort_idx').on(t.tripId, t.sortOrder),
     index('places_org_name_idx').on(t.organizationId, t.name),
+    uniqueIndex('places_photo_parent_idx').on(t.organizationId, t.tripId, t.id),
     index('places_external_idx').on(t.source, t.externalId),
     enumCheck('places_transport_mode_chk', t.transportMode, TRANSPORT_MODES),
     enumCheck('places_source_chk', t.source, PLACE_SOURCES),
@@ -977,6 +979,32 @@ export const places = sqliteTable(
       sql.raw('("rating" IS NULL OR ("rating" BETWEEN 1 AND 5))'),
     ),
     ...latLngChecks('places_lat_chk', t.lat, t.lng),
+  ],
+)
+
+/** Phase 1 owns only compatibility selection; assets and provider metadata land with their lifecycle. */
+export const placePhotoSelections = sqliteTable(
+  'place_photo_selections',
+  {
+    organizationId: orgRef(),
+    tripId: text('trip_id').notNull(),
+    placeId: text('place_id').notNull(),
+    version: integer('version').notNull().default(0),
+    mode: text('mode', { enum: ['legacy', 'fallback'] }).notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.organizationId, t.placeId] }),
+    index('place_photo_selections_trip_idx').on(t.organizationId, t.tripId),
+    foreignKey({
+      columns: [t.organizationId, t.tripId, t.placeId],
+      foreignColumns: [places.organizationId, places.tripId, places.id],
+    }).onDelete('cascade'),
+    nonNegativeCheck('place_photo_selections_version_chk', t.version),
+    enumCheck('place_photo_selections_mode_chk', t.mode, [
+      'legacy',
+      'fallback',
+    ]),
   ],
 )
 

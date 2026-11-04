@@ -1,3 +1,5 @@
+import { usePlaceImage } from '#/lib/use-place-image'
+import type { PlacePhoto } from '#/lib/place-photo'
 import * as React from 'react'
 import { Check } from 'lucide-react'
 import { cva } from 'class-variance-authority'
@@ -173,6 +175,7 @@ export interface PlacePinProps
   readonly name: string
   /** Thumbnail. Falls back to the category glyph when absent or broken. */
   readonly imageUrl?: string | null
+  readonly photo?: PlacePhoto
   /** `categories.icon` — the kebab-case `lucide-react` name. */
   readonly icon?: string | null
   /** `categories.colour`. Drives the ring. */
@@ -194,6 +197,7 @@ export const PlacePin = React.forwardRef<HTMLButtonElement, PlacePinProps>(
     {
       name,
       imageUrl,
+      photo,
       icon,
       colour,
       dayNumber,
@@ -209,9 +213,7 @@ export const PlacePin = React.forwardRef<HTMLButtonElement, PlacePinProps>(
     ref,
   ) => {
     const { locale } = useAtlasI18n()
-    const [imageFailed, setImageFailed] = React.useState(false)
-    const showImage =
-      typeof imageUrl === 'string' && imageUrl !== '' && !imageFailed
+    const { url, onError } = usePlaceImage(imageUrl, photo)
     // `cva` variant props are nullable, so the default parameter is not enough.
     const glyphSize = glyphSizes[size ?? 'md']
 
@@ -225,14 +227,14 @@ export const PlacePin = React.forwardRef<HTMLButtonElement, PlacePinProps>(
         {...props}
       >
         <span className="grid size-full place-items-center overflow-hidden rounded-full bg-surface text-ink-2">
-          {showImage ? (
+          {url ? (
             <img
-              src={imageUrl}
+              src={url}
               alt=""
               loading="lazy"
               decoding="async"
               className="size-full object-cover"
-              onError={() => setImageFailed(true)}
+              onError={onError}
             />
           ) : (
             <CategoryIcon name={icon} size={glyphSize} />

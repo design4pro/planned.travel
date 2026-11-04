@@ -14,8 +14,7 @@ import type { PinSize } from './pins'
 import type { MapCategory, MapPlace } from './types'
 
 /** Space a card needs above the pin before it has to flip below it. */
-const CARD_CLEARANCE_WITH_IMAGE = 260
-const CARD_CLEARANCE = 150
+const CARD_CLEARANCE = 260
 
 export interface PlaceMarkerProps {
   readonly place: MapPlace
@@ -62,18 +61,14 @@ export function PlaceMarker({
   const [open, setOpen] = React.useState(false)
   const [flipped, setFlipped] = React.useState(false)
 
-  const hasImage = typeof place.imageUrl === 'string' && place.imageUrl !== ''
-
   const show = React.useCallback(() => {
     if (map !== null) {
       const point = map.project([place.lng, place.lat])
-      setFlipped(
-        point.y < (hasImage ? CARD_CLEARANCE_WITH_IMAGE : CARD_CLEARANCE),
-      )
+      setFlipped(point.y < CARD_CLEARANCE)
     }
     setOpen(true)
     onHoverChange?.(place)
-  }, [hasImage, map, onHoverChange, place])
+  }, [map, onHoverChange, place])
 
   const hide = React.useCallback(() => {
     setOpen(false)
@@ -100,6 +95,7 @@ export function PlaceMarker({
           name={place.name}
           label={label}
           imageUrl={place.imageUrl}
+          photo={place.photo}
           icon={category?.icon}
           colour={category?.colour}
           dayNumber={place.dayNumber}
@@ -135,6 +131,7 @@ export function PlaceMarker({
             >
               <MarkerPopover
                 decorative
+                placeId={place.id}
                 name={place.name}
                 category={
                   category === null || category === undefined
@@ -148,6 +145,7 @@ export function PlaceMarker({
                 address={place.address}
                 rating={place.rating}
                 imageUrl={place.imageUrl}
+                photo={place.photo}
                 meta={meta}
                 side={flipped ? 'top' : 'bottom'}
               />

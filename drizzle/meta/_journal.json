@@ -169,6 +169,13 @@
       "when": 1793753930273,
       "tag": "0023_yielding_nehzno",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1793763600577,
+      "tag": "0024_gray_wither",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { PlaceThumb } from '#/components/planner/place-thumb'
+import type { PlacePhoto } from '#/lib/place-photo'
 import * as React from 'react'
 import { MapPin, Star } from 'lucide-react'
 
@@ -24,6 +26,8 @@ export interface MarkerPopoverProps extends React.ComponentPropsWithoutRef<'div'
   /** 1–5. Rendered as stars with a text equivalent for readers. */
   readonly rating?: number | null
   readonly imageUrl?: string | null
+  readonly photo?: PlacePhoto
+  readonly placeId?: string
   /** Extra line under the title — "Day 2 · 10:00", a price, a duration. */
   readonly meta?: React.ReactNode
   /** Which edge the pointer sits on. `bottom` means the card floats above the pin. */
@@ -76,6 +80,8 @@ export const MarkerPopover = React.forwardRef<
       address,
       rating,
       imageUrl,
+      photo,
+      placeId,
       meta,
       side = 'bottom',
       showName = true,
@@ -98,15 +104,14 @@ export const MarkerPopover = React.forwardRef<
         )}
         {...props}
       >
-        {typeof imageUrl === 'string' && imageUrl !== '' ? (
-          <img
-            src={imageUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="aspect-[16/10] w-full border-b border-edge-faint object-cover"
-          />
-        ) : null}
+        <PlaceThumb
+          placeId={placeId ?? name}
+          imageUrl={imageUrl}
+          photo={photo}
+          icon={category?.icon}
+          colour={category?.colour}
+          className="aspect-[16/10] h-auto w-full rounded-none border-b border-edge-faint"
+        />
 
         <div className="p-3">
           {showName ? (

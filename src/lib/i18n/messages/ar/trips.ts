@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'تعديل الصورة',
+  'plan.photo.unavailable':
+    'رفع الصور وتعديلها غير متاحين. يتم الاحتفاظ بالصورة الحالية.',
   'collab.readOnly.archived': 'هذه الرحلة مؤرشفة. التعاون متاح للقراءة فقط.',
   'collab.readOnly.role':
     'يمكن لمالكي الرحلة ومحرريها فقط تغيير المحادثة والملاحظات والاستطلاعات.',

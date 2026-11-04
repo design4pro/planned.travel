@@ -81,12 +81,14 @@ export function PlaceDetail({
         className="min-h-0 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         <MarkerPopover
+          placeId={place.placeId}
           name={place.name}
           showName={false}
           category={category}
           address={place.location}
           rating={place.rating}
           imageUrl={place.imageUrl}
+          photo={place.photo}
           side={null}
           className="w-full max-w-none rounded-none border-0 shadow-none"
         />

@@ -199,6 +199,28 @@ it('lets keyboard readers enter Place content and dismiss only from inside the d
   expect(document.activeElement).toBe(title)
 })
 
+it('keeps the selected Place photo version in the shared reading panel', async () => {
+  setup({
+    ...initial,
+    places: initial.places.map((place) => ({
+      ...place,
+      imageUrl: '/old-photo.jpg',
+      photo: {
+        version: 2,
+        source: 'legacy' as const,
+        imageUrl: '/selected-photo.jpg',
+      },
+    })),
+  })
+  await openDay()
+  await userEvent.click(screen.getByRole('button', { name: 'Days' }))
+  await userEvent.click(screen.getByRole('button', { name: /^Place p1,/ }))
+  const detail = await screen.findByRole('region', { name: 'Place p1' })
+  expect(detail.querySelector('img')?.getAttribute('src')).toBe(
+    '/selected-photo.jpg',
+  )
+})
+
 it.each([
   [true, true],
   [true, false],

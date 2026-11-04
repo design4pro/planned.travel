@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Görseli düzenle',
+  'plan.photo.unavailable':
+    'Görsel yükleme ve düzenleme kullanılamıyor. Mevcut görsel korunur.',
   'collab.readOnly.archived': 'Bu gezi arşivlendi. İş birliği salt okunurdur.',
   'collab.readOnly.role':
     'Yalnızca gezi sahipleri ve düzenleyicileri konuşmayı, notları ve anketleri değiştirebilir.',

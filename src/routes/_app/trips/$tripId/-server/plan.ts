@@ -18,6 +18,8 @@
  * `1..n` day run — owned solely by `syncTripDays` — safe from a drag.
  */
 
+import type { PlacePhoto } from '#/lib/place-photo'
+
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -41,6 +43,7 @@ import {
   listDayAssignments,
   listTripAssignments,
   listTripPlaces,
+  listTripPlacePhotos,
   listUnscheduledPlaces,
   reorderDayTimelines,
   reorderPlaces,
@@ -119,6 +122,7 @@ export interface PlanBoardPlace {
   readonly city: string | null
   readonly categoryId: string | null
   readonly imageUrl: string | null
+  readonly photo?: PlacePhoto
   readonly website: string | null
   readonly description: string | null
   readonly rating: number | null
@@ -241,13 +245,14 @@ export async function readPlanBoard(
 ): Promise<PlanBoardPayload> {
   const trip = await requireTrip(scope, tripId)
 
-  const [role, itinerary, inventory, unscheduled, categories] =
+  const [role, itinerary, inventory, unscheduled, categories, photos] =
     await Promise.all([
       tripRoleFor(scope, trip.id, scope.ctx.userId),
       getTripItinerary(scope, trip.id),
       listTripPlaces(scope, { tripId: trip.id }),
       listUnscheduledPlaces(scope, trip.id),
       listCategories(scope),
+      listTripPlacePhotos(scope, trip.id),
     ])
 
   return {
@@ -270,6 +275,7 @@ export async function readPlanBoard(
       city: place.city,
       categoryId: place.categoryId,
       imageUrl: place.imageUrl,
+      photo: photos.get(place.id),
       website: place.website,
       description: place.description,
       rating: place.rating,

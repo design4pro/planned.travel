@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Kép szerkesztése',
+  'plan.photo.unavailable':
+    'A képek feltöltése és szerkesztése nem érhető el. A jelenlegi kép megmarad.',
   'collab.readOnly.archived':
     'Ez az utazás archiválva van. Az együttműködés csak olvasható.',
   'collab.readOnly.role':

@@ -17,6 +17,9 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'plan.photo.edit': 'Edit image',
+  'plan.photo.unavailable':
+    'Image uploads and editing are unavailable. The current image is kept.',
   'collab.readOnly.archived':
     'This trip is archived. Collaboration is read-only.',
   'collab.readOnly.role':
