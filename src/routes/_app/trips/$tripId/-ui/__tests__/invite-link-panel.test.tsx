@@ -70,6 +70,25 @@ describe('invite link panel', () => {
     expect(screen.getByRole('status').textContent).toBe('Link copied')
     expect(rpc.create).toHaveBeenCalledTimes(1)
   })
+  it('restores action focus after the mutation render even when a frame runs first', async () => {
+    const frame = vi
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((callback) => {
+        callback(0)
+        return 0
+      })
+    try {
+      const user = userEvent.setup()
+      show()
+      await user.tab()
+      await user.keyboard('{Enter}')
+      const copy = await screen.findByRole('button', { name: 'Copy link' })
+      await waitFor(() => expect(document.activeElement).toBe(copy))
+      expect(copy.hasAttribute('disabled')).toBe(false)
+    } finally {
+      frame.mockRestore()
+    }
+  })
   it.each(['off', 'stale', 'creator-gone', 'archived'] as const)(
     'hides the URL in %s',
     (state) => {

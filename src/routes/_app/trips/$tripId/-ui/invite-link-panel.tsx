@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { Link as LinkIcon } from 'lucide-react'
 import {
   Alert,
@@ -60,6 +60,15 @@ export function InviteLinkPanel({
   const input = useRef<HTMLInputElement>(null)
   const create = useRef<HTMLButtonElement>(null)
   const returnToCopy = useRef(false)
+  const pendingFocus = useRef<(() => void) | null>(null)
+
+  // A frame may run before React commits the enabled replacement control.
+  useLayoutEffect(() => {
+    if (busy) return
+    const restore = pendingFocus.current
+    pendingFocus.current = null
+    restore?.()
+  })
 
   // Local component state is the only owner of a revealed credential. A changed loader snapshot
   // invalidates it before re-authorising; no URL enters router data, query caches or storage.
@@ -181,12 +190,12 @@ export function InviteLinkPanel({
     } finally {
       lock.current = false
       if (mounted.current) {
-        setBusy(false)
-        requestAnimationFrame(() => {
+        pendingFocus.current = () => {
           if (focus === 'copy') focusControl(copy.current)
           else if (focus === 'replace') focusControl(replace.current)
           else if (!previousFocus?.isConnected) focusControl(null)
-        })
+        }
+        setBusy(false)
       }
     }
   }
@@ -202,8 +211,10 @@ export function InviteLinkPanel({
       setError('trips.invite.error.title')
     } finally {
       lock.current = false
-      setBusy(false)
-      requestAnimationFrame(() => focusControl(null))
+      if (mounted.current) {
+        pendingFocus.current = () => focusControl(null)
+        setBusy(false)
+      }
     }
   }
 

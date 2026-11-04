@@ -123,11 +123,9 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
     await unblockCrossOriginFonts(page)
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
-    const report = watchConsole(page, {
-      name: 'invite-panel',
-      path: '/trips',
-      ready: 'main',
-    })
+    const consoleRoute = { name: 'invite-panel', path: '/trips', ready: 'main' }
+    const plainReport = watchConsole(page, consoleRoute)
+    const mapReport = watchConsole(page, { ...consoleRoute, map: true })
     await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
     const title = `Invite link proof ${Date.now()}`
     await page
@@ -136,6 +134,33 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
       .click()
     const creation = page.getByRole('dialog')
     await creation.getByLabel('Trip name').fill(title)
+    // Only creation through the completed People navigation owns a live map.
+    const plainStart = {
+      fatal: plainReport().fatal.length,
+      tolerated: plainReport().tolerated.length,
+    }
+    const mapStart = {
+      fatal: mapReport().fatal.length,
+      tolerated: mapReport().tolerated.length,
+    }
+    let plainEnd = plainStart
+    let mapEnd = mapStart
+    const report = () => {
+      const plain = plainReport()
+      const map = mapReport()
+      return {
+        fatal: [
+          ...plain.fatal.slice(0, plainStart.fatal),
+          ...map.fatal.slice(mapStart.fatal, mapEnd.fatal),
+          ...plain.fatal.slice(plainEnd.fatal),
+        ],
+        tolerated: [
+          ...plain.tolerated.slice(0, plainStart.tolerated),
+          ...map.tolerated.slice(mapStart.tolerated, mapEnd.tolerated),
+          ...plain.tolerated.slice(plainEnd.tolerated),
+        ],
+      }
+    }
     await creation
       .getByRole('button', { name: 'Create trip', exact: true })
       .click()
@@ -186,6 +211,14 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         { name: 'people', path: peoplePath, ready: 'main' },
         'light',
       )
+      plainEnd = {
+        fatal: plainReport().fatal.length,
+        tolerated: plainReport().tolerated.length,
+      }
+      mapEnd = {
+        fatal: mapReport().fatal.length,
+        tolerated: mapReport().tolerated.length,
+      }
       const panel = page.getByRole('region', {
         name: 'Invite link',
         exact: true,
@@ -348,6 +381,12 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         .click()
       await expect(deletion).toBeHidden()
     }
+    const verdict = report()
+    await test.info().attach('console-report', {
+      body: JSON.stringify(verdict),
+      contentType: 'application/json',
+    })
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
   test('keeps recovery headings visible below sticky navigation', async ({
     context,

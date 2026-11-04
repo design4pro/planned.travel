@@ -2053,7 +2053,8 @@ test.describe('01-S8c — Initial members on trip creation', () => {
   test('a trip created with an editor and a viewer lists both on its People screen', async ({
     page,
   }) => {
-    const report = watchConsole(page, TRIPS)
+    const plainReport = watchConsole(page, TRIPS)
+    const mapReport = watchConsole(page, { ...TRIPS, map: true })
     await visit(page, TRIPS, 'light')
 
     const create = page
@@ -2086,6 +2087,33 @@ test.describe('01-S8c — Initial members on trip creation', () => {
     await dialog.getByRole('combobox', { name: `Role · ${viewer}` }).click()
     await page.getByRole('option', { name: 'Viewer', exact: true }).click()
 
+    // Only creation through the completed People navigation owns a live map.
+    const plainStart = {
+      fatal: plainReport().fatal.length,
+      tolerated: plainReport().tolerated.length,
+    }
+    const mapStart = {
+      fatal: mapReport().fatal.length,
+      tolerated: mapReport().tolerated.length,
+    }
+    let plainEnd = plainStart
+    let mapEnd = mapStart
+    const report = () => {
+      const plain = plainReport()
+      const map = mapReport()
+      return {
+        fatal: [
+          ...plain.fatal.slice(0, plainStart.fatal),
+          ...map.fatal.slice(mapStart.fatal, mapEnd.fatal),
+          ...plain.fatal.slice(plainEnd.fatal),
+        ],
+        tolerated: [
+          ...plain.tolerated.slice(0, plainStart.tolerated),
+          ...map.tolerated.slice(mapStart.tolerated, mapEnd.tolerated),
+          ...plain.tolerated.slice(plainEnd.tolerated),
+        ],
+      }
+    }
     await dialog.getByRole('button', { name: 'Create trip' }).click()
     try {
       await expect(page).toHaveURL(/\/trips\/[^/]+\/plan(\?|$)/)
@@ -2106,6 +2134,14 @@ test.describe('01-S8c — Initial members on trip creation', () => {
         },
         'light',
       )
+      plainEnd = {
+        fatal: plainReport().fatal.length,
+        tolerated: plainReport().tolerated.length,
+      }
+      mapEnd = {
+        fatal: mapReport().fatal.length,
+        tolerated: mapReport().tolerated.length,
+      }
       await expect(
         page.getByRole('heading', { name: 'On this trip' }),
       ).toBeVisible()
@@ -2120,6 +2156,10 @@ test.describe('01-S8c — Initial members on trip creation', () => {
     }
 
     const verdict = report()
+    await test.info().attach('console-report', {
+      body: JSON.stringify(verdict),
+      contentType: 'application/json',
+    })
     expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
 })
