@@ -8,7 +8,12 @@
 import { and, eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { member, organization } from '#/server/db/auth-schema'
-import { newId, subscriptions } from '#/server/db/schema'
+import {
+  newId,
+  subscriptions,
+  tripCostCategories,
+  expenses,
+} from '#/server/db/schema'
 import {
   findLivePaidSubscription,
   getSubscription,
@@ -30,7 +35,13 @@ import {
   WorkspaceHasLiveSubscriptionError,
   WorkspaceNotEmptyError,
   deleteWorkspace,
+  drainWorkspace,
 } from '../members'
+import { listTripDays } from '../days'
+import { createTransport } from '../transports'
+import { createReservation, linkReservationExpense } from '../reservations'
+import { createExpense } from '../expenses'
+import { createAccommodation } from '../itinerary'
 import { createPlace } from '../places'
 import { createTrip, listWorkspaceTripIds } from '../trips'
 import { captureError, createHarness } from './harness'
@@ -128,11 +139,11 @@ describe('deleteWorkspace', () => {
       status: 'active',
       providerSubscriptionId: 'sub_b',
     })
-    const bBefore = rowCounts(b.organizationId)
+    const bBefore = tenantRows(b.organizationId)
 
     await deleteWorkspace(a.scope, { departingUserId: a.ownerUserId })
 
-    expect(rowCounts(b.organizationId)).toEqual(bBefore)
+    expect(tenantRows(b.organizationId)).toEqual(bBefore)
     expect(await organizationRows(b.organizationId)).toHaveLength(1)
     expect(await listWorkspaceTripIds(b.scope)).toHaveLength(1)
     expect(await listWorkspaceJourneyPhotoKeys(b.scope)).toHaveLength(2)
@@ -207,7 +218,7 @@ describe('deleteWorkspace', () => {
     ).resolves.toBeUndefined()
   })
 
-  it('refuses a plain member and lets an admin through', async () => {
+  it('refuses both plain members and admins', async () => {
     const a = await harness.seedTenant('a')
     const memberScope = a.scopeFor(a.ownerUserId, 'member')
     const adminScope = a.scopeFor(a.ownerUserId, 'admin')
@@ -218,8 +229,10 @@ describe('deleteWorkspace', () => {
 
     expect(error).toBeInstanceOf(ForbiddenError)
     expect(await organizationRows(a.organizationId)).toHaveLength(1)
-    await deleteWorkspace(adminScope, { departingUserId: a.ownerUserId })
-    expect(await organizationRows(a.organizationId)).toEqual([])
+    await expect(
+      deleteWorkspace(adminScope, { departingUserId: a.ownerUserId }),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+    expect(await organizationRows(a.organizationId)).toHaveLength(1)
   })
 
   it('reports a workspace that is already gone as not found', async () => {
@@ -536,10 +549,14 @@ describe('collecting what the rows name before they go', () => {
 })
 
 describe('the schema the delete relies on', () => {
-  /** Tenant tables that carry an organization id on purpose without being cascaded out with it. */
+  /** Platform tables whose organization id is attribution, not a cascading tenant discriminator. */
   const KEPT_AFTER_DELETE: ReadonlyArray<string> = [
     // Metering attribution for the platform's own cost accounting, not tenant content (SPEC §5).
     'provider_usage',
+    // Account-owned routing acknowledgements survive workspace deletion until the queue settles them.
+    'account_security_room_cleanup',
+    // Durable deletion recovery must survive the cascade (ADR 0048).
+    'workspace_deletions',
   ]
 
   it('cascades every table that has an organization_id out of the organization row', () => {
@@ -578,4 +595,306 @@ describe('the schema the delete relies on', () => {
       .where(eq(member.organizationId, a.organizationId))
     expect(rows).toEqual([])
   })
+})
+
+describe('bounded workspace drain', () => {
+  it('closes only the selected rooms before deleting trips, then drains tenant tables', async () => {
+    const a = await harness.seedTenant('drain-a')
+    const b = await harness.seedTenant('drain-b')
+    await seedContent(a, 'a')
+    await seedContent(b, 'b')
+    const bBefore = tenantRows(b.organizationId)
+    const insert = harness.sqlite.prepare(
+      'insert into trips (id, organization_id, title, slug, currency, created_by, created_at, updated_at) values (?, ?, ?, ?, ?, ?, ?, ?)',
+    )
+    for (let i = 0; i < 101; i++)
+      insert.run(
+        newId(),
+        a.organizationId,
+        'Volume',
+        newId(),
+        'EUR',
+        a.ownerUserId,
+        Date.now(),
+        Date.now(),
+      )
+    const closed: string[] = []
+    const progress = await drainWorkspace(
+      a.scope,
+      { departingUserId: a.ownerUserId },
+      async (ids) => {
+        expect(ids.length).toBeLessThanOrEqual(100)
+        for (const id of ids)
+          expect(
+            harness.sqlite.prepare('select id from trips where id = ?').get(id),
+          ).toBeDefined()
+        closed.push(...ids)
+      },
+    )
+    expect(progress.drained).toBe(true)
+    expect(closed).toHaveLength(102)
+    expect(new Set(closed).size).toBe(102)
+    expect(await listWorkspaceTripIds(a.scope)).toEqual([])
+    expect(tenantRows(b.organizationId)).toEqual(bBefore)
+    expect(await organizationRows(a.organizationId)).toHaveLength(1)
+  })
+
+  it('does not delete after another member joins during room closing', async () => {
+    const a = await harness.seedTenant('join')
+    await seedContent(a, 'a')
+    await expect(
+      drainWorkspace(a.scope, { departingUserId: a.ownerUserId }, async () => {
+        await a.addUser('New member')
+      }),
+    ).rejects.toBeInstanceOf(WorkspaceNotEmptyError)
+    expect(await listWorkspaceTripIds(a.scope)).toHaveLength(1)
+  })
+
+  it('propagates a room failure and can retry without deleting unclosed trips', async () => {
+    const a = await harness.seedTenant('retry')
+    await seedContent(a, 'a')
+    await expect(
+      drainWorkspace(a.scope, { departingUserId: a.ownerUserId }, async () => {
+        throw new Error('room unavailable')
+      }),
+    ).rejects.toThrow('room unavailable')
+    expect(await listWorkspaceTripIds(a.scope)).toHaveLength(1)
+    expect(
+      (
+        await drainWorkspace(
+          a.scope,
+          { departingUserId: a.ownerUserId },
+          async () => {},
+        )
+      ).drained,
+    ).toBe(true)
+  })
+})
+
+it('bounds audit draining at 20 steps and resumes without touching B contents', async () => {
+  const a = await harness.seedTenant('audit-a')
+  const b = await harness.seedTenant('audit-b')
+  await seedContent(b, 'b')
+  await upsertSubscription(b.scope, {
+    status: 'active',
+    providerSubscriptionId: 'sub_b',
+  })
+  const before = tenantRows(b.organizationId)
+  const insert = harness.sqlite.prepare(
+    'insert into audit_log (id, organization_id, action, created_at) values (?, ?, ?, ?)',
+  )
+  for (let i = 0; i < 2001; i++)
+    insert.run(newId(), a.organizationId, 'test', Date.now())
+  expect(
+    await drainWorkspace(
+      a.scope,
+      { departingUserId: a.ownerUserId },
+      async () => {},
+    ),
+  ).toEqual({ drained: false, steps: 20, deleted: 2000 })
+  expect(rowCounts(a.organizationId).audit_log).toBe(1)
+  expect(
+    (
+      await drainWorkspace(
+        a.scope,
+        { departingUserId: a.ownerUserId },
+        async () => {},
+      )
+    ).drained,
+  ).toBe(true)
+  await deleteWorkspace(a.scope, { departingUserId: a.ownerUserId })
+  expect(
+    Object.values(rowCounts(a.organizationId)).every((count) => count === 0),
+  ).toBe(true)
+  expect(tenantRows(b.organizationId)).toEqual(before)
+})
+
+function tenantRows(organizationId: string) {
+  return Object.fromEntries(
+    Object.keys(rowCounts(organizationId)).map((name) => [
+      name,
+      harness.sqlite
+        .prepare(
+          `select * from "${name}" where organization_id = ? order by rowid`,
+        )
+        .all(organizationId),
+    ]),
+  )
+}
+
+it('preserves all four migrated NO ACTION relationships while draining the whole trip', async () => {
+  const a = await harness.seedTenant('no-action')
+  const trip = await createTrip(a.scope, {
+    title: 'Overnight',
+    startDate: '2026-04-10',
+    endDate: '2026-04-12',
+  })
+  const days = await listTripDays(a.scope, trip.id)
+  await createTransport(a.scope, {
+    tripId: trip.id,
+    title: 'Flight',
+    mode: 'flight',
+    dayId: days[0].id,
+    arrivalDayId: days[1].id,
+  })
+  const reservation = await createReservation(a.scope, {
+    tripId: trip.id,
+    title: 'Stay',
+    startDate: '2026-04-10',
+  })
+  const cost = await createExpense(a.scope, {
+    tripId: trip.id,
+    title: 'Stay',
+    amountMinor: 100,
+    spentOn: '2026-04-10',
+  })
+  await linkReservationExpense(a.scope, reservation.id, cost.expense.id)
+  await createAccommodation(a.scope, {
+    tripId: trip.id,
+    startDayId: days[0].id,
+    endDayId: days[1].id,
+    name: 'Stay',
+    reservationId: reservation.id,
+  })
+  const categoryId = newId()
+  await harness.db.insert(tripCostCategories).values({
+    id: categoryId,
+    organizationId: a.organizationId,
+    tripId: trip.id,
+    name: 'Stay',
+  })
+  await harness.db
+    .update(expenses)
+    .set({ costCategoryId: categoryId })
+    .where(eq(expenses.id, cost.expense.id))
+  expect(
+    (
+      await drainWorkspace(
+        a.scope,
+        { departingUserId: a.ownerUserId },
+        async () => {},
+      )
+    ).drained,
+  ).toBe(true)
+  for (const table of [
+    'trips',
+    'days',
+    'transports',
+    'reservations',
+    'expenses',
+    'trip_cost_categories',
+    'day_accommodations',
+  ]) {
+    expect(rowCounts(a.organizationId)[table]).toBe(0)
+  }
+})
+
+it.each(['admin', 'member'] as const)(
+  'refuses %s before reading or closing rooms',
+  async (role) => {
+    const a = await harness.seedTenant(role)
+    await seedContent(a, 'a')
+    const before = tenantRows(a.organizationId)
+    let closed = false
+    await expect(
+      drainWorkspace(
+        a.scopeFor(a.ownerUserId, role),
+        { departingUserId: a.ownerUserId },
+        async () => {
+          closed = true
+        },
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenError)
+    expect(closed).toBe(false)
+    expect(tenantRows(a.organizationId)).toEqual(before)
+  },
+)
+
+it('refuses a subscription revived during room closure', async () => {
+  const a = await harness.seedTenant('subscription-race')
+  await seedContent(a, 'a')
+  await expect(
+    drainWorkspace(a.scope, { departingUserId: a.ownerUserId }, async () => {
+      await upsertSubscription(a.scope, {
+        status: 'active',
+        providerSubscriptionId: 'sub_a',
+      })
+    }),
+  ).rejects.toBeInstanceOf(WorkspaceHasLiveSubscriptionError)
+  expect(await listWorkspaceTripIds(a.scope)).toHaveLength(1)
+})
+
+it('supports memberless cleanup and an already missing workspace', async () => {
+  const a = await harness.seedTenant('memberless')
+  await seedContent(a, 'a')
+  harness.sqlite
+    .prepare('delete from member where organization_id = ?')
+    .run(a.organizationId)
+  expect((await drainWorkspace(a.scope, {}, async () => {})).drained).toBe(true)
+  await deleteWorkspace(a.scope)
+  expect(await drainWorkspace(a.scope, {}, async () => {})).toEqual({
+    drained: true,
+    steps: 0,
+    deleted: 0,
+  })
+})
+
+it('checks eligibility atomically for a non-trip step too', async () => {
+  const a = await harness.seedTenant('audit-race')
+  const other = await harness.seedTenant('other')
+  harness.sqlite
+    .prepare(
+      'insert into audit_log (id, organization_id, action, created_at) values (?, ?, ?, ?)',
+    )
+    .run(newId(), a.organizationId, 'test', Date.now())
+  const db = new Proxy(harness.db, {
+    get(target, property, receiver) {
+      if (property === 'delete')
+        harness.sqlite
+          .prepare(
+            'insert into member (id, organization_id, user_id, role, created_at) values (?, ?, ?, ?, ?)',
+          )
+          .run(
+            newId(),
+            a.organizationId,
+            other.ownerUserId,
+            'member',
+            Date.now(),
+          )
+      return Reflect.get(target, property, receiver)
+    },
+  })
+  const scope = createScope(db, a.scope.ctx)
+  await expect(
+    drainWorkspace(scope, { departingUserId: a.ownerUserId }, async () => {}),
+  ).rejects.toBeInstanceOf(WorkspaceNotEmptyError)
+  expect(rowCounts(a.organizationId).audit_log).toBe(1)
+})
+
+it('never deletes a trip inserted after the selected rooms were closed', async () => {
+  const a = await harness.seedTenant('trip-race')
+  const first = await createTrip(a.scope, { title: 'First' })
+  let inserted: string | undefined
+  const batches: string[][] = []
+  await drainWorkspace(
+    a.scope,
+    { departingUserId: a.ownerUserId },
+    async (ids) => {
+      batches.push([...ids])
+      if (!inserted) inserted = (await createTrip(a.scope, { title: 'New' })).id
+      else {
+        expect(
+          harness.sqlite
+            .prepare('select id from trips where id = ?')
+            .get(inserted),
+        ).toBeDefined()
+        expect(
+          harness.sqlite
+            .prepare('select id from trips where id = ?')
+            .get(first.id),
+        ).toBeUndefined()
+      }
+    },
+  )
+  expect(batches).toEqual([[first.id], [inserted]])
 })

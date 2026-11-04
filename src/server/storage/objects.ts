@@ -1,5 +1,5 @@
 /**
- * The one place this product moves bytes in R2 — deleting them, and duplicating them.
+ * Low-level R2 byte operations. Quota-bearing writers use storage/admission.ts (ADR 0050).
  *
  * Two callers will reach it and they live on opposite sides of the request boundary: a server
  * function, which has the bucket from `filesBucket()` (`src/server/fns/context.ts`), and the
@@ -26,15 +26,19 @@
  * says so at run time instead, with {@link ObjectCopyError}.
  */
 export interface ObjectStore {
+  head?: (key: string) => Promise<{ size: number } | null>
   delete: (keys: string | Array<string>) => Promise<void>
   get?: (key: string) => Promise<{
     body: ReadableStream | null
+    size?: number
     httpMetadata?: { contentType?: string; contentDisposition?: string }
   } | null>
   put?: (
     key: string,
     value: ReadableStream,
     options?: {
+      onlyIf?: { etagDoesNotMatch: string }
+      customMetadata?: Record<string, string>
       httpMetadata?: { contentType?: string; contentDisposition?: string }
     },
   ) => Promise<unknown>
@@ -95,7 +99,11 @@ export async function deleteObjects(
  * seen from this side; that module imports this one, so the shape is spelled out here.
  */
 export interface PrefixStore {
-  list: (options: { prefix: string; cursor?: string | undefined }) => Promise<{
+  list: (options: {
+    prefix: string
+    cursor?: string | undefined
+    limit?: number
+  }) => Promise<{
     objects: ReadonlyArray<{ key: string }>
     truncated: boolean
     cursor?: string | undefined
@@ -125,27 +133,70 @@ export async function deletePrefix(
   store: PrefixStore,
   prefix: string,
 ): Promise<number> {
+  let deleted = 0
+  for (;;) {
+    const progress = await drainPrefix(store, prefix)
+    deleted += progress.deleted
+    if (progress.drained) return deleted
+  }
+}
+
+export interface ObjectDrainProgress {
+  deleted: number
+  batches: number
+  drained: boolean
+}
+
+/** A bounded pass; retry starts at the remaining keys, so no cursor needs persisting. */
+export async function drainPrefix(
+  store: PrefixStore,
+  prefix: string,
+  maxBatches = 20,
+): Promise<ObjectDrainProgress> {
   if (!DELETABLE_PREFIX.test(prefix)) {
     throw new Error(
       `Refusing to delete the prefix "${prefix}": it is not a whole directory.`,
     )
   }
+  if (!Number.isInteger(maxBatches) || maxBatches < 1 || maxBatches > 20) {
+    throw new Error('A prefix drain needs between 1 and 20 batches.')
+  }
   let deleted = 0
+  let batches = 0
   let cursor: string | undefined
-  for (;;) {
-    const page = await store.list(
-      cursor === undefined ? { prefix } : { prefix, cursor },
-    )
-    deleted += await deleteObjects(
-      store,
-      page.objects.map((object) => object.key),
-    )
-    // A page that claims more but names no way to ask for it ends the loop rather than spinning.
-    if (!page.truncated || page.cursor === undefined) {
-      return deleted
+  while (batches < maxBatches) {
+    const page = await store.list({
+      prefix,
+      limit: R2_DELETE_MAX_KEYS,
+      ...(cursor === undefined ? {} : { cursor }),
+    })
+    if (
+      page.objects.length > R2_DELETE_MAX_KEYS ||
+      page.objects.some((object) => !object.key.startsWith(prefix))
+    ) {
+      throw new Error(
+        'Object listing exceeded the requested namespace or page size.',
+      )
     }
+    if (
+      page.truncated &&
+      (page.cursor === undefined ||
+        page.cursor === cursor ||
+        page.objects.length === 0)
+    ) {
+      throw new Error('Object listing did not provide forward progress.')
+    }
+    if (page.objects.length > 0) {
+      deleted += await deleteObjects(
+        store,
+        page.objects.map((object) => object.key),
+      )
+      batches += 1
+    }
+    if (!page.truncated) return { deleted, batches, drained: true }
     cursor = page.cursor
   }
+  return { deleted, batches, drained: false }
 }
 
 /**

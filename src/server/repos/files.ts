@@ -6,10 +6,12 @@
  * an upload is recorded, so a tenant can never push another tenant off its plan (`docs/SPEC.md` §5).
  */
 
-import { and, asc, count, desc, eq, sum } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { FILE_KINDS, tripFiles } from '#/server/db/schema'
-import { assertQuota, createTenantRepository, tenantFilter } from './base'
+import { FILE_KINDS, newId, tripFiles } from '#/server/db/schema'
+import { createTenantRepository, prepareTenantInsert } from './base'
+import { runAtomicBatch } from './batch'
+import { prepareStorageSettlement, readStorageUsage, retainTripStorage, storageAdmissionPredicate, storageWritePredicate, throwStorageQuota } from './storage-admission'
 import { NotFoundError } from './context'
 import { requireExpenseOfTrip } from './expenses'
 import { requirePlaceOfTrip } from './places'
@@ -128,35 +130,12 @@ export interface StorageUsage {
 
 /** Storage the tenant is using, overall and per kind — the billing and files screens. */
 export async function getStorageUsage(scope: TenantScope): Promise<StorageUsage> {
-  const rows = await scope.db
-    .select({ kind: tripFiles.kind, fileCount: count(), bytes: sum(tripFiles.sizeBytes) })
-    .from(tripFiles)
-    .where(tenantFilter(scope, tripFiles))
-    .groupBy(tripFiles.kind)
-    .orderBy(desc(count()))
-
-  const byKind = rows.flatMap((row) =>
-    (FILE_KINDS as ReadonlyArray<string>).includes(row.kind)
-      ? [
-          {
-            kind: row.kind as (typeof FILE_KINDS)[number],
-            fileCount: row.fileCount,
-            bytes: Number(row.bytes ?? 0),
-          },
-        ]
-      : [],
-  )
-
-  return {
-    fileCount: byKind.reduce((total, row) => total + row.fileCount, 0),
-    bytes: byKind.reduce((total, row) => total + row.bytes, 0),
-    byKind,
-  }
+  return readStorageUsage(scope)
 }
 
 /** Bytes stored against one trip. */
 export async function getTripStorageBytes(scope: TenantScope, tripId: string): Promise<number> {
-  return tripFilesRepository.sumOf(scope, tripFiles.sizeBytes, eq(tripFiles.tripId, tripId))
+  return (await readStorageUsage(scope, tripId)).bytes
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -229,19 +208,26 @@ async function requireLinksOfTrip(
 }
 
 /**
- * Records an uploaded object. Call it **after** the bytes are in R2 and **before** the response is
- * returned; if the quota check throws, the caller deletes the object it just wrote.
+ * Atomically publishes a reserved upload. Metadata-only seed callers use the same admission predicate.
  */
-export async function recordFile(scope: TenantScope, input: RecordFileInput): Promise<TripFile> {
+export async function recordFile(scope: TenantScope, input: RecordFileInput, reservationId?: string): Promise<TripFile> {
   const values = recordFileInput.parse(input)
   await requireTripForFileWrite(scope, values.tripId)
   await requireLinksOfTrip(scope, values.tripId, values)
 
-  const usage = await getStorageUsage(scope)
-  await assertQuota(scope, 'files', usage.fileCount)
-  await assertQuota(scope, 'storage_bytes', usage.bytes, values.sizeBytes)
-
-  return tripFilesRepository.insert(scope, { ...values, uploadedBy: scope.ctx.userId })
+  const condition = reservationId === undefined
+    ? await storageAdmissionPredicate(scope, values.sizeBytes)
+    : storageWritePredicate(scope, reservationId, values.storageKey, values.sizeBytes)
+  const fileId = newId()
+  const insert = prepareTenantInsert(scope, tripFiles, { ...values, id: fileId, uploadedBy: scope.ctx.userId }, condition).returning()
+  const rows = reservationId === undefined
+    ? await insert
+    : (await runAtomicBatch(scope, [insert, prepareStorageSettlement(scope, reservationId, fileId)]))[0]
+  if (!rows[0]) {
+    if (reservationId !== undefined) throw new NotFoundError('storage reservation', reservationId)
+    return throwStorageQuota(scope)
+  }
+  return rows[0]
 }
 
 export async function updateFile(
@@ -257,8 +243,7 @@ export async function updateFile(
 }
 
 /**
- * Removes the metadata row and returns the storage key so the caller can delete the object. The row
- * goes first: a dangling object is a cleanup job, a dangling row is a broken download.
+ * Removes metadata while retaining its storage charge until object cleanup is confirmed.
  */
 export async function deleteFile(
   scope: TenantScope,
@@ -266,6 +251,7 @@ export async function deleteFile(
   fileId: string,
 ): Promise<string> {
   const file = await requireFileForWrite(scope, tripId, fileId)
+  await retainTripStorage(scope, tripId)
   await tripFilesRepository.requireRemove(scope, fileId)
   return file.storageKey
 }

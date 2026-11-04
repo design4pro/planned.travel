@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Redigera bild',
+  'plan.photo.unavailable':
+    'Det går inte att ladda upp eller redigera bilder. Den nuvarande bilden behålls.',
   'collab.readOnly.archived':
     'Den här resan är arkiverad. Samarbetet är skrivskyddat.',
   'collab.readOnly.role':

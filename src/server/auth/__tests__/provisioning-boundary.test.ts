@@ -58,7 +58,11 @@ describe('src/server/auth/provisioning.ts', () => {
       'asc',
       'count',
       'eq',
+      'notExists',
+      'sql',
     ])
+    expect(source).not.toMatch(/\bsql\.raw\s*\(/)
+    expect(source).not.toMatch(/sql`[^`]*\b(?:select|insert|update|delete)\b/i)
     expect(source).not.toMatch(/\bimport\(/)
     expect(source).not.toMatch(/\brequire\(/)
     // A side-effect or double-quoted import would slip past the specifier scan above.
@@ -75,7 +79,10 @@ describe('src/server/auth/provisioning.ts', () => {
 
 describe('docs/SPEC.md §6', () => {
   it('names the provisioning module as a stated exception, with the tables it touches', () => {
-    expect(spec).toContain('The stated exceptions are three, and closed')
+    expect(spec).toContain('The other stated exceptions are three, and closed')
+    expect(spec).toContain(
+      'The account-auth repository is the separately bounded fourth exception above',
+    )
     expect(spec).toContain('`src/server/auth/provisioning.ts`')
     expect(spec).toContain(
       'reads `user` and reads and writes `organization` and `member`',

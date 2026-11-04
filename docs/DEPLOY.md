@@ -241,10 +241,10 @@ other way needs the command by hand.
 > (`--verify --remote --env staging` in the staging workflow.) Until that lands, a deploy whose
 > catalogue load silently did nothing is still only visible by running the command above.
 
-You should see **62 domain tables + 9 Better Auth tables** (`user`, `session`, `account`,
-`verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). Both numbers are
+You should see **70 domain tables + 9 Better Auth tables + 7 account-authority tables** (`user`, `session`, `account`,
+`verification`, `organization`, `member`, `invitation`, `passkey`, `two_factor`). The counts are
 read off the schema rather than remembered: `grep -c 'sqliteTable(' src/server/db/schema.ts` prints
-the first and the same command over `auth-schema.ts` prints the second. Migration `0005` moved the
+70; the same command over `auth-schema.ts` prints 16 (9 native + 7 account authority). Migration `0005` moved the
 domain count from 57 by adding `staff_api_tokens` and `platform_audit_log`; `0007` moved it from 60
 by adding `provider_registry` and `provider_usage`, both purely `CREATE TABLE` + `CREATE INDEX`.
 
@@ -1862,6 +1862,9 @@ itself fails, the call goes through and the Worker logs `provider gate unavailab
 call`, so a `block` is a strong cap and not an absolute one. If you pick `allow`, check
 `/console/providers` on a rhythm that suits your bill, and see the 90 % and blocked-count items in
 `docs/ARCHITECTURE.md` §9 ("Numbers worth alerting on") for what else to watch.
+Metering warnings retain the failure category and validated call labels, but omit raw exception
+messages, stacks and causes to keep SQL-bound tenant values out of logs. Rejected records log no
+input fields.
 
 **The ledger counts `here` from the deploy that adopted it.** Until that release `provider_usage` had no rows for
 `here`; it starts at zero and counts in UTC calendar months (or UTC days,
@@ -2480,3 +2483,29 @@ live rule and pre-Worker enforcement before clearing the ACCESS merge prerequisi
 `src/server/observability` already mirrors application LogRecords to Sentry. A platform log drain
 would duplicate those records. Tail consumers and account/zone Logpush jobs were absent at the
 control readback; any newly added collector needs a separate bearer-path assessment.
+
+## Account session authority rollout (ADR 0049)
+
+Apply additive migrations before deploying the revision-aware Worker. In expand mode (the optional
+`ACCOUNT_SECURITY_ENFORCEMENT` variable is absent), authority metadata is dual-written, existing
+session acceptance stays compatible, and the settings action is disabled. The scheduled maintenance
+job backfills at most 200 accounts and 200 live sessions per invocation. It also records the verified
+completion marker from the existing historical participation-backfill chain (ADR 0043); current
+memberships alone are insufficient for departed-workspace room eviction. Run that documented chain
+to completion before cutover, and let bounded maintenance reach readiness.
+
+Retire every old unversioned session/trust writer, then set `ACCOUNT_SECURITY_ENFORCEMENT=active`
+on the revision-aware deployment. The first request validates readiness, the historical-anchor
+qualification and complete legacy account/session coverage before atomically persisting cutover in
+D1. Legacy browser trust is invalidated at this point; OAuth/passkey exemptions remain native.
+Clearing the variable cannot reverse the D1 cutover. Roll back only to an authority-aware Worker;
+never restore a version that accepts KV proofs without primary revision checks. Do not restore an
+older D1 authority snapshot while keeping newer authentication proofs.
+
+Pending cleanup keeps encrypted session references until every KV key is attempted successfully,
+and durable workspace targets until queue consumers acknowledge room eviction. Scheduled maintenance
+retries publication and cleanup independently. Keep the encryption key available until pending work
+is drained; changing `BETTER_AUTH_SECRET` without retaining decryptability strands those references.
+An authorized native account deletion reserves its account before teardown, refuses while cleanup
+is pending, and resumes an interrupted reservation after one minute. Never manually clear a deletion
+reservation or delete pending cleanup records to unblock an account.

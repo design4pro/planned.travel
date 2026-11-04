@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Afbeelding bewerken',
+  'plan.photo.unavailable':
+    'Afbeeldingen uploaden en bewerken is niet beschikbaar. De huidige afbeelding blijft behouden.',
   'collab.readOnly.archived':
     'Deze reis is gearchiveerd. Samenwerking is alleen-lezen.',
   'collab.readOnly.role':

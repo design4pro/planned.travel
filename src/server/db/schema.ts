@@ -25,6 +25,7 @@
 import { sql } from 'drizzle-orm'
 import {
   check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -406,10 +407,11 @@ export const PLATFORM_ACTOR_KINDS = ['human', 'agent', 'system'] as const
 /**
  * Providers whose outbound calls this repository actually makes, and can therefore count.
  *
- * Seven, one client each - `src/server/queue/handlers/email.ts`,
+ * Eight, one client each - `src/server/queue/handlers/email.ts`,
  * `src/server/queue/handlers/pdf-export.ts`, the injected `fetch` of
  * `src/server/billing/polar.ts`, `src/server/geo/geoapify.ts`, `src/server/transit/here.ts`,
- * `src/server/weather/met-norway.ts` and `src/server/weather/nasa-power.ts`. A slug earns a place
+ * `src/server/weather/met-norway.ts`, `src/server/weather/nasa-power.ts` and
+ * `src/server/rates/frankfurter.ts`. A slug earns a place
  * here when a call site can name it, never before - {@link PLANNED_PROVIDERS} is where an
  * intention lives, and moving a slug across is what adopting a provider looks like.
  */
@@ -421,6 +423,7 @@ export const METERED_PROVIDERS = [
   'here',
   'met-norway',
   'nasa-power',
+  'frankfurter',
 ] as const
 
 /**
@@ -965,6 +968,7 @@ export const places = sqliteTable(
     index('places_org_country_idx').on(t.organizationId, t.countryCode),
     index('places_trip_sort_idx').on(t.tripId, t.sortOrder),
     index('places_org_name_idx').on(t.organizationId, t.name),
+    uniqueIndex('places_photo_parent_idx').on(t.organizationId, t.tripId, t.id),
     index('places_external_idx').on(t.source, t.externalId),
     enumCheck('places_transport_mode_chk', t.transportMode, TRANSPORT_MODES),
     enumCheck('places_source_chk', t.source, PLACE_SOURCES),
@@ -975,6 +979,32 @@ export const places = sqliteTable(
       sql.raw('("rating" IS NULL OR ("rating" BETWEEN 1 AND 5))'),
     ),
     ...latLngChecks('places_lat_chk', t.lat, t.lng),
+  ],
+)
+
+/** Phase 1 owns only compatibility selection; assets and provider metadata land with their lifecycle. */
+export const placePhotoSelections = sqliteTable(
+  'place_photo_selections',
+  {
+    organizationId: orgRef(),
+    tripId: text('trip_id').notNull(),
+    placeId: text('place_id').notNull(),
+    version: integer('version').notNull().default(0),
+    mode: text('mode', { enum: ['legacy', 'fallback'] }).notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.organizationId, t.placeId] }),
+    index('place_photo_selections_trip_idx').on(t.organizationId, t.tripId),
+    foreignKey({
+      columns: [t.organizationId, t.tripId, t.placeId],
+      foreignColumns: [places.organizationId, places.tripId, places.id],
+    }).onDelete('cascade'),
+    nonNegativeCheck('place_photo_selections_version_chk', t.version),
+    enumCheck('place_photo_selections_mode_chk', t.mode, [
+      'legacy',
+      'fallback',
+    ]),
   ],
 )
 
@@ -1730,6 +1760,46 @@ export const packingTemplateItems = sqliteTable(
 /* -------------------------------------------------------------------------------------------------
  * Files
  * ---------------------------------------------------------------------------------------------- */
+
+export const STORAGE_OBJECT_STATES = [
+  'reserved',
+  'writing',
+  'retained',
+  'garbage',
+  'deleted',
+] as const
+
+/** Survives trip deletion until storage confirms cleanup; deleted rows fence key reuse. */
+export const storageObjects = sqliteTable(
+  'storage_objects',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id').notNull(),
+    storageKey: text('storage_key').notNull(),
+    fileId: text('file_id'),
+    sizeBytes: integer('size_bytes').notNull(),
+    kind: text('kind').notNull().default('document'),
+    state: text('state', { enum: STORAGE_OBJECT_STATES }).notNull(),
+    needsFence: integer('needs_fence', { mode: 'boolean' })
+      .notNull()
+      .default(true),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    ...timestamps(),
+  },
+  (t) => [
+    uniqueIndex('storage_objects_key_unq').on(t.storageKey),
+    index('storage_objects_org_trip_idx').on(t.organizationId, t.tripId),
+    index('storage_objects_org_state_expiry_idx').on(
+      t.organizationId,
+      t.state,
+      t.expiresAt,
+    ),
+    enumCheck('storage_objects_state_chk', t.state, STORAGE_OBJECT_STATES),
+    enumCheck('storage_objects_kind_chk', t.kind, FILE_KINDS),
+    nonNegativeCheck('storage_objects_size_chk', t.sizeBytes),
+  ],
+)
 
 export const tripFiles = sqliteTable(
   'trip_files',
@@ -3321,5 +3391,74 @@ export const workspaceParticipants = sqliteTable(
   (t) => [
     primaryKey({ columns: [t.organizationId, t.userId] }),
     index('workspace_participants_user_idx').on(t.userId),
+  ],
+)
+
+/** Platform deletion state: attribution deliberately survives the workspace cascade. */
+export const WORKSPACE_DELETION_STATES = [
+  'requested',
+  'drained',
+  'rows_deleted',
+  'audited',
+  'swept',
+  'done',
+  'refused',
+] as const
+export const WORKSPACE_DELETION_INITIATORS = ['owner', 'erasure'] as const
+export const workspaceDeletions = sqliteTable(
+  'workspace_deletions',
+  {
+    id: text('id').primaryKey().$defaultFn(newId),
+    organizationId: text('organization_id').notNull(),
+    requestedBy: userRef('requested_by'),
+    initiator: text('initiator', {
+      enum: WORKSPACE_DELETION_INITIATORS,
+    }).notNull(),
+    erasureId: text('erasure_id'),
+    erasureConsumer: text('erasure_consumer'),
+    state: text('state', { enum: WORKSPACE_DELETION_STATES })
+      .notNull()
+      .default('requested'),
+    leaseUntil: integer('lease_until', { mode: 'timestamp_ms' }),
+    leaseToken: text('lease_token'),
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error'),
+    snapshot: text('snapshot', { mode: 'json' })
+      .$type<{
+        plan?: string
+        subscriptionStatus?: string
+        trips?: number
+        fileRows?: number
+        r2ObjectsDeleted?: number
+      }>()
+      .notNull()
+      .default({}),
+    receiptTo: text('receipt_to'),
+    receiptName: text('receipt_name'),
+    requestedAt: integer('requested_at', { mode: 'timestamp_ms' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+    sweptAt: integer('swept_at', { mode: 'timestamp_ms' }),
+    doneAt: integer('done_at', { mode: 'timestamp_ms' }),
+  },
+  (t) => [
+    enumCheck(
+      'workspace_deletions_state_chk',
+      t.state,
+      WORKSPACE_DELETION_STATES,
+    ),
+    enumCheck(
+      'workspace_deletions_initiator_chk',
+      t.initiator,
+      WORKSPACE_DELETION_INITIATORS,
+    ),
+    check(
+      'workspace_deletions_attribution_chk',
+      sql`(${t.initiator} = 'owner' and ${t.requestedBy} is not null and ${t.erasureId} is null and ${t.erasureConsumer} is null) or (${t.initiator} = 'erasure' and ${t.requestedBy} is null and ${t.erasureId} is not null and ${t.receiptTo} is null and ${t.receiptName} is null)`,
+    ),
+    check('workspace_deletions_attempts_chk', sql`${t.attempts} >= 0`),
+    uniqueIndex('workspace_deletions_live_org_idx')
+      .on(t.organizationId)
+      .where(sql`${t.state} <> 'refused'`),
+    index('workspace_deletions_stale_idx').on(t.state, t.updatedAt),
   ],
 )

@@ -31,6 +31,7 @@ import {
   SandcastleRegistry as UninstrumentedSandcastleRegistry,
   TripRoom as UninstrumentedTripRoom,
 } from './do'
+import { sweepScheduledAccountSecurity } from './auth/account-security-scheduled'
 import { sweepReminders } from './queue/reminders'
 import { sentryOptions, workerLogger } from './observability/sentry'
 
@@ -134,9 +135,15 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
     const bindings = taskEnv(env)
 
     switch (controller.cron) {
-      case REMINDER_CRON:
-        await sweepReminders(bindings, logger, controller.scheduledTime)
+      case REMINDER_CRON: {
+        const results = await Promise.allSettled([
+          sweepReminders(bindings, logger, controller.scheduledTime),
+          sweepScheduledAccountSecurity(env, controller.scheduledTime),
+        ])
+        const failed = results.find((result) => result.status === 'rejected')
+        if (failed?.status === 'rejected') throw failed.reason
         return
+      }
       case RETENTION_CRON:
         // This slot has five jobs, and one half of it is still not written.
         //

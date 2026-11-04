@@ -211,6 +211,14 @@ no conditional cell and no footnote that turns a no into a yes.
 | `revoke` | yes     | no        | no     |
 | `delete` | yes     | no        | no     |
 
+### 2.2a Self-service sign-out of other devices
+
+After the D1-owned account-security cutover (ADR 0049), a person with a non-impersonated self session created less than five minutes ago can register and explicitly confirm signing out every other device. The current session token is retained, factor state and trusted-browser policy are unchanged, and Google/Apple/passkey sign-in remains available. This grants no platform role and no authority over another account.
+
+The operation receives a restricted HttpOnly receipt before a destructive request is permitted. Automatic settings recovery additionally checks the signed-in account, so an old receipt left after switching accounts cannot be presented as the new account’s result. Reauthenticating the same account preserves status reconciliation; the receipt-only endpoint remains read-only without a session. Strict inputs carry intent/operation ids, never an account selector. Origin checks, native rate limits and a winning-claim-gated atomic D1 batch protect the operation. Session/trust acceptance and refresh check primary authority even when KV has an old blob. Missing/malformed metadata or storage errors refuse after cutover. Password login's provisional session is never accepted before all native factor hooks finish.
+
+A committed result can still have cleanup pending. Encrypted retry references and durable workspace targets survive failures; the existing room-eviction worker acknowledges successful closure rather than publication alone. Status reconciliation needs only the restricted receipt and works for fifteen minutes after commit. An unknown result offers status checks, not a blind destructive retry.
+
 ### 2.3 `catalog`, `pack`, `source`, `share`
 
 | Statement         | `admin` | `curator` | `user` |
@@ -286,7 +294,7 @@ through `createTenantRepository()`, which ANDs `organization_id = ?` onto every 
 supplies. A curator moderating a stranger's link holds no tenant context for that stranger's
 workspace and may not invent one: §3.7 rule 2 and SPEC §5 both forbid exactly that, and it is the
 single thing `src/server/repos/base.ts` exists to make inexpressible. Nor is the table reachable
-through `src/server/catalog/repo.ts`: that door serves eight of the twelve global tables of SPEC §5's
+through `src/server/catalog/repo.ts`: that door serves catalog content among the thirteen global tables of SPEC §5's
 carve-out, and `share_links` is not one of them. So the surface is built the way the one existing
 session-less path in this codebase is already built, and named the same way:
 
@@ -360,6 +368,15 @@ MCP server (SPEC §5, SPEC §6). Consequences that are not negotiable:
   unaudited mutation is a failing test.
 
 ### 2.6 The plugin's own HTTP surface is closed
+
+Workspace deletion preparation (ADR 0049) adds no usable deletion endpoint:
+`disableOrganizationDeletion: true` remains enforced. The platform deletion ledger fences
+organization member addition, invitation creation and acceptance, direct repository writers,
+checkout and plan changes while any non-refused row exists. Refused rows restore those paths;
+ordinary workspace reads do not consult the ledger. The eventual owner-only, step-up-protected
+product driver and its destructive endpoint ship separately. Better Auth hooks and Polar calls
+cannot make their check and external write atomic; guarded deletion and late-subscription handling
+remain required before enabling a producer.
 
 Registering Better Auth's `admin` plugin does not only hand us `hasPermission` and five columns. It
 publishes fifteen HTTP endpoints, and `src/routes/api/auth/$.ts` mounts every Better Auth route
@@ -513,7 +530,10 @@ report queue failure as recoverable delivery failure; real transitions write the
 lookup, acceptance and rejection stay open, retaining recipient, verification, expiry and status checks
 and the participation anchor. This tenant action keeps central impersonator attribution (§6.4).
 
-`deleteWorkspace` (`src/server/repos/members.ts`, #1057) is that repository-SQL deletion. It stays on `assertCanAdminister`, so a workspace `admin` may delete the workspace as well as the `owner`; narrowing the interactive caller to the owner is the screen's decision.
+`deleteWorkspace` (`src/server/repos/members.ts`, #1057, #1739) is that repository-SQL deletion.
+It and the bounded `drainWorkspace` require `assertRole(ctx, 'workspace.delete', 'owner')`;
+admins and members are refused. Every destructive statement atomically retains the tenant,
+departing-member and live-subscription guards. This preparation exposes no public deletion action.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace

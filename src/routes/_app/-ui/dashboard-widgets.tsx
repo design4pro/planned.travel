@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import { PanelRight, SlidersHorizontal } from 'lucide-react'
 
 import {
@@ -40,7 +48,7 @@ import type { ReactNode } from 'react'
  * switched off. `/dashboard` already shipped a right rail holding the bookings
  * list, the trip pipeline and the storage meter, so if the clock were the only
  * thing the menu governed, switching it off would leave three panels standing in
- * a column the ticket says is gone. All four are therefore one widget set. Their
+ * a column the ticket says is gone. They therefore share one widget set with the converter. Their
  * bodies are untouched — only where they are mounted moved.
  *
  * ## Why the menu lives in the header and not in the column
@@ -55,6 +63,7 @@ const WIDGET_LABEL: Record<DashboardWidgetId, MessageKey> = {
   bookings: 'shell.dashboard.bookings.label',
   tripMix: 'shell.dashboard.pipeline.label',
   storage: 'shell.dashboard.storage.label',
+  currency: 'shell.dashboard.currency.label',
 }
 
 export interface DashboardWidgets {
@@ -227,6 +236,8 @@ export function DashboardWidgetsColumn({ children }: { children: ReactNode }) {
   )
 }
 
+const HiddenWidgetFocus = createContext<(() => void) | null>(null)
+
 /**
  * The phone's way in: a compact trigger in the dashboard header opening the
  * same widgets in the shipped bottom sheet, which brings its own drag-to-dismiss,
@@ -238,9 +249,15 @@ export function DashboardWidgetsColumn({ children }: { children: ReactNode }) {
 export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
   const { t } = useI18n()
   const direction = useSheetDirection('bottom')
+  const [open, setOpen] = useState(false)
+  const hiddenFocus = useRef(false)
+  const recoverFocus = useCallback(() => {
+    hiddenFocus.current = true
+    setOpen(false)
+  }, [])
 
   return (
-    <Sheet direction={direction}>
+    <Sheet direction={direction} open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -252,7 +269,23 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
           {t('shell.dashboard.widgets.label')}
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" data-part="dashboard-widgets-sheet">
+      <SheetContent
+        side="bottom"
+        data-part="dashboard-widgets-sheet"
+        onCloseAutoFocus={(event) => {
+          if (!hiddenFocus.current) return
+          hiddenFocus.current = false
+          event.preventDefault()
+          const target =
+            document.querySelector<HTMLButtonElement>(
+              '[data-part="dashboard-widgets-trigger"]',
+            ) ??
+            document.querySelector<HTMLButtonElement>(
+              '[data-part="dashboard-widgets-menu"]',
+            )
+          target?.focus()
+        }}
+      >
         <SheetHeader className="pe-14">
           <SheetTitle>{t('shell.dashboard.widgets.label')}</SheetTitle>
           <SheetDescription>
@@ -260,9 +293,57 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
-          <div className="flex min-w-0 flex-col gap-6">{children}</div>
+          <HiddenWidgetFocus.Provider value={recoverFocus}>
+            <div className="flex min-w-0 flex-col gap-6">{children}</div>
+          </HiddenWidgetFocus.Provider>
         </SheetBody>
       </SheetContent>
     </Sheet>
+  )
+}
+
+/** A cross-tab hide returns focus; closing the sheet keeps its own focus contract. */
+export function DashboardWidget({
+  id,
+  children,
+}: {
+  id: DashboardWidgetId
+  children: ReactNode
+}) {
+  const root = useRef<HTMLDivElement>(null)
+  const focused = useRef(false)
+  const recoverFocus = useContext(HiddenWidgetFocus)
+  useLayoutEffect(() => {
+    const element = root.current
+    return () => {
+      if (
+        (focused.current || element?.contains(document.activeElement)) &&
+        !dashboardWidgetPreference.read().shown.includes(id)
+      ) {
+        if (recoverFocus) {
+          recoverFocus()
+          return
+        }
+        document
+          .querySelector<HTMLButtonElement>(
+            '[data-part="dashboard-widgets-menu"]',
+          )
+          ?.focus()
+      }
+    }
+  }, [id, recoverFocus])
+  return (
+    <div
+      ref={root}
+      data-part={`dashboard-widget-${id}`}
+      onFocusCapture={() => {
+        focused.current = true
+      }}
+      onBlurCapture={() => {
+        focused.current = false
+      }}
+    >
+      {children}
+    </div>
   )
 }

@@ -713,6 +713,24 @@ const messages = {
   'session.workspaceCheckPending': 'Memeriksa akses ruang kerja…',
   'session.workspaceCheckFailed':
     'Akses ke ruang kerja ini tidak dapat diverifikasi. Tidak ada tindakan yang diulangi. Anda dapat memeriksa lagi.',
+  'dashboard.currency.label': 'Konverter mata uang',
+  'dashboard.currency.amount': 'Jumlah',
+  'dashboard.currency.from': 'Mata uang asal',
+  'dashboard.currency.to': 'Mata uang tujuan',
+  'dashboard.currency.swap': 'Tukar mata uang',
+  'dashboard.currency.refresh': 'Perbarui kurs',
+  'dashboard.currency.result': 'Jumlah hasil konversi',
+  'dashboard.currency.invalid': 'Masukkan jumlah dari 0 hingga 1.000.000.000.',
+  'dashboard.currency.unsupported': 'Pasangan mata uang ini tidak tersedia.',
+  'dashboard.currency.stale': 'Kurs referensi ini mungkin sudah lama.',
+  'dashboard.currency.blocked': 'Batas layanan kurs telah tercapai.',
+  'dashboard.currency.failed': 'Kurs tidak dapat diperbarui.',
+  'dashboard.currency.cooldown': 'Coba lagi setelah {time}.',
+  'dashboard.currency.source': 'Kurs referensi ECB melalui Frankfurter',
+  'dashboard.currency.notice':
+    'Perhitungan untuk informasi; bukan penawaran transaksi.',
+  'dashboard.currency.free': 'Kurs referensi ECB tersedia gratis dari ECB.',
+  'dashboard.currency.date': 'Tanggal kurs: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

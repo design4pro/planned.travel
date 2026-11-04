@@ -3,7 +3,11 @@ import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
 import { readWorkspaceShell, roomRefreshToken } from '#/lib/room-refresh'
 import { publishBasemap } from '#/lib/map/basemap'
-import { setWorkspaceClaim } from '#/lib/workspace-claim-store'
+import {
+  setWorkspaceClaim,
+  workspaceResyncToken,
+  workspaceClaimState,
+} from '#/lib/workspace-claim-store'
 import { AppFrame } from '#/components/layout/app-frame'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { ImpersonationBar } from '#/components/layout/impersonation-bar'
@@ -28,7 +32,12 @@ export const Route = createFileRoute('/_app')({
     const shell = await readWorkspaceShell(
       abortController,
       preload,
-      (preserveWorkspace) => loadShell({ data: { preserveWorkspace } }),
+      (preserveWorkspace, fetch) =>
+        loadShell({
+          data: { preserveWorkspace },
+          fetch,
+          signal: abortController.signal,
+        }),
     )
 
     if (shell === null) {
@@ -39,7 +48,11 @@ export const Route = createFileRoute('/_app')({
       })
     }
 
-    return { shell, roomRefresh: roomRefreshToken(abortController) }
+    return {
+      shell,
+      roomRefresh: roomRefreshToken(abortController),
+      workspaceTransition: workspaceResyncToken(abortController),
+    }
   },
   onLeave: () => setWorkspaceClaim(null),
   errorComponent: RootErrorBoundary,
@@ -113,7 +126,7 @@ function AppShell() {
    */
   const organizationId = shell.session.organization?.id ?? null
   useEffect(() => {
-    setWorkspaceClaim(organizationId)
+    if (!workspaceClaimState().switching) setWorkspaceClaim(organizationId)
   }, [organizationId])
 
   return (

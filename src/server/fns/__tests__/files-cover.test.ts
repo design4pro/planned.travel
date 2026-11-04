@@ -40,6 +40,9 @@ const stubs = vi.hoisted(() => ({
   putKeys: [] as Array<string>,
   objects: new Set<string>(),
   afterPut: null as (() => Promise<void>) | null,
+  deleteFailure: false,
+  headFailure: false,
+  afterDelete: null as (() => Promise<void>) | null,
   room: vi.fn(async () => undefined),
   bucket: vi.fn(),
 }))
@@ -65,14 +68,26 @@ vi.mock('../context', () => ({
   filesBucket: () => {
     stubs.bucket()
     return {
-      put: async (key: string): Promise<void> => {
+      head: async (): Promise<null> => {
+        if (stubs.headFailure) throw new Error('head unavailable')
+        return null
+      },
+      put: async (key: string, _body: ReadableStream, options?: { customMetadata?: Record<string, string> }): Promise<void> => {
+        if (options?.customMetadata?.storageTombstone) {
+          if (stubs.deleteFailure) throw new Error('delete unavailable')
+          if (stubs.objects.has(key)) stubs.deletedKeys.push(key)
+          stubs.objects.delete(key)
+          return
+        }
         stubs.putKeys.push(key)
         stubs.objects.add(key)
         await stubs.afterPut?.()
       },
       delete: async (key: string): Promise<void> => {
+        if (stubs.deleteFailure) throw new Error('delete unavailable')
         stubs.deletedKeys.push(key)
         stubs.objects.delete(key)
+        await stubs.afterDelete?.()
       },
     }
   },
@@ -156,6 +171,9 @@ beforeEach(async () => {
   stubs.putKeys = []
   stubs.objects.clear()
   stubs.afterPut = null
+  stubs.deleteFailure = false
+  stubs.headFailure = false
+  stubs.afterDelete = null
   vi.clearAllMocks()
 })
 
@@ -393,6 +411,66 @@ describe('file writes and the trip guards', () => {
       }
     },
   )
+
+  it('does not leave a published row after a concurrent archive follows object deletion', async () => {
+    const { tripId, fileId } = await tripWithCover()
+    stubs.afterDelete = async () => { await archiveTrip(tenant.scope, tripId) }
+    await deleteFile({ tripId, fileId }).catch(() => undefined)
+    expect(await getFile(tenant.scope, fileId)).toBeNull()
+  })
+
+  it('keeps new storage diagnostics out of the upload refusal copy', async () => {
+    const trip = await createTrip(tenant.scope, { title: 'Interrupted upload' })
+    stubs.afterPut = async () => { throw new Error('internal object-store diagnostic') }
+    const response = await uploadFile(trip.id)
+    expect(await response.json()).toMatchObject({ ok: false, code: 'rejected', message: 'The upload could not be recorded. Try again in a moment.' })
+  })
+
+  it('keeps charging bytes when put retains an object but its response and cleanup fail', async () => {
+    const trip = await createTrip(tenant.scope, { title: 'Interrupted upload' })
+    stubs.afterPut = async () => { throw new Error('put response lost') }
+    stubs.deleteFailure = true
+    await uploadFile(trip.id).catch(() => undefined)
+    expect(stubs.objects.size).toBe(1)
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ fileCount: 1, bytes: 8 })
+  })
+
+  it('keeps charging an attachment after deletion fails and frees it on retry', async () => {
+    const { tripId, fileId } = await tripWithCover()
+    const before = await getStorageUsage(tenant.scope)
+    stubs.deleteFailure = true
+    await deleteFile({ tripId, fileId }).catch(() => undefined)
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: before.bytes, fileCount: 1 })
+    stubs.deleteFailure = false
+    await deleteFile({ tripId, fileId })
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 0, fileCount: 0 })
+    expect(stubs.room).toHaveBeenCalledTimes(1)
+    expect((await listAuditLog(tenant.scope, { action: 'file.deleted' })).items).toEqual([
+      expect.objectContaining({ entityId: fileId }),
+    ])
+  })
+
+  it('admits an unrelated upload while failed garbage cleanup remains charged', async () => {
+    const { tripId, fileId } = await tripWithCover()
+    stubs.deleteFailure = true
+    await expect(deleteFile({ tripId, fileId })).rejects.toThrow('delete unavailable')
+    const other = await createTrip(tenant.scope, { title: 'Other upload' })
+    const response = await uploadFile(other.id)
+    expect(await response.json()).toMatchObject({ ok: true })
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 2056, fileCount: 2 })
+  })
+
+  it('admits an upload while a legacy cover head fails and keeps the conservative charge', async () => {
+    const legacy = await createTrip(tenant.scope, { title: 'Legacy cover' })
+    await updateTrip(tenant.scope, legacy.id, {
+      coverImageKey: `trips/${tenant.organizationId}/${legacy.id}/legacy.jpg`,
+    })
+    stubs.headFailure = true
+    const other = await createTrip(tenant.scope, { title: 'Other upload' })
+    const response = await uploadFile(other.id)
+    expect(await response.json()).toMatchObject({ ok: true })
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 25 * 1024 * 1024 + 8, fileCount: 2 })
+  })
 
   it('cleans the stored object when recordFile refuses a role revoked after put', async () => {
     const { tripId, storageKey } = await tripWithCover()

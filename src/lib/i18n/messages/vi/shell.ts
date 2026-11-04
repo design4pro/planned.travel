@@ -708,6 +708,25 @@ const messages = {
     'Đang kiểm tra quyền truy cập không gian làm việc…',
   'session.workspaceCheckFailed':
     'Không thể xác minh quyền truy cập không gian làm việc này. Không thao tác nào được thực hiện lại. Bạn có thể kiểm tra lại.',
+  'dashboard.currency.label': 'Chuyển đổi tiền tệ',
+  'dashboard.currency.amount': 'Số tiền',
+  'dashboard.currency.from': 'Tiền tệ nguồn',
+  'dashboard.currency.to': 'Tiền tệ đích',
+  'dashboard.currency.swap': 'Đổi chiều tiền tệ',
+  'dashboard.currency.refresh': 'Làm mới tỷ giá',
+  'dashboard.currency.result': 'Số tiền đã quy đổi',
+  'dashboard.currency.invalid': 'Nhập số tiền từ 0 đến 1.000.000.000.',
+  'dashboard.currency.unsupported': 'Cặp tiền tệ này không khả dụng.',
+  'dashboard.currency.stale': 'Các tỷ giá tham chiếu này có thể đã cũ.',
+  'dashboard.currency.blocked': 'Đã đạt giới hạn dịch vụ tỷ giá.',
+  'dashboard.currency.failed': 'Không thể làm mới tỷ giá.',
+  'dashboard.currency.cooldown': 'Thử lại sau {time}.',
+  'dashboard.currency.source': 'Tỷ giá tham chiếu ECB qua Frankfurter',
+  'dashboard.currency.notice':
+    'Tính toán để tham khảo; không phải báo giá giao dịch.',
+  'dashboard.currency.free':
+    'Tỷ giá tham chiếu ECB được ECB cung cấp miễn phí.',
+  'dashboard.currency.date': 'Ngày tỷ giá: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

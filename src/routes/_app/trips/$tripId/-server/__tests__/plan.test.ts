@@ -22,6 +22,7 @@ import {
   createAccommodation,
   createAssignment,
   createPlace,
+  updatePlace,
   createReservation,
   createTrip,
   listDayAssignments,
@@ -220,6 +221,31 @@ beforeEach(async () => {
 /* --------------------------------------------------------------------- read */
 
 describe('readPlanBoard', () => {
+  it('projects only the resolved photo after a legacy write, including explicit fallback', async () => {
+    await updatePlace(owner, fixture.operaId, {
+      imageUrl: 'https://example.test/opera.jpg',
+    })
+    const saved = (await readPlanBoard(viewer, fixture.tripId)).places.find(
+      (place) => place.id === fixture.operaId,
+    )
+    expect(saved?.photo).toEqual({
+      version: 1,
+      source: 'legacy',
+      imageUrl: 'https://example.test/opera.jpg',
+    })
+    expect(saved?.imageUrl).toBe('https://example.test/opera.jpg')
+    await updatePlace(owner, fixture.operaId, { imageUrl: null })
+    const removed = (await readPlanBoard(viewer, fixture.tripId)).places.find(
+      (place) => place.id === fixture.operaId,
+    )
+    expect(removed?.photo).toEqual({
+      version: 2,
+      source: 'fallback',
+      imageUrl: null,
+    })
+    expect(removed?.imageUrl).toBeNull()
+  })
+
   it('lets an owner write the plan', async () => {
     const payload = await readPlanBoard(owner, fixture.tripId)
 

@@ -129,3 +129,9 @@ The 23 locales are one contract: every key exists in every locale (docs/SPEC.md 
 When a breaking change is unavoidable, the PR body carries a **Compatibility** section naming the
 surface, the breaking change, the deployment sequence, and the follow-up PR that completes the
 contraction. The reviewer labels the PR `risk-high` and `needs-qa`.
+
+## Account-authority rollout (#1758, ADR 0049)
+
+The account-security schema expands additively. Deploy revision-aware writers/readers with action/enforcement off, run the bounded primary backfill through the existing reminder cron, and retire every unversioned Worker before requesting `ACCOUNT_SECURITY_ENFORCEMENT=active`. D1 validates live legacy metadata and owns the irreversible cutover bit. Missing metadata after activation requires a new sign-in; legacy trust lineage cannot bypass TOTP, while Google/Apple/passkey exemptions remain. Do not roll back to a Worker that ignores this authority. Use a forward fix or another revision-aware release.
+
+After cutover the existing native `/api/auth/revoke-other-sessions` path remains recognized, including in-process calls, but refuses before mutation with `ACCOUNT_SECURITY_REGISTRATION_REQUIRED`. The replacement registers a receipt and explicitly confirms under `/api/auth/account-security/`. This intentional security refusal prevents an old client from bypassing confirmation/recovery; no existing input gains a required field. Queued `trip-room-evict` messages keep their previous payload accepted; the operation acknowledgement id is optional.

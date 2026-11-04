@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { CurrencyConverter } from './-ui/currency-converter'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ArrowUpRight,
@@ -24,6 +26,7 @@ import {
   Skeleton,
   StatCard,
 } from '#/components/ui'
+import { workspaceSwitchFetch } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
@@ -35,6 +38,7 @@ import {
 } from './-lib/format'
 import { RESERVATION_STATUS_TONE, TRIP_STATUS_TONE, toneFor } from './-lib/tone'
 import {
+  DashboardWidget,
   DashboardWidgetsColumn,
   DashboardWidgetsMenu,
   DashboardWidgetsSheet,
@@ -107,7 +111,11 @@ function labelFor(
 }
 
 export const Route = createFileRoute('/_app/dashboard')({
-  loader: () => loadDashboard(),
+  loader: ({ context, abortController }) =>
+    loadDashboard({
+      fetch: workspaceSwitchFetch(context.workspaceTransition),
+      signal: abortController.signal,
+    }),
   pendingComponent: DashboardPending,
   errorComponent: DashboardError,
   component: DashboardPage,
@@ -124,13 +132,18 @@ function DashboardError({ error }: { error: unknown }) {
 
 function DashboardPage() {
   const data = Route.useLoaderData()
+  const [converter, setConverter] = useState({
+    amount: '1',
+    from: 'EUR',
+    to: 'USD',
+  })
   const widgets = useDashboardWidgets()
   const inSheet = useWidgetsInSheet()
 
   /**
    * What each widget draws. Built as a table rather than as a chain of
    * conditions so the reference column's order lives in one place — the widget
-   * list itself — and adding the deferred converter later is one row here.
+   * list itself.
    *
    * These are element *descriptions*; only the ones the reader kept, in the one
    * surface the breakpoint chose, are ever mounted.
@@ -146,12 +159,19 @@ function DashboardPage() {
     bookings: <NextBookings reservations={data.reservations} />,
     tripMix: <TripMix data={data} />,
     storage: <StorageMeter data={data} />,
+    currency: (
+      <CurrencyConverter
+        state={converter}
+        onChange={setConverter}
+        inSheet={inSheet}
+      />
+    ),
   }
 
   const shown = widgets.shown.map((id) => (
-    <div key={id} data-part={`dashboard-widget-${id}`}>
+    <DashboardWidget key={id} id={id}>
       {bodies[id]}
-    </div>
+    </DashboardWidget>
   ))
 
   return (

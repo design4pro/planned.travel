@@ -16,6 +16,7 @@ import {
   copyObject,
   deleteObjects,
   deletePrefix,
+  drainPrefix,
 } from '../objects'
 import type { FakeBucket, FakeObject } from './fake-bucket'
 import { fakeBucket } from './fake-bucket'
@@ -265,4 +266,31 @@ describe('deletePrefix', () => {
     expect(bucket.calls).toEqual([])
     expect(bucket.remaining.size).toBe(1)
   })
+})
+
+it('refuses an oversized, foreign or non-progressing prefix listing before deleting', async () => {
+  for (const page of [
+    { objects: [{ key: 'trips/org-b/foreign' }], truncated: false },
+    {
+      objects: Array.from({ length: 1001 }, (_, i) => ({
+        key: `trips/org-a/${i}`,
+      })),
+      truncated: false,
+    },
+    { objects: [{ key: 'trips/org-a/one' }], truncated: true },
+  ]) {
+    let deleted = false
+    await expect(
+      drainPrefix(
+        {
+          list: async () => page,
+          delete: async () => {
+            deleted = true
+          },
+        },
+        'trips/org-a/',
+      ),
+    ).rejects.toThrow()
+    expect(deleted).toBe(false)
+  }
 })

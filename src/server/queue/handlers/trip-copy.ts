@@ -39,6 +39,7 @@ import { isOrganizationRole } from '#/server/auth/tenant'
 import {
   NotFoundError,
   QuotaExceededError,
+  RepositoryError,
   copyTripContents,
   createScope,
   deleteTrip,
@@ -49,7 +50,7 @@ import {
   notify,
   requireTrip,
 } from '#/server/repos'
-import { copyObject } from '#/server/storage/objects'
+import { copyStoredCover, cleanupStorage } from '#/server/storage/admission'
 import { storageKeyFor } from '#/server/fns/file-policy'
 import { coverUrlFor, fileIdOfStorageKey } from '#/lib/trip-cover'
 import { enqueueTasks } from '../jobs'
@@ -157,8 +158,10 @@ export function coverKeyFor(
  * **A cover failure is tolerated** (spec Q6): a missing cover is cosmetic, and deleting a fully
  * copied trip over it — or retrying an entire inventory copy for it — are both larger harms than
  * the loss. Logged once; the copy completes and the tile falls back to the shipped `CoverArt`.
+ * A competing delivery still writing the cover retries without clearing the pending stamp.
  */
 async function copyCover(
+  scope: TenantScope,
   context: TaskContext,
   source: Trip,
   targetTripId: string,
@@ -190,12 +193,13 @@ async function copyCover(
   }
 
   try {
-    await copyObject(context.env.FILES, sourceKey, targetKey)
+    await copyStoredCover(scope, context.env.FILES, targetTripId, sourceKey, targetKey)
     return {
       coverImageKey: targetKey,
       coverImageUrl: coverUrlFor(origin, targetTripId, fileId),
     }
   } catch (cause) {
+    if (cause instanceof RepositoryError && cause.code === 'STORAGE_WRITE_IN_PROGRESS') throw cause
     context.logger.warn('a trip cover was not copied', {
       tripId: targetTripId,
       ...serializeError(cause),
@@ -320,6 +324,7 @@ async function discardTarget(
 ): Promise<void> {
   try {
     await deleteTrip(scope, targetTripId)
+    await cleanupStorage(scope, context.env.FILES)
   } catch (cause) {
     context.logger.warn('a failed trip copy could not be cleaned up', {
       tripId: targetTripId,
@@ -417,7 +422,7 @@ export function createTripCopyHandler(
       // path rather than an unclassified rejection.
       const source = await requireTrip(scope, sourceTripId)
       const result = await copyTripContents(scope, sourceTripId, targetTripId)
-      const cover = await copyCover(context, source, targetTripId)
+      const cover = await copyCover(scope, context, source, targetTripId)
       await enqueueTravelStats(scope, context, target)
       const notified = await notifyCopied(scope, target, requestedBy, {
         days: result.days,

@@ -10,6 +10,7 @@
  * and one adapter at the route boundary produces both.
  */
 
+import type { PlacePhoto } from '#/lib/place-photo'
 import type { MessageKey } from '#/lib/i18n'
 
 /** A tenant's own taxonomy entry, as the rail needs it. */
@@ -44,6 +45,7 @@ export interface PlannerRow {
   readonly duration: string | null
   readonly categoryId: string | null
   readonly imageUrl: string | null
+  readonly photo?: PlacePhoto
   /** 1–5, as stored. `null` when unrated. */
   readonly rating: number | null
   /** The assignment's note, not the place's description. */

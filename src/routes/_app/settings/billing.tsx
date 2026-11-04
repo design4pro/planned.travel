@@ -1,3 +1,4 @@
+import { FreeRateDisclosure } from '#/components/rates/free-rate-disclosure'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 import {
@@ -452,6 +453,7 @@ function BillingPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <FreeRateDisclosure />
       {marker ? (
         <Alert
           tone={

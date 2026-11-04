@@ -66,6 +66,10 @@ export function fakeBucket(
   const writtenAt = new Map<string, Date>()
   return {
     calls,
+    head: async (key) => {
+      const object = objects.get(key)
+      return object ? { size: new TextEncoder().encode(object.body).length } : null
+    },
     listCalls,
     remaining,
     objects,
@@ -84,7 +88,10 @@ export function fakeBucket(
           ? 0
           : keys.findIndex((key) => key > String(listOptions.cursor))
       const rest = start === -1 ? [] : keys.slice(start)
-      const page = rest.slice(0, pageSize)
+      const page = rest.slice(
+        0,
+        Math.min(pageSize, listOptions.limit ?? pageSize),
+      )
       const truncated = rest.length > page.length
       return {
         objects: page.map((key) => ({
@@ -112,6 +119,7 @@ export function fakeBucket(
       if (!object) return null
       return {
         body: streamOf(object.body),
+        size: new TextEncoder().encode(object.body).length,
         ...(object.contentType === undefined &&
         object.contentDisposition === undefined
           ? {}
@@ -128,6 +136,7 @@ export function fakeBucket(
       }
     },
     put: async (key, value, putOptions) => {
+      if (putOptions?.onlyIf?.etagDoesNotMatch === '*' && objects.has(key)) return null
       const body = await new Response(value).text()
       const { contentType, contentDisposition } = putOptions?.httpMetadata ?? {}
       objects.set(key, {

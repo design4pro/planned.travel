@@ -463,6 +463,9 @@ export async function createCheckoutSession(
   input: PlanSelectionInput,
 ): Promise<PlanChangeResult> {
   assertCanManage(identity)
+  if (
+    await runtime.subscriptions.workspaceDeletionPending(identity.organizationId)
+  ) throw new BillingForbiddenError('WORKSPACE_DELETION_PENDING')
 
   const selection = resolvePlanSelection(input)
   const discount = await selectionDiscount(runtime, identity, input, selection)
@@ -974,6 +977,9 @@ export async function changePlan(
   input: PlanSelectionInput,
 ): Promise<PlanChangeResult> {
   assertCanManage(identity)
+  if (
+    await runtime.subscriptions.workspaceDeletionPending(identity.organizationId)
+  ) throw new BillingForbiddenError('WORKSPACE_DELETION_PENDING')
 
   const selection = resolvePlanSelection(input)
   const discount = await selectionDiscount(runtime, identity, input, selection)

@@ -137,7 +137,7 @@ import {
   tripFilesRepository,
   updateFile,
 } from '../files'
-import { handleTripPurge } from '#/server/queue/handlers/trip-purge'
+import { createTripPurgeHandler } from '#/server/queue/handlers/trip-purge'
 import { purgeContext } from '#/server/queue/handlers/__tests__/purge-context'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import { exportObjectKey } from '#/server/storage/export-artifacts'
@@ -4944,7 +4944,7 @@ describe('tenant isolation', () => {
       keys: ReadonlyArray<string>,
       bucket: FakeBucket,
     ): Promise<void> {
-      await handleTripPurge({ keys: [...keys] }, purgeContext(orgId, bucket))
+      await createTripPurgeHandler(() => harness.db)({ keys: [...keys] }, purgeContext(orgId, bucket))
     }
 
     /** The key `seedWorld` recorded for that tenant's one file. */

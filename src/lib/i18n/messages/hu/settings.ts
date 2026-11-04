@@ -769,6 +769,18 @@ const messages = {
   'twoFactor.off.pending': 'Kikapcsolás folyamatban',
   'twoFactor.off.cancel': 'Maradjon bekapcsolva',
   'twoFactor.off.done': 'A kétlépcsős hitelesítés ki van kapcsolva',
+  'security.other.label': 'Más eszközök kijelentkeztetése',
+  'security.other.description':
+    'A többi eszközön újra be kell jelentkezni. A kapcsolatok késleltetve zárulnak le; a megbízható böngészők, a Google, az Apple és a hozzáférési kulcsok elérhetők maradnak.',
+  'security.other.committed':
+    'A többi eszköz kijelentkezett. Ez az eszköz bejelentkezve marad.',
+  'security.other.refused':
+    'Ez a művelet nem módosított semmit. Jelentkezz be újra, és öt percen belül erősítsd meg.',
+  'security.other.unknown':
+    'Az eredmény nem ismert. Új művelet előtt ellenőrizd az állapotot.',
+  'security.other.pending':
+    'A többi munkamenet visszavonva. A kapcsolatok lezárása tovább tarthat.',
+  'security.other.check': 'Állapot ellenőrzése',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -849,6 +849,25 @@ const messages = {
   'session.workspaceCheckPending': 'جارٍ التحقق من الوصول إلى مساحة العمل…',
   'session.workspaceCheckFailed':
     'تعذّر تأكيد الوصول إلى مساحة العمل هذه. لم تُكرَّر أي عملية. يمكنك التحقق مرة أخرى.',
+  'dashboard.currency.label': 'محوّل العملات',
+  'dashboard.currency.amount': 'المبلغ',
+  'dashboard.currency.from': 'العملة المصدر',
+  'dashboard.currency.to': 'العملة الهدف',
+  'dashboard.currency.swap': 'تبديل العملات',
+  'dashboard.currency.refresh': 'تحديث الأسعار',
+  'dashboard.currency.result': 'المبلغ المحوّل',
+  'dashboard.currency.invalid': 'أدخل مبلغًا من 0 إلى 1,000,000,000.',
+  'dashboard.currency.unsupported': 'زوج العملات هذا غير متاح.',
+  'dashboard.currency.stale': 'قد تكون هذه الأسعار المرجعية قديمة.',
+  'dashboard.currency.blocked': 'تم بلوغ حد خدمة أسعار الصرف.',
+  'dashboard.currency.failed': 'تعذر تحديث أسعار الصرف.',
+  'dashboard.currency.cooldown': 'حاول مجددًا بعد {time}.',
+  'dashboard.currency.source':
+    'أسعار البنك المركزي الأوروبي المرجعية عبر Frankfurter',
+  'dashboard.currency.notice': 'حساب للمعلومات وليس عرضًا لتنفيذ معاملة.',
+  'dashboard.currency.free':
+    'أسعار البنك المركزي الأوروبي المرجعية متاحة مجانًا لدى البنك المركزي الأوروبي.',
+  'dashboard.currency.date': 'تاريخ السعر: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

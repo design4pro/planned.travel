@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Επεξεργασία εικόνας',
+  'plan.photo.unavailable':
+    'Η μεταφόρτωση και η επεξεργασία εικόνων δεν είναι διαθέσιμες. Η τρέχουσα εικόνα διατηρείται.',
   'collab.readOnly.archived':
     'Αυτό το ταξίδι έχει αρχειοθετηθεί. Η συνεργασία είναι μόνο για ανάγνωση.',
   'collab.readOnly.role':

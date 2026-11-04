@@ -792,6 +792,28 @@ const messages = {
     'Comprobando el acceso al espacio de trabajo…',
   'session.workspaceCheckFailed':
     'No se pudo verificar el acceso a este espacio de trabajo. No se repitió ninguna operación. Puedes volver a comprobarlo.',
+  'dashboard.currency.label': 'Conversor de divisas',
+  'dashboard.currency.amount': 'Importe',
+  'dashboard.currency.from': 'Moneda de origen',
+  'dashboard.currency.to': 'Moneda de destino',
+  'dashboard.currency.swap': 'Intercambiar monedas',
+  'dashboard.currency.refresh': 'Actualizar tipos',
+  'dashboard.currency.result': 'Importe convertido',
+  'dashboard.currency.invalid': 'Introduce un importe de 0 a 1.000.000.000.',
+  'dashboard.currency.unsupported': 'Este par de monedas no está disponible.',
+  'dashboard.currency.stale':
+    'Estos tipos de referencia pueden estar desactualizados.',
+  'dashboard.currency.blocked':
+    'Se ha alcanzado el límite del servicio de tipos.',
+  'dashboard.currency.failed': 'No se pudieron actualizar los tipos.',
+  'dashboard.currency.cooldown': 'Inténtalo después de {time}.',
+  'dashboard.currency.source':
+    'Tipos de referencia del BCE a través de Frankfurter',
+  'dashboard.currency.notice':
+    'Cálculo informativo; no es una oferta de transacción.',
+  'dashboard.currency.free':
+    'Los tipos de referencia del BCE están disponibles gratis en el BCE.',
+  'dashboard.currency.date': 'Fecha del tipo: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -2,7 +2,7 @@
  * Putting a chosen image on a trip that already exists.
  *
  * Two steps and their order is the contract: the file goes through the existing upload path against
- * the trip (which owns the object-first, quota-second rule and its compensating delete - this calls
+ * the trip (which owns quota reservation, create-only storage and settlement - this calls
  * it and does not restate it), and only then is the file recorded as the trip's cover. Neither step
  * may fail the trip: the caller gets a value to render, never an exception.
  */

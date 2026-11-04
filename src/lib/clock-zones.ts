@@ -67,16 +67,13 @@ function isFormattableZone(zone: string): boolean {
 
 /**
  * The widgets the reference column can hold, in the order they stack in it.
- *
- * The currency converter is deliberately absent rather than present and
- * disabled: it waits on a rate-provider decision (`11-S3`), and a control
- * promising a feature that has no provider is worse than no control.
  */
 export const DASHBOARD_WIDGET_IDS = [
   'clock',
   'bookings',
   'tripMix',
   'storage',
+  'currency',
 ] as const
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number]

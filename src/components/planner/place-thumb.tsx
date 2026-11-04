@@ -1,3 +1,5 @@
+import { usePlaceImage } from '#/lib/use-place-image'
+import type { PlacePhoto } from '#/lib/place-photo'
 import * as React from 'react'
 
 import { cn } from '#/lib/cn'
@@ -69,6 +71,7 @@ export interface PlaceThumbProps {
   /** Seeds the drawn fallback. The place id, so the tile is stable for its life. */
   readonly placeId: string
   readonly imageUrl?: string | null
+  readonly photo?: PlacePhoto
   /** `categories.icon` — the kebab-case `lucide-react` name. */
   readonly icon?: string | null
   /** `categories.colour`. Tints the ground and the glyph. */
@@ -94,13 +97,13 @@ export interface PlaceThumbProps {
 export function PlaceThumb({
   placeId,
   imageUrl,
+  photo,
   icon,
   colour,
   size = 'md',
   className,
 }: PlaceThumbProps) {
-  const [failed, setFailed] = React.useState(false)
-  const showImage = typeof imageUrl === 'string' && imageUrl !== '' && !failed
+  const { url, onError } = usePlaceImage(imageUrl, photo)
   const vars: ThumbVars = {
     '--thumb-accent': colour ?? 'var(--color-brand)',
   }
@@ -116,14 +119,14 @@ export function PlaceThumb({
         className,
       )}
     >
-      {showImage ? (
+      {url ? (
         <img
-          src={imageUrl}
+          src={url}
           alt=""
           loading="lazy"
           decoding="async"
           className="size-full object-cover"
-          onError={() => setFailed(true)}
+          onError={onError}
         />
       ) : (
         <>

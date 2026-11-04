@@ -782,6 +782,27 @@ const messages = {
     'Zugriff auf den Arbeitsbereich wird geprüft…',
   'session.workspaceCheckFailed':
     'Der Zugriff auf diesen Arbeitsbereich konnte nicht bestätigt werden. Es wurde nichts erneut ausgeführt. Du kannst es noch einmal prüfen.',
+  'dashboard.currency.label': 'Währungsrechner',
+  'dashboard.currency.amount': 'Betrag',
+  'dashboard.currency.from': 'Ausgangswährung',
+  'dashboard.currency.to': 'Zielwährung',
+  'dashboard.currency.swap': 'Währungen tauschen',
+  'dashboard.currency.refresh': 'Kurse aktualisieren',
+  'dashboard.currency.result': 'Umgerechneter Betrag',
+  'dashboard.currency.invalid':
+    'Geben Sie einen Betrag von 0 bis 1.000.000.000 ein.',
+  'dashboard.currency.unsupported': 'Dieses Währungspaar ist nicht verfügbar.',
+  'dashboard.currency.stale':
+    'Diese Referenzkurse sind möglicherweise veraltet.',
+  'dashboard.currency.blocked': 'Das Limit des Kursdienstes wurde erreicht.',
+  'dashboard.currency.failed': 'Die Kurse konnten nicht aktualisiert werden.',
+  'dashboard.currency.cooldown': 'Versuchen Sie es nach {time} erneut.',
+  'dashboard.currency.source': 'EZB-Referenzkurse über Frankfurter',
+  'dashboard.currency.notice':
+    'Berechnung zur Information; kein Transaktionsangebot.',
+  'dashboard.currency.free':
+    'EZB-Referenzkurse sind bei der EZB kostenlos verfügbar.',
+  'dashboard.currency.date': 'Kursdatum: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
