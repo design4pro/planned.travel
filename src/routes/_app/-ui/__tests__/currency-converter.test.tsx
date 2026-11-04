@@ -269,6 +269,60 @@ it('announces settled results and committed amounts without speaking each keystr
   expect(status?.textContent).toContain('2.50')
   expect(status?.closest('[aria-busy]')).toBeNull()
 })
+it.each(['fresh', 'blocked', 'failed'] as const)(
+  'announces the %s retry deadline without moving focus or repeating it on amount edits',
+  async (state) => {
+    render(<Harness />)
+    await screen.findByLabelText('Converted amount')
+    const retryAt = at + 300000
+    const result = available()
+    if (result.status !== 'available') throw new Error('fixture')
+    read.mockResolvedValue(
+      state === 'failed'
+        ? { status: 'unavailable', reason: 'provider-failed', retryAt }
+        : {
+            ...result,
+            freshness: state === 'blocked' ? 'stale' : 'fresh',
+            reason: state === 'blocked' ? 'provider-blocked' : null,
+            retryAt,
+          },
+    )
+    const refresh = screen.getByRole('button', { name: 'Refresh rates' })
+    refresh.focus()
+    fireEvent.click(refresh)
+    const deadline = `Try again after ${new Intl.DateTimeFormat('en', {
+      timeStyle: 'short',
+    }).format(new Date(retryAt))}.`
+    const status = document.querySelector('[role="status"][aria-live="polite"]')
+    await waitFor(() => expect(status?.textContent).toContain(deadline))
+    expect(document.activeElement).toBe(refresh)
+    expect(refresh.getAttribute('aria-disabled')).toBe('true')
+    expect(
+      document.getElementById(refresh.getAttribute('aria-describedby') ?? '')
+        ?.textContent,
+    ).toBe(deadline)
+    fireEvent.click(refresh)
+    expect(read).toHaveBeenCalledTimes(2)
+    const announcement = status?.textContent
+    const mutations: MutationRecord[] = []
+    const observer = new MutationObserver((records) =>
+      mutations.push(...records),
+    )
+    observer.observe(status!, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
+      target: { value: '2' },
+    })
+    await act(async () => {})
+    observer.disconnect()
+    expect(status?.textContent).toBe(announcement)
+    expect(mutations).toHaveLength(0)
+    expect(read).toHaveBeenCalledTimes(2)
+  },
+)
 it('preserves an eligible result when a refresh loses its connection', async () => {
   render(<Harness />)
   await screen.findByLabelText('Converted amount')

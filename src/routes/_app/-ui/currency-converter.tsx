@@ -189,6 +189,11 @@ export function CurrencyConverter({
         rates[state.to as keyof typeof rates],
       ))
   const cooldown = (result?.retryAt ?? 0) > now
+  const cooldownText = t('shell.dashboard.currency.cooldown', {
+    time: new Intl.DateTimeFormat(locale, {
+      timeStyle: 'short',
+    }).format(new Date(result?.retryAt ?? now)),
+  })
   const stale =
     result?.status === 'available' && (result.freshness === 'stale' || age > 4)
   let status = ''
@@ -306,6 +311,9 @@ export function CurrencyConverter({
             </span>
           ) : null}
           {loading ? t('ui.status.loading') : status}
+          {!loading && !identity && cooldown ? (
+            <span className="sr-only"> {cooldownText}</span>
+          ) : null}
         </p>
         {!identity ? (
           <div
@@ -347,6 +355,7 @@ export function CurrencyConverter({
               variant="secondary"
               aria-disabled={busy || cooldown}
               aria-busy={busy}
+              aria-describedby={cooldown ? `${id}-cooldown` : undefined}
               onClick={() => {
                 if (!busy && !cooldown) void read(true)
               }}
@@ -354,17 +363,14 @@ export function CurrencyConverter({
               {t('shell.dashboard.currency.refresh')}
             </Button>
             <p
+              id={`${id}-cooldown`}
               className={cn(
                 'min-h-10 text-caption text-ink-3',
                 !cooldown && 'invisible',
               )}
               aria-hidden={!cooldown}
             >
-              {t('shell.dashboard.currency.cooldown', {
-                time: new Intl.DateTimeFormat(locale, {
-                  timeStyle: 'short',
-                }).format(new Date(result?.retryAt ?? now)),
-              })}
+              {cooldownText}
             </p>
           </>
         ) : null}
