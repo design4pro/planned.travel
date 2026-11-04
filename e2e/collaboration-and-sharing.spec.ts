@@ -140,6 +140,13 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
       .getByRole('button', { name: 'Create trip', exact: true })
       .click()
     await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+    await settle(page, {
+      name: 'new-trip-plan',
+      path: new URL(page.url()).pathname,
+      ready: '[data-plan-loaded]',
+      map: true,
+    })
+    await page.waitForLoadState('networkidle')
     const peoplePath = new URL(page.url()).pathname.replace(
       /\/plan$/,
       '/people',

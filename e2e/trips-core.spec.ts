@@ -3,7 +3,7 @@ import type { Page } from '@playwright/test'
 import { visit, watchConsole } from './helpers/console.ts'
 import type { RouteCase } from './helpers/routes.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
-import { settleMutations } from './helpers/settle.ts'
+import { settle, settleMutations } from './helpers/settle.ts'
 import {
   DEMO_EMAIL,
   DEMO_PASSWORD,
@@ -2089,6 +2089,13 @@ test.describe('01-S8c — Initial members on trip creation', () => {
     await dialog.getByRole('button', { name: 'Create trip' }).click()
     try {
       await expect(page).toHaveURL(/\/trips\/[^/]+\/plan(\?|$)/)
+      await settle(page, {
+        name: 'new-trip-plan',
+        path: new URL(page.url()).pathname,
+        ready: '[data-plan-loaded]',
+        map: true,
+      })
+      await page.waitForLoadState('networkidle')
       const peopleUrl = page.url().replace(/\/plan(\?.*)?$/, '/people')
       await visit(
         page,

@@ -2913,6 +2913,7 @@ test('two-factor separates signed-in settings from the sign-in challenge', async
       guest.locator('input[autocomplete="one-time-code"]'),
     ).toBeVisible()
     await settle(guest, challenge)
+    await guest.waitForLoadState('networkidle')
     await guest.goto('/settings/two-factor')
     await expect(guest).toHaveURL(/\/login(?:\?|$)/)
     await settle(guest, { name: 'login', path: '/login', ready: 'main' })
