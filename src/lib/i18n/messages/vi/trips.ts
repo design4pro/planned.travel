@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Chỉnh sửa ảnh',
+  'plan.photo.unavailable':
+    'Tính năng tải lên và chỉnh sửa ảnh hiện không khả dụng. Ảnh hiện tại được giữ nguyên.',
   'collab.readOnly.archived':
     'Chuyến đi này đã được lưu trữ. Cộng tác chỉ có thể đọc.',
   'collab.readOnly.role':

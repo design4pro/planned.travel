@@ -576,7 +576,7 @@ is involved. No row in another plan gates this one.
 library measurements, owned paths and verification recipe below describe that earlier slice,
 not the current factor-management contract. The delivered hardening supersedes native writes,
 client-only expiry, password-only management, replayable proof and repeat-on-error recovery.
-Current ownership, additive migration 0024, atomic account authority, server-enforced proposal
+Current ownership, additive migration 0025, atomic account authority, server-enforced proposal
 expiry, proof budgets, receipt recovery and the forward-fix-only cutover are defined in
 [the lifecycle contract](../account-session-authority.md#factor-lifecycle-extension-1759),
 [ADR 0049](../adr/0049-account-session-authority-is-primary-and-account-scoped.md) and the

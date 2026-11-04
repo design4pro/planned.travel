@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9188aa26-8438-46f9-96a7-09e6e077f4f8",
+  "id": "7f62b6c9-d48b-4e0a-80bc-a2f65fb19a77",
   "prevId": "4fae199f-9392-4f39-8eea-db65f787fd78",
   "tables": {
     "account": {
@@ -220,223 +220,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "factor_budget": {
-      "name": "factor_budget",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "domain": {
-          "name": "domain",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "recovery_at": {
-          "name": "recovery_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "factor_budget_user_id_user_id_fk": {
-          "name": "factor_budget_user_id_user_id_fk",
-          "tableFrom": "factor_budget",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "factor_budget_user_id_domain_pk": {
-          "columns": [
-            "user_id",
-            "domain"
-          ],
-          "name": "factor_budget_user_id_domain_pk"
-        }
-      },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "factor_proposal": {
-      "name": "factor_proposal",
-      "columns": {
-        "digest": {
-          "name": "digest",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "factor_proposal_operation_id_unique": {
-          "name": "factor_proposal_operation_id_unique",
-          "columns": [
-            "operation_id"
-          ],
-          "isUnique": true
-        },
-        "factor_proposal_expiry_idx": {
-          "name": "factor_proposal_expiry_idx",
-          "columns": [
-            "expires_at"
-          ],
-          "isUnique": false
-        },
-        "factor_proposal_user_idx": {
-          "name": "factor_proposal_user_idx",
-          "columns": [
-            "user_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "factor_proposal_operation_id_account_security_operation_id_fk": {
-          "name": "factor_proposal_operation_id_account_security_operation_id_fk",
-          "tableFrom": "factor_proposal",
-          "tableTo": "account_security_operation",
-          "columnsFrom": [
-            "operation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "factor_proposal_user_id_user_id_fk": {
-          "name": "factor_proposal_user_id_user_id_fk",
-          "tableFrom": "factor_proposal",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "factor_replay": {
-      "name": "factor_replay",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "secret_digest": {
-          "name": "secret_digest",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "step": {
-          "name": "step",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "factor_replay_user_id_user_id_fk": {
-          "name": "factor_replay_user_id_user_id_fk",
-          "tableFrom": "factor_replay",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "factor_replay_user_id_secret_digest_pk": {
-          "columns": [
-            "user_id",
-            "secret_digest"
-          ],
-          "name": "factor_replay_user_id_secret_digest_pk"
-        }
-      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -995,28 +778,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'revoke-others'"
-        },
-        "refused_at": {
-          "name": "refused_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "factor_enabled": {
-          "name": "factor_enabled",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "receipt_digest": {
@@ -7571,6 +7332,116 @@
         }
       }
     },
+    "place_photo_selections": {
+      "name": "place_photo_selections",
+      "columns": {
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "mode": {
+          "name": "mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "place_photo_selections_trip_idx": {
+          "name": "place_photo_selections_trip_idx",
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "place_photo_selections_organization_id_organization_id_fk": {
+          "name": "place_photo_selections_organization_id_organization_id_fk",
+          "tableFrom": "place_photo_selections",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "place_photo_selections_organization_id_trip_id_place_id_places_organization_id_trip_id_id_fk": {
+          "name": "place_photo_selections_organization_id_trip_id_place_id_places_organization_id_trip_id_id_fk",
+          "tableFrom": "place_photo_selections",
+          "tableTo": "places",
+          "columnsFrom": [
+            "organization_id",
+            "trip_id",
+            "place_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "trip_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "place_photo_selections_organization_id_place_id_pk": {
+          "columns": [
+            "organization_id",
+            "place_id"
+          ],
+          "name": "place_photo_selections_organization_id_place_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "place_photo_selections_version_chk": {
+          "name": "place_photo_selections_version_chk",
+          "value": "(\"version\" IS NULL OR \"version\" >= 0)"
+        },
+        "place_photo_selections_mode_chk": {
+          "name": "place_photo_selections_mode_chk",
+          "value": "(\"mode\" IS NULL OR \"mode\" IN ('legacy', 'fallback'))"
+        }
+      }
+    },
     "place_tags": {
       "name": "place_tags",
       "columns": {
@@ -7910,6 +7781,15 @@
             "name"
           ],
           "isUnique": false
+        },
+        "places_photo_parent_idx": {
+          "name": "places_photo_parent_idx",
+          "columns": [
+            "organization_id",
+            "trip_id",
+            "id"
+          ],
+          "isUnique": true
         },
         "places_external_idx": {
           "name": "places_external_idx",
