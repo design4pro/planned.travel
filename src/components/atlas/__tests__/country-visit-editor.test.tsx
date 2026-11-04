@@ -241,6 +241,7 @@ it('refreshes Atlas after a save completes for a closed country without replacin
   )
   resolve({ country: { visit: { ...visit, note: 'Paris' } }, errors: null })
   await waitFor(() => expect(api.invalidate).toHaveBeenCalled())
+  expect(document.activeElement).toBe(note)
   expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe(
     'Tokyo',
   )
