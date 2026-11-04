@@ -1528,6 +1528,8 @@ Verify in sandbox that an absent workspace's current, correctly attributed live 
 only `{ cancel_at_period_end: true }`; an existing workspace (also while fenced), an ending or
 non-live subscription must cause no provider mutation. The handler logs `workspace-late-subscription`
 at `error` on a cancellation or provider failure, treats 403/404 as done, and retries 409/429/5xx.
+It validates the PATCH response's identity and ending/non-live state before acknowledging success;
+an unreadable, mismatched or still-renewing response retries and re-reads provider state.
 No refund or immediate cancellation is performed. Roll back producers before the consumer.
 
 The driver's billing gate refuses unreadable provider data as `billing-unavailable`, including

@@ -53,7 +53,15 @@ function setup(organizationId = 'missing') {
   const current = polarSubscription({
     customer: { id: 'customer', external_id: organizationId },
   })
-  const fetch = vi.fn().mockImplementation(async () => Response.json(current))
+  const fetch = vi
+    .fn()
+    .mockImplementation(async (_url, init) =>
+      Response.json(
+        init.method === 'PATCH'
+          ? { ...current, cancel_at_period_end: true }
+          : current,
+      ),
+    )
   const handler = createWorkspaceLateSubscriptionHandler(() => db.db, fetch)
   const payload = {
     kind: 'workspace-late-subscription' as const,
@@ -131,6 +139,57 @@ it('does not write when a delayed delivery is already ending', async () => {
   h.current.cancel_at_period_end = true
   await h.run()
   expect(h.fetch).toHaveBeenCalledTimes(1)
+})
+
+it.each(['empty', 'null', 'invalid-json', 'tenant', 'id', 'still-live'])(
+  'retries an unconfirmed successful PATCH (%s)',
+  async (kind) => {
+    const h = setup()
+    const updated = { ...h.current, cancel_at_period_end: true }
+    if (kind === 'tenant')
+      updated.customer = { id: 'foreign', external_id: 'foreign' }
+    if (kind === 'id') updated.id = 'foreign'
+    if (kind === 'still-live') updated.cancel_at_period_end = false
+    h.fetch.mockImplementation(async (_url, init) => {
+      if (init.method === 'GET') return Response.json(h.current)
+      if (kind === 'empty') return Response.json({})
+      if (kind === 'null') return Response.json(null)
+      if (kind === 'invalid-json')
+        return new Response('unreadable', { status: 200 })
+      return Response.json(updated)
+    })
+    await expect(h.run()).rejects.toBeInstanceOf(TaskRetryableError)
+    expect(h.sink.records.some((record) => record.outcome === 'ending')).toBe(
+      false,
+    )
+  },
+)
+
+it('accepts a correctly attributed subscription that became non-live during PATCH', async () => {
+  const h = setup()
+  h.fetch.mockImplementation(async (_url, init) =>
+    Response.json(
+      init.method === 'PATCH'
+        ? { ...h.current, status: 'canceled' }
+        : h.current,
+    ),
+  )
+  expect(await h.run()).toMatchObject({ outcome: 'ending' })
+})
+
+it('reconciles a committed cancellation after a lost response on redelivery', async () => {
+  const h = setup()
+  h.fetch.mockImplementation(async (_url, init) => {
+    if (init.method === 'GET') return Response.json(h.current)
+    h.current.cancel_at_period_end = true
+    throw new Error('response lost after commit')
+  })
+  await expect(h.run()).rejects.toBeInstanceOf(TaskRetryableError)
+  const callsAfterLoss = h.fetch.mock.calls.length
+  h.context.attempt = 2
+  expect(await h.run()).toMatchObject({ outcome: 'not-live' })
+  expect(h.fetch).toHaveBeenCalledTimes(callsAfterLoss + 1)
+  expect(h.fetch.mock.calls.at(-1)?.[1].method).toBe('GET')
 })
 
 it('rejects an envelope/payload tenant mismatch before reading Polar', async () => {

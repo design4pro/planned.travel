@@ -66,11 +66,22 @@ export function createWorkspaceLateSubscriptionHandler(
       }
       if (!providerSubscriptionBlocksWorkspaceDeletion(subscription))
         return { outcome: 'not-live' }
-      await polar.request({
-        method: 'PATCH',
-        path,
-        body: { cancel_at_period_end: true },
-      })
+      const updated = deletionSubscriptionSchema.parse(
+        await polar.request({
+          method: 'PATCH',
+          path,
+          body: { cancel_at_period_end: true },
+        }),
+      )
+      if (
+        updated.id !== payload.providerSubscriptionId ||
+        updated.customer.external_id !== context.orgId ||
+        providerSubscriptionBlocksWorkspaceDeletion(updated)
+      ) {
+        throw new TaskRetryableError(
+          'Polar did not confirm period-end cancellation',
+        )
+      }
       context.logger.error('workspace-late-subscription', undefined, {
         ...fields,
         outcome: 'ending',
@@ -88,6 +99,7 @@ export function createWorkspaceLateSubscriptionHandler(
         if (
           error.status !== 409 &&
           error.status !== 429 &&
+          error.status >= 400 &&
           error.status < 500
         ) {
           throw new TaskPermanentError(
