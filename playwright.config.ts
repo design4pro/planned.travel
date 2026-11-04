@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 import { FIXTURE_DAY } from './e2e/fixture-day'
+import { feedbackWebServers } from './scripts/ci/sentry-fixture'
 
 const isCI = process.env.CI === 'true' || process.env.CI === '1'
 
@@ -282,17 +283,21 @@ export default defineConfig({
       : []),
   ],
 
-  webServer:
-    externalBaseURL === undefined
-      ? {
-          command: 'pnpm dev',
-          url: baseURL,
-          // Locally, attach to the dev server that is probably already up;
-          // in CI always start a clean one so the run is reproducible.
-          reuseExistingServer: !isCI,
-          timeout: 120_000,
-          stdout: 'ignore',
-          stderr: 'pipe',
-        }
-      : undefined,
+  webServer: [
+    ...feedbackWebServers(process.env.E2E_SENTRY_DSN, baseURL),
+    ...(externalBaseURL === undefined
+      ? [
+          {
+            command: 'pnpm dev',
+            url: baseURL,
+            // Locally, attach to the dev server that is probably already up;
+            // in CI always start a clean one so the run is reproducible.
+            reuseExistingServer: !isCI,
+            timeout: 120_000,
+            stdout: 'ignore' as const,
+            stderr: 'pipe' as const,
+          },
+        ]
+      : []),
+  ],
 })

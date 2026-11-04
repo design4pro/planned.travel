@@ -128,7 +128,8 @@ export type ToleratedPageError = {
  * (`e2e/journeys.spec.ts`), where the sign-in form is typed into. Without the fake
  * clock `window.setTimeout` is native, Sentry takes it, and there is no second clock
  * — so no build and no browser raises this. It needs a `VITE_SENTRY_DSN` in the
- * local env to happen at all, which is why CI, which sets none, has never seen it.
+ * build to happen at all. CI enables the real SDK with a throwaway loopback DSN;
+ * its discard-only delivery fixture does not change this fake-clock interaction.
  *
  * What the entry gives up is this one pairing: were the app itself ever to cancel an
  * idle callback with `clearTimeout()` — a silent no-op in a browser — the journeys

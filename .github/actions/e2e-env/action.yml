@@ -2,7 +2,8 @@ name: Prepare the e2e environment
 description: >
   Everything the Playwright suite needs before a single spec runs: dependencies,
   a migrated local D1, an `E2E_BUILD=1` build served by `vite preview` on port
-  3000 and the seeded demo workspace behind it. Optionally the PMTiles basemap
+  3000 and the seeded demo workspace behind it. Reporting uses a throwaway
+  loopback DSN; Playwright owns its discard-only delivery fixture. Optionally the PMTiles basemap
   in the local R2 simulator - see the `basemap` input, which is off.
 
   Brings its own browsers. The step below installs exactly the projects the
@@ -196,7 +197,11 @@ runs:
       shell: bash
       env:
         E2E_BUILD: '1'
-      run: pnpm exec vite build
+      run: |
+        set -euo pipefail
+        fixture_dsn=$(node scripts/ci/sentry-fixture.ts --dsn)
+        VITE_SENTRY_DSN="$fixture_dsn" pnpm exec vite build
+        printf 'E2E_SENTRY_DSN=%s\n' "$fixture_dsn" >> "$GITHUB_ENV"
 
     # The seed still needs the dev server: `/api/dev/seed` is compiled out of every build, the
     # E2E one included, and it stays that way - an endpoint that rewrites the owner's password

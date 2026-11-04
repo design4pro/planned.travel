@@ -262,6 +262,12 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
+- **Reporting in browser tests.** The shared E2E action enables the real Sentry SDK with a
+  throwaway loopback DSN for its test build only. Playwright owns a bounded, discard-only
+  collector, including runs against an external local app server; it refuses port collisions
+  and stops the collector with the test run. No fixture envelopes reach a remote project.
+  Ordinary builds, local QA and deploys retain their own reporting configuration. This fixture
+  verifies UI and local delivery compatibility, not real Sentry ingestion or quotas.
 - **Who starts a run.** No label does (ADR 0032). The Reconciler triages an issue a maintainer
   opens, implements a ready one and slices a merged spec (§ The Reconciler); a PR is driven by
   its own automations. PR repair and second opinions require an explicit request; review findings
