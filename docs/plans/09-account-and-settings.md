@@ -1,5 +1,10 @@
 # Account and settings
 
+> Storage contract update (#1784, ADR 0050): historical R2-first/check-then-insert descriptions
+> below are superseded for workspace quota-bearing writes by atomic reservation before a
+> create-only put, followed by settlement. Failed cleanup remains charged. Future tenant writers
+> must extend and reuse the shared storage ledger; see `docs/ARCHITECTURE.md` §6.
+
 Eight rows of the 89-row matrix live here, plus the one Extensibility row that survives the hosted
 multi-tenant boundary. Seven of the eight are `ACC-*`; the eighth, `ACC-08`, is excluded and is
 argued in `docs/plans/11-boundaries-and-blockers.md` rather than planned here.

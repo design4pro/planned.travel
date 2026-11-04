@@ -64,7 +64,7 @@ The request path writes nothing and waits for nothing. It validates, resolves th
 browser                     request path                    queue                       browser
 ───────                     ────────────                    ─────                       ───────
 uploadFile() ──────────────► uploadTripFileFn
-  (existing XHR path)         └─ recordFile: assertQuota(files, storage_bytes)
+  (existing XHR path)         └─ shared atomic storage admission → R2 → recordFile settlement
                                  └─ { fileId }
 startBookingImportFn ──────► appScope → requireTrip → getFile
                               └─ enqueueTask(taskQueue(), {

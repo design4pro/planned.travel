@@ -9,7 +9,7 @@
  * `orgId` is the only authority the consumer trusts. A forged envelope can therefore only name
  * objects its own tenant already owned.
  */
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { taskHandlers } from '../../consumer'
 import { buildTaskEnvelope } from '../../jobs'
@@ -20,7 +20,12 @@ import {
 } from '../../types'
 import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import { purgeContext } from './purge-context'
-import { handleTripPurge, tripPurgeTaskId } from '../trip-purge'
+import { createHarness } from '#/server/repos/__tests__/harness'
+import type { Harness } from '#/server/repos/__tests__/harness'
+import { createTripPurgeHandler, handleTripPurge as shippedTripPurge, tripPurgeTaskId } from '../trip-purge'
+
+import { createTrip, recordFile, reserveStorage, getStorageUsage } from '#/server/repos'
+import { abandonStorage, writeStorageObject } from '#/server/storage/admission'
 
 const ALPHA = 'org-alpha'
 const BETA = 'org-beta'
@@ -29,6 +34,10 @@ const keyIn = (orgId: string, index: number): string =>
   `trips/${orgId}/trip-1/file-${index}-photo.jpg`
 
 describe('handleTripPurge', () => {
+  let harness: Harness
+  const handleTripPurge = createTripPurgeHandler(() => harness.db)
+  beforeEach(async () => { harness = await createHarness() })
+  afterEach(() => harness.close())
   it('deletes every key the envelope’s own organization owns', async () => {
     const keys = [keyIn(ALPHA, 1), keyIn(ALPHA, 2)]
     const bucket = fakeBucket(keys)
@@ -91,8 +100,39 @@ describe('handleTripPurge', () => {
     expect(bucket.remaining.size).toBe(0)
   })
 
+  it('preserves published objects and permanent fences while purging legacy keys', async () => {
+    const tenant = await harness.seedTenant('ledger-purge')
+    const trip = await createTrip(tenant.scope, { title: 'Files' })
+    const key = (name: string) => `trips/${tenant.organizationId}/${trip.id}/${name}.jpg`
+    const legacy = key('legacy')
+    const foreign = `trips/${BETA}/trip/foreign.jpg`
+    const bucket = fakeBucket([legacy, foreign])
+    const published = await reserveStorage(tenant.scope, { tripId: trip.id, storageKey: key('published'), sizeBytes: 4 })
+    await writeStorageObject(tenant.scope, bucket, published, new Blob(['live']).stream())
+    await recordFile(tenant.scope, { tripId: trip.id, storageKey: published.storageKey, sizeBytes: 4, filename: 'file.jpg', contentType: 'image/jpeg' }, published.id)
+    const cancelled = await reserveStorage(tenant.scope, { tripId: trip.id, storageKey: key('cancelled'), sizeBytes: 4 })
+    await abandonStorage(tenant.scope, bucket, cancelled.id)
+    const keys = [legacy, foreign, published.storageKey, cancelled.storageKey]
+    const context = purgeContext(tenant.organizationId, bucket)
+    await handleTripPurge({ keys }, context)
+    await handleTripPurge({ keys }, context)
+    expect(bucket.objects.has(legacy)).toBe(false)
+    expect(bucket.objects.has(foreign)).toBe(true)
+    expect(bucket.objects.get(published.storageKey)?.body).toBe('live')
+    expect(bucket.objects.get(cancelled.storageKey)?.body).toBe('')
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ bytes: 4, fileCount: 1 })
+  })
+
   it('is registered with the consumer, so a `case` cannot dead-letter it', () => {
-    expect(taskHandlers['trip-purge']).toBe(handleTripPurge)
+    expect(taskHandlers['trip-purge']).toBe(shippedTripPurge)
+  })
+
+  it('fails closed without D1 instead of deleting cancellation fences', async () => {
+    const bucket = fakeBucket([keyIn(ALPHA, 1)])
+    const context = purgeContext(ALPHA, bucket)
+    context.env.DB = undefined
+    await expect(shippedTripPurge({ keys: [keyIn(ALPHA, 1)] }, context)).rejects.toThrow('DB binding')
+    expect(bucket.calls).toEqual([])
   })
 
   it('rides an envelope the real schema accepts, with a deterministic id', () => {

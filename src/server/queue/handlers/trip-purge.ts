@@ -17,17 +17,19 @@
  * organization is skipped rather than deleted. Families that are not workspace-scoped, such as
  * `dead-letter/<date>/…`, have no organization segment and are never matched (see `belongsTo`).
  *
- * **Why not a second read of `trip_files`.** By the time this message is delivered the rows are gone —
- * that is what the cascade did, and it is the event that produced the envelope — so an intersection
- * with what the repository still confirms is empty by construction and the purge would be a no-op.
- * The confirmation happens on the producing side instead, where the rows still exist: `deleteTripFn`
- * reads the keys through the tenant-scoped `listTripStorageKeys` *before* it deletes. The handler
- * needs no `DB` binding at all, which is also why it cannot be pointed at rows it should not see.
+ * The retained storage ledger survives trip/file cascades. It distinguishes removable objects
+ * from published content and permanent cancellation fences; DB is therefore required. Legacy keys
+ * absent from the ledger still use the namespace check and chunked delete.
  *
  * Idempotent by construction: deleting an absent key is a success in R2, so a redelivery finishes
  * rather than dead-letters.
  */
 
+import { drizzle } from 'drizzle-orm/d1'
+import { createScope, listedStorageKeys } from '#/server/repos'
+import { purgeStorageKey } from '#/server/storage/admission'
+import { TaskConfigurationError } from '../types'
+import type { DatabaseFor } from './travel-stats'
 import { deleteObjects } from '#/server/storage/objects'
 
 import type {
@@ -73,8 +75,8 @@ function belongsTo(orgId: string, key: string): boolean {
  * which of them existed, and asking first would be a round trip per key to learn something the delete
  * already makes true.
  */
-export const handleTripPurge: TaskHandler<'trip-purge'> =
-  async function tripPurge(
+export function createTripPurgeHandler(databaseFor: DatabaseFor = (binding) => drizzle(binding)): TaskHandler<'trip-purge'> {
+  return async function tripPurge(
     payload: TripPurgePayload,
     context: TaskContext,
   ): Promise<TaskMetrics> {
@@ -90,7 +92,16 @@ export const handleTripPurge: TaskHandler<'trip-purge'> =
       )
     }
 
-    const deleted = await deleteObjects(context.env.FILES, mine)
-
-    return { requested: payload.keys.length, deleted, skipped }
+    const binding = context.env.DB
+    if (!binding) throw new TaskConfigurationError('DB binding is required to preserve storage cancellation fences.')
+    const scope = createScope(databaseFor(binding), {
+      organizationId: context.orgId, userId: 'system:trip-purge', role: 'member', impersonatedBy: null,
+    })
+    const ledgerKeys = await listedStorageKeys(scope, mine)
+    await deleteObjects(context.env.FILES, mine.filter((key) => !ledgerKeys.has(key)))
+    for (const key of ledgerKeys) await purgeStorageKey(scope, context.env.FILES, key)
+    return { requested: payload.keys.length, deleted: mine.length, skipped }
   }
+}
+
+export const handleTripPurge = createTripPurgeHandler()

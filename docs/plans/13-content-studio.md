@@ -633,7 +633,7 @@ No gap row - outside the 89-row matrix (see Area brief).
 ### Owned paths
 
 - `src/server/repos/content-assets.ts` - new. `recordAsset` (R2-first, compensating delete on
-  failure - the `repos/files.ts` order), `listAssets` (cursor-paged), `updateAsset` (name,
+  failure - operator assets do not use tenant quotas), `listAssets` (cursor-paged), `updateAsset` (name,
   description, per-locale alt), `deleteAsset` (reference check first), `findUsages`.
 - `src/server/repos/index.ts` - append. Barrel export.
 - `src/routes/studio/media.tsx` - new. The library screen.
@@ -688,8 +688,8 @@ tiles archives already keep ("immutable is a promise about the key",
 No tenant-countable row: operator media is deliberately outside `resolveQuotas` and
 `PLAN_QUOTAS` - the bound is the staff permission model plus the per-object and per-request
 caps from `file-policy.ts`. R2 write order is object first, assert/validate second,
-compensating delete on throw - stated here because the TEMPLATE demands the order and the
-store implements it.
+compensating delete on throw. This operator-only protocol is separate from the tenant reservation
+ledger in ADR 0050; it does not describe the current `repos/files.ts` admission order.
 
 ### Tenant isolation test
 

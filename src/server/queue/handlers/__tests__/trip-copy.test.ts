@@ -284,6 +284,43 @@ describe('handleTripCopy', () => {
     expect(kinds).toHaveLength(2)
   })
 
+  it('retries a concurrent delivery while the first cover put is in progress', async () => {
+    const source = await seedSource()
+    const sourceKey = `trips/${tenant.organizationId}/${source.id}/cover1-lisbon.jpg`
+    await updateTrip(tenant.scope, source.id, { coverImageKey: sourceKey })
+    const targetId = await startCopy(source)
+    const targetKey = `trips/${tenant.organizationId}/${targetId}/cover1-lisbon.jpg`
+    const files = fakeFiles({ [sourceKey]: { body: 'jpeg', contentType: 'image/jpeg' } })
+    const put = files.put
+    let signalStarted = () => {}
+    let resume = () => {}
+    const started = new Promise<void>((resolve) => { signalStarted = resolve })
+    const gate = new Promise<void>((resolve) => { resume = resolve })
+    files.put = async (...args) => {
+      if (args[0] === targetKey) { signalStarted(); await gate }
+      return put(...args)
+    }
+    const env = fakeEnv(files)
+    const payload = { sourceTripId: source.id, targetTripId: targetId, requestedBy: tenant.ownerUserId }
+    const first = copy(payload, context(tenant.organizationId, env))
+    await started
+    try {
+      await expect(copy(payload, context(tenant.organizationId, env))).rejects.toMatchObject({
+        code: 'STORAGE_WRITE_IN_PROGRESS',
+      })
+      expect((await getTrip(tenant.scope, targetId))?.copyPendingAt).not.toBeNull()
+      expect(await listForEntity(tenant.scope, 'trip', targetId)).toHaveLength(0)
+    } finally {
+      resume()
+      await first
+    }
+    expect(files.objects.get(targetKey)?.body).toBe('jpeg')
+    expect((await getTrip(tenant.scope, targetId))?.coverImageKey).toBe(targetKey)
+    expect((await getTrip(tenant.scope, targetId))?.copyPendingAt).toBeNull()
+    expect(await copy(payload, context(tenant.organizationId, env))).toMatchObject({ copied: false })
+    expect(await listForEntity(tenant.scope, 'trip', targetId)).toHaveLength(1)
+  })
+
   it('acks a redelivery of a finished copy without writing again', async () => {
     const source = await seedSource()
     const targetId = await startCopy(source)

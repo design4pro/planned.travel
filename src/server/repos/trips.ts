@@ -65,6 +65,7 @@ import {
   NotFoundError,
   RepositoryError,
 } from './context'
+import { retainedCoverPredicate, retainTripStorage } from './storage-admission'
 import { getMembership, stillInWorkspace } from './members'
 import {
   dayNotesRepository,
@@ -1120,6 +1121,9 @@ export async function updateTrip(
       ? undefined
       : await reserveTripSlug(scope, values.slug, tripId)
 
+  if (values.coverImageKey !== undefined && values.coverImageKey !== existing.coverImageKey) {
+    await retainTripStorage(scope, tripId)
+  }
   const patch = { ...values, ...(slug === undefined ? {} : { slug }) }
   const trip = currencyChanged
     ? await updateTripWithCurrency(scope, tripId, patch, currency)
@@ -1207,6 +1211,7 @@ export async function deleteTrip(
   tripId: string,
 ): Promise<void> {
   await requireOwnedTrip(scope, tripId)
+  await retainTripStorage(scope, tripId)
   await runBatch(scope, [
     scope.db
       .update(journeys)
@@ -1773,11 +1778,20 @@ export async function finishTripCopy(
   tripId: string,
   cover: FinishTripCopyInput = {},
 ): Promise<Trip> {
-  await requireOwnedTrip(scope, tripId)
-  return tripsRepository.requireUpdate(scope, tripId, {
-    ...definedOnly(finishTripCopyInput.parse(cover)),
+  const current = await requireOwnedTrip(scope, tripId)
+  if (current.copyPendingAt === null) return current
+  const values = definedOnly(finishTripCopyInput.parse(cover))
+  const key = values.coverImageKey
+  const canPublish = key ? retainedCoverPredicate(scope, key) : sql`true`
+  const rows = await scope.db.update(trips).set({
+    ...values,
+    ...(key ? {
+      coverImageKey: sql`case when (${canPublish}) then ${key} else null end`,
+      coverImageUrl: sql`case when (${canPublish}) then ${values.coverImageUrl ?? null} else null end`,
+    } : {}),
     copyPendingAt: null,
-  })
+  }).where(tenantFilter(scope, trips, eq(trips.id, tripId), isNotNull(trips.copyPendingAt))).returning()
+  return rows[0] ?? requireOwnedTrip(scope, tripId)
 }
 
 /**

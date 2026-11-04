@@ -45,7 +45,7 @@ renderer. Existing places without new metadata continue rendering their existing
 
 ## Ownership and architecture
 
-- `src/server/repos/place-photos.ts` (new) owns tenant-scoped metadata, quota reservations,
+- `src/server/repos/place-photos.ts` (new) owns tenant-scoped photo metadata, using shared storage admission for quota reservations,
   selection/version compare-and-set and cleanup claims. Reuse trip readability/write guards and
   tenant base access. It never imports a Worker binding. Every method has tenant and trip isolation
   tests. No SQL is added to a function, route or storage helper.
@@ -83,8 +83,9 @@ Proposed additive tenant tables (generated migrations only):
   and then write unconditionally. All storage usage readers include ready, staged and retained
   garbage bytes plus live reservations without double counting. Before activation, every existing writer spending these shared quotas (attachment uploads,
   cover writes and trip-copy paths included) must use the same atomic admission mechanism.
-  `recordFile` currently checks usage then inserts; that existing sequence does not prevent
-  photo-versus-attachment races and must not be treated as atomic. File-count quota counts each
+  The prerequisite in #1784 supplies `repos/storage-admission.ts` and `storage/admission.ts`
+  (ADR 0050); photo writers must reuse this shared admission and cancellation protocol, rather
+  than checking usage separately or adding a second quota owner. File-count quota counts each
   retained original and derivative as one stored object; temporary reservation reserves two slots.
 
 `places.image_url` is retained as the legacy fallback. No backfill fetches arbitrary existing
