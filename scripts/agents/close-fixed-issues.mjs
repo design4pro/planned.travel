@@ -410,18 +410,20 @@ function main() {
             `#${pr.number}: skipped; no explicit closing keywords outside code.`,
           )
         else {
-          const files = read([
-            'api',
-            '--paginate',
-            '--slurp',
-            `repos/${options.repo}/pulls/${pr.number}/files?per_page=100`,
-          ]).flat()
           if (pr.changedFiles === 0) {
             numbers = []
             console.log(
               `#${pr.number}: skipped; the merged PR has no changed files.`,
             )
-          } else pr.specOnly = specOnlyFiles(files)
+          } else {
+            const files = read([
+              'api',
+              '--paginate',
+              '--slurp',
+              `repos/${options.repo}/pulls/${pr.number}/files?per_page=100`,
+            ]).flat()
+            pr.specOnly = specOnlyFiles(files)
+          }
         }
         for (const number of numbers) {
           try {
