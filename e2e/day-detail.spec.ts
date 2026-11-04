@@ -495,7 +495,8 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
         await tile.locator('[data-part="trip-actions-trigger"]').click()
       }
       await expect(deleteAction).toBeEnabled()
-      await deleteAction.click()
+      // Leave time to reopen a detached menu within the outer retry window.
+      await deleteAction.click({ timeout: 5_000 })
     }).toPass({ timeout: 15_000 })
     const remove = page.locator('[data-part="trip-delete-dialog"]')
     await expect(remove.getByRole('listitem').first()).toBeVisible()
