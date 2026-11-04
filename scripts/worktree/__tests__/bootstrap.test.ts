@@ -215,7 +215,12 @@ describe('scripts/worktree/bootstrap.sh', { timeout: 15_000 }, () => {
       const result = spawnSync(
         'bash',
         [BOOTSTRAP, '--no-seed', '--port', '3030', '--host', '127.0.0.1'],
-        { cwd: main, encoding: 'utf8', env: baseEnv(), timeout: 30_000 },
+        {
+          cwd: main,
+          encoding: 'utf8',
+          env: baseEnv() as unknown as NodeJS.ProcessEnv,
+          timeout: 30_000,
+        },
       )
       expect(result.status).toBe(1)
       expect(result.stderr).toContain('leaving your file untouched')
@@ -228,7 +233,7 @@ describe('scripts/worktree/bootstrap.sh', { timeout: 15_000 }, () => {
       const result = spawnSync('bash', [BOOTSTRAP, '--host', '0.0.0.0'], {
         cwd: main,
         encoding: 'utf8',
-        env: baseEnv(),
+        env: baseEnv() as unknown as NodeJS.ProcessEnv,
         timeout: 30_000,
       })
       expect(result.status).toBe(2)
