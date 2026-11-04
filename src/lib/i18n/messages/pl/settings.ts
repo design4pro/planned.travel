@@ -720,7 +720,7 @@ const messages = {
   'twoFactor.password.pending': 'Konfigurowanie',
   'twoFactor.password.invalid': 'To hasło jest nieprawidłowe.',
   'twoFactor.key.intro':
-    'Potrzebujesz aplikacji uwierzytelniającej w telefonie. Dodaj do niej ten klucz i wróć tutaj. Uwierzytelnianie dwuskładnikowe nie jest jeszcze włączone.',
+    'Dodaj ten nowy klucz do aplikacji uwierzytelniającej, a następnie potwierdź kod. Obecna metoda logowania nie zmieni się do czasu potwierdzenia.',
   'twoFactor.key.matrixLabel':
     'Kod konfiguracji. Ten sam klucz jest dostępny jako tekst',
   'twoFactor.key.matrixFailed':
@@ -733,21 +733,18 @@ const messages = {
   'twoFactor.key.open': 'Otwórz w aplikacji uwierzytelniającej',
   'twoFactor.key.startOver': 'Zacznij od nowa',
   'twoFactor.key.startOverHint':
-    'Rozpoczęcie od nowa tworzy nowy klucz. Klucz dodany wcześniej do aplikacji przestanie działać.',
+    'Odrzucenie tej konfiguracji nie zmieni obecnej metody logowania.',
   'twoFactor.key.next': 'Klucz został dodany',
   'twoFactor.code.label': 'Kod z aplikacji',
-  'twoFactor.code.hint': 'Sześć cyfr widocznych teraz w aplikacji.',
   'twoFactor.code.submit': 'Włącz uwierzytelnianie dwuskładnikowe',
   'twoFactor.code.pending': 'Sprawdzanie',
   'twoFactor.code.invalid':
     'Kod jest nieprawidłowy. Sprawdź godzinę w telefonie i wpisz najnowszy kod z aplikacji.',
-  'twoFactor.code.unclear':
-    'Nie możemy ustalić, czy operacja się powiodła. Wpisz najnowszy kod, aby spróbować ponownie.',
   'twoFactor.rateLimited.title': 'Zbyt wiele prób w krótkim czasie',
   'twoFactor.rateLimited.password':
-    'Odczekaj około dziesięciu sekund i spróbuj ponownie. Wpisane dane zostały zachowane.',
+    'Poczekaj, aż ta czynność znów będzie dostępna, i spróbuj ponownie. Wpisane dane nie zostały utracone.',
   'twoFactor.rateLimited.code':
-    'Odczekaj do minuty i spróbuj ponownie. Wpisane dane zostały zachowane.',
+    'Poczekaj, aż ta czynność znów będzie dostępna, i spróbuj ponownie. Wpisane dane nie zostały utracone.',
   'twoFactor.codes.title': 'Twoje kody zapasowe',
   'twoFactor.codes.body':
     'Każdy kod działa raz, jeśli stracisz telefon. Pokazujemy je tylko teraz, więc przechowuj je w bezpiecznym miejscu.',
@@ -780,21 +777,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Uwierzytelnianie dwuskładnikowe wymaga hasła do tego konta. Następna strona poprosi o e-mail i wyśle link do ustawienia hasła. Ustawienie hasła wyloguje Cię wszędzie. Zaloguj się ponownie i wróć tutaj.',
   'twoFactor.nopassword.action': 'Ustaw hasło',
-  'twoFactor.setup.action': 'Pokaż ponownie klucz konfiguracji',
-  'twoFactor.setup.title': 'Klucz konfiguracji',
-  'twoFactor.setup.body':
-    'Dodaj ten klucz na innym urządzeniu. Klucz na pozostałych urządzeniach nadal działa.',
-  'twoFactor.setup.done': 'Gotowe',
-  'twoFactor.setup.confirm': 'Pokaż klucz',
   'twoFactor.setup.pending': 'Sprawdzanie',
   'twoFactor.off.action': 'Wyłącz uwierzytelnianie dwuskładnikowe',
   'twoFactor.off.title': 'Wyłączyć uwierzytelnianie dwuskładnikowe?',
   'twoFactor.off.body':
-    'Każdy, kto zna Twoje hasło, będzie mógł zalogować się bez kodu. Pozostałe zalogowane urządzenia pozostaną zalogowane.',
+    'Każdy, kto zna Twoje hasło, będzie mógł zalogować się bez kodu.',
   'twoFactor.off.confirm': 'Wyłącz',
   'twoFactor.off.pending': 'Wyłączanie',
   'twoFactor.off.cancel': 'Pozostaw włączone',
-  'twoFactor.off.done': 'Uwierzytelnianie dwuskładnikowe jest wyłączone',
   'security.other.label': 'Wyloguj inne urządzenia',
   'security.other.description':
     'Na innych urządzeniach trzeba zalogować się ponownie. Połączenia zamykają się z opóźnieniem; zaufane przeglądarki, Google, Apple i klucze dostępu pozostają dostępne.',
@@ -807,6 +797,26 @@ const messages = {
   'security.other.pending':
     'Inne sesje zostały unieważnione. Zamykanie połączeń może potrwać dłużej.',
   'security.other.check': 'Sprawdź stan',
+  'twoFactor.security.effect':
+    'Ta zmiana wylogowuje inne urządzenia i usuwa dotychczasowe zaufanie do przeglądarek. To urządzenie otrzyma nową sesję.',
+  'twoFactor.security.currentStep':
+    'Użyj aktualnego kodu z aplikacji. Jeśli użyto go już do zmiany zabezpieczeń, poczekaj na nowy.',
+  'twoFactor.security.invalidProof':
+    'Kod jest nieprawidłowy lub został już użyty. Wpisz nowy kod z aplikacji albo nieużywany kod zapasowy.',
+  'twoFactor.security.replace': 'Zmień aplikację uwierzytelniającą',
+  'twoFactor.security.codesLost':
+    'Zmiana została zapisana, ale nowych kodów zapasowych nie można wyświetlić ponownie. Zaloguj się ponownie, aby sprawdzić ustawienia.',
+  'twoFactor.security.changed': 'Ustawienia zabezpieczeń zostały zmienione.',
+  'twoFactor.security.fresh':
+    'Zaloguj się ponownie i potwierdź zmianę zabezpieczeń w ciągu pięciu minut.',
+  'twoFactor.security.expired':
+    'Konfiguracja wygasła. Zacznij ponownie; aktywny czynnik nie został zmieniony.',
+  'twoFactor.security.stale':
+    'Stan zabezpieczeń się zmienił. Odśwież go przed kolejną zmianą.',
+  'twoFactor.security.upgrade':
+    'Odśwież stronę, aby użyć nowych mechanizmów zabezpieczeń.',
+  'twoFactor.security.unavailable':
+    'Zmiany zabezpieczeń są niedostępne. Odśwież stronę, aby sprawdzić ponownie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

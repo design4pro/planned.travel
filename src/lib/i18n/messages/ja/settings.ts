@@ -654,7 +654,7 @@ const messages = {
   'twoFactor.password.pending': '設定中',
   'twoFactor.password.invalid': 'パスワードが正しくありません。',
   'twoFactor.key.intro':
-    'スマートフォンに認証アプリが必要です。このキーを追加してから、このページに戻ってください。二要素認証はまだ有効ではありません。',
+    'この新しいキーを認証アプリに追加し、コードを確認してください。確認が完了するまで、現在のログイン方法は変更されません。',
   'twoFactor.key.matrixLabel': '設定コード。同じキーをテキストでも確認できます',
   'twoFactor.key.matrixFailed':
     'このキーのコードを生成できませんでした。アプリに設定キーを入力してください。',
@@ -666,21 +666,18 @@ const messages = {
   'twoFactor.key.open': '認証アプリで開く',
   'twoFactor.key.startOver': '最初からやり直す',
   'twoFactor.key.startOverHint':
-    'やり直すと新しいキーが作成されます。すでにアプリに追加したキーは使えなくなります。',
+    'この設定を破棄しても、現在のログイン方法は変わりません。',
   'twoFactor.key.next': '追加しました',
   'twoFactor.code.label': 'アプリのコード',
-  'twoFactor.code.hint': 'アプリに現在表示されている6桁の数字。',
   'twoFactor.code.submit': '二要素認証を有効にする',
   'twoFactor.code.pending': '確認中',
   'twoFactor.code.invalid':
     'コードが一致しません。スマートフォンの時刻を確認し、アプリの最新コードを入力してください。',
-  'twoFactor.code.unclear':
-    '成功したか確認できませんでした。最新のコードを入力して再試行してください。',
   'twoFactor.rateLimited.title': '短時間に試行が集中しています',
   'twoFactor.rateLimited.password':
-    '約10秒待ってから再試行してください。入力内容は保持されています。',
+    'この操作が再び利用可能になるまで待ってから、もう一度お試しください。入力内容は保持されています。',
   'twoFactor.rateLimited.code':
-    '最大1分待ってから再試行してください。入力内容は保持されています。',
+    'この操作が再び利用可能になるまで待ってから、もう一度お試しください。入力内容は保持されています。',
   'twoFactor.codes.title': 'バックアップコード',
   'twoFactor.codes.body':
     'スマートフォンを紛失した場合、各コードを一度だけ使用できます。表示は今だけなので、安全な場所に保管してください。',
@@ -713,21 +710,14 @@ const messages = {
   'twoFactor.nopassword.body':
     '二要素認証にはアカウントのパスワードが必要です。次のページでメールアドレスを入力すると、設定リンクが届きます。設定するとすべての端末でログアウトします。再度ログインしてここに戻ってください。',
   'twoFactor.nopassword.action': 'パスワードを設定',
-  'twoFactor.setup.action': '設定キーをもう一度表示',
-  'twoFactor.setup.title': '設定キー',
-  'twoFactor.setup.body':
-    'このキーを別の端末に追加します。他の端末に登録済みのキーは引き続き使えます。',
-  'twoFactor.setup.done': '完了',
-  'twoFactor.setup.confirm': 'キーを表示',
   'twoFactor.setup.pending': '確認中',
   'twoFactor.off.action': '二要素認証をオフにする',
   'twoFactor.off.title': '二要素認証をオフにしますか？',
   'twoFactor.off.body':
-    'パスワードを知っている人は誰でもコードなしでログインできるようになります。他のログイン済みのデバイスはログインしたままです。',
+    'パスワードを知っている人はコードなしでログインできるようになります。',
   'twoFactor.off.confirm': 'オフにする',
   'twoFactor.off.pending': 'オフにしています',
   'twoFactor.off.cancel': 'オンのままにする',
-  'twoFactor.off.done': '二要素認証はオフです',
   'security.other.label': '他のデバイスからログアウト',
   'security.other.description':
     '他のデバイスでは再ログインが必要です。接続は順次閉じられます。信頼済みブラウザー、Google、Apple、パスキーは引き続き利用できます。',
@@ -740,6 +730,26 @@ const messages = {
   'security.other.pending':
     '他のセッションは無効になりました。接続が閉じるまで時間がかかる場合があります。',
   'security.other.check': '状態を確認',
+  'twoFactor.security.effect':
+    'この変更により他の端末がログアウトし、以前のブラウザーの信頼が解除されます。この端末には新しいセッションが発行されます。',
+  'twoFactor.security.currentStep':
+    '認証アプリの現在のコードを使用してください。セキュリティの変更に使用済みの場合は、新しいコードを待ってください。',
+  'twoFactor.security.invalidProof':
+    'このコードは無効か使用済みです。新しい認証コードまたは未使用のバックアップコードを入力してください。',
+  'twoFactor.security.replace': '認証アプリを変更',
+  'twoFactor.security.codesLost':
+    '変更は完了しましたが、新しいバックアップコードは再表示できません。再ログインして設定を確認してください。',
+  'twoFactor.security.changed': 'セキュリティ設定が変更されました。',
+  'twoFactor.security.fresh':
+    '再ログインしてから5分以内にこのセキュリティ変更を確認してください。',
+  'twoFactor.security.expired':
+    'この設定の有効期限が切れました。最初からやり直してください。現在の認証アプリは変更されていません。',
+  'twoFactor.security.stale':
+    'セキュリティの状態が変わりました。次の変更の前に再読み込みしてください。',
+  'twoFactor.security.upgrade':
+    'ページを更新して新しいセキュリティ確認を使用してください。',
+  'twoFactor.security.unavailable':
+    'セキュリティの変更は利用できません。再読み込みして確認してください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

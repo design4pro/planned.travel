@@ -709,7 +709,7 @@ const messages = {
   'twoFactor.password.pending': 'Configurando',
   'twoFactor.password.invalid': 'Esa contraseña no es correcta.',
   'twoFactor.key.intro':
-    'Necesitas una aplicación de autenticación en el móvil. Añade esta clave y vuelve aquí. Los dos factores aún no están activados.',
+    'Añade esta nueva clave a tu autenticador y confirma un código. Tu método de inicio de sesión actual no cambiará hasta que confirmes.',
   'twoFactor.key.matrixLabel':
     'Código de configuración. La misma clave está disponible como texto',
   'twoFactor.key.matrixFailed':
@@ -722,21 +722,18 @@ const messages = {
   'twoFactor.key.open': 'Abrir en tu aplicación de autenticación',
   'twoFactor.key.startOver': 'Empezar de nuevo',
   'twoFactor.key.startOverHint':
-    'Empezar de nuevo crea otra clave. La que ya añadiste a una aplicación dejará de funcionar.',
+    'Descartar esta configuración no cambia tu método de inicio de sesión actual.',
   'twoFactor.key.next': 'Ya la he añadido',
   'twoFactor.code.label': 'Código de la aplicación',
-  'twoFactor.code.hint': 'Los seis dígitos que muestra ahora la aplicación.',
   'twoFactor.code.submit': 'Activar dos factores',
   'twoFactor.code.pending': 'Comprobando',
   'twoFactor.code.invalid':
     'El código no coincide. Revisa la hora del móvil e introduce el código más reciente de la aplicación.',
-  'twoFactor.code.unclear':
-    'No pudimos saber si funcionó. Introduce el código más reciente para volver a intentarlo.',
   'twoFactor.rateLimited.title': 'Demasiados intentos seguidos',
   'twoFactor.rateLimited.password':
-    'Espera unos diez segundos y vuelve a intentarlo. Se conserva lo que escribiste.',
+    'Espera a que esta acción vuelva a estar disponible e inténtalo de nuevo. No se ha perdido lo que escribiste.',
   'twoFactor.rateLimited.code':
-    'Espera hasta un minuto y vuelve a intentarlo. Se conserva lo que escribiste.',
+    'Espera a que esta acción vuelva a estar disponible e inténtalo de nuevo. No se ha perdido lo que escribiste.',
   'twoFactor.codes.title': 'Tus códigos de respaldo',
   'twoFactor.codes.body':
     'Cada código funciona una vez si pierdes el móvil. Solo se muestran ahora; guárdalos en un lugar seguro.',
@@ -769,21 +766,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Los dos factores necesitan una contraseña en esta cuenta. La página siguiente pide tu correo y envía un enlace para establecerla. Esto cierra tus sesiones en todos los dispositivos. Inicia sesión de nuevo y vuelve aquí.',
   'twoFactor.nopassword.action': 'Establecer contraseña',
-  'twoFactor.setup.action': 'Volver a mostrar la clave de configuración',
-  'twoFactor.setup.title': 'Clave de configuración',
-  'twoFactor.setup.body':
-    'Añade esta clave a otro dispositivo. La clave de tus otros dispositivos seguirá funcionando.',
-  'twoFactor.setup.done': 'Listo',
-  'twoFactor.setup.confirm': 'Mostrar clave',
   'twoFactor.setup.pending': 'Comprobando',
   'twoFactor.off.action': 'Desactivar la autenticación de dos factores',
   'twoFactor.off.title': '¿Desactivar la autenticación de dos factores?',
   'twoFactor.off.body':
-    'Cualquier persona con tu contraseña podrá iniciar sesión sin un código. Tus otros dispositivos conectados seguirán conectados.',
+    'Cualquier persona con tu contraseña podrá iniciar sesión sin un código.',
   'twoFactor.off.confirm': 'Desactivar',
   'twoFactor.off.pending': 'Desactivando',
   'twoFactor.off.cancel': 'Mantener activada',
-  'twoFactor.off.done': 'La autenticación de dos factores está desactivada',
   'security.other.label': 'Cerrar sesión en otros dispositivos',
   'security.other.description':
     'Los otros dispositivos deberán iniciar sesión de nuevo. Las conexiones se cierran de forma asíncrona; los navegadores de confianza, Google, Apple y las claves de acceso siguen disponibles.',
@@ -796,6 +786,26 @@ const messages = {
   'security.other.pending':
     'Las otras sesiones están revocadas. Las conexiones pueden tardar más en cerrarse.',
   'security.other.check': 'Comprobar estado',
+  'twoFactor.security.effect':
+    'Este cambio cierra las sesiones de otros dispositivos y retira la confianza anterior en los navegadores. Este dispositivo recibe una sesión nueva.',
+  'twoFactor.security.currentStep':
+    'Usa el código actual del autenticador. Espera uno nuevo si ya lo usaste para cambiar la seguridad.',
+  'twoFactor.security.invalidProof':
+    'El código no es válido o ya se ha usado. Introduce un código nuevo del autenticador o un código de respaldo sin usar.',
+  'twoFactor.security.replace': 'Sustituir autenticador',
+  'twoFactor.security.codesLost':
+    'El cambio se completó, pero los nuevos códigos de respaldo no pueden mostrarse otra vez. Vuelve a iniciar sesión para revisar la configuración.',
+  'twoFactor.security.changed': 'La configuración de seguridad ha cambiado.',
+  'twoFactor.security.fresh':
+    'Vuelve a iniciar sesión y confirma el cambio de seguridad en cinco minutos.',
+  'twoFactor.security.expired':
+    'Esta configuración ha caducado. Empieza de nuevo; tu autenticador activo no ha cambiado.',
+  'twoFactor.security.stale':
+    'El estado de seguridad ha cambiado. Vuelve a cargarlo antes de otro cambio.',
+  'twoFactor.security.upgrade':
+    'Actualiza la página para usar las nuevas comprobaciones de seguridad.',
+  'twoFactor.security.unavailable':
+    'Los cambios de seguridad no están disponibles. Vuelve a cargar para comprobarlo.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

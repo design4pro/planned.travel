@@ -133,6 +133,9 @@ function shippedSources(): ReadonlyArray<Source> {
   }
 
   walk(SETTINGS_DIR)
+  // Factor lifecycle refusals use the shared auth error mapping.
+  const authErrors = join(process.cwd(), 'src/routes/(auth)/-lib/errors.ts')
+  files.push({ path: authErrors, text: readFileSync(authErrors, 'utf8') })
   files.push({
     path: WORKSPACE_INVITATIONS_FILE,
     text: readFileSync(WORKSPACE_INVITATIONS_FILE, 'utf8'),
