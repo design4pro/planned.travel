@@ -60,7 +60,7 @@ The release/retract handler can process an idempotent retraction but a future pu
 
 Add `src/components/gallery/publish-dialog.tsx` and `publication-status.ts` using existing UI primitives and the 23-locale catalogue. It is an unmounted component, so no product route changes in this stage. Its five faces are never shared, in review, changes requested, published and withdrawn. Show an explicit public-field and exclusion list before submit; default `showDates` to false. Show both the still-live version and pending version during an update, and do not describe an enqueued submission as published. The published face links to the future gallery URL only when a slug and live version exist. Withdrawal requires confirmation and explains that previously saved copies persist and cached copies cannot be recalled.
 
-Represent loading, failure with retry, pending and disabled states. The future caller supplies publication data and submit/withdraw callbacks; the component performs no fetch. Use labelled controls, keyboard and focus management through the existing dialog primitives, accessible status/error announcements, light/dark themes, reduced motion and mobile/desktop layouts. Verify all faces as a component; in-app browser evidence belongs to the later mount. Do not create a route solely for a screenshot.
+Prefill title from the trip. Show the submitted date and summary during review; show the curator note and previous values when changes are requested; offer publish again after withdrawal and copy-link confirmation for a live version. Keep form values on failed submission and the previous live version on update failure. Support long text and mobile scrolling in both themes. Represent loading, failure with retry, pending and disabled states. The future caller supplies publication data and submit/withdraw callbacks; the component performs no fetch. Use labelled controls, keyboard and focus management through the existing dialog primitives, accessible status/error announcements, light/dark themes, reduced motion and mobile/desktop layouts. Verify all faces as a component; in-app browser evidence belongs to the later mount. Do not create a route solely for a screenshot.
 
 ## Copy
 
@@ -69,9 +69,9 @@ Add these English keys under `trips.gallery.publish` and equivalent translations
 | Key | English |
 | --- | --- |
 | `title` | Share this trip with the community |
-| `publicFields` | Title, summary, attribution, destinations and itinerary places may be public. |
+| `publicFields` | Your title, summary, display name, country codes, day titles, place names and categories, and any place coordinates may be public. Dates are included only if you choose them. |
 | `privateFields` | Travellers, notes, files, costs and reservations are not included. |
-| `freeTextWarning` | Check the text and place names for personal information before submitting. |
+| `freeTextWarning` | Check the title, summary, display name, day titles and place names for personal information before submitting. |
 | `publicTitle` | Public title |
 | `summary` | Summary |
 | `attribution` | Display name |
@@ -116,17 +116,6 @@ Each slice is independently deployable, and none exposes a gallery route:
 3. **Snapshots and lifecycle:** bounded allowlisted builder, immutable candidate admission and CAS, retry/withdrawal fencing, accounting, GC, trip deletion and workspace erasure integration; fault and concurrency tests.
 4. **Submission contract and dialog:** validated server functions, standalone accessible dialog, complete locale copy and component tests. Producer activation follows deployed consumers; future curation and route integration remain separate.
 
-## Resolved assumptions (autonomous defaults)
-
-| # | Question | Applied default | Why |
-| --- | --- | --- | --- |
-| 1 | What ships in this stage? | Scoped pipeline and unmounted dialog, not curation or public gallery. | Product owner specialist, high confidence: the plan separates later stages. |
-| 2 | What quota defaults apply? | 1 / 10 / 100 / unlimited for free / starter / pro / business, with existing overrides. | Product owner specialist, medium confidence: matches existing `journeys` operational limits. |
-| 3 | How are tenant, queue and storage boundaries handled? | Scoped repository, durable work, version fencing and ADR 0050 storage accounting. | Security and tenancy specialist, high confidence: the plan's unscoped row and object-first write violate current contracts. |
-| 4 | What replaces the missing foundations? | Include additive schema and quota integration in this design. | Software architect specialist, high confidence: searches found neither prerequisite in the repository. |
-| 5 | When is source data frozen? | Capture a bounded coherent D1 snapshot atomically with submission; copy that frozen document asynchronously. | Security specialist, medium confidence, settling disagreement with architect: mixed-time capture can publish a combination that never existed. |
-
-
 ## Review clarifications
 
 The submit transaction rechecks current organization role, private-trip membership, tenant/trip binding and workspace deletion state inside the same D1 atomic operation as quota admission, frozen JSON, version and outbox. Earlier request authorization alone cannot close the race. The snapshot capture uses explicitly scoped joins, stable sort with ID tie-breakers and an indexed precondition of at most 1,000 included day-place assignments before JSON aggregation, in addition to the day, place and UTF-8 byte caps. All failed predicates abort the whole batch; no sequential fallback. Prove the actual statement, transaction semantics and bounded work with local D1/workerd tests, including each boundary, concurrent role revocation, deletion and source edits. Unsupported SQL or a bound failure returns a localized failure and no partial write.
@@ -140,3 +129,18 @@ Dialog status derives from the publication plus current-version preparation: `pr
 Before final workspace erasure, preserve an erasure ledger that survives the workspace cascade and records every outstanding snapshot candidate and storage fence. Stop new admissions, drain or fence every candidate with create-only tombstones, confirm no old writer can later put content, then sweep the tenant namespace. Failed fencing or cleanup keeps erasure pending and retryable; do not declare completion or release accounting. A delayed put after the final sweep and D1 unavailable during cleanup are explicit required workerd integration tests. If the existing deletion ledger cannot uphold this invariant, extend it as part of this slice; do not promise erasure based solely on cascading D1 rows.
 
 Additional English copy (translate to every locale): `preparing`: “Preparing for review”; `preparationFailed`: “Preparation failed”; `quotaExceeded`: “Publication limit reached. Withdraw another publication to free a slot.”; `storageFull`: “Not enough workspace storage to prepare this publication.”; `captureUnavailable`: “We could not submit this trip. Try again.”
+
+
+Accessibility: provide `DialogTitle`, intentional initial focus, trapped Tab/Shift+Tab, Escape and close, focus restoration and usable scrolling at 360px and zoom. Keep focus within a withdrawal confirmation and return focus to its control on cancel. Bind errors to fields with `aria-describedby` and `aria-invalid`; focus the error summary or first invalid field on submit failure and announce asynchronous changes once without relying on colour. Explain admin-only access to keyboard and screen-reader users, not solely via a disabled control's tooltip. Component tests exercise keyboard, focus, errors and status announcements; the later mounted stage includes manual screen-reader and visual checks.
+
+Additional copy: `preparingUpdate`: “Your update is being prepared. The previous version is still live.”; `reviewingUpdate`: “Your update is in review. The previous version is still live.”; `failedUpdate`: “Your update could not be prepared. The previous version is still live.”; `publishAgain`: “Publish again”. Translate all keys in every locale.
+
+## Resolved assumptions (autonomous defaults)
+
+| # | Question | Applied default | Why |
+| --- | --- | --- | --- |
+| 1 | What ships in this stage? | Scoped pipeline and unmounted dialog, not curation or public gallery. | Product owner specialist, high confidence: the plan separates later stages. |
+| 2 | What quota defaults apply? | 1 / 10 / 100 / unlimited for free / starter / pro / business, with existing overrides. | Product owner specialist, medium confidence: matches existing `journeys` operational limits. |
+| 3 | How are tenant, queue and storage boundaries handled? | Scoped repository, durable work, version fencing and ADR 0050 storage accounting. | Security and tenancy specialist, high confidence: the plan's unscoped row and object-first write violate current contracts. |
+| 4 | What replaces the missing foundations? | Include additive schema and quota integration in this design. | Software architect specialist, high confidence: searches found neither prerequisite in the repository. |
+| 5 | When is source data frozen? | Capture a bounded coherent D1 snapshot atomically with submission; copy that frozen document asynchronously. | Security specialist, medium confidence, settling disagreement with architect: mixed-time capture can publish a combination that never existed. |
