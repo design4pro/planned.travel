@@ -8,7 +8,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   executeGate,
   gateFingerprint,
@@ -18,14 +18,25 @@ import {
 
 const passed = { exitCode: 0, result: 'passed', durationMs: 1 }
 const dirs = []
+const localEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+)
+const inheritedGitEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => name.startsWith('GIT_')),
+)
+beforeEach(() => {
+  for (const name of Object.keys(inheritedGitEnv)) delete process.env[name]
+})
 afterEach(() => {
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true })
+  Object.assign(process.env, inheritedGitEnv)
 })
 const fixture = () => {
   const cwd = mkdtempSync(join(tmpdir(), 'pt-validation-'))
   dirs.push(cwd)
-  const git = (...args) => execFileSync('git', args, { cwd, stdio: 'pipe' })
+  const git = (...args) =>
+    execFileSync('git', args, { cwd, stdio: 'pipe', env: localEnv })
   git('init')
   git('config', 'user.email', 'test@example.com')
   git('config', 'user.name', 'Test')

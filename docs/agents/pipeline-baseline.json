@@ -1,0 +1,28 @@
+{
+  "observedAt": "2026-11-03T20:52:49.611723+00:00",
+  "source": "primary checkout local run store; not cockpit API",
+  "runs": 304,
+  "states": {
+    "queued": 2,
+    "running": 7,
+    "done": 285,
+    "failed": 10
+  },
+  "monitoring": 3,
+  "hostConfig": {
+    "globalSlots": 4,
+    "monitoringSlots": 2,
+    "projectSlots": 2,
+    "skillsAutoUpdate": false
+  },
+  "verified": {
+    "crontab": false,
+    "liveCockpit": false,
+    "productionProtections": false,
+    "deploymentReceipts": false
+  },
+  "leadTimeMedianMinutes": null,
+  "readyToMergeMedianMinutes": null,
+  "mergeToProductionMedianMinutes": null,
+  "notes": "No historical engine done status is treated as a deployment. Timing baseline requires complete event and tracker evidence."
+}

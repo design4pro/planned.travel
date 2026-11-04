@@ -120,8 +120,16 @@ export function findAttestation(comments) {
  * @param {string[]} input.changedFiles every path the pull request changes
  * @returns {{ valid: boolean, reason: string }}
  */
-export function judge({ attestation, treeHash, gateCommands, changedFiles }) {
+export function judge({
+  attestation,
+  treeHash,
+  gateCommands,
+  changedFiles,
+  requireExecutedCi = false,
+}) {
   const no = (reason) => ({ valid: false, reason })
+  if (requireExecutedCi)
+    return no('the base branch requires executed CI checks')
 
   if (attestation === null) return no('no attestation from a trusted author')
   if (attestation.version !== VERSION)
@@ -209,6 +217,7 @@ function verify() {
       treeHash: run('git', ['rev-parse', 'HEAD^{tree}']),
       gateCommands: config.validation?.commands ?? [],
       changedFiles: files,
+      requireExecutedCi: config.pipeline?.requireExecutedCi === true,
     })
   } catch (error) {
     verdict = {
@@ -237,11 +246,28 @@ async function attest() {
   const config = JSON.parse(
     run('git', ['show', 'HEAD:.ai/agentic.config.json']),
   )
+  if (config.pipeline?.requireExecutedCi === true) {
+    console.error(
+      'attestation: the project requires executed CI; no skip attestation published',
+    )
+    return
+  }
   // Attestation never trusts the local resume receipt, even if the same tree ran green earlier.
-  const result = await runGate({ commands: config.validation.commands, resume: false })
-  if (result.exitCode !== 0) throw new Error(`validation failed: nothing to attest; logs: ${result.logs}`)
-  if (run('git', ['status', '--porcelain']) !== '') throw new Error('checkout changed during validation: nothing to attest')
-  const commands = result.commands.map(({ command, exitCode, durationMs }) => ({ command, exitCode, durationMs }))
+  const result = await runGate({
+    commands: config.validation.commands,
+    resume: false,
+  })
+  if (result.exitCode !== 0)
+    throw new Error(
+      `validation failed: nothing to attest; logs: ${result.logs}`,
+    )
+  if (run('git', ['status', '--porcelain']) !== '')
+    throw new Error('checkout changed during validation: nothing to attest')
+  const commands = result.commands.map(({ command, exitCode, durationMs }) => ({
+    command,
+    exitCode,
+    durationMs,
+  }))
 
   const attestation = {
     version: VERSION,

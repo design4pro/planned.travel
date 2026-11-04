@@ -1,17 +1,70 @@
-# A human opened a pull request, or an agent pull request reached `merge-queue` (the "Autopilot new
-# pull requests" and "Merge reviewed agent pull requests" automations filter on authors and labels).
-# om-pr-autopilot diagnoses it and runs the right chain: continue, fix, review, QA, and with
-# `--allow-merge` the final om-approve-merge-pr squash-merge, which still refuses on a failed QA gate
-# or `qa-failed` / `do-not-merge` / `blocked` (ADR 0031). The develop-to-main promotion PR never
-# reaches this workflow: it carries `do-not-merge`, which every PR automation excludes (ADR 0032).
+version: 2
 name: pr-autopilot
-description: om-pr-autopilot on one PR - diagnose, then continue / fix / review / QA / merge to develop.
-steps:
+description: Own one PR, prepare review and QA, release the slot during CI, then confirm merge.
+nodes:
+  - id: start
+    type: start
+  - id: preflight
+    type: check
+    command: node .ai/scripts/pipeline-control.mjs pr-preflight
+  - id: ready
+    type: if
+    condition: { kind: output, ref: preflight.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
   - id: bootstrap
-    name: Provision the worktree (deps, routes, secrets, D1, basemap)
+    type: check
     command: bash .ai/scripts/bootstrap.sh --profile worktree --no-seed
-  - id: autopilot
-    name: om-pr-autopilot
-    prompt: '/om-pr-autopilot {{task}} --allow-merge'
-    # mcp__plugin_playwright_playwright: the QA step drives a browser; without it runs try to install one.
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent, mcp__plugin_playwright_playwright]
+  - id: prepare
+    type: agent
+    verdicts: [ready, blocked]
+    prompt: |
+      Run /om-pr-autopilot {{task}} through review, QA and concrete fixes. Checkout the PR head.
+      The graph owns CI waiting and final merge. Reuse current-head/policy evidence. Stop before
+      CI waiting and emit CEZ:VERDICT ready when review and QA pass, otherwise blocked.
+      Keep the existing three-round cap across runs; never remove a hold to finish.
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, Agent, mcp__plugin_playwright_playwright]
+  - id: ci
+    type: github.wait-ci
+    timeoutMs: 2400000
+    pollMs: 60000
+  - id: verify-ci
+    type: check
+    command: node .ai/scripts/pipeline-control.mjs ci
+  - id: merge
+    type: agent
+    verdicts: [merged, blocked]
+    prompt: |
+      Run /om-approve-merge-pr {{task}} into develop only. Verify the current head and all
+      existing QA/security/hold gates. Emit merged only on fresh GitHub confirmation;
+      otherwise emit blocked. Do not repeat a valid review just because this is another tick.
+    allowedTools: [Read, Grep, Glob, Bash, Skill, Agent]
+  - id: confirm
+    type: check
+    command: node .ai/scripts/pipeline-control.mjs confirm-merge
+  - id: done
+    type: end
+    status: success
+  - id: failed
+    type: end
+    status: failed
+edges:
+  - { from: start.next, to: preflight }
+  - { from: preflight.pass, to: ready }
+  - { from: preflight.fail, to: failed }
+  - { from: ready.false, to: done }
+  - { from: ready.true, to: bootstrap }
+  - { from: bootstrap.pass, to: prepare }
+  - { from: bootstrap.fail, to: failed }
+  - { from: prepare.ready, to: ci }
+  - { from: prepare.blocked, to: failed }
+  - { from: prepare.failed, to: failed }
+  - { from: ci.green, to: verify-ci }
+  - { from: ci.red, to: failed }
+  - { from: ci.timeout, to: failed }
+  - { from: ci.failed, to: failed }
+  - { from: verify-ci.pass, to: merge }
+  - { from: verify-ci.fail, to: failed }
+  - { from: merge.merged, to: confirm }
+  - { from: merge.blocked, to: failed }
+  - { from: merge.failed, to: failed }
+  - { from: confirm.pass, to: done }
+  - { from: confirm.fail, to: failed }

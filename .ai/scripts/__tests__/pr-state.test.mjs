@@ -23,12 +23,16 @@ describe('PR CI evidence', () => {
     hiddenApps = false,
     requiredApp = 1,
     hiddenRules = false,
+    hiddenClassic = false,
+    absentClassic = false,
+    admin = false,
   } = {}) => {
     let pulls = 0
     const calls = []
     const read = (args) => {
       calls.push(args)
       const path = args.at(-1)
+      if (path === 'repos/owner/repo') return { permissions: { admin } }
       if (path.endsWith('/pulls/7')) {
         const refreshed = pulls++ > 0
         return {
@@ -80,7 +84,14 @@ describe('PR CI evidence', () => {
           ],
         ]
       }
-      if (path.includes('/protection/')) throw new Error('403')
+      if (path.includes('/protection/')) {
+        if (hiddenClassic) throw new Error('403')
+        if (absentClassic)
+          throw Object.assign(new Error('gh failed'), {
+            stderr: Buffer.from('gh: Branch not protected (HTTP 404)'),
+          })
+        return { contexts: [] }
+      }
       if (path.includes('/reviews?'))
         return [[{ user: { login: 'reviewer' }, state: 'APPROVED' }]]
       throw new Error(`Unexpected path ${path}`)
@@ -101,6 +112,10 @@ describe('PR CI evidence', () => {
   })
 
   it('refuses green on a changed head, hidden app checks or unknown requirements', () => {
+    expect(
+      readPrState('owner/repo', 7, reader({ hiddenClassic: true }).read).ci
+        .state,
+    ).toBe('unknown')
     const retargeted = readPrState(
       'owner/repo',
       7,
@@ -123,8 +138,39 @@ describe('PR CI evidence', () => {
     ).toBe('unknown')
   })
 
+  it('accepts absent classic protection only with confirmed administrative visibility', () => {
+    expect(
+      readPrState(
+        'owner/repo',
+        7,
+        reader({ absentClassic: true, admin: true }).read,
+      ).ci.state,
+    ).toBe('green')
+    expect(
+      readPrState('owner/repo', 7, reader({ absentClassic: true }).read).ci
+        .state,
+    ).toBe('unknown')
+    expect(
+      readPrState(
+        'owner/repo',
+        7,
+        reader({ absentClassic: true, admin: true, hiddenRules: true }).read,
+      ).ci.state,
+    ).toBe('unknown')
+    expect(
+      readPrState(
+        'owner/repo',
+        7,
+        reader({ hiddenClassic: true, admin: true }).read,
+      ).ci.state,
+    ).toBe('unknown')
+  })
+
   it('requires named checks and their required app, including external checks', () => {
     expect(judgeChecks(evidence()).state).toBe('green')
+    expect(
+      judgeChecks(evidence({ checks: [check('unit', 'skipped')] })).state,
+    ).toBe('pending')
     expect(
       judgeChecks(evidence({ required: [{ context: 'external' }] })).state,
     ).toBe('pending')
@@ -154,7 +200,7 @@ describe('PR CI evidence', () => {
     ).toBe('pending')
     expect(
       judgeChecks(evidence({ checks: [check('unit', 'neutral')] })).state,
-    ).toBe('green')
+    ).toBe('pending')
     expect(
       judgeChecks(evidence({ checks: [check('unit', 'cancelled')] })).state,
     ).toBe('red')

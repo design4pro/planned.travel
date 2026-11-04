@@ -102,12 +102,29 @@ const RETENTION_CRON = '17 4 * * 1'
 export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
   /**
    * `fetchHandler` is Start's, and its second parameter is its own `RequestOptions` - not the
-   * Worker `env` the runtime passes there. Naming only `request` keeps the two apart; handing the
+   * Worker `env` the runtime passes there. Passing only `request` keeps the two apart; handing the
    * environment to a parameter that expects request options was never intended and is not what
    * wrapping this handler is supposed to preserve.
    */
-  fetch: (request: Request): Response | Promise<Response> =>
-    fetchHandler(request),
+  fetch: (
+    request: Request,
+    env: Cloudflare.Env,
+  ): Response | Promise<Response> => {
+    if (
+      new URL(request.url).pathname === '/api/version' &&
+      request.method === 'GET'
+    ) {
+      const { id, tag } = env.CF_VERSION_METADATA ?? {}
+      return Response.json(
+        { id: id ?? null, sha: tag ?? null },
+        {
+          status: id && tag ? 200 : 503,
+          headers: { 'cache-control': 'no-store' },
+        },
+      )
+    }
+    return fetchHandler(request)
+  },
 
   async queue(
     batch: MessageBatch<unknown>,

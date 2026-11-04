@@ -1,9 +1,17 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process'
-import { readFileSync, realpathSync } from 'node:fs'
+import {
+  readFileSync,
+  realpathSync,
+  writeFileSync,
+  renameSync,
+  existsSync,
+} from 'node:fs'
+import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { fileURLToPath } from 'node:url'
+import { runStore, runsByIssue } from '../../.ai/scripts/backlog-status.mjs'
 
 // Remove fenced blocks before inline spans. Matching delimiter lengths matter: a shorter
 // backtick run inside a span or fence cannot end it and expose an example closing keyword.
@@ -66,7 +74,31 @@ export function parseCloseLinks({ title, body }) {
   return [...numbers]
 }
 
+export function specOnlyFiles(files) {
+  if (!files.length || files.length >= 3000)
+    throw new Error('Incomplete PR file evidence')
+  return files.every((file) =>
+    /^(?:\.ai\/specs\/|docs\/plans\/|docs\/SPEC\.md$)/.test(file.filename),
+  )
+}
+
 export function planClose(pr, issue, { baseBranch, repo }) {
+  if (issue.state !== 'OPEN')
+    return { action: 'skip', reason: 'The issue is already closed.' }
+  if (issue.activeClaim)
+    return {
+      action: 'skip',
+      reason: 'An active or unresolved run claim owns this issue.',
+    }
+  if (
+    issue.labels.some(({ name }) => name === 'epic') ||
+    /^Spec: \.ai\/specs\//.test(issue.body ?? '') ||
+    /^#{1,3}\s*(?:Children|Child issues|Tickets)\s*$/im.test(issue.body ?? '')
+  )
+    return {
+      action: 'skip',
+      reason: 'An epic needs acceptance and child completion evidence.',
+    }
   if (
     issue.url &&
     issue.url !== `https://github.com/${repo}/issues/${issue.number}`
@@ -75,7 +107,7 @@ export function planClose(pr, issue, { baseBranch, repo }) {
       action: 'skip',
       reason: 'The reference is not an issue in the selected repository.',
     }
-  if (pr.headRefName?.startsWith('spec/'))
+  if (pr.headRefName?.startsWith('spec/') || pr.specOnly)
     return {
       action: 'skip',
       reason: 'The PR is design-only; its implementation issue must stay open.',
@@ -87,8 +119,6 @@ export function planClose(pr, issue, { baseBranch, repo }) {
       action: 'skip',
       reason: 'The PR has no explicit closing keyword for this issue.',
     }
-  if (issue.state !== 'OPEN')
-    return { action: 'skip', reason: 'The issue is already closed.' }
   const label = issue.labels.find(({ name }) =>
     ['do-not-close', 'blocked', 'in-progress'].includes(name),
   )
@@ -164,6 +194,8 @@ export function parseOptions(args) {
       since: { type: 'string' },
       limit: { type: 'string', default: '100' },
       repo: { type: 'string' },
+      checkpoint: { type: 'boolean' },
+      pr: { type: 'string' },
     },
   })
   const since = values.since ?? 'last-release'
@@ -176,16 +208,76 @@ export function parseOptions(args) {
     throw new Error('--limit must be a positive integer.')
   if (values.repo && !/^[\w.-]+\/[\w.-]+$/.test(values.repo))
     throw new Error('--repo must be owner/name.')
+  if (
+    values.pr &&
+    (!/^[1-9]\d*$/.test(values.pr) || !Number.isSafeInteger(Number(values.pr)))
+  )
+    throw new Error('--pr must be a positive integer.')
   return {
     since,
     limit: values.limit,
     repo: values.repo,
     apply: Boolean(values.apply && !values['dry-run']),
+    ...(values.checkpoint ? { checkpoint: true } : {}),
+    ...(values.pr ? { pr: Number(values.pr) } : {}),
+  }
+}
+
+/** REST pagination fails as one read; callers must not advance a cursor on a partial listing. */
+export function listMergedPrs(repo, read, since = '1970-01-01') {
+  return read([
+    'api',
+    '--paginate',
+    '--slurp',
+    `repos/${repo}/pulls?state=closed&sort=updated&direction=desc&per_page=100`,
+  ])
+    .flat()
+    .filter((pr) => pr.merged_at && pr.updated_at >= since)
+    .map(normalizePr)
+}
+
+function normalizePr(pr) {
+  return {
+    number: pr.number,
+    title: pr.title,
+    body: pr.body,
+    mergedAt: pr.merged_at,
+    mergeCommit: { oid: pr.merge_commit_sha },
+    baseRefName: pr.base.ref,
+    headRefName: pr.head.ref,
+    isDraft: pr.draft,
+  }
+}
+
+/** The kernel releases this lock after a crash; no stale directory can block later ticks. */
+export function closureLock(statePath, args, execute = execFileSync) {
+  try {
+    execute(
+      'flock',
+      [
+        '--nonblock',
+        '--conflict-exit-code',
+        '75',
+        `${statePath}.lock`,
+        process.execPath,
+        fileURLToPath(import.meta.url),
+        ...args,
+      ],
+      {
+        stdio: 'inherit',
+        env: { ...process.env, CEZ_CLOSE_LOCK: statePath },
+      },
+    )
+    return true
+  } catch (error) {
+    if (error.status === 75) return false
+    throw new Error('Locked issue reconciliation failed')
   }
 }
 
 function main() {
   const options = parseOptions(process.argv.slice(2))
+  if (options.checkpoint || options.pr) options.since = '1970-01-01'
   if (options.since === 'last-release') {
     let changelog
     try {
@@ -215,6 +307,8 @@ function main() {
         encoding: 'utf8',
         input,
         stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: 120_000,
+        maxBuffer: 64 * 1024 * 1024,
       })
     } catch {
       // Never echo command payloads or upstream errors: either can include tracker secrets.
@@ -229,76 +323,145 @@ function main() {
   console.log(
     `${options.apply ? 'APPLY' : 'DRY-RUN'}: ${options.repo}, base ${options.baseBranch}, since ${options.since}, limit ${options.limit}`,
   )
-  const prs = JSON.parse(
-    gh([
-      'pr',
-      'list',
-      ...scope,
-      '--state',
-      'merged',
-      '--search',
-      `merged:>=${options.since}`,
-      '--limit',
-      options.limit,
-      '--json',
-      'number,title,body,mergedAt,mergeCommit,baseRefName,headRefName,isDraft',
-    ]),
-  )
-  if (prs.length === Number(options.limit))
-    console.log(
-      'The PR limit was reached; increase --limit to inspect the complete window.',
+  const read = (args) => JSON.parse(gh(args))
+  const statePath = join(runStore(), 'close-fixed-issues.json')
+  if (options.apply && process.env.CEZ_CLOSE_LOCK !== statePath) {
+    if (!closureLock(statePath, process.argv.slice(2)))
+      console.log(
+        'Another merge reconciliation owns the lock; this tick is a no-op.',
+      )
+    return
+  }
+  {
+    const state =
+      options.checkpoint && existsSync(statePath)
+        ? JSON.parse(readFileSync(statePath, 'utf8'))
+        : { pending: [], scannedAt: options.since, repo: options.repo }
+    if (state.repo !== options.repo)
+      throw new Error('Checkpoint belongs to another repository')
+    if (
+      !Array.isArray(state.pending) ||
+      !Number.isFinite(Date.parse(state.scannedAt))
     )
-  const tracker = {
-    getIssue: (number) =>
-      JSON.parse(
+      throw new Error('Invalid reconciliation checkpoint')
+    const scannedAt = new Date().toISOString()
+    const getPr = (number) =>
+      normalizePr(read(['api', `repos/${options.repo}/pulls/${number}`]))
+    const listed = options.pr
+      ? [getPr(options.pr)]
+      : listMergedPrs(options.repo, read, state.scannedAt)
+    const pending = new Set(state.pending)
+    for (const pr of listed)
+      if (parseCloseLinks(pr).length) pending.add(pr.number)
+    const prs = [...pending].slice(0, Number(options.limit))
+    const tracker = {
+      getIssue: (number) => {
+        const path = `repos/${options.repo}/issues/${number}`
+        const row = read(['api', path])
+        if (row.pull_request) throw new Error('Reference is a PR, not an issue')
+        const store = runStore()
+        const claim = join(store, 'claims', `issue-${number}.json`)
+        const runsPath = join(store, 'runs.json')
+        const records = existsSync(runsPath)
+          ? JSON.parse(readFileSync(runsPath, 'utf8'))
+          : []
+        const activeClaim =
+          existsSync(claim) ||
+          runsByIssue(records, process.env.CEZ_RUN_ID).has(number)
+        return {
+          ...row,
+          state: row.state.toUpperCase(),
+          url: row.html_url,
+          activeClaim,
+          comments: read([
+            'api',
+            '--paginate',
+            '--slurp',
+            `${path}/comments?per_page=100`,
+          ])
+            .flat()
+            .map((c) => ({ ...c, author: c.user })),
+        }
+      },
+      comment: (number, body) =>
+        gh(
+          ['issue', 'comment', String(number), ...scope, '--body-file', '-'],
+          body,
+        ),
+      close: (number) =>
         gh([
           'issue',
-          'view',
+          'close',
           String(number),
           ...scope,
-          '--json',
-          'number,state,url,labels,comments',
+          '--reason',
+          'completed',
         ]),
-      ),
-    comment: (number, body) =>
-      gh(
-        ['issue', 'comment', String(number), ...scope, '--body-file', '-'],
-        body,
-      ),
-    close: (number) =>
-      gh(['issue', 'close', String(number), ...scope, '--reason', 'completed']),
-  }
-  let failed = 0
-  for (const pr of prs) {
-    const numbers = parseCloseLinks(pr)
-    if (!numbers.length)
-      console.log(
-        `#${pr.number}: skipped; no explicit closing keywords outside code.`,
-      )
-    for (const number of numbers) {
+    }
+    let failed = 0
+    for (const prNumber of prs) {
+      let settled = true
       try {
-        const plan = reconcilePair(pr, number, options, tracker)
-        console.log(
-          `#${pr.number} → #${number}: ${plan.action}. ${plan.reason}`,
-        )
-        if (!options.apply) {
-          if (plan.commentNeeded)
+        const pr = getPr(prNumber)
+        const files = read([
+          'api',
+          '--paginate',
+          '--slurp',
+          `repos/${options.repo}/pulls/${pr.number}/files?per_page=100`,
+        ]).flat()
+        pr.specOnly = specOnlyFiles(files)
+        const numbers = parseCloseLinks(pr)
+        if (!numbers.length)
+          console.log(
+            `#${pr.number}: skipped; no explicit closing keywords outside code.`,
+          )
+        for (const number of numbers) {
+          try {
+            const plan = reconcilePair(pr, number, options, tracker)
+            if (plan.action === 'skip' && /label|epic|claim/i.test(plan.reason))
+              settled = false
             console.log(
-              `DRY-RUN: comment on #${number} with the link to PR #${pr.number}.`,
+              `#${pr.number} → #${number}: ${plan.action}. ${plan.reason}`,
             )
-          if (plan.action === 'close')
-            console.log(`DRY-RUN: close #${number} with reason completed.`)
+            if (!options.apply) {
+              if (plan.commentNeeded)
+                console.log(
+                  `DRY-RUN: comment on #${number} with the link to PR #${pr.number}.`,
+                )
+              if (plan.action === 'close')
+                console.log(`DRY-RUN: close #${number} with reason completed.`)
+            }
+          } catch (error) {
+            failed++
+            settled = false
+            console.error(`#${pr.number} → #${number}: ${error.message}`)
+          }
         }
       } catch (error) {
         failed++
-        console.error(`#${pr.number} → #${number}: ${error.message}`)
+        settled = false
+        console.error(`#${prNumber}: ${error.message}`)
       }
+      pending.delete(prNumber)
+      if (!settled) pending.add(prNumber)
+    }
+    console.log(
+      `close-fixed-issues: ${prs.length} merged PR(s) inspected, ${failed} failure(s).`,
+    )
+    if (failed) process.exitCode = 1
+    if (options.checkpoint && options.apply) {
+      const tmp = `${statePath}.tmp`
+      writeFileSync(
+        tmp,
+        JSON.stringify({
+          repo: options.repo,
+          scannedAt,
+          pending: [...pending],
+        }) + '\n',
+      )
+      renameSync(tmp, statePath)
     }
   }
-  console.log(
-    `close-fixed-issues: ${prs.length} merged PR(s) inspected, ${failed} failure(s).`,
-  )
-  if (failed) process.exitCode = 1
 }
 
 // Imports are pure: only direct execution may access the tracker.

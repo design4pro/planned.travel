@@ -1,0 +1,11 @@
+name: context-maintenance
+description: Rotate completed contexts older than fourteen days with active-run protection.
+steps:
+  - id: rotate
+    prompt: |
+      Run /om-ai-context-maintenance with fourteen-day retention.
+      First read the primary checkout's Cezar run store and all open PRs with full pagination.
+      Exclude every context referenced by queued, running, waiting, review or retryable failed
+      runs and every open PR. Unknown ownership means preview only. Never rotate .ai/cezar/runs,
+      claims, live worktrees or checkpoint/evidence files. Preserve local overrides and archives.
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, Agent]

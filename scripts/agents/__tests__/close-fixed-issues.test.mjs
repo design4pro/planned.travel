@@ -7,6 +7,9 @@ import {
   reconcilePair,
   parseOptions,
   latestReleaseDate,
+  listMergedPrs,
+  specOnlyFiles,
+  closureLock,
 } from '../close-fixed-issues.mjs'
 
 const pr = JSON.parse(
@@ -67,6 +70,59 @@ describe('parseCloseLinks', () => {
 })
 
 describe('planClose', () => {
+  it('uses a crash-released kernel lock, distinguishing contention from a failed sweep', () => {
+    const execute = vi.fn()
+    expect(closureLock('/tmp/checkpoint', ['--apply'], execute)).toBe(true)
+    expect(execute.mock.calls[0][0]).toBe('flock')
+    expect(execute.mock.calls[0][1]).toContain('/tmp/checkpoint.lock')
+    expect(
+      closureLock('/tmp/checkpoint', [], () => {
+        throw { status: 75 }
+      }),
+    ).toBe(false)
+    expect(() =>
+      closureLock('/tmp/checkpoint', [], () => {
+        throw { status: 1 }
+      }),
+    ).toThrow('reconciliation failed')
+  })
+  it('distinguishes specification-only diffs from ordinary documentation work', () => {
+    expect(specOnlyFiles([{ filename: '.ai/specs/trips.md' }])).toBe(true)
+    expect(specOnlyFiles([{ filename: 'docs/how-to-travel.md' }])).toBe(false)
+    expect(() => specOnlyFiles([])).toThrow('Incomplete')
+  })
+  it('preserves an active run claim after a merge', () => {
+    expect(planClose(pr, { ...issue, activeClaim: true }, options).action).toBe(
+      'skip',
+    )
+  })
+  it('never closes an epic or a spec-only diff on an ordinary branch', () => {
+    expect(
+      planClose(pr, { ...issue, labels: [{ name: 'epic' }] }, options).action,
+    ).toBe('skip')
+    expect(planClose({ ...pr, specOnly: true }, issue, options).action).toBe(
+      'skip',
+    )
+  })
+  it('reads every merged-PR page and propagates pagination failures', () => {
+    const row = {
+      number: 1,
+      merged_at: '2026-11-01T00:00:00Z',
+      updated_at: '2026-11-02T00:00:00Z',
+      base: { ref: 'develop' },
+      head: { ref: 'fix/a' },
+    }
+    const read = vi.fn(() => [[row], [{ ...row, number: 2 }]])
+    expect(listMergedPrs('owner/repo', read).map((pr) => pr.number)).toEqual([
+      1, 2,
+    ])
+    expect(read.mock.calls[0][0]).toContain('--paginate')
+    expect(() =>
+      listMergedPrs('owner/repo', () => {
+        throw new Error('page 2 failed')
+      }),
+    ).toThrow('page 2 failed')
+  })
   it('closes the real #589 regression without closingIssuesReferences', () => {
     expect(planClose(pr, issue, options).action).toBe('close')
   })
