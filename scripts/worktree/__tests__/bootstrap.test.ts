@@ -182,6 +182,65 @@ describe('scripts/worktree/bootstrap.sh', { timeout: 15_000 }, () => {
   })
 
   describe('port', () => {
+    it('reconciles a provisioned checkout to the explicit loopback origin', () => {
+      provision(main, { deps: true })
+      bootstrap(main)
+      const varsPath = join(main, '.dev.vars')
+      const before = readFileSync(varsPath, 'utf8')
+      bootstrap(main, ['--port', '3030', '--host', '127.0.0.1'])
+      expect(readFileSync(varsPath, 'utf8')).toBe(
+        before.replace(
+          'APP_URL=http://localhost:3000',
+          'APP_URL=http://127.0.0.1:3030',
+        ),
+      )
+    })
+
+    it('preserves a matching user-owned configuration', () => {
+      provision(main, { deps: true })
+      const varsPath = join(main, '.dev.vars')
+      const before =
+        'BETTER_AUTH_SECRET=fixture-only\nAPP_URL=http://127.0.0.1:3030\n'
+      writeFileSync(varsPath, before)
+      bootstrap(main, ['--port', '3030', '--host', '127.0.0.1'])
+      expect(readFileSync(varsPath, 'utf8')).toBe(before)
+    })
+
+    it('refuses a conflicting user-owned origin without changing or printing it', () => {
+      provision(main, { deps: true })
+      const varsPath = join(main, '.dev.vars')
+      const before =
+        'BETTER_AUTH_SECRET=fixture-only\nAPP_URL=http://localhost:3001\n'
+      writeFileSync(varsPath, before)
+      const result = spawnSync(
+        'bash',
+        [BOOTSTRAP, '--no-seed', '--port', '3030', '--host', '127.0.0.1'],
+        {
+          cwd: main,
+          encoding: 'utf8',
+          env: baseEnv() as unknown as NodeJS.ProcessEnv,
+          timeout: 30_000,
+        },
+      )
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain('leaving your file untouched')
+      expect(result.stdout + result.stderr).not.toContain('fixture-only')
+      expect(result.stdout + result.stderr).not.toContain('localhost:3001')
+      expect(readFileSync(varsPath, 'utf8')).toBe(before)
+    })
+
+    it('refuses a non-loopback host before provisioning', () => {
+      const result = spawnSync('bash', [BOOTSTRAP, '--host', '0.0.0.0'], {
+        cwd: main,
+        encoding: 'utf8',
+        env: baseEnv() as unknown as NodeJS.ProcessEnv,
+        timeout: 30_000,
+      })
+      expect(result.status).toBe(2)
+      expect(pnpmCalls()).toEqual([])
+      expect(existsSync(join(main, '.dev.vars'))).toBe(false)
+    })
+
     it('serves the main checkout on 3000', () => {
       provision(main, { deps: true })
       const r = bootstrap(main)

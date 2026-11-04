@@ -708,7 +708,7 @@ const messages = {
   'twoFactor.password.pending': 'S’està configurant',
   'twoFactor.password.invalid': 'Aquesta contrasenya no és correcta.',
   'twoFactor.key.intro':
-    'Necessites una aplicació d’autenticació al mòbil. Afegeix-hi aquesta clau i torna aquí. Els dos factors encara no estan activats.',
+    "Afegeix aquesta clau nova a l'autenticador i confirma un codi. El mètode d'inici de sessió actual no canviarà fins que ho confirmis.",
   'twoFactor.key.matrixLabel':
     'Codi de configuració. La mateixa clau està disponible com a text',
   'twoFactor.key.matrixFailed':
@@ -721,21 +721,18 @@ const messages = {
   'twoFactor.key.open': 'Obre a l’aplicació d’autenticació',
   'twoFactor.key.startOver': 'Torna a començar',
   'twoFactor.key.startOverHint':
-    'Tornar a començar crea una clau nova. La que ja hagis afegit a una aplicació deixarà de funcionar.',
+    "Descartar aquesta configuració no canvia el mètode d'inici de sessió actual.",
   'twoFactor.key.next': 'Ja l’he afegida',
   'twoFactor.code.label': 'Codi de l’aplicació',
-  'twoFactor.code.hint': 'Els sis dígits que mostra ara l’aplicació.',
   'twoFactor.code.submit': 'Activa els dos factors',
   'twoFactor.code.pending': 'S’està comprovant',
   'twoFactor.code.invalid':
     'El codi no coincideix. Comprova l’hora del mòbil i introdueix el codi més recent de l’aplicació.',
-  'twoFactor.code.unclear':
-    'No hem pogut saber si ha funcionat. Introdueix el codi més recent per tornar-ho a provar.',
   'twoFactor.rateLimited.title': 'Massa intents seguits',
   'twoFactor.rateLimited.password':
-    'Espera uns deu segons i torna-ho a provar. Es conserva tot el que has escrit.',
+    "Espera que aquesta acció torni a estar disponible i torna-ho a provar. No s'ha perdut res del que has escrit.",
   'twoFactor.rateLimited.code':
-    'Espera fins a un minut i torna-ho a provar. Es conserva tot el que has escrit.',
+    "Espera que aquesta acció torni a estar disponible i torna-ho a provar. No s'ha perdut res del que has escrit.",
   'twoFactor.codes.title': 'Els teus codis de reserva',
   'twoFactor.codes.body':
     'Cada codi funciona una vegada si perds el mòbil. Només es mostren ara: desa’ls en un lloc segur.',
@@ -768,21 +765,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Els dos factors requereixen una contrasenya en aquest compte. La pàgina següent demana el correu i envia un enllaç per establir-la. Això tanca totes les sessions. Torna a entrar i torna aquí.',
   'twoFactor.nopassword.action': 'Estableix una contrasenya',
-  'twoFactor.setup.action': 'Torna a mostrar la clau de configuració',
-  'twoFactor.setup.title': 'Clau de configuració',
-  'twoFactor.setup.body':
-    'Afegeix aquesta clau a un altre dispositiu. La clau dels altres dispositius continua funcionant.',
-  'twoFactor.setup.done': 'Fet',
-  'twoFactor.setup.confirm': 'Mostra la clau',
   'twoFactor.setup.pending': 'S’està comprovant',
   'twoFactor.off.action': 'Desactiva l’autenticació de dos factors',
   'twoFactor.off.title': 'Vols desactivar l’autenticació de dos factors?',
   'twoFactor.off.body':
-    'Qualsevol persona amb la teva contrasenya podrà iniciar sessió sense cap codi. Els altres dispositius on has iniciat sessió continuaran connectats.',
+    'Qualsevol persona que conegui la teva contrasenya podrà iniciar sessió sense codi.',
   'twoFactor.off.confirm': 'Desactiva',
   'twoFactor.off.pending': 'S’està desactivant',
   'twoFactor.off.cancel': 'Mantén-la activada',
-  'twoFactor.off.done': 'L’autenticació de dos factors està desactivada',
   'security.other.label': 'Tancar la sessió als altres dispositius',
   'security.other.description':
     'Els altres dispositius hauran de tornar a iniciar sessió. Les connexions es tanquen de manera asíncrona; els navegadors de confiança, Google, Apple i les claus d’accés continuen disponibles.',
@@ -795,6 +785,26 @@ const messages = {
   'security.other.pending':
     'Les altres sessions estan revocades. Les connexions poden trigar més a tancar-se.',
   'security.other.check': 'Comprovar l’estat',
+  'twoFactor.security.effect':
+    'Aquest canvi tanca les sessions dels altres dispositius i retira la confiança anterior dels navegadors. Aquest dispositiu rep una sessió nova.',
+  'twoFactor.security.currentStep':
+    'Fes servir el codi actual de l’autenticador. Espera un codi nou si ja l’has fet servir per canviar la seguretat.',
+  'twoFactor.security.invalidProof':
+    'El codi no és vàlid o ja s’ha utilitzat. Introdueix un codi nou de l’autenticador o un codi de reserva sense utilitzar.',
+  'twoFactor.security.replace': 'Substitueix l’autenticador',
+  'twoFactor.security.codesLost':
+    'El canvi s’ha completat, però els codis de reserva nous no es poden tornar a mostrar. Torna a iniciar sessió per comprovar la configuració.',
+  'twoFactor.security.changed': 'La configuració de seguretat ha canviat.',
+  'twoFactor.security.fresh':
+    'Torna a iniciar sessió i confirma aquest canvi de seguretat en cinc minuts.',
+  'twoFactor.security.expired':
+    'Aquesta configuració ha caducat. Torna a començar; l’autenticador actiu no ha canviat.',
+  'twoFactor.security.stale':
+    'L’estat de seguretat ha canviat. Torna’l a carregar abans de fer un altre canvi.',
+  'twoFactor.security.upgrade':
+    'Actualitza aquesta pàgina per utilitzar les comprovacions de seguretat noves.',
+  'twoFactor.security.unavailable':
+    'Els canvis de seguretat no estan disponibles. Torna a carregar per comprovar-ho.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

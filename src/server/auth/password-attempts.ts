@@ -9,6 +9,9 @@ import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import type { BetterAuthPlugin } from 'better-auth'
 
 const PATHS = new Set([
+  '/account-security/prepare-factor',
+  '/account-security/disable-factor',
+  '/account-security/replace-backup-codes',
   '/two-factor/enable',
   '/two-factor/get-totp-uri',
   '/two-factor/generate-backup-codes',
