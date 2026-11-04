@@ -75,10 +75,6 @@ estimate, e.g. 2 minutes).
 Single file, inline CSS and JS, no external requests — so it opens from a
 local path with nothing else running. Generate one `.card` per test case;
 everything in `{{ }}` is filled in from `test-plan.md` and step 2's brief.
-Include only the role and credential reference (descriptor path and `passwordEnv`
-variable name), never a password value in the plan or HTML. Follow
-`worktree-and-env.md` to retrieve credentials locally through the approved
-environment; do not print or copy their values into retained artifacts.
 
 ```html
 <!doctype html>
@@ -137,7 +133,7 @@ environment; do not print or copy their values into retained artifacts.
     <div class="card" data-tc="{{ case id, e.g. TC-XXX-001 }}">
       <div class="status-bar"></div>
       <strong>{{ case id }} — {{ title }}</strong> <span style="color:var(--muted)">({{ priority }})</span>
-      <p>Role: {{ role }} · Credentials: {{ descriptor path and passwordEnv variable name }}</p>
+      <p>Role: {{ role }} · Login: {{ email }} / {{ password }}</p>
       <ol>{{ numbered steps, each with an exact clickable URL }}</ol>
       <p><strong>Test data:</strong> {{ prepared IDs/links/JSON }}</p>
       <p><strong>Expected:</strong> {{ expected result }}</p>

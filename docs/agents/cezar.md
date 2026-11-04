@@ -29,7 +29,6 @@ the rules of `SDLC.md`.
   initial diagnostic sweep still gathers independent findings and the plan-to-spec gate remains
   intentionally scoped to spec checks.
 
-
 ## Install and configure
 
 - Version: the cockpit runs the [design4pro/cezar](https://github.com/design4pro/cezar/tree/design4pro)
@@ -98,9 +97,11 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
     issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
     label and add it again.
-- Skills: `.agents/skills/om-*` are vendored files, byte-identical to
-  `open-mercato/skills@e886001ab1dea2123af79e52dcd175c36878dab1`, and each `.claude/skills/om-*`
-  is a relative symlink to its directory there - this line is the pin, because
+- Skills: `.agents/skills/om-*` are vendored files based on
+  `open-mercato/skills@75cf3146fd31aa6fa53af0866c076e5b7a3d9179`, and each `.claude/skills/om-*`
+  is a relative symlink to its directory there. Three local helper repairs are retained and
+  hashed with reasons in `scripts/agents/skills-upstream.json`; every other file is byte-identical.
+  This line is the pin, because
   `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
   carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
   the diff is a PR, read with `/om-apply-upgrade-notes`, and the SHA on this line moves in the same
@@ -229,7 +230,8 @@ stop it: under `E2E=1` `vite.config.ts` therefore has it watch for its own root 
 send itself `SIGTERM` when it does, which is what keeps a removed worktree from leaving a process
 holding one of the eleven ports for the life of the host (issue #327).
 
-Seven graph workflows (`version: 2`, `*.yaml`) sit beside the `.yml` ones: `issue-to-merge`, `pr-to-merge`, `idea-to-spec`, `spec-to-backlog`, `maintain-to-intent`, `scheduled-scan` and `housekeeping-graph`. Nothing starts them: neither the Reconciler nor `docs/agents/cezar-automations.json` names them, and each overlaps a `.yml` workflow. What is left open before first use is in `.ai/cezar/DEFERRED.md`.
+The seven unconnected prototype `.yaml` graphs were removed after checking references. Their
+active equivalents remain; `.ai/cezar/DEFERRED.md` records that retirement.
 
 The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), the scripts in
 `scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
@@ -256,27 +258,23 @@ requests** on `pull_request.opened` with `authors` naming the maintainer, and **
 pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Two are schedules
 (`kind: "schedule"`), started by the clock and by nobody's action: **Weekly architecture review** on
 Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. What bounds a schedule is its skill:
-three refactor issues or one pull request per run. Two are disabled (`"enabled": false`): **Groom
-and triage new issues** (`issue.opened`) and **Re-triage when a hold is cleared** (`issue.unlabeled`
-with `changedLabels` `blocked`), both with `authors` naming the maintainer.
+three refactor issues or one pull request per run. Three additional weekly definitions (skills,
+product radar and context rotation) are disabled pending the rollout gates. All schedule times
+are UTC after verifying the effective service timezone.
 
 Triage, implement, slice and unblock are started by the Reconciler (below), not by an automation.
-The **Implement the next ready issue** (every two hours) and **Spec to tickets** (weekdays 07:00)
-schedules started the same work, so beside the Reconciler one issue could be started twice; they are
-removed (ADR 0033). The issue pair would start triage a second time too, so it is disabled, and it
-stays in the file only because `backlog-status.mjs` and `afk-unblock` read the trusted authors from
-the `authors` gates of the issue automations: a repository whose automations gate nobody trusts
-nobody, and the Reconciler would start nothing (`backlog-status.test.mjs` pins the committed file to
-trusting the maintainer). The trust gate is unchanged. What is lost is the automatic groom: a new
-issue, and one whose `blocked` a person removed, gets `afk-triage` from the Reconciler's next tick
+The old issue event pair and duplicate implement/spec schedules have been removed. Trusted authors
+now live in `.ai/agentic.config.json` → `trustedAuthors`, read by `backlog-status.mjs` and
+`afk-unblock`; an empty list trusts nobody. A new issue, and one whose `blocked` a person removed,
+gets `afk-triage` from the Reconciler's next tick
 but no `om-auto-manage-issues` step (the Definition of Ready check and implementation notes);
 `issue-groom` stays available from the cockpit.
 
 Applying this on the host, from the main checkout once it is merged:
 
 1. `bash .ai/scripts/cez-automations.sh` (the Reconciler's sync runs it too when the file changes):
-   it updates the issue pair to disabled and lists every automation the file does not name as
-   `not in file` - the two schedules, and any older stray.
+   it lists the removed issue pair, duplicate schedules and older definitions as `not in file`.
+   Verify timezone and active schedules before applying the new cadence.
 2. In the cockpit (Automations), disable each automation listed as `not in file`: `--prune` refuses
    an enabled stray.
 3. `bash .ai/scripts/cez-automations.sh --prune --dry-run` must say `would delete` for each of them,
@@ -387,29 +385,11 @@ brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
 
 ## Housekeeping
 
-Cezar's scheduler takes one occurrence per automation - `weekdays` or `weekly`, each at a single
-time of day - so three runs a weekday cannot be expressed as one, and this cadence lives outside
-it. `.ai/scripts/housekeeping.sh` POSTs one `housekeeping` run to the cockpit
-(`/api/v1/p/planned-travel/runs`) and falls back to a headless `cezar run` when the cockpit is
-down, or exits 1 when `cezar` is not on PATH - there is no npx fallback, since upstream lacks the
-fork's fixes; launchd calls it at 07:30, 12:30 and 17:30 on weekdays. The half hour keeps it off
-money-tracker.online's housekeeping, which the same cockpit starts on the hour: two runs started
-together take both of the host's `maxParallel` slots and start Claude in the same seconds.
-Install (template in `.ai/scripts/launchd/`):
-
-```bash
-sed -e "s|__REPO_ROOT__|$PWD|g" -e "s|__PATH__|$(dirname "$(command -v cezar)"):$(dirname "$(command -v node)"):$(dirname "$(command -v gh)"):/usr/bin:/bin|g" \
-  .ai/scripts/launchd/dev.planned-travel.housekeeping.plist > ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist
-```
-
-launchd gives the job only the substituted PATH, so check `cezar` resolves there, not in your shell:
-`env -i PATH="$(plutil -extract EnvironmentVariables.PATH raw ~/Library/LaunchAgents/dev.planned-travel.housekeeping.plist)" /bin/bash -c 'command -v cezar node gh curl'`
-must print four paths. The job runs `bash -lc`, whose profile normally only extends that PATH, so this
-non-login check is the stricter of the two. `jq` is optional: without it the log omits the run id.
-
-Remove with `launchctl bootout gui/$(id -u)/dev.planned-travel.housekeeping`. Log:
-`.ai/cezar/tmp/housekeeping.log`. Run it by hand any time: `bash .ai/scripts/housekeeping.sh`.
+`housekeeping` calls the checkpointed closure script and prints backlog exceptions. It no longer
+runs blanket review or merge-buddy passes. The Reconciler also calls closure every ten minutes,
+and `pipeline-control.mjs confirm-merge` calls it for the confirmed PR immediately. Existing
+host cron/plist jobs must be inventoried before removing old triggers or enabling new ones.
+See [the rollout gates](autonomy-rollout.md).
 
 A `review-prs` step that claims a PR and exits without releasing it leaves an `in-progress` lock
 nobody holds, and the same run's `merge-buddy` step then skips that PR (#551).
@@ -464,3 +444,22 @@ Every workflow's skill runs the same way in a local `claude` session, with the d
 `/om-merge-buddy`, `/om-close-fixed-issues`, `/om-brainstorm`. Hand-worked branches go through
 `/om-check-and-commit` and `/om-open-pr`. The hooks are the project's, so nothing depends on the
 host's user-level configuration.
+
+## Autonomous pipeline rollout
+
+The current host configuration observed on 2026-11-03 has four global slots and two monitoring
+slots; this project's `maxParallel: 2` is a separate cap. Startup skills updates are disabled.
+These are local configuration observations, not confirmation of the effective service environment.
+The live crontab and cockpit API were unavailable from the implementation sandbox.
+
+`implement-ticket` and `pr-autopilot` use native `github.wait-ci` parking, then the stricter
+`pr-state` check. Required skipped/neutral checks cannot pass. Claims name the owning run and
+are shared across worktrees. A failed owner's claim is retained for recovery, not stolen by a
+new run. Inspect its handoff and current GitHub state before manually releasing an abandoned claim.
+Review and QA records carry head, base, policy digest and report URL; fresh findings or revocations
+still override a reusable record. A confirmed merge records a business outcome and reconciles the
+issue independently of the Cezar engine's done status.
+
+The three new scheduled workflows are disabled pending [rollout verification](autonomy-rollout.md).
+`product-radar` qualifies at most one feature weekly, context maintenance keeps fourteen days,
+and skills updates prepare one pinned PR at a time. Existing manual entry points remain available.

@@ -202,6 +202,12 @@ slices that matter.
   `ignored`: `subscription.*` and `checkout.updated` ask `organizationExists()` before they write, so no
   row is created, no cache entry is dropped and nothing is enqueued, and Polar does not retry into a
   foreign-key failure. Order events find no row to move, so they already end the same way.
+  The consumer-first `workspace-late-subscription` handler (#1740) is registered but has no producer.
+  It re-reads organization existence through the subscription store and current provider attribution
+  before setting a live subscription to cancel at period end. Existing organizations, including
+  fenced ones, are untouched. The future deletion driver uses `checkWorkspaceDeletionBilling`:
+  the local mirror and all validated Polar pages must permit deletion, with the same blocking-status
+  vocabulary as the atomic SQL guard. `unpaid` is non-blocking; unreadable provider state refuses.
 - **Transactional email** → ten React Email templates in `src/server/email/templates/`, rendered
   by `renderEmailBody()` (`src/server/email/render.ts`) into `{ html, text }`, described by
   `src/server/auth/email.ts`, and POSTed to the Resend-compatible endpoint by

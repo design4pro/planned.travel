@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { createHarness as createDbHarness } from '#/server/repos/__tests__/harness'
 import { deleteWorkspace } from '#/server/repos'
+import { insertWorkspaceDeletion } from '#/server/catalog/workspace-deletions'
 import { subscriptions } from '#/server/db/schema'
 import { handlePolarWebhook } from '../webhook'
 import { createSubscriptionStore } from '../store'
@@ -161,7 +162,15 @@ describe('a billing webhook for a deleted organization', () => {
     expect(tasks.sent).toEqual([])
   })
 
-  it('still writes the row of a workspace that exists', async () => {
+  it.each([false, true])('still writes an existing workspace (fenced: %s)', async (fenced) => {
+    if (fenced) {
+      await insertWorkspaceDeletion(db.db, {
+        organizationId: live.organizationId,
+        initiator: 'owner',
+        requestedBy: live.ownerUserId,
+      })
+    }
+
     const response = await deliver(
       'subscription.active',
       polarSubscription(forOrganization(live.organizationId)),

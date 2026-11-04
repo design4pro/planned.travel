@@ -1514,6 +1514,29 @@ sandbox dashboard (**Products → Discounts**), and do it at the latest when the
 
 ---
 
+### 9.13 Workspace deletion billing consumer (#1740)
+
+The `workspace-late-subscription` handler ships inert, without a webhook or driver producer. It
+uses the same `POLAR_ACCESS_TOKEN` and `POLAR_SERVER` secrets as request billing, now declared on
+`TaskSecrets`/`TaskBindings`; the Worker's existing environment bridge passes them to the consumer.
+The token needs `subscriptions:read` and `subscriptions:write`. Every provider attempt uses the
+queue's metered `callProvider` adapter.
+
+Before enabling producers in #1742, record the deployed Worker revision and successful deployment
+time separately for staging and production. This source change supplies no deployment evidence.
+Verify in sandbox that an absent workspace's current, correctly attributed live subscription gets
+only `{ cancel_at_period_end: true }`; an existing workspace (also while fenced), an ending or
+non-live subscription must cause no provider mutation. The handler logs `workspace-late-subscription`
+at `error` on a cancellation or provider failure, treats 403/404 as done, and retries 409/429/5xx.
+It validates the PATCH response's identity and ending/non-live state before acknowledging success;
+an unreadable, mismatched or still-renewing response retries and re-reads provider state.
+No refund or immediate cancellation is performed. Roll back producers before the consumer.
+
+The driver's billing gate refuses unreadable provider data as `billing-unavailable`, including
+incomplete, inconsistent or oversized pagination (more than 100 pages of 100 rows). It checks the
+local mirror and lists subscriptions using the workspace's `external_customer_id`; all four live
+statuses (`trialing`, `active`, `past_due`, `paused`) block unless already ending. `unpaid` does not.
+
 ## 10. Continuous deployment
 
 `.github/workflows/ci.yml` runs on every pull request and every push to `develop` and `main`:

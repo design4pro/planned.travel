@@ -170,13 +170,22 @@ BASE_BRANCH=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
 #### get-issue
 `{issueId}`, field list → issue data. Request only the fields the calling skill names.
 ```bash
-gh issue view {issueId} --repo {owner}/{repo} --json number,title,body,state,author,url,labels,assignees,comments
+gh issue view {issueId} --repo {owner}/{repo} --json number,title,body,state,author,url,labels,assignees,comments,createdAt,updatedAt
 ```
 
 #### search-issues
-Query (text, `in:title,body`, state) → matching issues.
+Query (text, `in:title,body`, state) → matching issues. Empty text enumerates issues in that state. The cap defaults to 1000; disclose a result that reaches it as incomplete.
 ```bash
-gh issue list --repo {owner}/{repo} --state open --search "<query> in:title,body" --json number,title,url
+ISSUE_STATE="{state}"
+case "$ISSUE_STATE" in open|closed|all) ;; *) exit 1 ;; esac
+ISSUE_QUERY="<query>"
+ISSUE_SEARCH_LIMIT=${ISSUE_SEARCH_LIMIT:-1000}
+case "$ISSUE_SEARCH_LIMIT" in ''|*[!0-9]*|0) echo "Invalid issue search limit" >&2; exit 1 ;; esac
+if [ -n "$ISSUE_QUERY" ]; then
+  gh issue list --repo {owner}/{repo} --state "$ISSUE_STATE" --search "$ISSUE_QUERY in:title,body" --json number,title,url,createdAt --limit "$ISSUE_SEARCH_LIMIT"
+else
+  gh issue list --repo {owner}/{repo} --state "$ISSUE_STATE" --json number,title,url,createdAt --limit "$ISSUE_SEARCH_LIMIT"
+fi
 ```
 
 #### create-issue
@@ -270,6 +279,15 @@ gh api -X PATCH repos/{owner}/{repo}/pulls/{prNumber} -F body=@<path>
 ```
 `gh pr edit {prNumber} --title … --body-file …` does the same on `gh` >= 2.82.1. On older clients it exits non-zero with the Projects (classic) error and writes nothing (see Prerequisites) — which reads like a no-op, so script the REST form above.
 
+#### close-pr
+`{prNumber}` → close without merging; preserve the head branch, linked issues,
+title and body. Post/update the caller's evidence note before calling. A fresh
+**get-pr** must confirm `CLOSED` and no merge before reporting success; an
+already merged PR is never reported as closed-obsolete.
+```bash
+gh api -X PATCH repos/{owner}/{repo}/pulls/{prNumber} -f state=closed
+```
+
 #### comment-pr
 `{prNumber}`, body. For long structured comments:
 ```bash
@@ -326,6 +344,19 @@ gh pr diff {prNumber} --name-only
 gh api "repos/{owner}/{repo}/pulls/{prNumber}/files" --paginate --jq '.[] | {path: .filename, status: .status}'
 ```
 
+#### get-pr-author-association
+`{prNumber}` → `{login, association}`, normalized from GitHub's `author_association`. GitHub reports `COLLABORATOR` for anyone with explicit repository access who is not an organization member, so on an organization-owned repository that is an `outside-collaborator`. `FIRST_TIMER` (first PR anywhere on GitHub) folds into `first-time-contributor`, and `MANNEQUIN` folds into `none`.
+```bash
+gh api "repos/{owner}/{repo}/pulls/{prNumber}" --jq '{login: .user.login, association: (
+  .author_association as $a | .base.repo.owner.type as $t |
+  if $a == "OWNER" then "owner"
+  elif $a == "MEMBER" then "member"
+  elif $a == "COLLABORATOR" then (if $t == "Organization" then "outside-collaborator" else "collaborator" end)
+  elif $a == "CONTRIBUTOR" then "contributor"
+  elif $a == "FIRST_TIME_CONTRIBUTOR" or $a == "FIRST_TIMER" then "first-time-contributor"
+  else "none" end)}'
+```
+
 #### checkout-pr
 `{prNumber}` → the PR's head available locally (needed for cross-repository fork PRs where the head branch cannot be fetched from `origin`).
 ```bash
@@ -352,14 +383,15 @@ branch_rules=$(gh api "repos/{owner}/{repo}/rules/branches/$encoded_base" --jq '
 if grep -qx merge_queue <<< "$branch_rules"; then
   gh pr merge {prNumber} --repo {owner}/{repo}
 elif [ "$merge_base" = main ]; then
-  gh pr merge {prNumber} --repo {owner}/{repo} --merge
+  gh pr merge {prNumber} --repo {owner}/{repo} --merge --match-head-commit "<headRefOid>"
 else
-  gh pr merge {prNumber} --repo {owner}/{repo} --squash
+  gh pr merge {prNumber} --repo {owner}/{repo} --squash --match-head-commit "<headRefOid>"
 fi
 ```
 **When the base branch has a merge queue** — `gh api "repos/{owner}/{repo}/rules/branches/{baseBranch}" --jq '.[].type'` lists `merge_queue` — drop the strategy and run `gh pr merge {prNumber}`. That enqueues the PR (enabling auto-merge while checks are still pending); the queue's own method decides, so `--squash` / `--merge` / `--rebase` are ignored with a warning and `--delete-branch` is refused outright. The command means **queued**, not merged: report it that way, and expect the merge minutes later, once the queue has run the suite on the commit it built. Removing an entry is `gh api graphql -f query='mutation { dequeuePullRequest(input: {id: "<node id>"}) { clientMutationId } }'` — `gh pr merge --disable-auto` does not do it.
 
 The hard blocks `SDLC.md` declares — `do-not-merge`, `blocked`, `qa-failed`, and `needs-qa` without `qa-approved` — are a convention the merge skills (`om-merge-buddy`, `om-approve-merge-pr`) read before they call this command; neither this command nor any CI check enforces them (ADR 0031). Read the labels on the PR right before merging. Never reach for `--admin` to get past a required check - that bypass is a human's deliberate act, never a skill's.
+
 
 #### mark-pr-ready
 Promote a draft PR.
@@ -522,6 +554,15 @@ Run id → re-execute only the failed jobs of that run. Use to disambiguate flak
 gh run rerun {runId} --failed
 ```
 
+#### approve-pending-runs
+Head SHA → approve every workflow run on that commit that is waiting for maintainer approval (`conclusion` `action_required` — GitHub holds runs from first-time or outside contributors until a maintainer approves them). Prints the approved run ids; an empty result means nothing was waiting. Approving lets the contributor's workflow code run with this repository's CI, so callers approve only on a PR a human has authorized for automation (e.g. an `automerge` label) and read the diff's workflow changes first.
+```bash
+gh api "repos/{owner}/{repo}/actions/runs?head_sha={headSha}&status=action_required&per_page=100" \
+  --jq '.workflow_runs[].id' | while read -r run; do
+  gh api -X POST "repos/{owner}/{repo}/actions/runs/$run/approve" >/dev/null && echo "$run"
+done
+```
+
 #### watch-run
 When waiting for the PR rather than diagnosing a single run, prefer the shared
 `node .ai/scripts/pr-state.mjs {prNumber} --wait` operation above. It covers workflow runs and
@@ -569,6 +610,12 @@ gh label create qa-self-verified  --color c5def5 --description "Self-QA exceptio
 gh label create in-progress       --color c5def5 --description "An automated skill is working on this"
 gh label create ci-monitoring     --color d4c5f9 --description "Work complete and reported; agent is watching CI results"
 gh label create do-not-close      --color c5def5 --description "Humans only: never auto-close this issue"
+gh label create "${AUTOFIX_LABEL:-cez-autofix}" --color 5319e7 --description "Human-confirmed issue ready for the configured autofix worker"
+gh label create "${AUTOMERGE_LABEL:-automerge}" --color 5319e7 --description "Human-confirmed: drive this PR to merge once every gate is green"
+gh label create automerge-signal-1-cr --color 1d76db --description "om-auto-merge-buddy: code review signal holds for the current head"
+gh label create automerge-signal-2-qa --color 1d76db --description "om-auto-merge-buddy: QA signal holds for the current head"
+gh label create automerge-signal-3-ci --color 1d76db --description "om-auto-merge-buddy: CI signal holds for the current head"
+gh label create automerge-blocked --color b60205 --description "om-auto-merge-buddy parked this PR; a human removes this label to retry"
 gh label create priority-low      --color e4e669 --description "Cosmetic or follow-up work"
 gh label create priority-medium   --color fbca04 --description "Ordinary bug or feature"
 gh label create priority-high     --color d93f0b --description "Release-blocking"

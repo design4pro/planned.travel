@@ -43,6 +43,7 @@ import {
   handleInvoicePaid,
   handleSubscriptionChanged,
 } from './handlers/billing'
+import { handleWorkspaceLateSubscription } from './handlers/workspace-late-subscription'
 import { handleBookingImport } from './handlers/booking-import'
 import { handleEmail } from './handlers/email'
 import { handlePdfExport } from './handlers/pdf-export'
@@ -92,6 +93,7 @@ export interface QueueBatchLike {
 export type TaskHandlerRegistry = Partial<TaskHandlerTable>
 
 export const taskHandlers: TaskHandlerRegistry = {
+  'workspace-late-subscription': handleWorkspaceLateSubscription,
   email: handleEmail,
   'pdf-export': handlePdfExport,
   'booking-import': handleBookingImport,
@@ -121,6 +123,10 @@ function runHandler(
   context: TaskContext,
 ): Promise<TaskMetrics> {
   switch (envelope.kind) {
+    case 'workspace-late-subscription':
+      return (
+        registry['workspace-late-subscription'] ?? unhandled(envelope.kind)
+      )(envelope.payload, context)
     case 'email':
       return (registry.email ?? unhandled(envelope.kind))(
         envelope.payload,

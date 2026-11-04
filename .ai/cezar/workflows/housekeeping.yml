@@ -1,24 +1,9 @@
-# The sweeper's successor (ADR 0018): issue reconciliation and two read-mostly passes, started by
-# launchd three times a day on the cezar host (.ai/scripts/launchd/, .ai/scripts/housekeeping.sh).
-# om-review-prs reviews what waits for review, om-merge-buddy reports what could merge (it never
-# merges), close-fixed-issues.mjs closes issues whose `Closes #n` PR merged into the configured
-# base branch - GitHub does not, because develop is not the default branch.
 name: housekeeping
-description: Review the queue, report what can merge, close issues whose PR merged into develop.
+description: Reconcile merged issues and report exceptions with missing evidence.
 steps:
-  # Reconcile first: a later review permission denial must not strand merged issues.
   - id: close-fixed
     name: Reconcile issues fixed by merged PRs
-    command: node scripts/agents/close-fixed-issues.mjs --apply --limit 50
-  - id: bootstrap
-    name: Install dependencies and generate the route tree
-    command: bash .ai/scripts/bootstrap.sh
-  - id: review-prs
-    name: om-review-prs
-    prompt: '/om-review-prs'
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
-  - id: merge-buddy
-    name: om-merge-buddy (read-only)
-    prompt: '/om-merge-buddy'
-    # Write: comment bodies go to a file for `gh --body-file`.
-    allowedTools: [Read, Write, Grep, Glob, Bash, Skill, TodoWrite]
+    command: node scripts/agents/close-fixed-issues.mjs --apply --checkpoint
+  - id: exceptions
+    name: Report unresolved pipeline states
+    command: node .ai/scripts/backlog-status.mjs --json

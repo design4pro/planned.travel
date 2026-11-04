@@ -10,10 +10,8 @@
 //
 // It keeps no knowledge of its own that another file already holds:
 //   - the category, priority and risk labels come from .ai/agentic.config.json;
-//   - the trusted authors are the `authors` gates of the issue automations in
-//     docs/agents/cezar-automations.json, plus the retired agent account: an issue anyone else
-//     opened is never auto-implemented. A ticket scripts/sentry-triage filed (its `sentry-issue`
-//     marker) is triaged unattended, and ready only on a trusted comment's brief (ADR 0040);
+//   - trustedAuthors in .ai/agentic.config.json plus the retired agent account;
+//     production-derived Sentry issues still require a trusted comment's brief (ADR 0040);
 //   - "not ready" is read through the 🤖 comment marker every skill writes
 //     (.ai/trackers/github.md) - a groom's not-ready comment, or the `STOP:` comment implement-ticket
 //     leaves on an issue it would not take - so a human comment newer than it is the answer, and the
@@ -36,8 +34,9 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { readProductBudget } from "./product-budget.mjs";
+import { listMergedPrs, parseCloseLinks, specOnlyFiles } from "../../scripts/agents/close-fixed-issues.mjs";
 
-const AUTOMATIONS = "docs/agents/cezar-automations.json";
 const CONFIG = ".ai/agentic.config.json";
 const SPECS = ".ai/specs";
 const PLANS = "docs/plans";
@@ -108,12 +107,7 @@ export const stripCode = (text) =>
  * whose first or last character is not ASCII. A bare `#N` mention is never a link.
  */
 export function closeKeywordTargets(text) {
-  const pattern =
-    /(^|[^A-Za-z0-9_])(?:fix(?:es|ed)?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
-  const found = new Set();
-  for (const match of stripCode(text).matchAll(pattern))
-    found.add(Number(match[2]));
-  return [...found];
+  return parseCloseLinks({ body: text });
 }
 
 /**
@@ -178,33 +172,23 @@ export function linkOpenPrs(prs) {
  */
 export function linkMergedPrs(prs) {
   const closing = new Map();
-  for (const [issue, links] of linkOpenPrs(prs)) {
+  for (const [issue, links] of linkOpenPrs(prs.filter((pr) => !pr.specOnly && !pr.headRefName?.startsWith("spec/")))) {
     const keyworded = links.filter((link) => link.viaKeyword);
     if (keyworded.length) closing.set(issue, keyworded);
   }
   return closing;
 }
 
-/**
- * The logins the issue automations trust: the union of their `authors` gates. An automation with
- * no gate adds nobody, so a missing gate makes nothing ready rather than everything.
- */
-export function readTrusted(automations) {
-  const trusted = new Set();
-  for (const automation of automations) {
-    if (!(automation.events ?? []).some((event) => event.startsWith("issue."))) continue;
-    for (const login of automation.filters?.authors ?? []) trusted.add(login);
-  }
-  return trusted;
+/** Explicit trust is independent of event automation installation. */
+export function readTrusted(config) {
+  const authors = config.trustedAuthors ?? [];
+  if (!Array.isArray(authors) || authors.some((login) => typeof login !== "string" || !/^[a-zA-Z0-9-]+$/.test(login)))
+    throw new Error("Invalid trustedAuthors configuration");
+  return new Set(authors);
 }
 
-/**
- * The authors a run may act on: the gated logins plus the retired agent account. A repository whose
- * automations gate nobody trusts nobody - the retired logins do not turn a missing gate into an
- * open door.
- */
-export function trustedAuthors(automations) {
-  const gated = readTrusted(automations);
+export function trustedAuthors(config) {
+  const gated = readTrusted(config);
   return gated.size === 0 ? gated : new Set([...gated, ...RETIRED_AGENT_LOGINS]);
 }
 
@@ -263,7 +247,7 @@ const SENTRY_FILER = "app/github-actions";
 /** One issue's state and the single next step that moves it. Pure: every input is passed in. */
 export function classify(
   issue,
-  { trusted, sdlcLabels, openIssues, runs, prLinks, mergedLinks = new Map(), completedSpecs = new Map(), staleHours, now },
+  { trusted, sdlcLabels, openIssues, runs, prLinks, mergedLinks = new Map(), completedSpecs = new Map(), staleHours, now, productAllowed = false },
 ) {
   const labels = issue.labels.map((label) => label.name);
   const has = (label) => labels.includes(label);
@@ -452,6 +436,9 @@ export function classify(
       "NEEDS_TRIAGE",
       `No ${missing.join(", ")} yet: the Reconciler's \`triage\` run takes it, or start \`issue-groom\` on it from the cockpit.`,
     );
+
+  if (issue.body?.includes("<!-- product-radar -->") && !productAllowed)
+    return state("WAITING", "Product discovery is disabled, at its budget, already in flight, or lacks timing evidence.");
 
   return state(
     "READY",
@@ -694,7 +681,7 @@ export function buildPlan({
   const idle = (issue) => !runs.has(issue.number);
 
   for (const number of readyIssues(issues, wip))
-    onIssue("implement", number, `Implement issue #${number}.`);
+    onIssue("implement", number, `Implement issue #${number}.${issues.find((issue) => issue.number === number)?.body?.includes("<!-- product-radar -->") ? " [product-radar]" : ""}`);
 
   const candidates = (keep) => issues.filter((issue) => keep(issue) && idle(issue)).slice(0, PLAN_CANDIDATES);
   for (const { number } of candidates((issue) => issue.canUnblock))
@@ -756,8 +743,9 @@ export const isAlive = (run) =>
 export function runsByIssue(records, currentRunId) {
   const byIssue = new Map();
   for (const run of records) {
-    if ((currentRunId && run.id === currentRunId) || !run.issueNumber || !isAlive(run)) continue;
-    byIssue.set(Number(run.issueNumber), { status: run.status, workflow: run.workflow });
+    const issue = run.issueNumber ?? (/^\s*(?:Implement issue\s+)?#?([1-9]\d*)\.?\s*(?:\[product-radar\])?\s*$/i.exec(run.task ?? "")?.[1]);
+    if ((currentRunId && run.id === currentRunId) || !issue || !isAlive(run)) continue;
+    byIssue.set(Number(issue), { id: run.id, status: run.status, workflow: run.workflow });
   }
   return byIssue;
 }
@@ -819,16 +807,16 @@ function main(argv) {
   }
   const { asJson, next, plan, staleHours } = options;
 
-  const { labels, baseBranch } = JSON.parse(readFileSync(CONFIG, "utf8"));
-  const trusted = trustedAuthors(JSON.parse(readFileSync(AUTOMATIONS, "utf8")));
+  const config = JSON.parse(readFileSync(CONFIG, "utf8"));
+  const { labels, baseBranch } = config;
+  const trusted = trustedAuthors(config);
   const prs = gh([
     "pr", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", `number,title,body,headRefName,author,labels,updatedAt${plan ? ",files" : ""}`,
   ]);
-  const mergedPrs = gh([
-    "pr", "list", "--state", "merged", "--limit", "200",
-    "--json", "number,title,body,headRefName",
-  ]);
+  const repo = gh(["repo", "view", "--json", "nameWithOwner"]).nameWithOwner;
+  const mergedPrs = listMergedPrs(repo, gh).filter((pr) => pr.baseRefName === baseBranch);
+
   const openIssues = gh([
     "issue", "list", "--state", "open", "--limit", String(LIST_LIMIT),
     "--json", "number,title,url,labels,updatedAt,body,comments,author",
@@ -836,10 +824,25 @@ function main(argv) {
 
   for (const [what, rows] of [["open pull requests", prs], ["open issues", openIssues]])
     if (isTruncated(rows))
-      console.error(`backlog-status: ${rows.length} ${what} fill the limit of ${LIST_LIMIT}; some are not classified. Raise LIST_LIMIT.`);
+      throw new Error(`backlog-status: incomplete ${what}; refusing to select work`);
 
   const records = readRunRecords();
+  const openNumbers = new Set(openIssues.map((issue) => issue.number));
+  for (const pr of mergedPrs) {
+    if (!parseCloseLinks(pr).some((number) => openNumbers.has(number))) continue;
+    try {
+      pr.specOnly = specOnlyFiles(gh(["api", "--paginate", "--slurp", `repos/${repo}/pulls/${pr.number}/files?per_page=100`]).flat());
+    } catch {
+      // Retain the merged link as a hold until its diff can be verified; never implement twice.
+      console.error(`PR #${pr.number}: diff unavailable; linked issues remain held for reconciliation`);
+    }
+  }
+  let productAllowed = false;
+  if (config.pipeline?.productDiscovery && !openIssues.some((issue) => issue.title === "[release incident] Production releases paused")) {
+    try { productAllowed = readProductBudget().allowed; } catch { /* Unknown telemetry blocks discovery only. */ }
+  }
   const context = {
+    productAllowed,
     trusted,
     sdlcLabels: { category: labels.category, priority: labels.priority, risk: labels.risk },
     openIssues: new Set(openIssues.map((issue) => issue.number)),
@@ -879,7 +882,7 @@ function main(argv) {
     // be covered by an issue long done. Only needed when a spec or a plan can yield a candidate.
     const allIssues =
       specs.length || stages.length
-        ? gh(["issue", "list", "--state", "all", "--limit", "3000", "--json", "number,title,body"])
+        ? gh(["api", "--paginate", "--slurp", `repos/${repo}/issues?state=all&per_page=100`]).flat().filter((issue) => !issue.pull_request)
         : [];
     console.log(
       JSON.stringify(

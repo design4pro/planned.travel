@@ -117,7 +117,7 @@ When signals conflict, pick the higher label and say why in the label comment. A
 
 No label says an issue is ready, and no label starts a run (ADR 0032). The taxonomy above is the whole vocabulary; readiness is computed.
 
-An issue is **ready** when all of these hold: it is open; a maintainer opened it (the `authors` gate of the issue automations) or the Sentry sweep filed it; its body or a maintainer's comment carries an `## Agent Brief` (for a Sentry ticket only a maintainer's comment counts, ADR 0040); it has a category, a priority and a risk label; every issue under its `Blocked by` is closed; no open PR addresses it; no 🤖 not-ready or `STOP:` comment waits for an answer; and it carries none of `blocked`, `do-not-merge`, `do-not-close` or `in-progress`. A later trusted `🤖 RESOLVED:` comment (what `afk-unblock` posts) answers a not-ready or `STOP:` comment, as a human reply does. A trusted author's comment that says `HUMAN-ONLY:`, or an issue body that opens with it (what `afk-plan-to-spec` files for a stage only a person can decide), names what only a person can do, and no run is started on that issue until a maintainer comments. `.ai/scripts/backlog-status.mjs` is the one implementation of that rule. It prints the report a person reads, with `--next` it picks the issue the next `implement-ticket` run takes: highest priority first, then oldest, and nothing while three PRs are **waiting for a person**, and with `--plan` it lists everything the Reconciler may start right now (§ Repo automations, ADR 0033). A PR waits for a person when it is open, by a maintainer, not the `do-not-merge` promotion, and it is `blocked` (or `changes-requested` untouched for 24 hours): those are the PRs only a person can move. A PR the pipeline merges by itself (`review`, `changes-requested`, `merge-queue`, a plain draft) is not inventory, so it does not hold back the next implementation. Trusted authors are the `authors` gates of the issue automations plus the retired `design4pro-agent`, every issue of which came out of an agent run (ADR 0031, amendment of 2026-10-01).
+An issue is **ready** when all of these hold: it is open; a maintainer opened it (`trustedAuthors` in `.ai/agentic.config.json`) or the Sentry sweep filed it; its body or a maintainer's comment carries an `## Agent Brief` (for a Sentry ticket only a maintainer's comment counts, ADR 0040); it has a category, a priority and a risk label; every issue under its `Blocked by` is closed; no open PR addresses it; no 🤖 not-ready or `STOP:` comment waits for an answer; and it carries none of `blocked`, `do-not-merge`, `do-not-close` or `in-progress`. A later trusted `🤖 RESOLVED:` comment (what `afk-unblock` posts) answers a not-ready or `STOP:` comment, as a human reply does. A trusted author's comment that says `HUMAN-ONLY:`, or an issue body that opens with it (what `afk-plan-to-spec` files for a stage only a person can decide), names what only a person can do, and no run is started on that issue until a maintainer comments. `.ai/scripts/backlog-status.mjs` is the one implementation of that rule. It prints the report a person reads, with `--next` it picks the issue the next `implement-ticket` run takes: highest priority first, then oldest, and nothing while three PRs are **waiting for a person**, and with `--plan` it lists everything the Reconciler may start right now (§ Repo automations, ADR 0033). A PR waits for a person when it is open, by a maintainer, not the `do-not-merge` promotion, and it is `blocked` (or `changes-requested` untouched for 24 hours): those are the PRs only a person can move. A PR the pipeline merges by itself (`review`, `changes-requested`, `merge-queue`, a plain draft) is not inventory, so it does not hold back the next implementation. Trusted authors are `trustedAuthors` in `.ai/agentic.config.json` plus the retired `design4pro-agent`, every issue of which came out of an agent run (ADR 0031, amendment of 2026-10-01).
 
 - **How an issue gets there.** The Reconciler's next tick starts `triage` on it: `afk-triage` sets the category, priority and risk and writes the Agent Brief, or puts a `blocked` hold on it with a comment that starts `🤖 HUMAN-ONLY:` and names the one thing a person must do. A person who wants the Definition of Ready check and implementation notes first starts `issue-groom` from the cockpit: `om-auto-manage-issues`, then `afk-triage`, in one run so the two never race on the same labels. `afk-to-tickets` files tickets whose body is their brief; `afk-plan-to-spec` writes the spec for a stage of `docs/plans/` that nothing covers yet, which `afk-to-tickets` then slices.
 - **How it leaves a hold.** A hold an agent set that does not say `HUMAN-ONLY:` is offered to `afk-unblock`, which asks a specialist (§ Delegated decisions): on a verdict it removes `blocked` and posts `🤖 RESOLVED:`, otherwise it posts `🤖 HUMAN-ONLY:` and leaves the hold. A hold a person set, or a person commented on last, and a `HUMAN-ONLY:` one stay until a person removes `blocked`; the issue still has no Agent Brief, so the Reconciler triages it again.
@@ -159,7 +159,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` by `om-pr-autopilot --allow-merge` behind the ruleset and the QA gate (ADR 0031), `risk-high` and `security` PRs on a security and tenancy reviewer's verdict (ADR 0035); the `develop` -> `main` promotion (it carries `do-not-merge`) and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `afk-plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a security reviewer that does not approve, or a verdict that escalates a case `afk-decide` § 5 lists, leaves it `blocked` for a person, while any other specialist's standing **revise** goes to a second specialist.
+- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` after `om-pr-autopilot` review/QA, native CI waiting and `om-approve-merge-pr`, behind the ruleset and the QA gate (ADR 0031), `risk-high` and `security` PRs on a security and tenancy reviewer's verdict (ADR 0035); the `develop` -> `main` promotion (it carries `do-not-merge`) and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `afk-plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a security reviewer that does not approve, or a verdict that escalates a case `afk-decide` § 5 lists, leaves it `blocked` for a person, while any other specialist's standing **revise** goes to a second specialist.
 - **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision; QA and risk labels are the agents', ADR 0035), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the Reconciler.
 
 ## Unattended decisions
@@ -190,11 +190,11 @@ run fresh. Attestation always invokes the same executor fresh and refuses a chec
 
 ### Agent attestation (ADR 0045)
 
-When the gate is green on the commit an agent is about to hand over, it records that with `node scripts/ci/attestation.mjs attest --pr <n>`: the script runs the committed head's gate from a clean tree and posts the result as a PR comment bound to the tree. CI's `attestation` job accepts it, and `lint · typecheck · build` and `unit tests` then report skipped (which counts as passed) instead of repeating the run. Do it **after the last push**: another commit changes the tree and voids the record, and the full jobs run as before. A diff that touches the gate itself or a `risk-high` path never rides on an attestation, and the e2e journeys always run. The push to `develop` runs everything and gates the deploy.
+With `pipeline.requireExecutedCi: true`, required CI jobs must execute; attestations do not skip them and the `attest` command publishes no skip record. The native wait checks their actual results. For projects without that policy, when the gate is green on the commit an agent is about to hand over, it records that with `node scripts/ci/attestation.mjs attest --pr <n>`: the script runs the committed head's gate from a clean tree and posts the result as a PR comment bound to the tree. CI's `attestation` job accepts it, and `lint · typecheck · build` and `unit tests` then report skipped (which counts as passed) instead of repeating the run. Do it **after the last push**: another commit changes the tree and voids the record, and the full jobs run as before. A diff that touches the gate itself or a `risk-high` path never rides on an attestation, and the e2e journeys always run. The push to `develop` runs everything and gates the deploy.
 
 ### Draft until the last push
 
-A draft runs no CI (ADR 0037), so a chain keeps its PR a draft while it still pushes and lets CI start once, on the head it hands over. The chain opens the PR with `om-open-pr --draft` and keeps pushing review, QA and fix-round commits to it. After the last push it attests (above), then marks the PR ready (`gh pr ready <number>`); that `ready_for_review` is what starts CI. It never ends a run on a draft it opened: `om-approve-merge-pr` stops on drafts, so a stranded one never merges. A push after the PR is ready (a CI repair) re-runs CI as before and needs a new attestation.
+A draft runs no CI (ADR 0037), so a chain keeps its PR a draft while it still pushes and lets CI start once, on the head it hands over. The chain opens the PR with `om-open-pr --draft` and keeps pushing review, QA and fix-round commits to it. After the last push it attests only if the policy permits skipping CI (above), then marks the PR ready (`gh pr ready <number>`); that `ready_for_review` is what starts CI. It never ends a run on a draft it opened: `om-approve-merge-pr` stops on drafts, so a stranded one never merges. A push after the PR is ready (a CI repair) re-runs CI as before and needs a new attestation.
 
 ## Repo automations
 
@@ -338,47 +338,41 @@ is also what stops the Reconciler from starting the same run again.
 Workflows live in `.ai/cezar/workflows/`; the committed definitions are
 `docs/agents/cezar-automations.json`, applied with `.ai/scripts/cez-automations.sh`.
 
-| Automation                         | Trigger                               | Workflow                                               |
-| ---------------------------------- | ------------------------------------- | ------------------------------------------------------ |
-| Groom and triage new issues        | disabled (was `issue.opened`)         | `issue-groom` (`om-auto-manage-issues` + `afk-triage`) |
-| Re-triage when a hold is cleared   | disabled (was `blocked` removed)      | `issue-groom`                                          |
-| Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                         |
-| Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                         |
-| Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`)      |
-| Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                              |
+| Automation                         | Trigger                               | Workflow                                          |
+| ---------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| Autopilot new pull requests        | `pull_request.opened` by a maintainer | `pr-autopilot`                                    |
+| Merge reviewed agent pull requests | `merge-queue` by `rafalwolak`         | `pr-autopilot`                                    |
+| Weekly architecture review         | Mondays 06:00                         | `architecture-review` (`afk-architecture-review`) |
+| Weekly lessons                     | Fridays 16:00                         | `lessons` (`afk-lessons`)                         |
 
-Thirteen workflows have **no enabled cezar automation**: `housekeeping` (`om-review-prs`, `om-merge-buddy`
-report, `om-close-fixed-issues`), `backlog`, `brainstorm`, `implement-spec`, `pr-review`,
+The new skills, radar and context schedules are committed disabled until the rollout gates pass.
+The retired issue event pair is no longer the trust configuration; `trustedAuthors` owns that list.
+
+Thirteen existing workflows have **no enabled cezar automation**: `housekeeping` (deterministic closure
+and exception reporting), `backlog`, `brainstorm`, `implement-spec`, `pr-review`,
 `issue-autofix`, `issue-groom`, `spec`, `triage`, `unblock`, `plan-to-spec`, `implement-ticket` and
 `spec-to-tickets`. The Reconciler (§ The Reconciler) starts the last five; a person starts any of
 them, and every other workflow on that list but `housekeeping`, from the cockpit. The implement and
 slice schedules were removed, because beside the Reconciler one issue could be started twice (ADR
-0033). The two `issue-groom` automations are disabled for the same reason and stay in the file only
-because `backlog-status.mjs` and `afk-unblock` read the trusted authors from the `authors` gates of
-the issue automations: removing them would trust nobody. So a new issue gets `afk-triage` from the
-Reconciler but no automatic `om-auto-manage-issues` groom; `issue-groom` stays available from the
-cockpit.
+0033). The two retired `issue-groom` automations were removed after moving their trust list to
+`trustedAuthors` in `.ai/agentic.config.json`. `backlog-status.mjs` and `afk-unblock` read that
+field; no issue event competes with the Reconciler. `issue-groom` remains a manual entry.
 
-`housekeeping` is the exception, and it matters because the sentence that used to stand here said
-the opposite: **it runs on a schedule, just not on cezar's.** A launchd agent on the cezar host —
-`dev.planned-travel.housekeeping`, template at `.ai/scripts/launchd/` — calls
-`.ai/scripts/housekeeping.sh` at 07:30, 12:30 and 17:30 on weekdays, and that script POSTs one
-`housekeeping` run to the cockpit's API. Cezar does have a scheduler — two rows of the table are
-schedules, not events — but it takes one occurrence per automation, in the shapes `daily`,
-`weekdays` and `weekly` at a single time of day, or `hours` around the clock
-(`docs/agents/cezar-automations.json`). Three runs a weekday at fixed hours is none of them, so this cadence lives outside it (`docs/agents/cezar.md`
-§ Housekeeping). So read "no automation" as "no row in the table above", never as "nothing starts
-it" — the earlier wording told a reader that an issue whose PR merged stays open until someone runs
-the sweep by hand, and that was wrong.
+`housekeeping` now runs deterministic reconciliation and reports exceptions; it never sweeps the
+whole queue for another review. The Reconciler runs the same closure script every ten minutes
+when `pipeline.policyVersion` is present, and confirmed merges call it immediately. Retire the
+legacy host housekeeping and hourly closure triggers only after inspecting the effective crontab.
+The three new weekly schedules are committed disabled until that host audit establishes UTC and
+rules out duplicate triggers. See `docs/agents/autonomy-rollout.md`.
 
-The `authors: ["rafalwolak"]` filter on the issue and PR automations is a security gate, not a
+The `authors: ["rafalwolak"]` filter on the PR automations is a security gate, not a
 convenience: those runs read the issue or PR body as a prompt and hold Bash with no allowlist, so
-anything from anyone else waits for a maintainer to start a run from the cockpit. The same list is
+anything from anyone else waits for a maintainer to start a run from the cockpit. The explicit `trustedAuthors` config is
 what `backlog-status.mjs` trusts, so the Reconciler never starts a run on such an issue either.
 
 **Guardrails:**
 
-- Cezar merges into `develop` only through `om-pr-autopilot --allow-merge` - the last step of
+- Cezar merges into `develop` only after review/QA, native CI waiting and `om-approve-merge-pr` in
   `implement-ticket`, and the `pr-autopilot` workflow - through `om-approve-merge-pr` and its label
   and QA checks (ADR 0031, amended 2026-10-01, and by ADR 0033 for a spec PR `afk-plan-to-spec` wrote: it merges on
   its specialist panel's verdicts, while every other spec PR, the one `implement-ticket` writes for a spec task among them, still ends at merge-ready). It never merges into `main`: a person merges the
@@ -428,3 +422,15 @@ Named here because an unstated gap is one a reader rediscovers by losing work to
   Take-overs and newer claims after a release are left alone. The same bounded command with
   `--dry-run` previews manual recovery; arbitrary stale issue or PR claims still follow
   `## The claim protocol` and require the maintainer.
+
+## Controlled release and exploratory work
+
+The implementation pipeline still merges only into develop. The deterministic release workflow
+may merge develop into main after current-head staging observation, complete CI and whole-range
+risk checks. A high-risk range needs a trusted current-head approval on the promotion PR;
+`do-not-merge` continues to exclude the promotion from every agent merge flow. This path is
+inactive until the rollout gates in docs/agents/autonomy-rollout.md are verified.
+
+Product discovery uses active turn minutes over seven days, excluding parked CI gaps. Unknown
+telemetry, an incident, an existing exploratory implementation or a share of at least 20% blocks
+new exploratory implementation only. `pipeline.productDiscovery` stays false during rollout.
