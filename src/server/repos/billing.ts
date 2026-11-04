@@ -18,6 +18,7 @@
 
 import { and, asc, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { WORKSPACE_DELETION_BLOCKING_STATUSES } from '#/server/billing/workspace-deletion-rule'
 import { organization } from '#/server/db/auth-schema'
 import {
   BILLING_INTERVALS,
@@ -128,21 +129,8 @@ export async function upsertSubscription(
 }
 
 /**
- * The statuses of a subscription that is still being billed or can resume billing. `incomplete`,
- * `incomplete_expired` and `canceled` are not here: no charge is running and none can be taken
- * without a new checkout.
- */
-const LIVE_PAID_STATUSES = [
-  'trialing',
-  'active',
-  'past_due',
-  'unpaid',
-  'paused',
-] as const satisfies ReadonlyArray<(typeof SUBSCRIPTION_STATUSES)[number]>
-
-/**
  * A subscription a customer is paying for, as a predicate over `subscriptions`: the provider knows
- * it (a free row never has a `provider_subscription_id`), it is in a {@link LIVE_PAID_STATUSES}
+ * it (a free row never has a `provider_subscription_id`), it is in a {@link WORKSPACE_DELETION_BLOCKING_STATUSES}
  * status, and it is not already set to end with the period. The one definition of "live paid", read
  * by the refusal in {@link findLivePaidSubscription} and by the conditional `DELETE` in
  * `deleteWorkspace`, so what is reported and what is enforced cannot drift apart. Compose it with
@@ -151,7 +139,7 @@ const LIVE_PAID_STATUSES = [
 export function livePaidSubscription(): SQL {
   return allOf(
     isNotNull(subscriptions.providerSubscriptionId),
-    inArray(subscriptions.status, LIVE_PAID_STATUSES),
+    inArray(subscriptions.status, WORKSPACE_DELETION_BLOCKING_STATUSES),
     eq(subscriptions.cancelAtPeriodEnd, false),
   )
 }

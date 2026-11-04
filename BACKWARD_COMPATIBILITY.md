@@ -96,6 +96,12 @@ The 23 locales are one contract: every key exists in every locale (docs/SPEC.md 
   a contract with every row already in D1. A removed or renamed value needs a migration that
   rewrites existing rows.
 
+`workspace-late-subscription` (#1740) is a consumer-first addition. This release accepts the new
+billing task and registers its handler but enqueues none. Producer ticket #1742 must record the
+consumer deployment revision and completion time in each target environment before it starts
+sending this kind; a local build or merged PR is not deployment evidence. Roll back producers
+before rolling back the consumer.
+
 ### 7. Configuration and secrets
 
 - **`wrangler.jsonc` bindings**: renaming a binding or a secret name breaks the deployed Worker

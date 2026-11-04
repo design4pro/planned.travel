@@ -130,6 +130,12 @@ export interface BillingCache {
 /** Follow-up work a webhook hands off so it can answer the provider immediately. */
 export type BillingTask =
   | {
+      readonly kind: 'workspace-late-subscription'
+      readonly organizationId: string
+      readonly providerEventId: string
+      readonly providerSubscriptionId: string
+    }
+  | {
       readonly kind: 'billing.subscription.changed'
       readonly organizationId: string
       readonly planId: PlanId
