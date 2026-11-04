@@ -184,9 +184,10 @@ test('Sheet selections hand focus to Place reading at both mobile heights', asyn
       await page.keyboard.press('Enter')
       const detail = page.getByRole('region', { name, exact: true })
       await expect(page.getByRole('dialog')).toHaveCount(0)
-      await expect(
-        detail.getByRole('heading', { name, exact: true }),
-      ).toBeFocused()
+      const heading = detail.getByRole('heading', { name, exact: true })
+      await expect(heading).toBeFocused()
+      await expect(heading).toHaveCSS('outline-style', 'solid')
+      await expect(heading).toHaveCSS('outline-width', '2px')
       const outside = page.locator('[data-plan-loaded] > h1')
       await outside.focus()
       await page.mouse.move(0, 0)
