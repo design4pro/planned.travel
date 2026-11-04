@@ -199,6 +199,36 @@ it('lets keyboard readers enter Place content and dismiss only from inside the d
   expect(document.activeElement).toBe(title)
 })
 
+it.each([
+  [true, true],
+  [true, false],
+  [false, true],
+  [false, false],
+])(
+  'hands Sheet focus to Place reading (short=%s, fromDay=%s)',
+  async (short, fromDay) => {
+    const original = window.matchMedia
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...original(query),
+      matches: short && query.includes('height'),
+    }))
+    setup()
+    if (fromDay) await openDay()
+    await userEvent.click(screen.getByRole('button', { name: 'Days' }))
+    const row = screen.getByRole('button', { name: /^Place p1,/ })
+    row.focus()
+    await userEvent.keyboard('{Enter}')
+    const region = await screen.findByRole('region', { name: 'Place p1' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const heading = within(region).getByRole('heading', { name: 'Place p1' })
+    await waitFor(() => expect(document.activeElement).toBe(heading))
+    const title = screen.getByRole('heading', { level: 1, name: 'Trip' })
+    title.focus()
+    fireEvent.mouseLeave(region)
+    expect(document.activeElement).toBe(title)
+  },
+)
+
 it('restores the actual Day header when pointer activation did not focus it', async () => {
   const original = window.matchMedia
   vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({

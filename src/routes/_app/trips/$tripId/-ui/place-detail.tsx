@@ -62,6 +62,7 @@ export function PlaceDetail({
       >
         <h2
           id={heading}
+          tabIndex={-1}
           className="min-w-0 flex-1 line-clamp-2 text-label font-semibold text-ink"
         >
           {place.name}

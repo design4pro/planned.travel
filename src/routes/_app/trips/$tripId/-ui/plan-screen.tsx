@@ -1617,6 +1617,64 @@ export function PlanScreen({
     </div>
   )
 
+  let detailContent: React.ComponentProps<typeof PlanWorkspace>['detail']
+  if (
+    detail.kind === 'day' &&
+    detailDay !== undefined &&
+    detailPlannerDay !== undefined
+  ) {
+    detailContent = (controls) => (
+      <DayDetail
+        compact={workspace.short}
+        controls={controls}
+        model={dayDetailModel(
+          detailDay,
+          detailPlannerDay,
+          payload.days,
+          bookings.rows,
+        )}
+        tripId={payload.tripId}
+        minimised={detail.minimised}
+        editable={editable && !payload.archived}
+        loading={bookings.loading}
+        error={bookings.error}
+        focusToken={detailFocus}
+        blockedEscape={dialog !== null || dnd.draggingId !== null}
+        panelRef={detailPanel}
+        addStayRef={addStayRef}
+        onMinimise={() => detailDispatch({ type: 'minimise' })}
+        onExpand={() => {
+          detailDispatch({ type: 'expand' })
+          focusDetail()
+        }}
+        onClose={closeDetail}
+        onRetry={bookings.retry}
+        onAddStay={() => {
+          if (
+            editable &&
+            !payload.archived &&
+            payload.days.some((day) => day.dayId === detailDayId)
+          ) {
+            stayFromDetail.current = true
+            setDialog({ kind: 'stay', dayId: detail.dayId })
+          }
+        }}
+      />
+    )
+  } else if (detailPlace !== undefined) {
+    detailContent = (controls) => (
+      <PlaceDetail
+        place={detailPlace}
+        category={categoryFor(detailPlace.categoryId)}
+        compact={workspace.short}
+        controls={controls}
+        panelRef={detailPanel}
+        blockedEscape={dialog !== null || dnd.draggingId !== null}
+        onClose={closeDetail}
+      />
+    )
+  }
+
   /* ------------------------------------------------------------------ render */
 
   return (
@@ -1653,66 +1711,11 @@ export function PlanScreen({
         ideas={ideas}
         addButton={addButton}
         railFooter={railFooter}
-        detail={
-          detail.kind === 'day' &&
-          detailDay !== undefined &&
-          detailPlannerDay !== undefined
-            ? (controls) => (
-                <DayDetail
-                  compact={workspace.short}
-                  controls={controls}
-                  model={dayDetailModel(
-                    detailDay,
-                    detailPlannerDay,
-                    payload.days,
-                    bookings.rows,
-                  )}
-                  tripId={payload.tripId}
-                  minimised={detail.minimised}
-                  editable={editable && !payload.archived}
-                  loading={bookings.loading}
-                  error={bookings.error}
-                  focusToken={detailFocus}
-                  blockedEscape={dialog !== null || dnd.draggingId !== null}
-                  panelRef={detailPanel}
-                  addStayRef={addStayRef}
-                  onMinimise={() => detailDispatch({ type: 'minimise' })}
-                  onExpand={() => {
-                    detailDispatch({ type: 'expand' })
-                    focusDetail()
-                  }}
-                  onClose={closeDetail}
-                  onRetry={bookings.retry}
-                  onAddStay={() => {
-                    if (
-                      editable &&
-                      !payload.archived &&
-                      payload.days.some((day) => day.dayId === detailDayId)
-                    ) {
-                      stayFromDetail.current = true
-                      setDialog({ kind: 'stay', dayId: detail.dayId })
-                    }
-                  }}
-                />
-              )
-            : detailPlace !== undefined
-              ? (controls) => (
-                  <PlaceDetail
-                    place={detailPlace}
-                    category={categoryFor(detailPlace.categoryId)}
-                    compact={workspace.short}
-                    controls={controls}
-                    panelRef={detailPanel}
-                    blockedEscape={dialog !== null || dnd.draggingId !== null}
-                    onClose={closeDetail}
-                  />
-                )
-              : undefined
-        }
+        detail={detailContent}
         titleRef={titleRef}
         sheetTitleRef={sheetTitleRef}
         onSheetCloseAutoFocus={(event) => {
-          if (detail.kind === 'day') {
+          if (detail.kind !== 'closed') {
             event.preventDefault()
             detailPanel.current?.querySelector<HTMLElement>('h2')?.focus()
           }

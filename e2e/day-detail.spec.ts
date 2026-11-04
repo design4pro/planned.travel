@@ -157,6 +157,51 @@ test('Day reading stays nonmodal, minimises, reopens and switches to a Place', a
   expect(consoleReport().fatal).toEqual([])
 })
 
+test('Sheet selections hand focus to Place reading at both mobile heights', async ({
+  page,
+}) => {
+  const route = {
+    name: 'trip-plan',
+    path,
+    ready: '[data-plan-loaded]',
+    map: true as const,
+  }
+  const report = watchConsole(page, route)
+  await visit(page, route, 'light')
+  for (const height of [450, 800]) {
+    await page.setViewportSize({ width: 360, height })
+    await settle(page, route)
+    for (const fromDay of [false, true]) {
+      if (fromDay) {
+        await showDays(page)
+        await page.locator('[data-planner-day-header]').first().click()
+        await expect(page.locator('[data-day-detail] h2').first()).toBeFocused()
+      }
+      await showDays(page)
+      const row = page.locator('[data-planner-place]').first()
+      const name = await row.locator('span.text-label').innerText()
+      await row.locator(':scope > button:not([aria-roledescription])').focus()
+      await page.keyboard.press('Enter')
+      const detail = page.getByRole('region', { name, exact: true })
+      await expect(page.getByRole('dialog')).toHaveCount(0)
+      await expect(
+        detail.getByRole('heading', { name, exact: true }),
+      ).toBeFocused()
+      const outside = page.locator('[data-plan-loaded] > h1')
+      await outside.focus()
+      await page.mouse.move(0, 0)
+      await expect(outside).toBeFocused()
+      await expect(detail).toBeVisible()
+      await detail
+        .getByRole('button', { name: `Close ${name}`, exact: true })
+        .click()
+      await expect(detail).toHaveCount(0)
+      await expect(outside).toBeFocused()
+    }
+  }
+  expect(report().fatal).toEqual([])
+})
+
 test('a failed Reservation read keeps Day content and can be retried', async ({
   page,
 }) => {
@@ -226,6 +271,11 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
       page.locator('[data-sonner-toast][data-type="success"]'),
     ).toHaveCount(0, { timeout: 10_000 })
     await showDays(page)
+    const removedDayId = await page
+      .locator('[data-planner-day]')
+      .first()
+      .getAttribute('data-planner-day')
+    if (removedDayId === null) throw new Error('Day identity missing')
     await page.locator('[data-planner-day-header]').first().click()
     const panel = page.locator('[data-day-detail]')
     await expect(panel.getByText('Dates not set')).toBeVisible()
@@ -258,11 +308,6 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
     ).toBeVisible()
     await expect(panel.getByText('DAY-1718', { exact: true })).toBeVisible()
     await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
-    const removedDayId = await page
-      .locator('[data-planner-day]')
-      .first()
-      .getAttribute('data-planner-day')
-    if (removedDayId === null) throw new Error('Day identity missing')
     // Return a successful board generation without the selected identity after a real write.
     await page.route(
       (url) => callsServerFn(url, 'loadPlanBoard'),
