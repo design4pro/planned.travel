@@ -44,6 +44,7 @@ vi.mock('#/server/auth/env', () => ({
   googleCredentials: () => null,
   relyingPartyId: () => 'localhost',
   sessionStore: () => shared.sessions,
+  securityEnforcement: () => false,
   taskQueue: () => ({ send: async () => {} }),
   trustedOrigins: () => ['http://localhost:3000'],
 }))
