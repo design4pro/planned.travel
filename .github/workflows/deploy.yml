@@ -185,20 +185,15 @@ jobs:
             https://planned.travel/api/tiles/basemap.pmtiles)
           echo "tiles: $code"; test "$code" = 206
 
-      - name: Verify authenticated production
-        id: authenticated-smoke
+      - name: Verify production version and health
+        id: release-smoke
         if: steps.gate.outputs.configured == 'true' && (vars.RELEASE_OBSERVATION == 'true' || vars.AUTONOMOUS_RELEASES == 'true')
         env:
           SMOKE_URL: https://planned.travel
-          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
-          SMOKE_WORKSPACE_ID: ${{ vars.SMOKE_WORKSPACE_ID }}
-          SMOKE_TRIP_ID: ${{ vars.SMOKE_TRIP_ID }}
           EXPECTED_SHA: ${{ github.sha }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
-          pnpm exec playwright install chromium
           node scripts/ci/release-smoke.mjs
 
       - name: Save last verified healthy production version
@@ -211,13 +206,9 @@ jobs:
           retention-days: 90
 
       - name: Lock releases and attempt one compatible rollback
-        if: failure() && steps.worker.outcome == 'success' && (steps.basic-smoke.outcome == 'failure' || steps.authenticated-smoke.outcome == 'failure') && vars.AUTONOMOUS_RELEASES == 'true'
+        if: failure() && steps.worker.outcome == 'success' && (steps.basic-smoke.outcome == 'failure' || steps.release-smoke.outcome == 'failure') && vars.AUTONOMOUS_RELEASES == 'true'
         env:
           SMOKE_URL: https://planned.travel
-          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
-          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
-          SMOKE_WORKSPACE_ID: ${{ vars.SMOKE_WORKSPACE_ID }}
-          SMOKE_TRIP_ID: ${{ vars.SMOKE_TRIP_ID }}
           CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
           CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           GH_TOKEN: ${{ secrets.PROMOTE_PR_TOKEN }}
