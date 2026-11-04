@@ -643,6 +643,35 @@ test('short planner controls and feedback stay usable by pointer @chromium-only'
       await page.keyboard.press('Escape')
       await expect(page.getByRole('dialog')).toHaveCount(0)
     }
+    for (const name of ['Days', 'Places']) {
+      const action = page.getByRole('button', { name, exact: true })
+      await action.focus()
+      for (const height of [800, viewport.height]) {
+        await page.setViewportSize({ ...viewport, height })
+        await expect
+          .poll(() =>
+            action.evaluate(
+              (node) => node.closest('[data-day-detail]') !== null,
+            ),
+          )
+          .toBe(height === viewport.height)
+        await expect(action).toBeFocused()
+        await expect(page.getByRole('dialog')).toHaveCount(0)
+      }
+    }
+    const detailHeading = panel.getByRole('heading', { level: 2 })
+    await detailHeading.focus()
+    for (const height of [800, viewport.height]) {
+      await page.setViewportSize({ ...viewport, height })
+      await expect
+        .poll(() =>
+          page
+            .getByRole('button', { name: 'Days', exact: true })
+            .evaluate((node) => node.closest('[data-day-detail]') !== null),
+        )
+        .toBe(height === viewport.height)
+      await expect(detailHeading).toBeFocused()
+    }
     const report = page.getByRole('button', {
       name: 'Report a problem',
       exact: true,

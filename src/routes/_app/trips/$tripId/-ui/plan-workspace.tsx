@@ -175,6 +175,21 @@ export function usePlanWorkspace(
   }
 }
 
+/** Hand focus to the same action when React relocates its button within this commit. */
+function useRelocatedActionRef() {
+  const restoreFocus = React.useRef(false)
+  React.useLayoutEffect(() => {
+    restoreFocus.current = false
+  })
+  return React.useCallback((node: HTMLButtonElement | null) => {
+    if (!node) return
+    if (restoreFocus.current) node.focus({ preventScroll: true })
+    return () => {
+      restoreFocus.current = document.activeElement === node
+    }
+  }, [])
+}
+
 export function PlanWorkspace({
   layout,
   tripTitle,
@@ -225,15 +240,19 @@ export function PlanWorkspace({
     setWidths,
     planVars,
   } = layout
+  const daysActionRef = useRelocatedActionRef()
+  const placesActionRef = useRelocatedActionRef()
   const compactDetail = layout.short && detail !== undefined
   const mobileActions = compactDetail ? (
     <>
       <IconButton
+        ref={daysActionRef}
         label={t('trips.plan.workspace.days')}
         icon={<ListTree />}
         onClick={() => setSheet('itinerary')}
       />
       <IconButton
+        ref={placesActionRef}
         label={t('trips.plan.places')}
         icon={<Layers />}
         onClick={() => setSheet('places')}
@@ -242,6 +261,7 @@ export function PlanWorkspace({
   ) : (
     <>
       <Button
+        ref={daysActionRef}
         variant="secondary"
         shape="pill"
         size="sm"
@@ -251,6 +271,7 @@ export function PlanWorkspace({
         {t('trips.plan.workspace.days')}
       </Button>
       <Button
+        ref={placesActionRef}
         variant="primary"
         shape="pill"
         size="sm"
