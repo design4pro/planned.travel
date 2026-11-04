@@ -157,3 +157,28 @@ it('shows a textual Reservation status with its semantic tint and the Book link'
     '/trips/t1/book',
   )
 })
+
+it('lets read-only readers Tab into static content and out, and removes the target on minimise', async () => {
+  const { update, props } = setup({ editable: false })
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('heading', { level: 2 }),
+    ),
+  )
+  const body = screen.getByRole('group', { name: 'Day 1 · Tokyo' })
+  expect(body.querySelector('button, a, input, textarea, select')).toBeNull()
+  await userEvent.tab()
+  await userEvent.tab()
+  await userEvent.tab()
+  expect(document.activeElement).toBe(body)
+  await userEvent.tab()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Outside' }),
+  )
+  await userEvent.tab({ shift: true })
+  expect(document.activeElement).toBe(body)
+  await userEvent.keyboard('{Escape}')
+  expect(props.onClose).toHaveBeenCalledOnce()
+  update({ minimised: true })
+  expect(screen.queryByRole('group', { name: 'Day 1 · Tokyo' })).toBeNull()
+})

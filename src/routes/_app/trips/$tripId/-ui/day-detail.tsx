@@ -182,8 +182,11 @@ export function DayDetail({
       </header>
       {minimised ? null : (
         <div
+          role="group"
+          aria-labelledby={headingId}
+          tabIndex={0}
           className={cn(
-            'min-h-0 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] text-caption text-ink-2 [overflow-wrap:anywhere]',
+            'min-h-0 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] text-caption text-ink-2 [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
             compact && 'py-1',
           )}
         >

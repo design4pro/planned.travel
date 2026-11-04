@@ -358,6 +358,130 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
   }
 })
 
+test('an archived Day with only static Notes scrolls by keyboard and lets Tab leave', async ({
+  page,
+}) => {
+  test.setTimeout(240_000)
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const title = `Static Day keyboard ${Date.now()}`
+  const tripsRoute = { name: 'trips', path: '/trips?view=list', ready: 'main' }
+  await visit(page, tripsRoute, 'light')
+  await page
+    .getByRole('button', { name: 'New trip', exact: true })
+    .first()
+    .click()
+  const create = page.getByRole('dialog')
+  await create.getByLabel('Trip name').fill(title)
+  await create.getByLabel('Duration in days').fill('1')
+  await create.getByRole('button', { name: 'Create trip', exact: true }).click()
+  await expect(page).toHaveURL(/\/trips\/[^/]+\/plan/)
+  const fixturePath = new URL(page.url()).pathname
+  const tile = page
+    .locator('[data-part="trip-tile"], [data-part="trip-row"]')
+    .filter({ hasText: title, visible: true })
+    .first()
+  try {
+    await expect(page.locator('[data-workspace-splash]')).toHaveCount(0, {
+      timeout: 60_000,
+    })
+    await page
+      .getByRole('button', { name: 'Add a note for Day 1', exact: true })
+      .click()
+    const note = page.getByRole('dialog')
+    await note
+      .getByRole('textbox', { name: /^Note/ })
+      .fill('Keyboard reading fixture')
+    await note
+      .getByLabel('Details', { exact: true })
+      .fill(
+        'Plain static travel notes with no links or interactive controls. '.repeat(
+          60,
+        ),
+      )
+    await note.getByRole('button', { name: 'Save note', exact: true }).click()
+    await expect(note).toHaveCount(0)
+    await expect(
+      page.getByText('Keyboard reading fixture', { exact: true }),
+    ).toBeVisible()
+    await visit(page, tripsRoute, 'light')
+    await tile.locator('[data-part="trip-actions-trigger"]').click()
+    await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
+    await expect(page.getByText('Trip archived', { exact: true })).toBeVisible()
+
+    await page.setViewportSize({ width: 360, height: 450 })
+    const route = {
+      name: 'trip-plan',
+      path: fixturePath,
+      ready: '[data-plan-loaded]',
+      map: true,
+    } as const
+    const report = watchConsole(page, route)
+    await visit(page, route, 'light')
+    await showDays(page)
+    await page.locator('[data-planner-day-header]').first().click()
+    const panel = page.locator('[data-day-detail]')
+    const body = panel.getByRole('group')
+    await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
+    await expect(panel.locator('section[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    )
+    await expect(body.locator('a,button,input,textarea,select')).toHaveCount(0)
+    await expect(body).toContainText('Keyboard reading fixture')
+    for (let step = 0; step < 5; step++) await page.keyboard.press('Tab')
+    await expect(body).toBeFocused()
+    const headerBefore = await panel.locator('header').boundingBox()
+    const cameraBefore = await restingCamera(page, () => null)
+    await page.keyboard.press('PageDown')
+    await expect
+      .poll(() => body.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0)
+    expect(await panel.locator('header').boundingBox()).toEqual(headerBefore)
+    const cameraAfter = await restingCamera(page, () => null)
+    expect(cameraAfter.center).toEqual(cameraBefore.center)
+    expect(cameraAfter.zoom).toBe(cameraBefore.zoom)
+    await page.keyboard.press('Tab')
+    expect(
+      await panel.evaluate((node) => node.contains(document.activeElement)),
+    ).toBe(false)
+    expect(
+      await page.evaluate(() => document.activeElement === document.body),
+    ).toBe(false)
+    await page.keyboard.press('Shift+Tab')
+    await expect(body).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
+    await expect(page.locator('[data-plan-loaded] > h1')).toBeFocused()
+    await showDays(page)
+    await page.locator('[data-planner-day-header]').first().click()
+    await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
+    for (let step = 0; step < 3; step++) await page.keyboard.press('Tab')
+    await expect(
+      panel.getByRole('button', { name: 'Minimise day details' }),
+    ).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(body).toHaveCount(0)
+    await expect(
+      panel.getByRole('button', { name: 'Expand day details' }),
+    ).toBeFocused()
+    expect(report().fatal).toEqual([])
+  } finally {
+    await visit(page, tripsRoute, 'light')
+    if (!(await tile.count()))
+      await page.locator('[data-part="trip-archive-disclosure"]').click()
+    await tile.locator('[data-part="trip-actions-trigger"]').click()
+    await page
+      .getByRole('menuitem', { name: /^Delete( permanently)?$/ })
+      .click()
+    const remove = page.locator('[data-part="trip-delete-dialog"]')
+    await expect(remove.getByRole('listitem').first()).toBeVisible()
+    const name = remove.getByLabel(/Type the trip’s name/)
+    if (await name.count()) await name.fill(title)
+    await remove.getByRole('button', { name: 'Delete permanently' }).click()
+    await expect(remove).toBeHidden()
+  }
+})
+
 test('a viewer and an archived Trip retain readable Day details without Stay writes', async ({
   page,
   context,
