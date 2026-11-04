@@ -146,6 +146,7 @@ export function TwoFactorPasswordDialog({
         }}
       >
         <form
+          className="flex min-h-0 flex-col"
           data-sentry-block
           onSubmit={(event) => {
             event.preventDefault()
