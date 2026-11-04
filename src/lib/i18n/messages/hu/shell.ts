@@ -27,6 +27,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Egy értesítés vár rád.',
+  'dashboard.mascot.actionNotification': 'Egy értesítés a válaszodra vár.',
+  'dashboard.mascot.event': 'Egy tervezett esemény ekkor kezdődik: {date}.',
+  'dashboard.mascot.openEvent': 'Útiterv megtekintése',
+  'dashboard.mascot.empty': 'Jelenleg nincsenek javaslatok.',
+  'dashboard.mascot.sourceUnavailable':
+    'Néhány javaslatot nem sikerült betölteni.',
+  'dashboard.mascot.retry': 'Újra',
   'dashboard.mascot.reservation':
     'Egy megerősített foglalás kezdőnapja: {date}.',
   'dashboard.mascot.openReservation': 'Foglalások megtekintése',

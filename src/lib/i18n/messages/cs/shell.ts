@@ -30,6 +30,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'Čeká na vás oznámení.',
+  'dashboard.mascot.actionNotification': 'Oznámení čeká na vaši odpověď.',
+  'dashboard.mascot.event': 'Naplánovaná událost začíná {date}.',
+  'dashboard.mascot.openEvent': 'Zobrazit plán cesty',
+  'dashboard.mascot.empty': 'Momentálně nejsou žádné návrhy.',
+  'dashboard.mascot.sourceUnavailable': 'Některé návrhy se nepodařilo načíst.',
+  'dashboard.mascot.retry': 'Zkusit znovu',
   'dashboard.mascot.reservation': 'Potvrzená rezervace začíná {date}.',
   'dashboard.mascot.openReservation': 'Zobrazit rezervace',
   'dashboard.mascot.openChat': 'Otevřít cestovní chat',
