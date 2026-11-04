@@ -57,6 +57,7 @@ const shared = vi.hoisted(() => ({
 }))
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => false,
   APP_NAME: 'planned.travel',
   appUrl: () => BASE_URL,
   appleBundleIdentifier: () => undefined,
@@ -821,7 +822,7 @@ describe('ending one’s own session queues the close of the person’s trip-roo
       const line = String(warnings.mock.calls[0]?.[0])
       expect(JSON.parse(line)).toMatchObject({
         event: 'room-eviction.other-sessions.unread',
-        reason: 'TypeError',
+        reason: source === 'durable' ? 'TypeError' : 'Error',
       })
       expect(line).not.toContain(String(token))
       expect(line).not.toContain(failure.message)
@@ -857,13 +858,16 @@ describe('ending one’s own session queues the close of the person’s trip-roo
     },
   )
 
-  it('keeps the shipped rate-limit configuration unchanged', () => {
+  it('preserves existing limits and bounds account-security registration, commit and status', () => {
     expect(getAuth().options.rateLimit).toEqual({
       enabled: true,
       storage: 'secondary-storage',
       window: 60,
       max: 100,
       customRules: {
+        '/account-security/register-operation': { window: 300, max: 5 },
+        '/account-security/revoke-other-sessions': { window: 300, max: 5 },
+        '/account-security/operation-status': { window: 60, max: 20 },
         '/sign-in/email': { window: 60, max: 10 },
         '/sign-up/email': { window: 300, max: 5 },
         '/request-password-reset': { window: 300, max: 5 },
@@ -1677,7 +1681,7 @@ describe('revoke-other-sessions ends every other session of the person, indexed 
     expect(lines).toHaveLength(1)
     expect(JSON.parse(String(lines[0]))).toMatchObject({
       event: 'room-eviction.sweep.failed',
-      reason: 'TypeError',
+      reason: 'Error',
     })
     for (const token of otherTokens) expect(lines[0]).not.toContain(token)
   })

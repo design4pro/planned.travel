@@ -48,8 +48,8 @@ import {
   vi,
 } from 'vitest'
 import { BANNED_USER_MESSAGE } from '#/server/auth/admin-options'
-import { authSchema } from '#/server/db/auth-schema'
-import { subscriptions, workspaceParticipants } from '#/server/db/schema'
+import { authSchema, accountSecuritySchema } from '#/server/db/auth-schema'
+import { subscriptions, workspaceParticipants, workspaceDeletions } from '#/server/db/schema'
 import { DISABLED_ADMIN_PATHS } from '../admin-options'
 import type * as CatalogAudit from '#/server/catalog/audit'
 import type { AuthDb } from '../db'
@@ -74,6 +74,7 @@ const shared = vi.hoisted(() => {
     current: new Request('http://localhost:3000'),
   }
   return {
+    enforced: false,
     db,
     request,
     kv: new Map<string, string>(),
@@ -82,6 +83,7 @@ const shared = vi.hoisted(() => {
 })
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => shared.enforced,
   APP_NAME: 'planned.travel',
   appUrl: () => BASE_URL,
   appleBundleIdentifier: () => undefined,
@@ -137,6 +139,7 @@ const { WORKSPACE_LIMIT, createOrganizationFor } = await import(
   '../provisioning'
 )
 const { getSession } = await import('../session')
+const { backfillLegacyAuthority, recordAnchorBackfillCompletion, AccountAuthorityError } = await import('#/server/repos/account-security')
 
 /* -------------------------------------------------------------------------------------------------
  * The database
@@ -189,8 +192,9 @@ beforeAll(async () => {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
     await generateSQLiteDrizzleJson({
-      ...authSchema,
+      ...authSchema, ...accountSecuritySchema,
       workspaceParticipants,
+      workspaceDeletions,
       subscriptions,
     }),
   )
@@ -2778,5 +2782,224 @@ describe('two-factor setup protects a working factor', () => {
     const own = await person()
     await enrol(own.cookie)
     expect(stored(other.id)).toEqual(before)
+  })
+})
+
+
+describe('authoritative other-device revocation', () => {
+  it('refuses a revoked device even when its old KV session blob reappears', async () => {
+    const email = 'authority-stale-cache@planned.travel'
+    await createAccount(email)
+    const first = await signIn(email)
+    const firstCookie = sessionCookie(first)
+    const firstBody = await first.json() as { token: string }
+    const blob = shared.kv.get(firstBody.token)
+    expect(blob).toBeDefined()
+    const current = await signIn(email)
+    const currentCookie = sessionCookie(current)
+    await backfillLegacyAuthority(repositoryDatabase, Date.now()); await recordAnchorBackfillCompletion(repositoryDatabase, { runId: 'fixture-complete', completedAt: new Date().toISOString() }, Date.now())
+    shared.enforced = true
+    const intent = crypto.randomUUID()
+    const registered = await post('/account-security/register-operation', { intent }, currentCookie)
+    expect(registered.status).toBe(200)
+    const { id } = await registered.json() as { id: string }
+    const receipt = registered.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ')
+    const revoked = await post('/account-security/revoke-other-sessions', { id, intent, confirm: true }, `${currentCookie}; ${receipt}`)
+    expect(revoked.status).toBe(200)
+    expect(await revoked.json()).toMatchObject({ status: 'committed' })
+    shared.kv.set(firstBody.token, blob ?? '')
+    const stale = await get(`${AUTH_BASE}/get-session`, firstCookie)
+    expect(stale.status).toBe(200)
+    expect(await stale.json() === null).toBe(true)
+    const retained = await get(`${AUTH_BASE}/get-session`, currentCookie)
+    expect(await retained.json()).not.toBeNull()
+  })
+})
+
+
+async function enableAuthorityForTest(): Promise<void> {
+  const row = sqlite.prepare('select cutover from account_security_fence where id = 1').get() as { cutover: number } | undefined
+  if (!row?.cutover) await backfillLegacyAuthority(repositoryDatabase, Date.now()); await recordAnchorBackfillCompletion(repositoryDatabase, { runId: 'fixture-complete', completedAt: new Date().toISOString() }, Date.now())
+  shared.enforced = true
+}
+
+async function confirmedRevocation(cookie: string) {
+  const intent = crypto.randomUUID()
+  const registered = await post('/account-security/register-operation', { intent }, cookie)
+  expect(registered.status).toBe(200)
+  const { id } = await registered.json() as { id: string }
+  const receipt = registered.headers.getSetCookie().map((entry) => entry.split(';')[0]).join('; ')
+  const authorized = `${cookie}; ${receipt}`
+  const response = await post('/account-security/revoke-other-sessions', { id, intent, confirm: true }, authorized)
+  expect(response.status).toBe(200)
+  expect((await response.json() as { status: string }).status).toBe('committed')
+  return { id, intent, cookie: authorized }
+}
+
+function authorityBarrier() {
+  let release = () => undefined as void
+  const waiting = new Promise<void>((resolve) => { release = resolve })
+  return { waiting, release }
+}
+
+describe('authoritative proof ordering at public HTTP and in-process entry points', () => {
+  beforeEach(() => shared.kv.clear())
+  for (const mode of ['http', 'api'] as const) for (const seam of ['before-identity', 'after-identity'] as const) {
+    it(`${mode} refuses a sign-in held ${seam} across account revocation`, async () => {
+      await enableAuthorityForTest()
+      const email = `authority-${mode}-${seam}@planned.travel`
+      await createAccount(email)
+      const current = sessionCookie(await signIn(email))
+      const context = await getAuth().$context
+      const started = authorityBarrier()
+      const resume = authorityBarrier()
+      let restore: () => void
+      if (seam === 'before-identity') {
+        const original = context.internalAdapter.findUserByEmail.bind(context.internalAdapter)
+        const spy = vi.spyOn(context.internalAdapter, 'findUserByEmail').mockImplementationOnce(async (...args) => {
+          started.release()
+          await resume.waiting
+          return original(...args)
+        })
+        restore = () => spy.mockRestore()
+      } else {
+        const original = context.password.verify.bind(context.password)
+        const spy = vi.spyOn(context.password, 'verify').mockImplementationOnce(async (...args) => {
+          started.release()
+          await resume.waiting
+          return original(...args)
+        })
+        restore = () => spy.mockRestore()
+      }
+      const pending = mode === 'http' ? signIn(email) : getAuth().api.signInEmail({ body: { email, password: PASSWORD }, headers: new Headers({ origin: BASE_URL }), asResponse: true })
+      await started.waiting
+      try { await confirmedRevocation(current) } finally { resume.release() }
+      const result = await pending.then((response) => ({ status: response.status, error: null }), (error: unknown) => ({ status: null, error }))
+      restore()
+      if (mode === 'api') expect(result.error instanceof AccountAuthorityError).toBe(true)
+      else expect(result.status !== null && result.status >= 400).toBe(true)
+      const stillCurrent = await get(`${AUTH_BASE}/get-session`, current)
+      expect(await stillCurrent.json() !== null).toBe(true)
+    })
+  }
+
+  it('cannot use a receipt alone, a conflicting intent or an account selector to mutate', async () => {
+    await enableAuthorityForTest()
+    const email = 'authority-receipt-boundary@planned.travel'
+    const userId = await createAccount(email)
+    const current = sessionCookie(await signIn(email))
+    const intent = crypto.randomUUID()
+    const selected = await post('/account-security/register-operation', { intent, userId }, current)
+    expect(selected.status >= 400).toBe(true)
+    const registered = await post('/account-security/register-operation', { intent }, current)
+    expect(registered.status).toBe(200)
+    const { id } = await registered.json() as { id: string }
+    const receipt = registered.headers.getSetCookie().map((entry) => entry.split(';')[0]).join('; ')
+    const noReceipt = await post('/account-security/revoke-other-sessions', { id, intent, confirm: true }, current)
+    expect(noReceipt.status).toBe(403)
+    const noSession = await post('/account-security/revoke-other-sessions', { id, intent, confirm: true }, receipt)
+    expect(noSession.status).toBe(401)
+    const conflicting = await post('/account-security/register-operation', { intent: crypto.randomUUID() }, current)
+    expect(conflicting.status).toBe(403)
+    const before = sqlite.prepare('select revision from account_security where user_id = ?').get(userId)
+    const status = await get(`${AUTH_BASE}/account-security/operation-status?id=${id}`, receipt)
+    expect(status.status).toBe(200)
+    expect(await status.json()).toMatchObject({ status: 'unknown' })
+    expect(sqlite.prepare('select revision from account_security where user_id = ?').get(userId)).toEqual(before)
+  })
+
+  it('reconciles loss of the entire commit response using the pre-issued receipt and no session', async () => {
+    await enableAuthorityForTest()
+    const email = 'authority-lost-response@planned.travel'
+    await createAccount(email)
+    const current = sessionCookie(await signIn(email))
+    const operation = await confirmedRevocation(current)
+    const receiptOnly = operation.cookie.split('; ').filter((entry) => !entry.startsWith('planned.session_token=')).join('; ')
+    const status = await get(`${AUTH_BASE}/account-security/operation-status?id=${operation.id}`, receiptOnly)
+    expect(status.status).toBe(200)
+    expect(await status.json()).toMatchObject({ status: 'committed' })
+    expect(status.headers.get('cache-control')).toBe('no-store')
+  })
+
+  it('keeps a native sign-out revoked while other-device cleanup is pending', async () => {
+    await enableAuthorityForTest()
+    const email = 'authority-native-signout@planned.travel'
+    await createAccount(email)
+    const first = await signIn(email)
+    const cookie = sessionCookie(first)
+    const { token } = await first.json() as { token: string }
+    const operation = await confirmedRevocation(cookie)
+    const blob = shared.kv.get(token)
+    expect(blob !== undefined).toBe(true)
+    const ended = await post('/sign-out', {}, cookie)
+    expect(ended.status).toBe(200)
+    shared.kv.set(token, blob ?? '')
+    const result = await get(`${AUTH_BASE}/get-session`, cookie)
+    expect(await result.json() === null).toBe(true)
+    const status = await get(`${AUTH_BASE}/account-security/operation-status?id=${operation.id}`, operation.cookie)
+    expect((await status.json() as { status: string }).status).toBe('committed')
+  })
+})
+
+it('fences the real Better Auth member, invitation and recipient interfaces during deletion', async () => {
+  const {
+    insertWorkspaceDeletion,
+    acquireDeletionLease,
+    transitionWorkspaceDeletion,
+  } = await import('#/server/catalog/workspace-deletions')
+  const ownerEmail = 'deletion-hook-owner@planned.travel'
+  const recipientEmail = 'deletion-hook-recipient@planned.travel'
+  const ownerId = await createAccount(ownerEmail)
+  const recipientId = await createAccount(recipientEmail)
+  sqlite
+    .prepare('update user set email_verified = 1 where id = ?')
+    .run(recipientId)
+  const org = sqlite
+    .prepare('select organization_id as id from member where user_id = ?')
+    .get(ownerId) as { id: string }
+  const ownerCookie = sessionCookie(await signIn(ownerEmail))
+  const recipientCookie = sessionCookie(await signIn(recipientEmail))
+  const invitation = await getAuth().api.createInvitation({
+    headers: new Headers({ cookie: ownerCookie }),
+    body: { email: recipientEmail, role: 'member', organizationId: org.id },
+  })
+  const row = await insertWorkspaceDeletion(repositoryDatabase, {
+    organizationId: org.id,
+    initiator: 'owner',
+    requestedBy: ownerId,
+  })
+  await expect(
+    getAuth().api.addMember({
+      body: { userId: recipientId, role: 'member', organizationId: org.id },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  await expect(
+    getAuth().api.createInvitation({
+      headers: new Headers({ cookie: ownerCookie }),
+      body: {
+        email: 'another@planned.travel',
+        role: 'member',
+        organizationId: org.id,
+      },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  await expect(
+    getAuth().api.acceptInvitation({
+      headers: new Headers({ cookie: recipientCookie }),
+      body: { invitationId: invitation.id },
+    }),
+  ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+  const token = await acquireDeletionLease(repositoryDatabase, row.id)
+  if (!token) throw new Error('Missing lease')
+  await transitionWorkspaceDeletion(
+    repositoryDatabase,
+    row.id,
+    token,
+    'requested',
+    'refused',
+  )
+  await getAuth().api.acceptInvitation({
+    headers: new Headers({ cookie: recipientCookie }),
+    body: { invitationId: invitation.id },
   })
 })

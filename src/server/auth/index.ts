@@ -1,3 +1,4 @@
+import { assertWorkspaceNotDeleting } from '#/server/catalog/workspace-deletions'
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { admin, twoFactor } from 'better-auth/plugins'
@@ -27,6 +28,8 @@ import {
   googleCredentials,
   relyingPartyId,
   sessionStore,
+  securityEnforcement,
+  taskQueue,
   trustedOrigins,
 } from './env'
 import {
@@ -34,6 +37,10 @@ import {
   impersonationCookieGuard,
   impersonationExpiryGuard,
 } from './impersonation-expiry'
+import { createAccountAuthority } from './account-authority'
+import { enqueueTasks } from '#/server/queue/jobs'
+import { sweepAccountSecurity } from './account-security-cleanup'
+import { accountSessionManagement } from './factor-management'
 import { guardMemberDeletion } from './member-deletion'
 import { logAuth } from './log'
 import { recordParticipation } from './participation'
@@ -315,19 +322,20 @@ async function auditImpersonatedWorkspaceChange(
 function buildAuth() {
   const baseUrl = appUrl()
   const db = authDb()
+  const authority = createAccountAuthority(db, securityEnforcement)
 
-  return betterAuth({
+  const auth = betterAuth({
     appName: APP_NAME,
     baseURL: baseUrl,
     basePath: '/api/auth',
     secret: authSecret(),
     trustedOrigins: trustedOrigins(),
 
-    database: (options: Parameters<ReturnType<typeof drizzleAdapter>>[0]) => guardMemberDeletion(drizzleAdapter(db, {
+    database: (options: Parameters<ReturnType<typeof drizzleAdapter>>[0]) => authority.guardAdapter(guardMemberDeletion(drizzleAdapter(db, {
       provider: 'sqlite',
       schema: authSchema,
       usePlural: false,
-    })(options)),
+    })(options))),
 
     // Sessions, OAuth state and rate-limit counters live at the edge in KV;
     // D1 remains the durable record so a KV miss degrades to a slower read
@@ -410,6 +418,9 @@ function buildAuth() {
       window: 60,
       max: 100,
       customRules: {
+        '/account-security/register-operation': { window: 300, max: 5 },
+        '/account-security/revoke-other-sessions': { window: 300, max: 5 },
+        '/account-security/operation-status': { window: 60, max: 20 },
         '/sign-in/email': { window: 60, max: 10 },
         '/sign-up/email': { window: 300, max: 5 },
         '/request-password-reset': { window: 300, max: 5 },
@@ -575,6 +586,14 @@ function buildAuth() {
       // other plugin, and before our own organization provisioning, does work on
       // its behalf. Nothing here replaces the hooks below; both run.
       admin(adminOptions),
+      authority.plugin,
+      accountSessionManagement(db, authority, authority.enforced, async () => sweepAccountSecurity(db, {
+        key: authSecret(), store: sessionStore(), now: Date.now(),
+        discoveryDb: authRepositoryDb(),
+        publish: async (userId, accountSecurityOperationId, organizations) => {
+          await enqueueTasks(taskQueue(), organizations.map((orgId) => ({ kind: 'trip-room-evict' as const, orgId, payload: { userId, accountSecurityOperationId } })))
+        },
+      })),
 
       // Reads the person a session-ending endpoint is about before it deletes the session (#1093).
       roomEvictionPrepare,
@@ -619,7 +638,14 @@ function buildAuth() {
           // the join; an anchor left behind by a join that then fails is harmless. The organization
           // id comes from what the library resolved or from the invitation row, never from a body.
           organizationHooks: {
+            beforeCreateInvitation: async ({ organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
+            },
+            beforeAcceptInvitation: async ({ organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
+            },
             beforeAddMember: async ({ member, organization: workspace }) => {
+              await assertWorkspaceNotDeleting(authRepositoryDb(), workspace.id)
               await recordParticipation(authDb(), workspace.id, member.userId)
             },
           },
@@ -654,6 +680,7 @@ function buildAuth() {
       },
     },
   })
+  return authority.wrap(auth)
 }
 
 export type Auth = ReturnType<typeof buildAuth>

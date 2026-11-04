@@ -777,6 +777,18 @@ const messages = {
   'twoFactor.off.pending': 'Desativando',
   'twoFactor.off.cancel': 'Manter ativada',
   'twoFactor.off.done': 'A autenticação de dois fatores está desativada',
+  'security.other.label': 'Sair dos outros dispositivos',
+  'security.other.description':
+    'Os outros dispositivos precisarão entrar novamente. As conexões são fechadas de forma assíncrona; navegadores confiáveis, Google, Apple e chaves de acesso continuam disponíveis.',
+  'security.other.committed':
+    'Os outros dispositivos foram desconectados. Este dispositivo continua conectado.',
+  'security.other.refused':
+    'Esta operação não fez alterações. Entre novamente e confirme em até cinco minutos.',
+  'security.other.unknown':
+    'O resultado é desconhecido. Verifique o status antes de iniciar outra operação.',
+  'security.other.pending':
+    'As outras sessões foram revogadas. As conexões podem demorar mais para fechar.',
+  'security.other.check': 'Verificar status',
 } satisfies TranslationOf<typeof En>
 
 export default messages

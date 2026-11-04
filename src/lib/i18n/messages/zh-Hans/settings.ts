@@ -652,6 +652,15 @@ const messages = {
   'twoFactor.off.pending': '正在关闭',
   'twoFactor.off.cancel': '保持开启',
   'twoFactor.off.done': '双重验证已关闭',
+  'security.other.label': '退出其他设备',
+  'security.other.description':
+    '其他设备需要重新登录。连接会异步关闭；受信任的浏览器、Google、Apple 和通行密钥仍可使用。',
+  'security.other.committed': '其他设备已退出。此设备保持登录状态。',
+  'security.other.refused':
+    '此操作未做任何更改。请重新登录，并在五分钟内确认。',
+  'security.other.unknown': '结果未知。请先检查状态，再开始其他操作。',
+  'security.other.pending': '其他会话已撤销。连接可能需要更长时间才能关闭。',
+  'security.other.check': '检查状态',
 } satisfies TranslationOf<typeof En>
 
 export default messages

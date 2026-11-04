@@ -21,9 +21,9 @@ const sources = modulesUnder(SOURCE_ROOT, { tests: false })
 
 /** A statement that creates a `member` row, in any spelling this codebase uses. */
 const MEMBERSHIP_INSERT =
-  /\.insert\(\s*member\s*\)|membersRepository\.insert\(|\bcreateMember\s*\(/
+  /\.insert\(\s*member\s*\)|membersRepository\.insert\(|\bcreateMember\s*\(|\bprepareTenantInsert\(\s*scope,\s*member\b/
 
-const ANCHOR_WRITE = /\brecordParticipation\(|\brecordParticipant\(/
+const ANCHOR_WRITE = /\brecordParticipation\(|\brecordParticipant\(|\bprepareTenantInsert\(\s*scope,\s*workspaceParticipants\b/
 
 /** Files whose code inserts a membership and never writes the anchor. */
 function unanchored(files: ReadonlyArray<[string, string]>): Array<string> {
@@ -50,6 +50,7 @@ describe('every place that inserts a membership writes the anchor', () => {
         'routes/api/dev/-seed/bootstrap.ts',
         'server/auth/provisioning.ts',
         'server/repos/members.ts',
+        'server/repos/workspace-invitation-acceptance.ts',
       ]),
     )
   })
@@ -83,12 +84,14 @@ describe('every place that inserts a membership writes the anchor', () => {
           'await db.insert(member).values({ organizationId, userId })',
         ],
         ['spelled-out.ts', 'await membersRepository.insert(scope, { userId })'],
+        ['atomic.ts', 'await prepareTenantInsert(scope, member, { userId }, predicate)'],
+        ['anchored-atomic.ts', 'prepareTenantInsert(scope, workspaceParticipants, { userId }); prepareTenantInsert(scope, member, { userId })'],
         [
           'ok.ts',
           'recordParticipation(db, o, u); db.insert(member).values({})',
         ],
       ]),
-    ).toEqual(['fixture.ts', 'spelled-out.ts'])
+    ).toEqual(['fixture.ts', 'spelled-out.ts', 'atomic.ts'])
   })
 })
 
@@ -141,11 +144,14 @@ describe('who imports the erasure catalog', () => {
         (file.startsWith('server/catalog/') && specifier === './erasure'),
     )
 
-  it('is the participation backfill handler and nothing else', () => {
+  it('limits importers to participation backfill and account-security routing discovery', () => {
     const importers = sourceTexts
       .filter(([file, source]) => imports(file, source))
       .map(([file]) => file)
-    expect(importers).toEqual(['server/queue/handlers/participant-backfill.ts'])
+    expect(importers).toEqual([
+      'server/auth/account-security-cleanup.ts',
+      'server/queue/handlers/participant-backfill.ts',
+    ])
   })
 
   it('sees an importer under any spelling (fixture)', () => {

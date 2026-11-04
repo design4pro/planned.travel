@@ -63,7 +63,9 @@ It is the single biggest latency lever for the authenticated app, and it costs n
    file route from `src/routeTree.gen.ts` and runs the route chain.
 3. **Session.** The auth layer reads the session cookie and resolves it against the `SESSIONS`
    KV namespace (`src/server/auth/secondary-storage.ts`). A KV hot read at the edge is
-   sub-millisecond and costs one KV read, versus a D1 round trip plus a row read.
+   sub-millisecond. KV is only a hint: the request first captures the primary account entry fence,
+   then validates native session ownership, expiry, ban and session revision against primary D1
+   before accepting it (ADR 0049). A restored KV blob never restores authority.
 4. **Tenant context.** `src/server/auth/tenant.ts` resolves the active organization and
    membership, producing the `TenantScope` that every repository call requires.
 5. **Loaders.** Route loaders call server functions in `src/server/fns/**`, which validate input
@@ -75,14 +77,21 @@ It is the single biggest latency lever for the authenticated app, and it costs n
    `method`, `durationMs`, `outcome`) into Workers Observability, sampled at 100%.
 
 Budget for a warm authenticated document request: **~12 ms CPU**, 1 KV read, 3–8 D1 queries
-(batched where they are independent), one 200 with a streamed body.
+(batched where they are independent), plus **two primary authority reads per in-process session
+acceptance**, one 200 with a streamed body. Do not cache either authority read across requests.
 
 ### 2.2 A server function call (`POST /_serverFn/...`)
 
 Same path from step 3, minus rendering. Mutations follow one shape: validate → `assertQuota`
 → write D1 in the smallest possible transaction → invalidate the KV cache keys the write
 touched → enqueue anything slow → return the new state. Budget: **~4 ms CPU**, 1 KV read,
-1–4 D1 statements.
+1–4 D1 statements plus the two primary authority reads.
+
+The #1758 local SQLite/KV production-handler fixture measured 20 warm in-process `getSession`
+acceptances: exactly two primary SELECTs each, median 3.91 ms and p95 6.72 ms wall time. This
+is a local regression budget, not a production-network or Workers CPU measurement. HTTP hooks
+can perform an additional acceptance check. Smart Placement remains necessary; verify production
+latency after cutover without removing the primary checks to meet a latency target.
 
 A call from the authenticated shell also carries the workspace the tab is showing, in the
 `x-planned-workspace` header (the _workspace claim_, `src/lib/workspace-claim-middleware.ts`).
@@ -215,7 +224,7 @@ slices that matter.
   `switch (controller.cron)` branch exists (`docs/SPEC.md` §5). It is unrelated to the
   `17 4 * * 1` prune that runs seventeen minutes later the same morning.
 
-### 2.5 The three paths beside the tenant repository
+### 2.5 The paths beside the tenant repository
 
 `src/server/repos/**` is the tenant-scoped path §2.1 and §2.2 take, and it remains the only
 place tenant SQL lives. `docs/SPEC.md` §6 puts three siblings beside it, each with its own
@@ -224,8 +233,15 @@ entry rule. These are architectural paths; some surfaces remain planned. Bounded
 another catalog member. Better Auth's own tables reached through its adapter (the passkey plugin's
 user-keyed `passkey` table) are not application SQL and not a fourth path (SPEC §6).
 
-- `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists twelve: eleven carry no
-  `organization_id`; `provider_usage` uses it only for attribution. Catalog is one of the three
+The closed account-auth repository `src/server/repos/account-security.ts` (ADR 0049) is an
+additional repository capability, scoped to a native account proof rather than a workspace. It
+contains no tenant content; the auth boundary alone mints its branded account scope. Primary
+revision reads and conditional native session/trust writes cannot use KV as authority.
+
+- `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists thirteen: eleven carry no
+  `organization_id`; `provider_usage` and the deletion recovery ledger use it only for attribution.
+  The latter is owned by `catalog/workspace-deletions.ts`, with rare-path reader guards and no
+  production writer until the deletion driver lands (ADR 0048). Catalog is one of the three
   closed exceptions outside repos (SPEC §6; the others are the `…Unscoped` shape and the identity-table SQL of `src/server/auth/provisioning.ts`), with exactly four members (these tables, bounded reminder discovery,
   the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
