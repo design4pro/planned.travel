@@ -31,6 +31,7 @@ import { workspaceSwitchFetch } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
+import { loadDashboardMascot } from '#/server/fns/dashboard-mascot'
 import {
   countryFlag,
   formatNumber,
@@ -114,11 +115,21 @@ function labelFor(
 }
 
 export const Route = createFileRoute('/_app/dashboard')({
-  loader: ({ context, abortController }) =>
-    loadDashboard({
+  loader: async ({ context, abortController }) => {
+    const options = {
       fetch: workspaceSwitchFetch(context.workspaceTransition),
       signal: abortController.signal,
-    }),
+    }
+    const [dashboard, mascot] = await Promise.all([
+      loadDashboard(options),
+      loadDashboardMascot(options).catch(() => ({
+        candidates: [],
+        partial: true,
+        nowMs: Date.now(),
+      })),
+    ])
+    return { ...dashboard, mascot }
+  },
   pendingComponent: DashboardPending,
   errorComponent: DashboardError,
   component: DashboardPage,
@@ -265,6 +276,9 @@ function UpNext({
         }
         trips={mascotTrips}
         reservations={mascotReservations}
+        candidates={data.mascot?.candidates}
+        nowMs={data.mascot?.nowMs}
+        partial={data.mascot?.partial}
         onRefresh={onRefresh}
         reduceMotion={reduceMotion}
         today={data.today}

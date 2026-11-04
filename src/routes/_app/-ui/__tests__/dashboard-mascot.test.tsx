@@ -376,3 +376,85 @@ describe('dashboard mascot', () => {
     visibility.mockRestore()
   })
 })
+
+it('opens the inbox for an action notification ahead of a later reservation', async () => {
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  const trip = tripCard()
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+        'shell.dashboard.mascot.actionNotification':
+          'A notification is waiting for your response.',
+      }}
+    >
+      <DashboardMascot
+        trip={trip}
+        trips={[trip]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+        candidates={[
+          {
+            source: 'reservation',
+            id: 'r',
+            tripId: trip.id,
+            occurrence: '2026-01-09',
+          },
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: true,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(
+    (
+      await screen.findByRole('link', { name: 'Open notifications' })
+    ).getAttribute('href'),
+  ).toBe('/notifications')
+})
+
+it('keeps a working notification visible and retries a failed source', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  const retry = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={retry}
+        partial
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: false,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  expect(retry).toHaveBeenCalledOnce()
+})

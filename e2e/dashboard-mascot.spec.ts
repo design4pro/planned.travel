@@ -65,7 +65,11 @@ test('dashboard chat and layout remain usable on small screens', async ({
     ).toBeVisible()
     const controls = [
       page.getByRole('button', { name: 'Pause animation' }),
-      page.getByRole('link', { name: 'View reservations' }),
+      page
+        .getByRole('link', {
+          name: /^(View reservations|View trip plan|Open notifications)$/,
+        })
+        .first(),
       page.getByRole('button', { name: 'Dismiss' }),
       page.getByRole('link', { name: 'Open notifications' }),
       page.getByRole('button', { name: 'Close', exact: true }),

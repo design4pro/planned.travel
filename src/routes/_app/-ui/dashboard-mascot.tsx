@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { selectReservationPrompt } from '../-lib/mascot-state'
+import { selectMascotPrompt } from '#/lib/mascot-prompts'
+import type { MascotCandidate } from '#/lib/mascot-prompts'
 import {
   dismissOccurrence,
   readSuppression,
@@ -23,6 +25,9 @@ type Props = {
   userId: string
   workspaceId: string
   onRefresh: () => Promise<boolean>
+  candidates?: ReadonlyArray<MascotCandidate>
+  nowMs?: number
+  partial?: boolean
   reduceMotion?: boolean
   adapter?: Parameters<typeof createChatLauncher>[0]
 }
@@ -38,8 +43,10 @@ export function DashboardMascot(props: Props) {
   const [invalid, setInvalid] = useState(false)
   const [focused, setFocused] = useState<{
     id: string
-    tripId: string
+    tripId?: string
     startDate: string
+    source: 'reservation' | 'event' | 'notification'
+    action?: boolean
     userId: string
     workspaceId: string
   } | null>(null)
@@ -47,8 +54,7 @@ export function DashboardMascot(props: Props) {
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
     let inFlight = false
-    const refresh = (today: string) => {
-      const now = Date.now()
+    const refresh = (today: string, now = Date.now()) => {
       let dismissed: ReturnType<typeof readSuppression> = []
       try {
         dismissed = readSuppression(
@@ -95,7 +101,7 @@ export function DashboardMascot(props: Props) {
       )
     }
     setInvalid(false)
-    refresh(props.today)
+    refresh(props.today, props.nowMs)
     schedule()
     const visible = () => {
       if (document.visibilityState === 'visible') void revalidate()
@@ -112,23 +118,44 @@ export function DashboardMascot(props: Props) {
     props.userId,
     props.workspaceId,
     props.reservations,
+    props.candidates,
+    props.nowMs,
     props.onRefresh,
   ])
-  const select = (reservations: ReadonlyArray<Reservation>) =>
-    snapshot && !hidden && !invalid
-      ? selectReservationPrompt({
-          today: snapshot.today,
-          currentScope: {
-            userId: props.userId,
-            workspaceId: props.workspaceId,
-          },
-          dismissedScope: snapshot.scope,
-          nowMs: snapshot.now,
-          dismissed: snapshot.dismissed,
-          trips: props.trips,
-          reservations,
-        })
+  const select = (
+    reservations = props.reservations,
+    candidates = props.candidates,
+  ) => {
+    if (!snapshot || hidden || invalid) return null
+    if (
+      snapshot.scope.userId !== props.userId ||
+      snapshot.scope.workspaceId !== props.workspaceId
+    )
+      return null
+    if (candidates) {
+      const candidate = selectMascotPrompt({
+        today: snapshot.today,
+        nowMs: snapshot.now,
+        dismissed: snapshot.dismissed,
+        candidates,
+      })
+      if (!candidate) return null
+      return { ...candidate, startDate: candidate.occurrence }
+    }
+    const reservation = selectReservationPrompt({
+      today: snapshot.today,
+      currentScope: { userId: props.userId, workspaceId: props.workspaceId },
+      dismissedScope: snapshot.scope,
+      nowMs: snapshot.now,
+      dismissed: snapshot.dismissed,
+      trips: props.trips,
+      reservations,
+    })
+    return reservation
+      ? { ...reservation, source: 'reservation' as const }
       : null
+  }
+  const selected = select()
   const retained =
     focused &&
     snapshot &&
@@ -138,16 +165,25 @@ export function DashboardMascot(props: Props) {
     focused.workspaceId === props.workspaceId &&
     snapshot.scope.userId === props.userId &&
     snapshot.scope.workspaceId === props.workspaceId &&
-    props.reservations.some(
-      (item) => item.id === focused.id && item.tripId === focused.tripId,
-    ) &&
-    props.trips.some(
-      (trip) => trip.id === focused.tripId && !trip.isArchived,
-    ) &&
-    !props.trips.some((trip) => trip.id === focused.tripId && trip.isArchived)
+    (props.candidates
+      ? props.candidates.some(
+          (item) =>
+            item.id === focused.id &&
+            item.source === focused.source &&
+            (item.source === 'notification' || item.tripId === focused.tripId),
+        )
+      : props.reservations.some(
+          (item) => item.id === focused.id && item.tripId === focused.tripId,
+        ) &&
+        props.trips.some(
+          (trip) => trip.id === focused.tripId && !trip.isArchived,
+        ) &&
+        !props.trips.some(
+          (trip) => trip.id === focused.tripId && trip.isArchived,
+        ))
       ? focused
       : null
-  const prompt = focused ? retained : select(props.reservations)
+  const prompt = focused ? retained : selected
   const promptDetails =
     !focused ||
     Boolean(
@@ -158,13 +194,19 @@ export function DashboardMascot(props: Props) {
             item.tripId === focused.tripId &&
             item.startDate === focused.startDate,
         ),
+        props.candidates?.filter(
+          (item) =>
+            item.id === focused.id &&
+            item.source === focused.source &&
+            item.occurrence === focused.startDate,
+        ),
       ),
     )
   function dismiss() {
     if (!prompt || !snapshot) return
     const entries = dismissOccurrence(
       snapshot.dismissed,
-      'reservation',
+      prompt.source,
       prompt.id,
       prompt.startDate,
       Date.now(),
@@ -185,6 +227,16 @@ export function DashboardMascot(props: Props) {
       today={snapshot?.today ?? props.today}
       prompt={prompt}
       promptDetails={promptDetails}
+      partial={props.partial}
+      showEmpty={Boolean(
+        props.candidates &&
+        snapshot &&
+        !hidden &&
+        !invalid &&
+        !prompt &&
+        !props.partial,
+      )}
+      onRetry={props.onRefresh}
       onDismiss={dismiss}
       onPromptFocus={() =>
         setFocused(

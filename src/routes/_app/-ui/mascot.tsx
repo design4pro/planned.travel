@@ -24,6 +24,9 @@ export function Mascot({
   reduceMotion = false,
   prompt,
   promptDetails = true,
+  partial = false,
+  showEmpty = false,
+  onRetry,
   onDismiss,
   onPromptFocus,
   onPromptBlur,
@@ -33,7 +36,16 @@ export function Mascot({
   adapter?: Adapter
   available?: boolean
   reduceMotion?: boolean
-  prompt?: { id: string; tripId: string; startDate: string } | null
+  prompt?: {
+    id: string
+    tripId?: string
+    startDate: string
+    source?: 'reservation' | 'event' | 'notification'
+    action?: boolean
+  } | null
+  partial?: boolean
+  showEmpty?: boolean
+  onRetry?: () => Promise<boolean>
   promptDetails?: boolean
   onDismiss?: () => void
   onPromptFocus?: () => void
@@ -132,6 +144,34 @@ export function Mascot({
     } catch {
       setPaused(true)
     }
+  }
+
+  let promptText = ''
+  let promptLink = ''
+  let promptLabel = ''
+  if (prompt?.source === 'notification') {
+    promptText = t(
+      prompt.action
+        ? 'shell.dashboard.mascot.actionNotification'
+        : 'shell.dashboard.mascot.notification',
+    )
+    promptLink = '/notifications'
+    promptLabel = t('shell.dashboard.mascot.openInbox')
+  } else if (prompt) {
+    const date = formatDate(prompt.startDate, locale) ?? prompt.startDate
+    const event = prompt.source === 'event'
+    promptText = t(
+      event
+        ? 'shell.dashboard.mascot.event'
+        : 'shell.dashboard.mascot.reservation',
+      { date },
+    )
+    promptLink = `/trips/${encodeURIComponent(prompt.tripId ?? '')}/${event ? 'plan' : 'book'}`
+    promptLabel = t(
+      event
+        ? 'shell.dashboard.mascot.openEvent'
+        : 'shell.dashboard.mascot.openReservation',
+    )
   }
 
   return (
@@ -296,20 +336,13 @@ export function Mascot({
               }
             }}
           >
-            {promptDetails ? (
-              <p>
-                {t('shell.dashboard.mascot.reservation', {
-                  date:
-                    formatDate(prompt.startDate, locale) ?? prompt.startDate,
-                })}
-              </p>
-            ) : null}
+            {promptDetails ? <p>{promptText}</p> : null}
             <a
               className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
-              href={`/trips/${encodeURIComponent(prompt.tripId)}/book`}
+              href={promptLink}
             >
-              {t('shell.dashboard.mascot.openReservation')}
+              {promptLabel}
             </a>
             <button
               type="button"
@@ -322,6 +355,15 @@ export function Mascot({
           </div>
         ) : null}
       </div>
+      {showEmpty ? <p>{t('shell.dashboard.mascot.empty')}</p> : null}
+      {partial ? (
+        <div>
+          <p>{t('shell.dashboard.mascot.sourceUnavailable')}</p>
+          <button type="button" onClick={() => void onRetry?.()}>
+            {t('shell.dashboard.mascot.retry')}
+          </button>
+        </div>
+      ) : null}
       {panel ? (
         <div
           id={panelId}
