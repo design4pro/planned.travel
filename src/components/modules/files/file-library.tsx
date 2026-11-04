@@ -701,7 +701,7 @@ export function FileLibrary({
               )}
               <ul
                 ref={queueListRef}
-                className="flex flex-col gap-2"
+                className="flex scroll-mt-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+var(--subnav-h)+4rem)] flex-col gap-2"
                 data-part="file-queue"
               >
                 {queue.tasks.map((task) => (
