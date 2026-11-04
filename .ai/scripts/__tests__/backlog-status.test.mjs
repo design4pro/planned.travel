@@ -61,11 +61,7 @@ import {
 const NOW = Date.parse("2026-09-13T12:00:00Z");
 const OWNER = { login: "rafalwolak" };
 
-const AUTOMATIONS = [
-  { name: "Groom", events: ["issue.opened"], filters: { authors: ["rafalwolak"] } },
-  { name: "Ungated", events: ["issue.labeled"], filters: {} },
-  { name: "Autopilot", events: ["pull_request.opened"], filters: { authors: ["someone-else"] } },
-];
+const AUTOMATIONS = { trustedAuthors: ["rafalwolak"] };
 
 const trusted = new Set(["rafalwolak"]);
 
@@ -108,7 +104,7 @@ describe("readTrusted", () => {
   });
 
   it("trusts nobody when no issue automation is gated", () => {
-    expect(readTrusted([AUTOMATIONS[1]]).size).toBe(0);
+    expect(readTrusted({}).size).toBe(0);
   });
 });
 
@@ -119,14 +115,14 @@ describe("trustedAuthors", () => {
   });
 
   it("still trusts nobody when no issue automation is gated", () => {
-    expect(trustedAuthors([AUTOMATIONS[1]]).size).toBe(0);
+    expect(trustedAuthors({}).size).toBe(0);
   });
 
   // The issue pair is kept disabled in the committed file for this gate alone (ADR 0033): removing
   // it would leave every issue EXTERNAL and the Reconciler nothing to start.
   it("trusts the maintainer through the committed definitions", () => {
     const committed = JSON.parse(
-      readFileSync(new URL("../../../docs/agents/cezar-automations.json", import.meta.url), "utf8"),
+      readFileSync(new URL("../../agentic.config.json", import.meta.url), "utf8"),
     );
     expect(trustedAuthors(committed).has("rafalwolak")).toBe(true);
   });

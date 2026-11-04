@@ -37,7 +37,7 @@ actions for the Reconciler (ADR 0033); this report never starts one.
 | `TRACKING`     | A spec parent `afk-to-tickets` filed (`Spec: .ai/specs/...`)                | Nothing - its tickets carry the work          |
 | `WAITING`      | An issue under its `## Blocked by` is still open                            | Nothing - the Reconciler takes it once it closes |
 | `NOT_READY`    | An unanswered 🤖 not-ready comment, or `implement-ticket`'s `STOP:` comment | Answer it, then `issue-groom` from the cockpit |
-| `EXTERNAL`     | Opened by someone the `authors` gate does not trust, or filed from Sentry   | A person reads it first                       |
+| `EXTERNAL`     | Opened by someone the `trustedAuthors` config does not trust, or filed from Sentry   | A person reads it first                       |
 | `NEEDS_TRIAGE` | No Agent Brief, or no category, priority or risk label                      | Nothing - the Reconciler triages it (or `issue-groom` from the cockpit) |
 | `READY`        | Briefed, labelled, unblocked, unclaimed, no open PR                         | Nothing - the Reconciler takes it             |
 

@@ -711,7 +711,7 @@ const messages = {
   'twoFactor.password.pending': 'Configuration en cours',
   'twoFactor.password.invalid': 'Ce mot de passe est incorrect.',
   'twoFactor.key.intro':
-    'Il vous faut une application d’authentification sur votre téléphone. Ajoutez-y cette clé, puis revenez ici. Les deux facteurs ne sont pas encore activés.',
+    "Ajoutez cette nouvelle clé à votre application d'authentification, puis confirmez un code. Votre méthode de connexion actuelle reste inchangée jusqu'à la confirmation.",
   'twoFactor.key.matrixLabel':
     'Code de configuration. La même clé est disponible en texte',
   'twoFactor.key.matrixFailed':
@@ -724,22 +724,18 @@ const messages = {
   'twoFactor.key.open': 'Ouvrir dans votre application d’authentification',
   'twoFactor.key.startOver': 'Recommencer',
   'twoFactor.key.startOverHint':
-    'Recommencer crée une nouvelle clé. Une clé déjà ajoutée à une application cessera de fonctionner.',
+    'Abandonner cette configuration ne change pas votre méthode de connexion actuelle.',
   'twoFactor.key.next': 'Je l’ai ajoutée',
   'twoFactor.code.label': 'Code de l’application',
-  'twoFactor.code.hint':
-    'Les six chiffres affichés actuellement par l’application.',
   'twoFactor.code.submit': 'Activer les deux facteurs',
   'twoFactor.code.pending': 'Vérification en cours',
   'twoFactor.code.invalid':
     'Ce code ne correspond pas. Vérifiez l’heure du téléphone et saisissez le code le plus récent de l’application.',
-  'twoFactor.code.unclear':
-    'Nous ne savons pas si cela a fonctionné. Saisissez le code le plus récent pour réessayer.',
   'twoFactor.rateLimited.title': 'Trop de tentatives rapprochées',
   'twoFactor.rateLimited.password':
-    'Attendez environ dix secondes, puis réessayez. Vos saisies sont conservées.',
+    'Attendez que cette action soit de nouveau disponible, puis réessayez. Votre saisie a été conservée.',
   'twoFactor.rateLimited.code':
-    'Attendez jusqu’à une minute, puis réessayez. Vos saisies sont conservées.',
+    'Attendez que cette action soit de nouveau disponible, puis réessayez. Votre saisie a été conservée.',
   'twoFactor.codes.title': 'Vos codes de secours',
   'twoFactor.codes.body':
     'Chaque code fonctionne une fois si vous perdez votre téléphone. Ils ne sont affichés que maintenant : conservez-les en lieu sûr.',
@@ -772,21 +768,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Les deux facteurs nécessitent un mot de passe pour ce compte. La page suivante demande votre e-mail et envoie un lien pour en définir un. Cela vous déconnecte partout. Reconnectez-vous, puis revenez ici.',
   'twoFactor.nopassword.action': 'Définir un mot de passe',
-  'twoFactor.setup.action': 'Afficher à nouveau la clé de configuration',
-  'twoFactor.setup.title': 'Clé de configuration',
-  'twoFactor.setup.body':
-    'Ajoutez cette clé sur un autre appareil. La clé sur vos autres appareils continue de fonctionner.',
-  'twoFactor.setup.done': 'Terminé',
-  'twoFactor.setup.confirm': 'Afficher la clé',
   'twoFactor.setup.pending': 'Vérification',
   'twoFactor.off.action': 'Désactiver la double authentification',
   'twoFactor.off.title': 'Désactiver la double authentification ?',
   'twoFactor.off.body':
-    'Toute personne connaissant votre mot de passe pourra se connecter sans code. Vos autres appareils connectés resteront connectés.',
+    'Toute personne connaissant votre mot de passe pourra se connecter sans code.',
   'twoFactor.off.confirm': 'Désactiver',
   'twoFactor.off.pending': 'Désactivation',
   'twoFactor.off.cancel': 'La garder activée',
-  'twoFactor.off.done': 'La double authentification est désactivée',
   'security.other.label': 'Déconnecter les autres appareils',
   'security.other.description':
     'Les autres appareils devront se reconnecter. Les connexions se ferment de façon asynchrone ; les navigateurs de confiance, Google, Apple et les clés d’accès restent disponibles.',
@@ -799,6 +788,26 @@ const messages = {
   'security.other.pending':
     'Les autres sessions sont révoquées. La fermeture des connexions peut prendre plus de temps.',
   'security.other.check': 'Vérifier l’état',
+  'twoFactor.security.effect':
+    'Ce changement déconnecte les autres appareils et retire la confiance accordée aux navigateurs. Cet appareil reçoit une nouvelle session.',
+  'twoFactor.security.currentStep':
+    'Utilisez le code actuel de l’authentificateur. Attendez un nouveau code si vous l’avez déjà utilisé pour modifier la sécurité.',
+  'twoFactor.security.invalidProof':
+    'Ce code est invalide ou déjà utilisé. Saisissez un nouveau code de l’authentificateur ou un code de secours inutilisé.',
+  'twoFactor.security.replace': 'Remplacer l’authentificateur',
+  'twoFactor.security.codesLost':
+    'Le changement est terminé, mais les nouveaux codes de secours ne peuvent plus être affichés. Reconnectez-vous pour vérifier vos paramètres.',
+  'twoFactor.security.changed': 'Vos paramètres de sécurité ont changé.',
+  'twoFactor.security.fresh':
+    'Reconnectez-vous, puis confirmez ce changement de sécurité dans les cinq minutes.',
+  'twoFactor.security.expired':
+    'Cette configuration a expiré. Recommencez ; votre authentificateur actif n’a pas changé.',
+  'twoFactor.security.stale':
+    'Votre état de sécurité a changé. Rechargez-le avant une autre modification.',
+  'twoFactor.security.upgrade':
+    'Actualisez cette page pour utiliser les nouveaux contrôles de sécurité.',
+  'twoFactor.security.unavailable':
+    'Les changements de sécurité sont indisponibles. Rechargez pour vérifier à nouveau.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

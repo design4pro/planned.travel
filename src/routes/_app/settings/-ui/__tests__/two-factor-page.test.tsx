@@ -14,12 +14,13 @@ import type * as AuthClientModule from '#/lib/auth/client'
 const mocks = vi.hoisted(() => ({
   listAccounts: vi.fn(),
   getSession: vi.fn(),
-  enable: vi.fn(),
-  disable: vi.fn(),
-  toast: vi.fn(),
-  verifyTotp: vi.fn(),
-  generateBackupCodes: vi.fn(),
-  getTotpUri: vi.fn(),
+  signOut: vi.fn(),
+  availability: vi.fn(),
+  register: vi.fn(),
+  prepare: vi.fn(),
+  commit: vi.fn(),
+  cancel: vi.fn(),
+  status: vi.fn(),
   invalidate: vi.fn(),
   blocker: { status: 'idle', proceed: vi.fn(), reset: vi.fn() },
   blockOptions: vi.fn(),
@@ -29,16 +30,15 @@ vi.mock('#/lib/auth/client', async (load) => ({
   authClient: {
     listAccounts: mocks.listAccounts,
     getSession: mocks.getSession,
-    twoFactor: {
-      enable: mocks.enable,
-      disable: mocks.disable,
-      verifyTotp: mocks.verifyTotp,
-      generateBackupCodes: mocks.generateBackupCodes,
-      getTotpUri: mocks.getTotpUri,
-    },
+    signOut: mocks.signOut,
   },
+  factorAvailability: mocks.availability,
+  registerFactorOperation: mocks.register,
+  prepareFactor: mocks.prepare,
+  commitFactorOperation: mocks.commit,
+  cancelFactorOperation: mocks.cancel,
+  factorOperationStatus: mocks.status,
 }))
-vi.mock('sonner', () => ({ toast: { success: mocks.toast } }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => ({ invalidate: mocks.invalidate }),
   useBlocker: (options: unknown) => {
@@ -53,6 +53,14 @@ const messages = {
   ...namespaceCatalogue('auth', Auth),
 }
 const codes = Array.from({ length: 10 }, (_, i) => `abcde-${i}2345`)
+const registration = { id: 'operation', intent: 'intent', operation: 'enable' }
+const committed = {
+  status: 'committed',
+  enabled: true,
+  operation: 'enable',
+  cleanupPending: false,
+  backupCodes: codes,
+}
 function page(on = false) {
   return (
     <I18nProvider locale="en" messages={messages}>
@@ -60,10 +68,12 @@ function page(on = false) {
     </I18nProvider>
   )
 }
+function failure(code: string | null, status: number, retryAt?: number) {
+  return { authFailure: { code, status, message: '', retryAt } }
+}
 async function start() {
   const user = userEvent.setup()
-  await screen.findByLabelText('Your password')
-  await user.type(screen.getByLabelText('Your password'), 'my-password')
+  await user.type(await screen.findByLabelText('Your password'), 'my-password')
   await user.click(screen.getByRole('button', { name: 'Continue' }))
   return user
 }
@@ -76,70 +86,73 @@ async function confirm() {
   await user.click(screen.getByRole('button', { name: 'Turn on two-factor' }))
   return user
 }
+async function dialog(action = 'Turn off two-factor') {
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: action }))
+  await user.type(screen.getByLabelText('Your password'), 'my-password')
+  await user.type(screen.getByLabelText('Code from the app'), '123456')
+  return user
+}
 beforeEach(() => {
-  vi.clearAllMocks()
-  mocks.listAccounts.mockResolvedValue({
-    data: [{ providerId: 'credential' }],
-    error: null,
-  })
+  vi.resetAllMocks()
+  mocks.blocker.status = 'idle'
+  mocks.listAccounts.mockResolvedValue({ data: [{ providerId: 'credential' }] })
   mocks.getSession.mockResolvedValue({
-    data: { user: { twoFactorEnabled: false } },
-    error: null,
+    data: { user: { twoFactorEnabled: true } },
   })
-  mocks.enable.mockResolvedValue({
-    data: {
-      totpURI: 'otpauth://totp/test?secret=ABCDEFGH2345',
-      backupCodes: codes,
-    },
-    error: null,
+  mocks.availability.mockResolvedValue({ available: true, recovery: null })
+  mocks.register.mockImplementation((operation: string, intent: string) =>
+    Promise.resolve({ ...registration, operation, intent }),
+  )
+  mocks.prepare.mockResolvedValue({
+    proposalId: 'proposal',
+    expiresAt: Date.now() + 300000,
+    totpURI: 'otpauth://totp/test?secret=ABCDEFGH2345',
   })
-  mocks.verifyTotp.mockResolvedValue({ data: { status: true }, error: null })
-  mocks.generateBackupCodes.mockResolvedValue({
-    data: { backupCodes: codes },
-    error: null,
-  })
-  mocks.getTotpUri.mockResolvedValue({
-    data: { totpURI: 'otpauth://totp/existing?secret=ZYXWVUTS2345' },
-    error: null,
-  })
-  mocks.disable.mockResolvedValue({ data: { status: true }, error: null })
+  mocks.commit.mockResolvedValue(committed)
+  mocks.cancel.mockResolvedValue({ status: 'refused' })
+  mocks.status.mockResolvedValue({ ...committed, backupCodes: undefined })
   mocks.invalidate.mockResolvedValue(undefined)
 })
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   vi.useRealTimers()
 })
-describe('two-factor settings', () => {
-  it('makes no session or second-factor call on mount', async () => {
+describe('factor lifecycle', () => {
+  it('only discovers availability and credential capability on mount', async () => {
     render(page())
     await screen.findByLabelText('Your password')
     expect(mocks.listAccounts).toHaveBeenCalledOnce()
+    expect(mocks.availability).toHaveBeenCalledOnce()
     expect(mocks.getSession).not.toHaveBeenCalled()
-    expect(mocks.enable).not.toHaveBeenCalled()
-    expect(mocks.verifyTotp).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { level: 2 }).textContent).toBe(
-      'Two-factor authentication',
-    )
-    expect(
-      screen
-        .getByRole('list', { name: 'Set up two-factor' })
-        .querySelector('[aria-current=step]')?.textContent,
-    ).toContain('Current step')
+    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.prepare).not.toHaveBeenCalled()
+    expect(mocks.commit).not.toHaveBeenCalled()
   })
-  it('enrols without trustDevice and preserves the one-time codes across a loader refresh until acknowledged', async () => {
+  it('registers before preparing, only reveals committed codes and retains them across loader refresh until acknowledged', async () => {
     const view = render(page())
-    const user = await confirm()
+    const user = await start()
+    expect(mocks.register.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.prepare.mock.invocationCallOrder[0],
+    )
+    expect(mocks.prepare).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'enable' }),
+      'my-password',
+    )
+    expect(screen.queryByText(codes[0])).toBeNull()
+    expect(screen.queryByLabelText(/trust/i)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'I have added it' }))
+    await user.type(screen.getByLabelText('Code from the app'), '123456')
+    await user.click(screen.getByRole('button', { name: 'Turn on two-factor' }))
     const heading = await screen.findByRole('heading', {
       name: 'Your backup codes',
-      level: 3,
     })
     await waitFor(() => expect(document.activeElement).toBe(heading))
-    expect(mocks.getSession).toHaveBeenCalledWith({
-      query: { disableCookieCache: true },
-    })
-    expect(mocks.enable).toHaveBeenCalledWith({ password: 'my-password' })
-    expect(mocks.verifyTotp).toHaveBeenCalledWith({ code: '123456' })
-    expect(screen.queryByLabelText(/trust/i)).toBeNull()
+    expect(mocks.commit).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: 'enable' }),
+      { proposalId: 'proposal', code: '123456' },
+    )
     expect(heading.closest('[data-sentry-block]')).not.toBeNull()
     const done = screen.getByRole('button', { name: 'Done' })
     expect(done.getAttribute('aria-disabled')).toBe('true')
@@ -163,9 +176,8 @@ describe('two-factor settings', () => {
         screen.getByRole('heading', { name: 'Two-factor is on' }),
       ),
     )
-    expect(mocks.invalidate).toHaveBeenCalledOnce()
   })
-  it('shows the shared typed key as a blocked left-to-right paragraph and focuses each step', async () => {
+  it('shows a masked LTR proposal key and cancels before starting over', async () => {
     render(page())
     const user = await start()
     const heading = await screen.findByRole('heading', {
@@ -180,65 +192,156 @@ describe('two-factor settings', () => {
         .getByRole('link', { name: 'Open in your authenticator app' })
         .closest('[data-sentry-block]'),
     ).not.toBeNull()
-    expect(screen.getByRole('status').getAttribute('aria-live')).toBe('polite')
     await user.click(screen.getByRole('button', { name: 'Start over' }))
-    expect(screen.getByRole('dialog')).toBeTruthy()
     await user.click(screen.getByRole('button', { name: 'Start over' }))
     await screen.findByLabelText('Your password')
+    expect(mocks.cancel).toHaveBeenCalledOnce()
     expect(screen.queryByText('ABCD EFGH 2345')).toBeNull()
   })
-  it('clears a refused password and focuses its field', async () => {
-    mocks.enable.mockResolvedValue({
-      error: { code: 'INVALID_PASSWORD', status: 400 },
-    })
-    render(page())
-    await start()
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
-    expect(field.value).toBe('')
-    expect(document.activeElement).toBe(field)
-  })
-  it('keeps a wrong code as a field error', async () => {
-    mocks.verifyTotp.mockResolvedValue({
-      error: { code: 'INVALID_CODE', status: 400 },
-    })
-    render(page())
-    await confirm()
-    const field = screen.getByLabelText('Code from the app') as HTMLInputElement
-    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
-    expect(field.value).toBe('123456')
-    expect(document.activeElement).toBe(field)
-  })
-  it.each(['precheck', 'refusal'])(
-    'recovers an already-on %s without reenrolling',
-    async (kind) => {
-      if (kind === 'precheck')
-        mocks.getSession.mockResolvedValue({
-          data: { user: { twoFactorEnabled: true } },
-        })
-      else
-        mocks.enable.mockResolvedValue({
-          error: { code: 'TWO_FACTOR_ALREADY_ENABLED', status: 400 },
-        })
+  it.each(['password', 'code'])(
+    'associates and focuses invalid %s without false success',
+    async (stage) => {
+      if (stage === 'password')
+        mocks.prepare.mockRejectedValue(failure('INVALID_PASSWORD', 400))
+      else mocks.commit.mockRejectedValue(failure('INVALID_CODE', 400))
       render(page())
-      await start()
-      const heading = await screen.findByRole('heading', {
-        name: 'Two-factor is on',
-      })
-      expect(document.activeElement).toBe(heading)
-      expect(screen.getByText('Two-factor is already on')).toBeTruthy()
-      if (kind === 'precheck') expect(mocks.enable).not.toHaveBeenCalled()
+      if (stage === 'password') await start()
+      else await confirm()
+      const field = screen.getByLabelText(
+        stage === 'password' ? 'Your password' : 'Code from the app',
+      ) as HTMLInputElement
+      await waitFor(() =>
+        expect(field.getAttribute('aria-invalid')).toBe('true'),
+      )
+      expect(field.value).toBe(stage === 'password' ? '' : '123456')
+      expect(document.activeElement).toBe(field)
+      expect(field.getAttribute('aria-describedby')).toBeTruthy()
+      expect(screen.queryByText(codes[0])).toBeNull()
     },
   )
-  it('does not enable when the fresh session read fails', async () => {
+  it.each(['FACTOR_STATE_CHANGED', 'FACTOR_SETUP_EXPIRED'])(
+    'refreshes authoritative state after %s instead of reenrolling',
+    async (code) => {
+      mocks.prepare.mockRejectedValue(failure(code, 409))
+      render(page())
+      await start()
+      await screen.findByRole('heading', { name: 'Two-factor is on' })
+      expect(mocks.cancel).toHaveBeenCalledOnce()
+      expect(mocks.getSession).toHaveBeenCalledWith({
+        query: { disableCookieCache: true },
+      })
+      expect(mocks.prepare).toHaveBeenCalledOnce()
+    },
+  )
+  it('requires sign-in when stale-state refresh fails', async () => {
+    mocks.prepare.mockRejectedValue(failure('FACTOR_STATE_CHANGED', 409))
     mocks.getSession.mockRejectedValue(new TypeError('offline'))
     render(page())
     await start()
+    await screen.findByText(Settings['twoFactor.security.fresh'])
+    expect(screen.queryByText(codes[0])).toBeNull()
+  })
+  it('reuses registration intent after losing the registration response', async () => {
+    mocks.register.mockRejectedValueOnce(new TypeError('offline'))
+    render(page())
+    const user = await start()
     await screen.findByText(Auth['error.offline.detail'])
-    expect(mocks.enable).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await screen.findByText('ABCD EFGH 2345')
+    expect(mocks.register.mock.calls[0]).toEqual(mocks.register.mock.calls[1])
+    expect(mocks.prepare).toHaveBeenCalledOnce()
+  })
+  it.each(['prepare', 'commit', 'cancel'] as const)(
+    'uses receipt-only recovery after a lost %s response',
+    async (phase) => {
+      mocks[phase].mockRejectedValue(new TypeError('offline'))
+      render(page())
+      if (phase === 'commit') await confirm()
+      else {
+        const user = await start()
+        if (phase === 'cancel') {
+          await user.click(screen.getByRole('button', { name: 'Start over' }))
+          await user.click(screen.getByRole('button', { name: 'Start over' }))
+        }
+      }
+      const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole('button', {
+          name: Settings['security.other.check'],
+        }),
+      )
+      await screen.findByText(Settings['twoFactor.security.fresh'])
+      expect(mocks.status).toHaveBeenCalledWith('operation')
+      expect(mocks.getSession).not.toHaveBeenCalled()
+      expect(screen.queryByText(codes[0])).toBeNull()
+      expect(mocks.register).toHaveBeenCalledOnce()
+    },
+  )
+  it('recovers a receipt on remount without exposing secrets or issuing another operation', async () => {
+    mocks.availability.mockResolvedValue({
+      available: true,
+      recovery: { id: 'prior', status: 'unknown' },
+    })
+    mocks.status.mockRejectedValue(new TypeError('offline'))
+    render(page())
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole('button', {
+        name: Settings['security.other.check'],
+      }),
+    )
+    await screen.findByText(Auth['error.offline.detail'])
+    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.status).toHaveBeenCalledWith('prior')
+  })
+  it('offers fresh sign-in when an unknown receipt is no longer readable', async () => {
+    mocks.availability.mockResolvedValue({
+      available: true,
+      recovery: { id: 'prior', status: 'unknown' },
+    })
+    mocks.status.mockRejectedValue(failure('ACCOUNT_SECURITY_REFUSED', 403))
+    render(page())
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole('button', {
+        name: Settings['security.other.check'],
+      }),
+    )
+    await screen.findByRole('button', { name: Auth['login.submit'] })
     expect(
-      (screen.getByLabelText('Your password') as HTMLInputElement).value,
-    ).toBe('my-password')
+      screen.queryByRole('button', { name: Settings['security.other.check'] }),
+    ).toBeNull()
+    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.commit).not.toHaveBeenCalled()
+    expect(mocks.getSession).not.toHaveBeenCalled()
+    expect(screen.queryByText(codes[0])).toBeNull()
+  })
+  it.each(['PASSWORD_ATTEMPTS_LOCKED', 'FACTOR_FRESH_SESSION_REQUIRED'])(
+    'provides fresh sign-in for %s',
+    async (code) => {
+      mocks.prepare.mockRejectedValue(failure(code, 403))
+      render(page())
+      await start()
+      await screen.findByText(Settings['twoFactor.security.fresh'])
+      expect(
+        screen.getByRole('button', { name: Auth['login.submit'] }),
+      ).toBeTruthy()
+    },
+  )
+  it('does not continue preparation after registration resolves on an unmounted screen', async () => {
+    let resolve!: (value: typeof registration) => void
+    mocks.register.mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        }),
+    )
+    const view = render(page())
+    await start()
+    view.unmount()
+    await act(async () => resolve(registration))
+    expect(mocks.prepare).not.toHaveBeenCalled()
+    expect(mocks.invalidate).not.toHaveBeenCalled()
   })
   it('detects a no-password account but falls through on failed detection', async () => {
     mocks.listAccounts.mockResolvedValueOnce({
@@ -255,113 +358,6 @@ describe('two-factor settings', () => {
     mocks.listAccounts.mockRejectedValueOnce(new TypeError('offline'))
     render(page())
     expect(await screen.findByLabelText('Your password')).toBeTruthy()
-  })
-  it.each([true, false])(
-    'rereads the session exactly once after an uncertain confirmation (on=%s)',
-    async (on) => {
-      mocks.verifyTotp.mockRejectedValue(new TypeError('offline'))
-      mocks.getSession
-        .mockResolvedValueOnce({ data: { user: { twoFactorEnabled: false } } })
-        .mockResolvedValueOnce({ data: { user: { twoFactorEnabled: on } } })
-      render(page())
-      await confirm()
-      if (on) await screen.findByRole('heading', { name: 'Your backup codes' })
-      else {
-        const alert = (
-          await screen.findAllByText(
-            'We could not tell whether that worked. Enter the newest code to try again.',
-          )
-        )[0]
-        expect(document.activeElement).toBe(alert.closest('[role=status]'))
-        expect(
-          (screen.getByLabelText('Code from the app') as HTMLInputElement)
-            .value,
-        ).toBe('123456')
-      }
-      expect(mocks.getSession).toHaveBeenCalledTimes(2)
-      expect(mocks.verifyTotp).toHaveBeenCalledOnce()
-    },
-  )
-  it('shows only the on view and replaces codes after a fresh password', async () => {
-    const user = userEvent.setup()
-    render(page(true))
-    expect(mocks.listAccounts).not.toHaveBeenCalled()
-    await user.click(
-      screen.getByRole('button', { name: 'Replace backup codes' }),
-    )
-    expect(
-      screen.getByText(
-        'You will get a new set. The set you have now stops working as soon as you continue.',
-      ),
-    ).toBeTruthy()
-    await user.type(screen.getByLabelText('Your password'), 'fresh-password')
-    await user.click(screen.getByRole('button', { name: 'Replace' }))
-    const panelHeading = await screen.findByRole('heading', {
-      name: 'Your backup codes',
-      level: 3,
-    })
-    await waitFor(() => expect(document.activeElement).toBe(panelHeading))
-    expect(mocks.generateBackupCodes).toHaveBeenCalledWith({
-      password: 'fresh-password',
-    })
-    expect(screen.queryByLabelText('Your password')).toBeNull()
-  })
-  it.each(['password', 'code'])(
-    'keeps typed values and applies the %s endpoint wait without retries',
-    async (stage) => {
-      const timer = vi.spyOn(window, 'setTimeout')
-      render(page())
-      if (stage === 'password') {
-        mocks.enable.mockResolvedValue({ error: { status: 429 } })
-        await start()
-      } else {
-        mocks.verifyTotp.mockResolvedValue({ error: { status: 429 } })
-        await confirm()
-      }
-      const message =
-        stage === 'password'
-          ? 'Wait about ten seconds, then try again. Nothing you typed was lost.'
-          : 'Wait up to a minute, then try again. Nothing you typed was lost.'
-      const alert = await screen.findByText(message)
-      expect(document.activeElement).toBe(alert.closest('[role=status]'))
-      expect(
-        (
-          screen.getByLabelText(
-            stage === 'password' ? 'Your password' : 'Code from the app',
-          ) as HTMLInputElement
-        ).value,
-      ).toBe(stage === 'password' ? 'my-password' : '123456')
-      const duration = stage === 'password' ? 10000 : 60000
-      const scheduled = timer.mock.calls.find((args) => args[1] === duration)
-      expect(scheduled).toBeTruthy()
-      const button = screen.getByRole('button', {
-        name: stage === 'password' ? 'Continue' : 'Turn on two-factor',
-      })
-      expect((button as HTMLButtonElement).disabled).toBe(true)
-      act(() => {
-        if (typeof scheduled?.[0] === 'function') scheduled[0]()
-      })
-      expect((button as HTMLButtonElement).disabled).toBe(false)
-      expect(mocks.enable).toHaveBeenCalledOnce()
-      if (stage === 'code') expect(mocks.verifyTotp).toHaveBeenCalledOnce()
-      expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
-    },
-  )
-  it('keeps the code and reports uncertainty when the recovery read fails', async () => {
-    mocks.verifyTotp.mockRejectedValue(new TypeError('offline'))
-    mocks.getSession
-      .mockResolvedValueOnce({ data: { user: { twoFactorEnabled: false } } })
-      .mockRejectedValueOnce(new TypeError('offline'))
-    render(page())
-    await confirm()
-    await screen.findAllByText(Settings['twoFactor.code.unclear'])
-    expect(mocks.getSession).toHaveBeenCalledTimes(2)
-    expect(
-      screen.queryByRole('heading', { name: 'Your backup codes' }),
-    ).toBeNull()
-    expect(
-      (screen.getByLabelText('Code from the app') as HTMLInputElement).value,
-    ).toBe('123456')
   })
   it('guards leaving until acknowledged and supports stay or leave', async () => {
     const view = render(page())
@@ -396,24 +392,13 @@ describe('two-factor settings', () => {
       .mockResolvedValue()
     render(page())
     await start()
-    const live = screen.getByRole('status')
+    const live = screen
+      .getAllByRole('status')
+      .find((node) => node.classList.contains('text-caption'))!
     expect(live.textContent).toBe('')
     await user.click(screen.getByRole('button', { name: 'Copy key' }))
     expect(clipboard).toHaveBeenCalledWith('ABCDEFGH2345')
     expect(live.textContent).toBe('Key copied')
-  })
-  it('returns focus to the password-dialog trigger on cancel and clears its password', async () => {
-    const user = userEvent.setup()
-    render(page(true))
-    const trigger = screen.getByRole('button', { name: 'Replace backup codes' })
-    await user.click(trigger)
-    await user.type(screen.getByLabelText('Your password'), 'forget-me')
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
-    await waitFor(() => expect(document.activeElement).toBe(trigger))
-    await user.click(trigger)
-    expect(
-      (screen.getByLabelText('Your password') as HTMLInputElement).value,
-    ).toBe('')
   })
   it('focuses the confirm-step h3 and preserves the mirrored security back arrow', async () => {
     render(page())
@@ -435,444 +420,352 @@ describe('two-factor settings', () => {
     expect(steps.querySelectorAll('li')[0].textContent).toContain('Done')
     expect(steps.querySelectorAll('li')[1].textContent).toContain('Done')
   })
-  it('clears an invalid replacement password and associates its focused field error', async () => {
-    mocks.generateBackupCodes.mockResolvedValue({
-      error: { status: 400, code: 'INVALID_PASSWORD' },
-    })
-    const user = userEvent.setup()
-    render(page(true))
-    await user.click(
-      screen.getByRole('button', { name: 'Replace backup codes' }),
-    )
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await user.type(field, 'wrong-password')
-    await user.click(screen.getByRole('button', { name: 'Replace' }))
-    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
-    expect(field.value).toBe('')
-    expect(document.activeElement).toBe(field)
-    expect(
-      document.getElementById(field.getAttribute('aria-describedby') ?? '')
-        ?.textContent,
-    ).toBe(Settings['twoFactor.password.invalid'])
-    expect(
-      screen.queryByRole('heading', { name: 'Your backup codes' }),
-    ).toBeNull()
-  })
-  it('retains the replacement password during its ten-second rate limit without retrying', async () => {
-    mocks.generateBackupCodes.mockResolvedValue({ error: { status: 429 } })
-    const timer = vi.spyOn(window, 'setTimeout')
-    const user = userEvent.setup()
-    render(page(true))
-    await user.click(
-      screen.getByRole('button', { name: 'Replace backup codes' }),
-    )
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await user.type(field, 'keep-this-password')
-    const submit = screen.getByRole('button', {
-      name: 'Replace',
-    }) as HTMLButtonElement
-    await user.click(submit)
-    const warning = await screen.findByText(
-      Settings['twoFactor.rateLimited.password'],
-    )
-    expect(document.activeElement).toBe(warning.closest('[role=status]'))
-    expect(field.value).toBe('keep-this-password')
-    expect(submit.disabled).toBe(true)
-    const scheduled = timer.mock.calls.find((args) => args[1] === 10000)
-    expect(scheduled).toBeTruthy()
-    act(() => {
-      if (typeof scheduled?.[0] === 'function') scheduled[0]()
-    })
-    expect(submit.disabled).toBe(false)
-    expect(mocks.generateBackupCodes).toHaveBeenCalledOnce()
-    expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
-  })
-  it('retains a replacement password after a dropped connection and waits for an explicit retry', async () => {
-    mocks.generateBackupCodes.mockRejectedValue(new TypeError('offline'))
-    const user = userEvent.setup()
-    render(page(true))
-    await user.click(
-      screen.getByRole('button', { name: 'Replace backup codes' }),
-    )
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await user.type(field, 'keep-this-password')
-    await user.click(screen.getByRole('button', { name: 'Replace' }))
-    await screen.findByText(Auth['error.offline.detail'])
-    expect(field.value).toBe('keep-this-password')
-    expect(mocks.generateBackupCodes).toHaveBeenCalledOnce()
-    expect(
-      screen.queryByRole('heading', { name: 'Your backup codes' }),
-    ).toBeNull()
-    expect(
-      screen.getByRole('dialog').hasAttribute('data-sentry-block') ||
-        field.closest('[data-sentry-block]') !== null,
-    ).toBe(true)
-  })
 })
-
-async function openTurnOff() {
-  const user = userEvent.setup()
-  await user.click(screen.getByRole('button', { name: 'Turn off two-factor' }))
-  await user.type(screen.getByLabelText('Your password'), 'fresh-password')
-  return user
-}
-describe('turning two-factor off', () => {
-  it.each([true, false])(
-    'resets the initially enabled screen and focuses its replacement (credential=%s)',
-    async (credential) => {
-      mocks.listAccounts.mockResolvedValue({
-        data: credential
-          ? [{ providerId: 'credential' }]
-          : [{ providerId: 'google' }],
+describe('proof-gated changes', () => {
+  it.each([
+    'Turn off two-factor',
+    'Replace backup codes',
+    Settings['twoFactor.security.replace'],
+  ])('requires password and current possession for %s', async (action) => {
+    mocks.commit.mockImplementation((value: { operation: string }) =>
+      Promise.resolve({
+        ...committed,
+        operation: value.operation,
+        enabled: value.operation !== 'disable',
+        backupCodes: value.operation === 'disable' ? undefined : codes,
+      }),
+    )
+    render(page(true))
+    const user = await dialog(action)
+    const submit =
+      action === 'Turn off two-factor'
+        ? 'Turn off'
+        : action === 'Replace backup codes'
+          ? 'Replace'
+          : 'Continue'
+    await user.click(screen.getByRole('button', { name: submit }))
+    if (submit === 'Continue') {
+      await screen.findByText('ABCD EFGH 2345')
+      expect(mocks.prepare).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: 'replace' }),
+        'my-password',
+        { kind: 'totp', code: '123456' },
+      )
+    } else {
+      await screen.findByRole('heading', {
+        name: submit === 'Turn off' ? 'Confirm it is you' : 'Your backup codes',
       })
-      const view = render(page(true))
-      const user = await openTurnOff()
-      expect(
-        screen.getByText(
-          'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
-        ),
-      ).toBeTruthy()
-      expect(screen.queryByLabelText('Code from the app')).toBeNull()
-      await user.click(screen.getByRole('button', { name: 'Turn off' }))
-      const heading = await screen.findByRole('heading', {
-        name: credential ? 'Confirm it is you' : 'Set a password first',
-        level: 3,
+      expect(mocks.commit).toHaveBeenCalledWith(expect.anything(), {
+        password: 'my-password',
+        proof: { kind: 'totp', code: '123456' },
       })
-      await waitFor(() => expect(document.activeElement).toBe(heading))
-      expect(mocks.disable).toHaveBeenCalledWith({ password: 'fresh-password' })
-      expect(mocks.invalidate).toHaveBeenCalledOnce()
-      expect(mocks.toast).toHaveBeenCalledWith('Two-factor is off')
-      expect(
-        screen.queryByRole('heading', { name: 'Two-factor is on' }),
-      ).toBeNull()
-      view.rerender(page(false))
-      view.rerender(page(true))
-      expect(
-        await screen.findByRole('heading', { name: 'Two-factor is on' }),
-      ).toBeTruthy()
-    },
-  )
+    }
+  })
+  it('switches proof with the keyboard and clears the previous code', async () => {
+    render(page(true))
+    const user = await dialog()
+    const radios = screen.getAllByRole('radio')
+    await user.click(radios[0])
+    await user.keyboard('{ArrowRight>}')
+    await waitFor(() =>
+      expect(radios[1].getAttribute('aria-checked')).toBe('true'),
+    )
+    await user.keyboard('{/ArrowRight}')
+    const field = (await screen.findByLabelText(
+      Auth['twoFactor.backup.label'],
+      { selector: 'input' },
+    )) as HTMLInputElement
+    expect(field.value).toBe('')
+    await user.type(field, 'abcde-12345')
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    expect(mocks.commit).toHaveBeenCalledWith(expect.anything(), {
+      password: 'my-password',
+      proof: { kind: 'backup', code: 'abcde-12345' },
+    })
+  })
   it.each(['Keep it on', 'Escape', 'Close'])(
-    'keeps the factor on and returns focus on %s',
+    'cancels through %s without mutation and restores focus',
     async (action) => {
       render(page(true))
+      const user = await dialog()
       const trigger = screen.getByRole('button', {
         name: 'Turn off two-factor',
+        hidden: true,
       })
-      const user = await openTurnOff()
       if (action === 'Escape') await user.keyboard('{Escape}')
       else await user.click(screen.getByRole('button', { name: action }))
       await waitFor(() => expect(document.activeElement).toBe(trigger))
-      expect(mocks.disable).not.toHaveBeenCalled()
+      expect(mocks.register).not.toHaveBeenCalled()
       await user.click(trigger)
       expect(
         (screen.getByLabelText('Your password') as HTMLInputElement).value,
       ).toBe('')
+      expect(
+        (screen.getByLabelText('Code from the app') as HTMLInputElement).value,
+      ).toBe('')
     },
   )
-  it('clears a wrong password and focuses the associated field error', async () => {
-    mocks.disable.mockResolvedValue({
-      error: { code: 'INVALID_PASSWORD', status: 400 },
-    })
+  it.each([
+    'INVALID_PASSWORD',
+    'INVALID_CODE',
+    'INVALID_BACKUP_CODE',
+    'FACTOR_PROOF_USED',
+  ])('focuses the correct error field for %s', async (code) => {
+    mocks.commit.mockRejectedValue(failure(code, 400))
     render(page(true))
-    const user = await openTurnOff()
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
+    const user = await dialog()
     await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    const field = screen.getByLabelText(
+      code === 'INVALID_PASSWORD' ? 'Your password' : 'Code from the app',
+    ) as HTMLInputElement
     await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
     expect(field.value).toBe('')
     expect(document.activeElement).toBe(field)
-    expect(
-      screen.getByText(Settings['twoFactor.password.invalid']),
-    ).toBeTruthy()
-    expect(mocks.toast).not.toHaveBeenCalled()
+    expect(field.getAttribute('aria-describedby')).toBeTruthy()
   })
-  it.each(['rate', 'network', 'refusal'])(
-    'handles %s without false success or automatic retries',
-    async (kind) => {
-      const timer = vi.spyOn(window, 'setTimeout')
-      if (kind === 'network')
-        mocks.disable.mockRejectedValue(new TypeError('offline'))
-      else
-        mocks.disable.mockResolvedValue({
-          error: { status: kind === 'rate' ? 429 : 403 },
-        })
-      render(page(true))
-      const user = await openTurnOff()
-      const field = screen.getByLabelText('Your password') as HTMLInputElement
-      const submit = screen.getByRole('button', {
-        name: 'Turn off',
-      }) as HTMLButtonElement
-      await user.click(submit)
-      await waitFor(() => expect(mocks.disable).toHaveBeenCalledOnce())
-      if (kind === 'rate') {
-        const warning = await screen.findByText(
-          Settings['twoFactor.rateLimited.password'],
-        )
-        expect(document.activeElement).toBe(warning.closest('[role=status]'))
-        expect(submit.disabled).toBe(true)
-        const scheduled = timer.mock.calls.find((args) => args[1] === 10000)
-        expect(scheduled).toBeTruthy()
-        act(() => {
-          if (typeof scheduled?.[0] === 'function') scheduled[0]()
-        })
-        expect(submit.disabled).toBe(false)
-        expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
-      } else if (kind === 'network')
-        await screen.findByText(Auth['error.offline.detail'])
-      else await waitFor(() => expect(field.value).toBe(''))
-      expect(field.value).toBe(kind === 'refusal' ? '' : 'fresh-password')
-      expect(mocks.toast).not.toHaveBeenCalled()
-      expect(mocks.invalidate).not.toHaveBeenCalled()
-      expect(mocks.disable).toHaveBeenCalledOnce()
-      expect(field.closest('[data-sentry-block]')).not.toBeNull()
-    },
-  )
-  it('prevents duplicate submits and dismissal while busy', async () => {
-    let finish:
-      ((value: { data: { status: boolean }; error: null }) => void) | undefined
-    mocks.disable.mockImplementation(
+  it('retains inputs and honors the authoritative retry deadline without automatic retry', async () => {
+    const timer = vi.spyOn(window, 'setTimeout')
+    mocks.commit.mockRejectedValue(
+      failure('ACCOUNT_TEMPORARILY_LOCKED', 429, Date.now() + 500000),
+    )
+    render(page(true))
+    const user = await dialog()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await waitFor(() =>
+      expect(timer.mock.calls.some((args) => Number(args[1]) > 450000)).toBe(
+        true,
+      ),
+    )
+    expect(
+      (screen.getByLabelText('Your password') as HTMLInputElement).value,
+    ).toBe('my-password')
+    expect(
+      (screen.getByLabelText('Code from the app') as HTMLInputElement).value,
+    ).toBe('123456')
+    expect(
+      (screen.getByRole('button', { name: 'Turn off' }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true)
+    expect(mocks.commit).toHaveBeenCalledOnce()
+  })
+  it('blocks duplicate submissions and dismissal until the operation settles', async () => {
+    let resolve!: (value: unknown) => void
+    mocks.commit.mockImplementation(
       () =>
-        new Promise((resolve) => {
-          finish = resolve
+        new Promise((r) => {
+          resolve = r
         }),
     )
     render(page(true))
-    const user = await openTurnOff()
+    const user = await dialog()
     await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await user.keyboard('{Enter}{Escape}')
+    expect(screen.getByRole('dialog')).toBeTruthy()
     expect(
       screen
         .getByRole('button', { name: /Turning off/ })
         .getAttribute('aria-busy'),
     ).toBe('true')
-    await user.keyboard('{Escape}')
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(
-      (screen.getByRole('button', { name: 'Keep it on' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true)
-    expect(mocks.disable).toHaveBeenCalledOnce()
-    await act(async () => {
-      finish?.({ data: { status: true }, error: null })
-    })
-    await screen.findByRole('heading', { name: 'Confirm it is you', level: 3 })
-  })
-})
-
-describe('turn-off response boundaries', () => {
-  it('does not claim success without a confirmed response', async () => {
-    mocks.disable.mockResolvedValue({ data: null, error: null })
-    render(page(true))
-    const user = await openTurnOff()
-    await user.click(screen.getByRole('button', { name: 'Turn off' }))
-    await waitFor(() => expect(mocks.disable).toHaveBeenCalledOnce())
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(mocks.toast).not.toHaveBeenCalled()
-    expect(mocks.invalidate).not.toHaveBeenCalled()
-  })
-  it('keeps confirmed success when route refresh fails', async () => {
-    mocks.invalidate.mockRejectedValue(new TypeError('offline'))
-    render(page(true))
-    const user = await openTurnOff()
-    await user.click(screen.getByRole('button', { name: 'Turn off' }))
-    await screen.findByRole('heading', { name: 'Confirm it is you', level: 3 })
-    expect(mocks.disable).toHaveBeenCalledOnce()
-    expect(mocks.toast).toHaveBeenCalledWith('Two-factor is off')
-    expect(screen.queryByRole('dialog')).toBeNull()
-  })
-})
-
-it('shows session lock recovery without the ten-second wait', async () => {
-  mocks.enable.mockResolvedValue({
-    data: null,
-    error: { code: 'PASSWORD_ATTEMPTS_LOCKED', status: 403 },
-  })
-  render(page())
-  await start()
-  expect(
-    await screen.findByText(Auth['error.passwordAttemptsLocked.detail']),
-  ).toBeTruthy()
-  expect(
-    screen.queryByText(Settings['twoFactor.rateLimited.password']),
-  ).toBeNull()
-})
-
-it('explains a possibly committed backup-code replacement and focuses its recovery alert', async () => {
-  mocks.generateBackupCodes.mockResolvedValue({
-    data: null,
-    error: { code: 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN', status: 403 },
-  })
-  const user = userEvent.setup()
-  render(page(true))
-  await user.click(screen.getByRole('button', { name: 'Replace backup codes' }))
-  await user.type(screen.getByLabelText('Your password'), 'my-password')
-  await user.click(screen.getByRole('button', { name: 'Replace' }))
-  expect(
-    await screen.findByText(Auth['error.passwordResultUnknown.detail']),
-  ).toBeTruthy()
-  await waitFor(() =>
-    expect(document.activeElement?.textContent).toContain(
-      Auth['error.passwordResultUnknown.detail'],
-    ),
-  )
-  expect(mocks.generateBackupCodes).toHaveBeenCalledTimes(1)
-})
-
-describe('show existing setup key', () => {
-  async function openKey() {
-    const user = userEvent.setup()
-    render(page(true))
-    const trigger = screen.getByRole('button', { name: 'Show setup key again' })
-    await user.click(trigger)
-    return { user, trigger }
-  }
-  it('reads only after a password, shows the shared blocked key and discards it on Done', async () => {
-    const { user, trigger } = await openKey()
-    expect(mocks.getTotpUri).not.toHaveBeenCalled()
-    expect(
-      screen.getByText(
-        'Add this key to another device. The key already on your other devices keeps working.',
-      ),
-    ).toBeTruthy()
-    await user.type(screen.getByLabelText('Your password'), 'fresh-password')
-    await user.click(screen.getByRole('button', { name: 'Show key' }))
-    const key = await screen.findByText('ZYXW VUTS 2345')
-    expect(key.closest('[data-sentry-block]')).not.toBeNull()
-    const link = screen.getByRole('link', {
-      name: 'Open in your authenticator app',
-    })
-    expect(link.getAttribute('href')).toBe(
-      'otpauth://totp/existing?secret=ZYXWVUTS2345',
+    expect(mocks.commit).toHaveBeenCalledOnce()
+    await act(async () =>
+      resolve({ ...committed, enabled: false, backupCodes: undefined }),
     )
-    expect(link.closest('[data-sentry-block]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Copy key' })).toBeTruthy()
-    expect(mocks.getTotpUri).toHaveBeenCalledExactlyOnceWith({
-      password: 'fresh-password',
-    })
-    expect(mocks.enable).not.toHaveBeenCalled()
-    expect(mocks.generateBackupCodes).not.toHaveBeenCalled()
-    expect(screen.queryByLabelText('Your password')).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Done' }))
-    await waitFor(() => expect(document.activeElement).toBe(trigger))
-    await user.click(trigger)
-    expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
-    expect(
-      (screen.getByLabelText('Your password') as HTMLInputElement).value,
-    ).toBe('')
-    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
+    await screen.findByRole('heading', { name: 'Confirm it is you' })
   })
-  it.each(['cancel', 'escape', 'key escape'])(
-    'clears state and restores trigger focus on %s',
-    async (close) => {
-      const { user, trigger } = await openKey()
-      await user.type(screen.getByLabelText('Your password'), 'forget-me')
-      if (close === 'key escape') {
-        await user.click(screen.getByRole('button', { name: 'Show key' }))
-        await screen.findByText('ZYXW VUTS 2345')
-      }
-      if (close === 'cancel')
-        await user.click(screen.getByRole('button', { name: 'Cancel' }))
-      else await user.keyboard('{Escape}')
-      await waitFor(() => expect(document.activeElement).toBe(trigger))
-      await user.click(trigger)
+  it.each(['unknown', 'refused'])(
+    'never reports %s as successful disable',
+    async (status) => {
+      mocks.commit.mockResolvedValue({ status, enabled: null })
+      render(page(true))
+      const user = await dialog()
+      await user.click(screen.getByRole('button', { name: 'Turn off' }))
+      await screen.findByText(Settings['security.other.unknown'])
+      expect(mocks.invalidate).not.toHaveBeenCalled()
       expect(
-        (screen.getByLabelText('Your password') as HTMLInputElement).value,
-      ).toBe('')
-      expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
+        screen.queryByRole('heading', { name: 'Confirm it is you' }),
+      ).toBeNull()
     },
   )
-  it('clears a wrong password and focuses its field', async () => {
-    mocks.getTotpUri.mockResolvedValue({
-      error: { code: 'INVALID_PASSWORD', status: 400 },
+  it('preserves a committed disable if loader refresh fails', async () => {
+    mocks.commit.mockResolvedValue({
+      ...committed,
+      enabled: false,
+      backupCodes: undefined,
     })
-    const { user } = await openKey()
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await user.type(field, 'wrong')
-    await user.click(screen.getByRole('button', { name: 'Show key' }))
-    await waitFor(() => expect(field.getAttribute('aria-invalid')).toBe('true'))
-    expect(field.value).toBe('')
-    expect(document.activeElement).toBe(field)
+    mocks.invalidate.mockRejectedValue(new TypeError('offline'))
+    render(page(true))
+    const user = await dialog()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    await screen.findByRole('heading', { name: 'Confirm it is you' })
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
-  it('keeps the password for the ten-second wait with no automatic retry', async () => {
-    mocks.getTotpUri.mockResolvedValue({ error: { status: 429 } })
-    const timer = vi.spyOn(window, 'setTimeout')
-    const { user } = await openKey()
-    const field = screen.getByLabelText('Your password') as HTMLInputElement
-    await user.type(field, 'keep-me')
-    const submit = screen.getByRole('button', {
-      name: 'Show key',
-    }) as HTMLButtonElement
-    await user.click(submit)
-    const warning = await screen.findByText(
-      Settings['twoFactor.rateLimited.password'],
+  it('ignores a late commit from the previous mounted screen', async () => {
+    let resolve!: (value: unknown) => void
+    mocks.commit.mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolve = r
+        }),
     )
-    expect(document.activeElement).toBe(warning.closest('[role=status]'))
-    expect(field.value).toBe('keep-me')
-    expect(submit.disabled).toBe(true)
-    const scheduled = timer.mock.calls.find((args) => args[1] === 10000)
+    const view = render(page(true))
+    const user = await dialog()
+    await user.click(screen.getByRole('button', { name: 'Turn off' }))
+    view.unmount()
+    render(page(true))
+    await screen.findByRole('heading', { name: 'Two-factor is on' })
+    await act(async () => resolve({ ...committed, enabled: false }))
+    expect(mocks.invalidate).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('heading', { name: 'Two-factor is on' }),
+    ).toBeTruthy()
+  })
+  it('never renders a malformed proposal URI or an arbitrary server message', async () => {
+    mocks.prepare.mockResolvedValue({
+      proposalId: 'proposal',
+      expiresAt: Date.now(),
+      totpURI: 'javascript:secret-value',
+    })
+    render(page(true))
+    const user = await dialog(Settings['twoFactor.security.replace'])
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await screen.findByText(Settings['security.other.unknown'])
+    expect(document.body.textContent?.includes('secret-value')).toBe(false)
+    expect(mocks.commit).not.toHaveBeenCalled()
+  })
+})
+
+it('confirms replacement with its own proposal and only then displays new codes', async () => {
+  render(page(true))
+  const user = await dialog(Settings['twoFactor.security.replace'])
+  await user.click(screen.getByRole('button', { name: 'Continue' }))
+  expect(screen.queryByText(codes[0])).toBeNull()
+  await user.click(screen.getByRole('button', { name: 'I have added it' }))
+  await user.type(screen.getByLabelText('Code from the app'), '123456')
+  await user.click(
+    screen.getByRole('button', {
+      name: Settings['twoFactor.security.replace'],
+    }),
+  )
+  await screen.findByRole('heading', { name: 'Your backup codes' })
+  expect(mocks.commit).toHaveBeenCalledWith(
+    expect.objectContaining({ operation: 'replace' }),
+    { proposalId: 'proposal', code: '123456' },
+  )
+})
+it.each(['unknown', 'refused'] as const)(
+  'reconciles a %s receipt without success or another mutation',
+  async (status) => {
+    mocks.availability.mockResolvedValue({
+      available: true,
+      recovery: { id: 'prior' },
+    })
+    mocks.status.mockResolvedValue({
+      status,
+      enabled: null,
+      cleanupPending: false,
+      operation: 'disable',
+    })
+    render(page(true))
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole('button', {
+        name: Settings['security.other.check'],
+      }),
+    )
+    if (status === 'unknown') {
+      expect(screen.getByText(Settings['security.other.unknown'])).toBeTruthy()
+      expect(mocks.getSession).not.toHaveBeenCalled()
+    } else {
+      await screen.findByRole('heading', { name: 'Two-factor is on' })
+      expect(mocks.getSession).toHaveBeenCalledOnce()
+    }
+    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.commit).not.toHaveBeenCalled()
+    expect(screen.queryByText(codes[0])).toBeNull()
+  },
+)
+it.each(['password', 'code'] as const)(
+  'retains wizard %s input until its retry timer finishes without automatic requests',
+  async (stage) => {
+    const timer = vi.spyOn(window, 'setTimeout')
+    const endpoint = stage === 'password' ? mocks.prepare : mocks.commit
+    endpoint.mockRejectedValue(failure(null, 429, Date.now() + 180000))
+    render(page())
+    if (stage === 'password') await start()
+    else await confirm()
+    const button = screen.getByRole('button', {
+      name: stage === 'password' ? 'Continue' : 'Turn on two-factor',
+    }) as HTMLButtonElement
+    await waitFor(() => expect(button.disabled).toBe(true))
+    const scheduled = timer.mock.calls.find((args) => Number(args[1]) > 150000)
     expect(scheduled).toBeTruthy()
     act(() => {
       if (typeof scheduled?.[0] === 'function') scheduled[0]()
     })
-    expect(submit.disabled).toBe(false)
-    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
-    expect(screen.queryByText(Auth['error.rateLimited.detail'])).toBeNull()
-  })
-  it('prevents duplicate submissions while checking and ignores a response after unmount', async () => {
-    let resolve: (value: unknown) => void = () => undefined
-    mocks.getTotpUri.mockImplementation(
-      () =>
-        new Promise((done) => {
-          resolve = done
-        }),
-    )
-    const { user } = await openKey()
-    await user.type(screen.getByLabelText('Your password'), 'fresh-password')
-    await user.click(screen.getByRole('button', { name: 'Show key' }))
+    expect(button.disabled).toBe(false)
+    expect(endpoint).toHaveBeenCalledOnce()
     expect(
-      screen
-        .getByRole('button', { name: /Show keyChecking/ })
-        .getAttribute('aria-busy'),
-    ).not.toBeNull()
-    expect(mocks.getTotpUri).toHaveBeenCalledOnce()
-    cleanup()
-    await act(async () => {
-      resolve({
-        data: { totpURI: 'otpauth://totp/existing?secret=ZYXWVUTS2345' },
-      })
-    })
-    render(page(true))
-    await user.click(
-      screen.getByRole('button', { name: 'Show setup key again' }),
+      (
+        screen.getByLabelText(
+          stage === 'password' ? 'Your password' : 'Code from the app',
+        ) as HTMLInputElement
+      ).value,
+    ).toBe(stage === 'password' ? 'my-password' : '123456')
+  },
+)
+it.each(['returned', 'thrown'] as const)(
+  'does not render secret material from a %s failure',
+  async (kind) => {
+    const secret = 'fixture-private-error-material'
+    mocks.prepare.mockRejectedValue(
+      kind === 'thrown'
+        ? new Error(secret)
+        : {
+            authFailure: {
+              code: 'UNKNOWN_FIXTURE',
+              status: 400,
+              message: secret,
+            },
+          },
     )
-    expect(screen.queryByText('ZYXW VUTS 2345')).toBeNull()
-    expect(screen.getByLabelText('Your password')).toBeTruthy()
-  })
-  it.each(['returned', 'thrown', 'malformed'])(
-    'contains a secret-bearing %s failure without rendering raw messages',
-    async (kind) => {
-      const secret = 'otpauth://totp/existing?secret=ZYXWVUTS2345'
-      if (kind === 'thrown')
-        mocks.getTotpUri.mockRejectedValue(new Error(secret))
-      else if (kind === 'malformed')
-        mocks.getTotpUri.mockResolvedValue({
-          data: { totpURI: 'https://unsafe.test/?secret=ZYXWVUTS2345' },
-        })
-      else
-        mocks.getTotpUri.mockResolvedValue({
-          error: { status: 500, message: secret },
-        })
-      const { user } = await openKey()
-      await user.type(screen.getByLabelText('Your password'), 'fresh-password')
-      await user.click(screen.getByRole('button', { name: 'Show key' }))
-      await screen.findByText(
-        kind === 'returned'
-          ? Auth['error.unexpected.detail']
-          : Auth['error.offline.detail'],
-      )
-      expect(screen.queryByText(/ZYXW/)).toBeNull()
-      expect(
-        screen.queryByRole('link', { name: 'Open in your authenticator app' }),
-      ).toBeNull()
-    },
+    render(page())
+    await start()
+    await waitFor(() => expect(mocks.prepare).toHaveBeenCalledOnce())
+    expect(document.body.textContent?.includes(secret)).toBe(false)
+    expect(
+      screen.queryByRole('link', { name: 'Open in your authenticator app' }),
+    ).toBeNull()
+  },
+)
+it('blocks proofless and partial-code submissions before registration', async () => {
+  const user = userEvent.setup()
+  render(page(true))
+  await user.click(
+    await screen.findByRole('button', { name: 'Turn off two-factor' }),
   )
+  const submit = screen.getByRole('button', {
+    name: 'Turn off',
+  }) as HTMLButtonElement
+  expect(submit.disabled).toBe(true)
+  await user.type(screen.getByLabelText('Your password'), 'my-password')
+  expect(submit.disabled).toBe(true)
+  await user.type(screen.getByLabelText('Code from the app'), '123')
+  expect(submit.disabled).toBe(true)
+  await user.click(submit)
+  expect(mocks.register).not.toHaveBeenCalled()
+  expect(mocks.commit).not.toHaveBeenCalled()
+})
+
+it('uses receipt recovery for an explicit post-commit unknown outcome', async () => {
+  mocks.commit.mockRejectedValue(failure('FACTOR_OUTCOME_UNKNOWN', 403))
+  render(page(true))
+  const user = await dialog()
+  await user.click(screen.getByRole('button', { name: 'Turn off' }))
+  const check = await screen.findByRole('button', {
+    name: Settings['security.other.check'],
+  })
+  await user.click(check)
+  expect(mocks.status).toHaveBeenCalledWith('operation')
+  expect(mocks.commit).toHaveBeenCalledOnce()
+  expect(mocks.register).toHaveBeenCalledOnce()
 })

@@ -546,6 +546,39 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
   /* ------------------------------------------------- auth tables (go with the user row) -- */
   {
     ...authPlace(
+      'factor_proposal',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from the account user; factor setup, proof budget and replay metadata grant no surviving authority (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+
+  {
+    ...authPlace(
+      'factor_budget',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from the account user; factor setup, proof budget and replay metadata grant no surviving authority (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+
+  {
+    ...authPlace(
+      'factor_replay',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from the account user; factor setup, proof budget and replay metadata grant no surviving authority (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+
+  {
+    ...authPlace(
       'account_security',
       'user_id',
       'auth',

@@ -23,13 +23,13 @@ The script reads `baseBranch` from `.ai/agentic.config.json`.
 Preview (the default is read-only):
 
 ```bash
-node scripts/agents/close-fixed-issues.mjs --dry-run --limit 50
+node scripts/agents/close-fixed-issues.mjs --dry-run --checkpoint
 ```
 
 Apply only when the invocation authorizes mutations:
 
 ```bash
-node scripts/agents/close-fixed-issues.mjs --apply --limit 50
+node scripts/agents/close-fixed-issues.mjs --apply --checkpoint
 ```
 
 `--dry-run` overrides `--apply`. `--since YYYY-MM-DD` selects the lower bound;
@@ -40,7 +40,7 @@ repository. Unlike the generic skill, the script does not resolve git refs, insp
 PRs, or extend the built-in keyword vocabulary.
 
 Every pair re-reads the issue and skips closed issues and `do-not-close`,
-`blocked`, or `in-progress` labels. This bounded reconciler does not acquire
+`blocked`, or `in-progress` labels. This checkpointed reconciler does not acquire
 claims or edit labels/assignees. It posts the linked comment before closing:
 a failed comment cannot leave a context-free closure, and a failed close is
 retried without duplicating the comment. Comments carry a stable PR/action
@@ -53,3 +53,9 @@ PR bodies are used only for parsing, never copied into comments or logs. Each
 PR without a recognized link is reported as skipped; no bare reference causes
 a tracker mutation. Per-pair errors make the command fail while allowing other
 pairs to finish, so operational failures cannot look like successful cleanup.
+
+`--checkpoint` scans all REST pages, saves a timestamp plus unfinished PRs in the primary
+checkout's `.ai/cezar/close-fixed-issues.json`, and serializes writers with a lock directory.
+The limit bounds work per tick, not discovery; deferred entries rotate fairly. Failed pagination
+never advances progress. `--pr N` reconciles a freshly confirmed merge immediately.
+Spec-only diffs and epics remain open; epic acceptance is not inferred from closing keywords.

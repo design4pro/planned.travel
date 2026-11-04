@@ -683,7 +683,7 @@ const messages = {
   'twoFactor.password.pending': 'Đang thiết lập',
   'twoFactor.password.invalid': 'Mật khẩu này không đúng.',
   'twoFactor.key.intro':
-    'Bạn cần ứng dụng xác thực trên điện thoại. Thêm khóa này rồi quay lại đây. Hai yếu tố vẫn chưa được bật.',
+    'Thêm khóa mới này vào ứng dụng xác thực, rồi xác nhận mã. Phương thức đăng nhập hiện tại không thay đổi cho đến khi xác nhận.',
   'twoFactor.key.matrixLabel':
     'Mã thiết lập. Khóa này cũng có sẵn dưới dạng văn bản',
   'twoFactor.key.matrixFailed':
@@ -696,21 +696,18 @@ const messages = {
   'twoFactor.key.open': 'Mở trong ứng dụng xác thực',
   'twoFactor.key.startOver': 'Bắt đầu lại',
   'twoFactor.key.startOverHint':
-    'Bắt đầu lại sẽ tạo khóa mới. Khóa đã thêm vào ứng dụng sẽ ngừng hoạt động.',
+    'Hủy thiết lập này không thay đổi phương thức đăng nhập hiện tại.',
   'twoFactor.key.next': 'Tôi đã thêm',
   'twoFactor.code.label': 'Mã từ ứng dụng',
-  'twoFactor.code.hint': 'Sáu chữ số ứng dụng đang hiển thị.',
   'twoFactor.code.submit': 'Bật hai yếu tố',
   'twoFactor.code.pending': 'Đang kiểm tra',
   'twoFactor.code.invalid':
     'Mã không khớp. Kiểm tra giờ trên điện thoại và nhập mã mới nhất trong ứng dụng.',
-  'twoFactor.code.unclear':
-    'Không thể xác định thao tác đã thành công chưa. Nhập mã mới nhất để thử lại.',
   'twoFactor.rateLimited.title': 'Quá nhiều lần thử trong thời gian ngắn',
   'twoFactor.rateLimited.password':
-    'Đợi khoảng mười giây rồi thử lại. Nội dung đã nhập được giữ nguyên.',
+    'Chờ đến khi thao tác này khả dụng trở lại rồi thử lại. Nội dung bạn đã nhập vẫn được giữ.',
   'twoFactor.rateLimited.code':
-    'Đợi tối đa một phút rồi thử lại. Nội dung đã nhập được giữ nguyên.',
+    'Chờ đến khi thao tác này khả dụng trở lại rồi thử lại. Nội dung bạn đã nhập vẫn được giữ.',
   'twoFactor.codes.title': 'Mã dự phòng của bạn',
   'twoFactor.codes.body':
     'Mỗi mã dùng được một lần nếu bạn mất điện thoại. Mã chỉ hiển thị lúc này, nên hãy cất ở nơi an toàn.',
@@ -743,21 +740,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Hai yếu tố cần mật khẩu cho tài khoản này. Trang tiếp theo yêu cầu email và gửi liên kết đặt mật khẩu. Việc đặt mật khẩu đăng xuất bạn ở mọi nơi. Đăng nhập lại rồi quay lại đây.',
   'twoFactor.nopassword.action': 'Đặt mật khẩu',
-  'twoFactor.setup.action': 'Hiện lại khóa thiết lập',
-  'twoFactor.setup.title': 'Khóa thiết lập',
-  'twoFactor.setup.body':
-    'Thêm khóa này vào thiết bị khác. Khóa trên các thiết bị khác của bạn vẫn hoạt động.',
-  'twoFactor.setup.done': 'Xong',
-  'twoFactor.setup.confirm': 'Hiện khóa',
   'twoFactor.setup.pending': 'Đang kiểm tra',
   'twoFactor.off.action': 'Tắt xác thực hai yếu tố',
   'twoFactor.off.title': 'Tắt xác thực hai yếu tố?',
   'twoFactor.off.body':
-    'Bất kỳ ai biết mật khẩu của bạn đều có thể đăng nhập mà không cần mã. Các thiết bị khác đã đăng nhập vẫn sẽ duy trì đăng nhập.',
+    'Bất kỳ ai biết mật khẩu của bạn sẽ có thể đăng nhập mà không cần mã.',
   'twoFactor.off.confirm': 'Tắt',
   'twoFactor.off.pending': 'Đang tắt',
   'twoFactor.off.cancel': 'Giữ bật',
-  'twoFactor.off.done': 'Xác thực hai yếu tố đã tắt',
   'security.other.label': 'Đăng xuất các thiết bị khác',
   'security.other.description':
     'Các thiết bị khác phải đăng nhập lại. Kết nối sẽ đóng bất đồng bộ; trình duyệt tin cậy, Google, Apple và khóa truy cập vẫn dùng được.',
@@ -770,6 +760,26 @@ const messages = {
   'security.other.pending':
     'Các phiên khác đã bị thu hồi. Kết nối có thể cần thêm thời gian để đóng.',
   'security.other.check': 'Kiểm tra trạng thái',
+  'twoFactor.security.effect':
+    'Thay đổi này đăng xuất các thiết bị khác và xóa sự tin cậy trình duyệt trước đó. Thiết bị này nhận một phiên mới.',
+  'twoFactor.security.currentStep':
+    'Dùng mã hiện tại từ ứng dụng xác thực. Hãy đợi mã mới nếu bạn đã dùng mã này để thay đổi bảo mật.',
+  'twoFactor.security.invalidProof':
+    'Mã không hợp lệ hoặc đã được dùng. Nhập mã xác thực mới hoặc mã dự phòng chưa dùng.',
+  'twoFactor.security.replace': 'Thay ứng dụng xác thực',
+  'twoFactor.security.codesLost':
+    'Thay đổi đã hoàn tất nhưng không thể hiển thị lại các mã dự phòng mới. Đăng nhập lại để kiểm tra cài đặt.',
+  'twoFactor.security.changed': 'Cài đặt bảo mật của bạn đã thay đổi.',
+  'twoFactor.security.fresh':
+    'Đăng nhập lại rồi xác nhận thay đổi bảo mật này trong vòng năm phút.',
+  'twoFactor.security.expired':
+    'Thiết lập đã hết hạn. Bắt đầu lại; ứng dụng xác thực đang dùng không thay đổi.',
+  'twoFactor.security.stale':
+    'Trạng thái bảo mật đã thay đổi. Tải lại trước khi thực hiện thay đổi khác.',
+  'twoFactor.security.upgrade':
+    'Làm mới trang để sử dụng các bước kiểm tra bảo mật mới.',
+  'twoFactor.security.unavailable':
+    'Hiện không thể thay đổi bảo mật. Tải lại để kiểm tra lần nữa.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -6,6 +6,10 @@ import { JSDOM } from 'jsdom'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const skill = (path) => resolve('.agents/skills', path)
+// Hook-local Git variables must never redirect scratch repositories into the real worktree.
+const localEnv = Object.fromEntries(
+  Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
+)
 const scratch = []
 const windows = []
 afterEach(() => {
@@ -66,7 +70,7 @@ it('redacts quoted credentials in generated JSON and embedded tool output', () =
       '--out',
       join(root, 'bundle'),
     ],
-    { encoding: 'utf8', timeout: 10000 },
+    { encoding: 'utf8', timeout: 10000, env: localEnv },
   )
   expect(result.stderr).toBe('')
   expect(result.status).toBe(0)
@@ -105,9 +109,9 @@ describe('criterion identities', () => {
     ['C1', null, 1],
   ])('validates %s / %s with exit %s', (first, second, expected) => {
     const root = temporary()
-    execFileSync('git', ['init', '-q', root])
+    execFileSync('git', ['init', '-q', root], { env: localEnv })
     writeFileSync(join(root, 'currency.ts'), 'export const currencies = []\n')
-    execFileSync('git', ['-C', root, 'add', 'currency.ts'])
+    execFileSync('git', ['-C', root, 'add', 'currency.ts'], { env: localEnv })
     writeFileSync(
       join(root, 'story.txt'),
       'Currency support\n- currencies listed\n- currencies converted\n',
@@ -130,7 +134,7 @@ describe('criterion identities', () => {
         '--story',
         join(root, 'story.txt'),
       ],
-      { input: block, encoding: 'utf8', timeout: 10000 },
+      { input: block, encoding: 'utf8', timeout: 10000, env: localEnv },
     )
     expect(result.status, result.stderr).toBe(expected)
   })

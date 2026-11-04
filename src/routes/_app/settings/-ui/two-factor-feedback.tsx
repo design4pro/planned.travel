@@ -15,7 +15,14 @@ export function useTwoFactorFeedback() {
   }, [wait])
   function reject(error: AuthFailure, call: 'password' | 'code') {
     if (error.status === 429) {
-      setWait(call === 'code' ? 60000 : 10000)
+      let delay = call === 'code' ? 60000 : 10000
+      if (error.retryAt !== undefined)
+        delay = Math.max(0, error.retryAt - Date.now())
+      setWait(delay)
+      if (error.code === 'ACCOUNT_TEMPORARILY_LOCKED') {
+        setFailure(describeFailure(error))
+        return
+      }
       setFailure({
         titleKey: 'settings.twoFactor.rateLimited.title',
         detailKey:

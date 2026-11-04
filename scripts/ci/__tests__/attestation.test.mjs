@@ -18,6 +18,13 @@ import {
 const GATE = ['pnpm typecheck', 'pnpm lint', 'pnpm test']
 const TREE = 'a'.repeat(40)
 
+it('keeps CI execution mandatory when the base branch requires it', () => {
+  expect(judge({ requireExecutedCi: true })).toEqual({
+    valid: false,
+    reason: 'the base branch requires executed CI checks',
+  })
+})
+
 const attestation = (over = {}) => ({
   version: 1,
   treeHash: TREE,

@@ -126,3 +126,6 @@ airports.sql
 .ai/qa/dev-server-process.json
 .ai/qa/artifacts_*/
 .ai/tmp/
+# Local release receipts; Actions stores verified copies as artifacts.
+release-smoke.json
+previous-release.json

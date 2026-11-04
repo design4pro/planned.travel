@@ -13,6 +13,7 @@
  *
  * Nothing here imports from `src/server`: this file ships to the browser.
  */
+import { z } from 'zod'
 import { createAuthClient } from 'better-auth/react'
 import { organizationClient, twoFactorClient } from 'better-auth/client/plugins'
 
@@ -623,6 +624,8 @@ export async function otherDeviceAvailability(): Promise<{
     recovery.status !== 'refused'
   )
     throw new Error('InvalidAccountSecurityRecovery')
+  if ('operation' in recovery && recovery.operation !== 'revoke-others')
+    return { available: value.available, recovery: null }
   return {
     available: value.available,
     recovery: {
@@ -689,5 +692,114 @@ export async function settleOtherDeviceRevocation(
       cleanupPending: false,
       ...(failure.retryAt === undefined ? {} : { retryAt: failure.retryAt }),
     }
+  }
+}
+
+export type FactorOperation = 'enable' | 'replace' | 'disable' | 'backup'
+export type FactorProof = { kind: 'totp' | 'backup'; code: string }
+export type FactorRegistration = {
+  id: string
+  intent: string
+  operation: FactorOperation
+}
+const factorOutcome = z.object({
+  status: z.enum(['committed', 'refused', 'unknown']),
+  cleanupPending: z.boolean(),
+  operation: z.enum(['enable', 'replace', 'disable', 'backup']),
+  enabled: z.boolean().nullable(),
+  backupCodes: z.array(z.string()).length(10).optional(),
+})
+export type FactorOutcome = z.infer<typeof factorOutcome>
+
+export async function factorAvailability() {
+  const value = z
+    .object({ available: z.boolean(), recovery: z.unknown() })
+    .parse(await requestAuth('GET', '/account-security/availability'))
+  const recovery = factorOutcome
+    .extend({ id: z.string().uuid() })
+    .safeParse(value.recovery)
+  return {
+    available: value.available,
+    recovery: recovery.success ? recovery.data : null,
+  }
+}
+
+export async function registerFactorOperation(
+  operation: FactorOperation,
+  intent: string = crypto.randomUUID(),
+): Promise<FactorRegistration> {
+  const value = z
+    .object({ id: z.string().uuid() })
+    .parse(
+      await requestAuth('POST', '/account-security/register-operation', {
+        intent,
+        operation,
+      }),
+    )
+  return { id: value.id, intent, operation }
+}
+
+export async function prepareFactor(
+  registration: FactorRegistration,
+  password: string,
+  proof?: FactorProof,
+) {
+  return z
+    .object({
+      proposalId: z.string().uuid(),
+      expiresAt: z.number(),
+      totpURI: z.string().startsWith('otpauth://'),
+    })
+    .parse(
+      await requestAuth('POST', '/account-security/prepare-factor', {
+        ...registration,
+        password,
+        ...(proof ? { proof } : {}),
+      }),
+    )
+}
+
+export async function commitFactorOperation(
+  registration: FactorRegistration,
+  input:
+    | { password: string; proof: FactorProof }
+    | { proposalId: string; code: string },
+): Promise<FactorOutcome> {
+  let path = '/account-security/commit-factor'
+  if (registration.operation === 'disable')
+    path = '/account-security/disable-factor'
+  if (registration.operation === 'backup')
+    path = '/account-security/replace-backup-codes'
+  return factorOutcome.parse(
+    await requestAuth('POST', path, {
+      ...registration,
+      ...input,
+      confirm: true,
+    }),
+  )
+}
+
+export async function cancelFactorOperation(
+  registration: FactorRegistration,
+): Promise<FactorOutcome> {
+  return factorOutcome.parse(
+    await requestAuth('POST', '/account-security/cancel-factor', registration),
+  )
+}
+
+export async function factorOperationStatus(
+  id: string,
+): Promise<FactorOutcome> {
+  const value = factorOutcome.parse(
+    await requestAuth(
+      'GET',
+      `/account-security/operation-status?id=${encodeURIComponent(id)}`,
+    ),
+  )
+  return {
+    status: value.status,
+    cleanupPending: value.cleanupPending,
+    operation: value.operation,
+    enabled: value.enabled,
   }
 }

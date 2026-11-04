@@ -35,6 +35,8 @@ set -euo pipefail
 
 PROFILE=worktree
 PORT=
+HOST=localhost
+HOST_EXPLICIT=0
 CHECK_ONLY=0
 IF_NEEDED=0
 FORCE=0
@@ -46,6 +48,7 @@ Usage: bash scripts/worktree/bootstrap.sh [options]
 
   --profile worktree|cloud  Which environment this is. Default: worktree.
   --port N                  Serve on this port instead of the allocated one.
+  --host localhost|127.0.0.1 Local origin and bind host. Default: localhost.
   --check                   Report what is missing and exit 1. Writes nothing.
   --if-needed               Exit 0 immediately when nothing is missing.
   --no-seed                 Stop after the schema; do not start a server or seed.
@@ -60,6 +63,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --profile) PROFILE="${2:?--profile needs a value}"; shift 2 ;;
     --port) PORT="${2:?--port needs a value}"; shift 2 ;;
+    --host) HOST="${2:?--host needs a value}"; HOST_EXPLICIT=1; shift 2 ;;
     --check) CHECK_ONLY=1; shift ;;
     --if-needed) IF_NEEDED=1; shift ;;
     --no-seed) SEED=0; shift ;;
@@ -72,6 +76,11 @@ done
 case "$PROFILE" in
   worktree|cloud) ;;
   *) echo "bootstrap: unknown profile '$PROFILE' (worktree|cloud)" >&2; exit 2 ;;
+esac
+
+case "$HOST" in
+  localhost|127.0.0.1) ;;
+  *) echo "bootstrap: --host must be localhost or 127.0.0.1" >&2; exit 2 ;;
 esac
 
 # The cloud profile provisions a VM for a suite that seeds itself; keeping it
@@ -313,7 +322,7 @@ if [ -z "$PORT" ]; then
       || die "no free port in 3001-3009; stop another worktree's dev server, or pass --port"
   fi
 fi
-BASE_URL="http://localhost:${PORT}"
+BASE_URL="http://${HOST}:${PORT}"
 
 if [ "$OWNS_DEV_VARS" = 1 ]; then
   # Every auth URL is built from APP_URL, so a port nothing listens on does not
@@ -327,6 +336,9 @@ if [ "$OWNS_DEV_VARS" = 1 ]; then
     grep -q '^APP_URL=' .dev.vars || echo "APP_URL=${BASE_URL}" >> .dev.vars
   fi
 elif [ "$(read_dev_var APP_URL)" != "$BASE_URL" ]; then
+  if [ "$HOST_EXPLICIT" = 1 ]; then
+    die "APP_URL in your .dev.vars does not match ${BASE_URL}; leaving your file untouched."
+  fi
   warn "APP_URL in your .dev.vars is '$(read_dev_var APP_URL)' but this run serves ${BASE_URL}."
   warn "Leaving your file untouched; pass --port to match it."
 fi
@@ -427,7 +439,7 @@ fi
 
 if [ "$SEED" = 0 ]; then
   say "ready. Start a server and seed with:"
-  say "  pnpm exec vite dev --port ${PORT} --strictPort"
+  say "  pnpm exec vite dev --port ${PORT} --strictPort --host ${HOST}"
   say "  node scripts/seed/seed.mjs --url ${BASE_URL}"
   exit 0
 fi
@@ -451,7 +463,7 @@ else
     die "port ${PORT} is held by an unowned server; refusing to seed it"
   fi
   say "starting the dev server on :${PORT}"
-  node node_modules/vite/bin/vite.js dev --port "$PORT" --strictPort > dev-server.log 2>&1 &
+  node node_modules/vite/bin/vite.js dev --port "$PORT" --strictPort --host "$HOST" > dev-server.log 2>&1 &
   APP_PID=$!
   echo "$APP_PID" > .ai/qa/dev-server.pid
   node "$PROCESS_HELPER" record "$APP_PID" "$PORT"
