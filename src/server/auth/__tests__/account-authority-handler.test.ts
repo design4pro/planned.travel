@@ -17,6 +17,7 @@ import {
   recordAnchorBackfillCompletion,
 } from '#/server/repos/account-security'
 import * as securityRepo from '#/server/repos/account-security'
+import { createAuthenticator } from '../passkey/__tests__/authenticator'
 import type { AuthDatabase } from '#/server/fns/console/__tests__/real-auth'
 
 const BASE_URL = 'http://localhost:3000'
@@ -35,10 +36,18 @@ vi.mock('#/server/auth/env', () => ({
   APP_NAME: 'planned.travel',
   appUrl: () => BASE_URL,
   appleBundleIdentifier: () => undefined,
-  appleCredentials: () => null,
+  appleCredentials: () => ({
+    clientId: 'fixture-apple',
+    clientSecret: 'fixture-apple-secret',
+    verifyIdToken: async (token: string) => token === 'valid-provider-proof',
+  }),
   authSecret: () => 'test-secret-not-used-outside-this-process',
   d1: () => ({}),
-  googleCredentials: () => null,
+  googleCredentials: () => ({
+    clientId: 'fixture-google',
+    clientSecret: 'fixture-google-secret',
+    verifyIdToken: async (token: string) => token === 'valid-provider-proof',
+  }),
   relyingPartyId: () => 'localhost',
   sessionStore: () => fixture.kv,
   securityEnforcement: () => fixture.active,
@@ -1160,6 +1169,166 @@ async function backupFor(userId: string) {
     }),
   ) as Array<string>
 }
+describe.each(['enable', 'replace'] as const)(
+  'provider exemptions after an atomic %s with authority cutover active',
+  (operation) => {
+    it.each(['google', 'apple', 'passkey'] as const)(
+      'accepts fresh %s proof at the final revision without bypassing or removing TOTP',
+      async (providerId) => {
+        const email = `${providerId}-${operation}@planned.travel`
+        const person = await (operation === 'enable' ? signup : enroll)(email)
+        const other = await enroll('other-provider-account@planned.travel')
+        const otherFactor = database.sqlite
+          .prepare('select * from two_factor where user_id = ?')
+          .get(other.userId)
+        const device = await createAuthenticator()
+        const provider = (await getAuth().$context).socialProviders.find(
+          (entry) => entry.id === providerId,
+        )
+        // Only the external provider proof/profile boundary is replaced; session authority is real.
+        const profile = provider
+          ? vi.spyOn(provider, 'getUserInfo').mockResolvedValue({
+              user: { name: 'Provider fixture', email, emailVerified: true },
+              data: { sub: `${providerId}-subject`, email },
+            })
+          : undefined
+        try {
+          if (providerId === 'passkey') {
+            const options = await post(
+              '/passkey/register/options',
+              {},
+              person.cookie,
+            )
+            expect(options.status).toBe(200)
+            const { challenge } = (await options.json()) as {
+              challenge: string
+            }
+            const registered = await post(
+              '/passkey/register/verify',
+              device.registration(challenge),
+              person.cookie,
+            )
+            expect(registered.status).toBe(200)
+          } else {
+            const linked = await post(
+              '/link-social',
+              {
+                provider: providerId,
+                idToken: { token: 'valid-provider-proof' },
+              },
+              person.cookie,
+            )
+            expect(linked.status).toBe(200)
+          }
+          await activate()
+          const proposal = await stage(
+            person.cookie,
+            operation,
+            operation === 'replace'
+              ? { kind: 'backup', code: (await backupFor(person.userId))[0] }
+              : undefined,
+          )
+          const committed = await post(
+            '/account-security/commit-factor',
+            proposal.body,
+            proposal.registered.cookie,
+          )
+          expect(committed.status).toBe(200)
+          expect(await committed.json()).toMatchObject({
+            status: 'committed',
+            enabled: true,
+          })
+          expect(await sessionPresent(person.cookie)).toBe(false)
+          expect(await sessionPresent(cookies(committed))).toBe(true)
+          const finalFactor = database.sqlite
+            .prepare('select * from two_factor where user_id = ?')
+            .get(person.userId)
+          expect(finalFactor).toBeDefined()
+
+          async function signIn(valid: boolean) {
+            if (providerId !== 'passkey') {
+              return post('/sign-in/social', {
+                provider: providerId,
+                idToken: {
+                  token: valid
+                    ? 'valid-provider-proof'
+                    : 'invalid-provider-proof',
+                },
+              })
+            }
+            const options = await post('/passkey/authenticate/options', {
+              email,
+            })
+            expect(options.status).toBe(200)
+            const { challenge } = (await options.json()) as {
+              challenge: string
+            }
+            const proof = await device.authentication(challenge)
+            if (!valid) {
+              const signature = Buffer.from(
+                proof.credential.response.signature,
+                'base64url',
+              )
+              signature[0] ^= 1
+              proof.credential.response.signature =
+                signature.toString('base64url')
+            }
+            return post('/passkey/authenticate/verify', proof)
+          }
+          const refused = await signIn(false)
+          expect(refused.status).toBe(401)
+          expect(await sessionPresent(cookies(refused))).toBe(false)
+          const signedIn = await signIn(true)
+          expect(signedIn.status).toBe(200)
+          expect(await signedIn.json()).not.toHaveProperty(
+            'twoFactorRedirect',
+            true,
+          )
+          expect(signedIn.headers.get('location')).toBeNull()
+          const current = await getAuth().handler(
+            new Request(`${BASE_URL}/api/auth/get-session`, {
+              headers: { cookie: cookies(signedIn) },
+            }),
+          )
+          expect(current.status).toBe(200)
+          expect(await current.json()).toMatchObject({
+            user: { id: person.userId, twoFactorEnabled: true },
+            session: { userId: person.userId },
+          })
+          expect(
+            database.sqlite
+              .prepare('select * from two_factor where user_id = ?')
+              .get(person.userId),
+          ).toEqual(finalFactor)
+          const password = await post('/sign-in/email', {
+            email,
+            password: PASSWORD,
+          })
+          expect(await password.json()).toMatchObject({
+            twoFactorRedirect: true,
+          })
+          expect(await sessionPresent(cookies(password))).toBe(false)
+          const verified = await post(
+            '/two-factor/verify-totp',
+            { code: proposal.body.code },
+            cookies(password),
+          )
+          expect(verified.status).toBe(200)
+          expect(await sessionPresent(cookies(verified))).toBe(true)
+          expect(await sessionPresent(other.cookie)).toBe(true)
+          expect(
+            database.sqlite
+              .prepare('select * from two_factor where user_id = ?')
+              .get(other.userId),
+          ).toEqual(otherFactor)
+        } finally {
+          profile?.mockRestore()
+        }
+      },
+    )
+  },
+)
+
 describe('native proof races against factor commits', () => {
   it.each(['before', 'after'] as const)(
     'cannot accept old password proof paused %s session insertion across enable',
