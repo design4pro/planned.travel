@@ -411,9 +411,20 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     ).toBeVisible()
     await visit(page, tripsRoute, 'light')
     await tile.locator('[data-part="trip-actions-trigger"]').click()
+    // Wait for this mutation's refresh, not the previous navigation's idle event.
+    const refreshed = Promise.all(
+      ['loadTrips', 'loadShell'].map(async (name) => {
+        const response = await page.waitForResponse((answer) =>
+          callsServerFn(new URL(answer.url()), name),
+        )
+        expect(response.ok()).toBe(true)
+        expect(await response.finished()).toBeNull()
+      }),
+    )
     await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
     await expect(page.getByText('Trip archived', { exact: true })).toBeVisible()
-    await page.waitForLoadState('networkidle')
+    await refreshed
+    await expect(tile).toHaveCount(0)
 
     await page.setViewportSize({ width: 360, height: 450 })
     const route = {
