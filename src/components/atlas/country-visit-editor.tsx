@@ -95,7 +95,14 @@ export function CountryVisitEditor({
       opening.current = false
       if (alive.current) {
         setLoading(false)
-        requestAnimationFrame(() => (first.current ?? trigger.current)?.focus())
+        const focused = document.activeElement
+        requestAnimationFrame(() => {
+          if (
+            document.activeElement === focused ||
+            (!focused?.isConnected && document.activeElement === document.body)
+          )
+            (first.current ?? trigger.current)?.focus()
+        })
       }
     }
   }
