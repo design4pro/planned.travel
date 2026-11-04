@@ -93,6 +93,7 @@ import {
 } from './plan-model'
 import { planBoard } from './plan-board'
 import { DayDetail } from './day-detail'
+import { PlaceDetail } from './place-detail'
 import { dayDetailModel } from './day-detail-model'
 import { plannerDetailReducer } from './planner-detail-state'
 import { useDayDetailBookings } from './use-day-detail-bookings'
@@ -1040,6 +1041,10 @@ export function PlanScreen({
   const closeDetail = React.useCallback(() => {
     const dayId = detail.kind === 'day' ? detail.dayId : null
     detailDispatch({ type: 'close' })
+    if (detail.kind === 'place') {
+      titleRef.current?.focus()
+      return
+    }
     const currentHeader =
       dayId === null
         ? null
@@ -1066,6 +1071,14 @@ export function PlanScreen({
       document.removeEventListener('focusout', leave)
     }
   }, [])
+  const detailPlace =
+    detail.kind === 'place' ? model.rowsByPlace.get(detail.placeId) : undefined
+  React.useEffect(() => {
+    if (detail.kind !== 'place' || detailPlace !== undefined) return
+    const inside = detailFocused.current
+    detailDispatch({ type: 'close' })
+    if (inside) titleRef.current?.focus()
+  }, [detail, detailPlace])
   const detailDay = payload.days.find((day) => day.dayId === detailDayId)
   const detailPlannerDay = model.days.find((day) => day.dayId === detailDayId)
   React.useEffect(() => {
@@ -1682,7 +1695,19 @@ export function PlanScreen({
                   }}
                 />
               )
-            : undefined
+            : detailPlace !== undefined
+              ? (controls) => (
+                  <PlaceDetail
+                    place={detailPlace}
+                    category={categoryFor(detailPlace.categoryId)}
+                    compact={workspace.short}
+                    controls={controls}
+                    panelRef={detailPanel}
+                    blockedEscape={dialog !== null || dnd.draggingId !== null}
+                    onClose={closeDetail}
+                  />
+                )
+              : undefined
         }
         titleRef={titleRef}
         sheetTitleRef={sheetTitleRef}
@@ -1726,7 +1751,7 @@ export function PlanScreen({
             places={mapPlaces}
             categories={categories}
             selectedId={selection.placeId ?? selection.hoverId}
-            detailId={detail.kind === 'place' ? detail.placeId : null}
+            showPopover={false}
             onSelect={selectPin}
             onHoverChange={hoverPin}
             metaFor={metaFor}

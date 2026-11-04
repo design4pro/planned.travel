@@ -4,7 +4,7 @@ import { unblockCrossOriginFonts, visit, watchConsole } from './helpers/console'
 import { callsServerFn } from './helpers/server-fn'
 import { showDays } from './helpers/trip-weather'
 import { restingCamera } from './helpers/places-and-maps'
-import { readCaptureState } from './helpers/settle'
+import { readCaptureState, settle } from './helpers/settle'
 
 const tripId = 'demo-trip-02-lisbon-long-weekend'
 const path = `/trips/${tripId}/plan`
@@ -124,6 +124,36 @@ test('Day reading stays nonmodal, minimises, reopens and switches to a Place', a
   await page.mouse.move(0, 0)
   await expect(placeDetail).toBeVisible()
   await expect(outside).toBeFocused()
+  const openPlaces = async () => {
+    const toggle = page.getByRole('button', { name: 'Places', exact: true })
+    if (await toggle.isVisible()) await toggle.click()
+  }
+  await openPlaces()
+  const search = page.getByRole('searchbox', {
+    name: "Search this trip's places",
+  })
+  await search.fill('no matching map place')
+  if (await page.getByRole('dialog').count())
+    await page.keyboard.press('Escape')
+  await showDays(page)
+  await header.click()
+  await expect(placeDetail).toHaveCount(0)
+  await showDays(page)
+  await placeRow.locator(':scope > button:not([aria-roledescription])').click()
+  await expect(panel).toHaveCount(0)
+  await expect(pin).toHaveCount(0)
+  await expect(placeDetail).toBeInViewport({ ratio: 1 })
+  await outside.focus()
+  await expect(placeDetail).toContainText(placeName)
+  await openPlaces()
+  await search.clear()
+  if (await page.getByRole('dialog').count())
+    await page.keyboard.press('Escape')
+  await placeDetail
+    .getByRole('button', { name: `Close ${placeName}`, exact: true })
+    .click()
+  await expect(placeDetail).toHaveCount(0)
+  await expect(outside).toBeFocused()
   expect(consoleReport().fatal).toEqual([])
 })
 
@@ -191,6 +221,10 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
     await expect(page.locator('[data-workspace-splash]')).toHaveCount(0, {
       timeout: 60_000,
     })
+    await page.mouse.move(0, 0)
+    await expect(
+      page.locator('[data-sonner-toast][data-type="success"]'),
+    ).toHaveCount(0, { timeout: 10_000 })
     await showDays(page)
     await page.locator('[data-planner-day-header]').first().click()
     const panel = page.locator('[data-day-detail]')
@@ -351,6 +385,12 @@ test('desktop, mobile and a 200% equivalent viewport retain a usable map and no 
     { width: 720, height: 450 },
   ]) {
     await page.setViewportSize(viewport)
+    await settle(page, {
+      name: 'trip-plan',
+      path,
+      ready: '[data-day-detail]',
+      map: true,
+    })
     await expect(panel).toBeVisible()
     await expect
       .poll(() =>

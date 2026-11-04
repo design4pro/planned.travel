@@ -27,7 +27,9 @@ export interface MarkerPopoverProps extends React.ComponentPropsWithoutRef<'div'
   /** Extra line under the title — "Day 2 · 10:00", a price, a duration. */
   readonly meta?: React.ReactNode
   /** Which edge the pointer sits on. `bottom` means the card floats above the pin. */
-  readonly side?: 'top' | 'bottom'
+  readonly side?: 'top' | 'bottom' | null
+  /** False when an enclosing reading panel already owns the name heading. */
+  readonly showName?: boolean
   /**
    * `true` when the same information is already on the trigger's accessible name,
    * which is how `PlaceMarker` uses it: the card becomes purely visual and the
@@ -76,6 +78,7 @@ export const MarkerPopover = React.forwardRef<
       imageUrl,
       meta,
       side = 'bottom',
+      showName = true,
       decorative = false,
       className,
       ...props
@@ -106,9 +109,11 @@ export const MarkerPopover = React.forwardRef<
         ) : null}
 
         <div className="p-3">
-          <p className="line-clamp-2 text-label font-semibold text-ink">
-            {name}
-          </p>
+          {showName ? (
+            <p className="line-clamp-2 text-label font-semibold text-ink">
+              {name}
+            </p>
+          ) : null}
 
           {meta ? (
             <p className="mt-0.5 text-caption text-ink-3">{meta}</p>
@@ -156,15 +161,17 @@ export const MarkerPopover = React.forwardRef<
           ) : null}
         </div>
 
-        <span
-          aria-hidden="true"
-          className={cn(
-            'absolute left-1/2 size-2 -translate-x-1/2 rotate-45 border-edge bg-surface',
-            side === 'bottom'
-              ? '-bottom-1 border-r border-b'
-              : '-top-1 border-t border-l',
-          )}
-        />
+        {side === null ? null : (
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute left-1/2 size-2 -translate-x-1/2 rotate-45 border-edge bg-surface',
+              side === 'bottom'
+                ? '-bottom-1 border-r border-b'
+                : '-top-1 border-t border-l',
+            )}
+          />
+        )}
       </div>
     )
   },

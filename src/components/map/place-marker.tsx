@@ -20,8 +20,8 @@ const CARD_CLEARANCE = 150
 export interface PlaceMarkerProps {
   readonly place: MapPlace
   readonly category?: MapCategory | null
-  /** Supplied by a shared detail owner; otherwise retain hover/focus cards. */
-  readonly detailOpen?: boolean
+  /** False when the owner presents Place reading outside the map. */
+  readonly showPopover?: boolean
   readonly selected?: boolean
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -41,7 +41,7 @@ export interface PlaceMarkerProps {
  * pin when there is no room above, which is measured against the real projected
  * position rather than guessed.
  *
- * Without a detail owner, hover and focus open it; controlled cards follow explicit selection.
+ * When enabled, hover and focus open the card. A planner with its own detail surface disables it.
  * For hover cards, the pin's own
  * accessible name repeats everything shown, so that card is marked
  * decorative and nothing is announced twice.
@@ -50,7 +50,7 @@ export function PlaceMarker({
   place,
   category,
   selected = false,
-  detailOpen,
+  showPopover = true,
   size = 'md',
   interactive = true,
   meta,
@@ -59,8 +59,7 @@ export function PlaceMarker({
 }: PlaceMarkerProps) {
   const { locale, t } = useAtlasI18n()
   const { map } = useMapContext()
-  const [hoverOpen, setOpen] = React.useState(false)
-  const open = detailOpen ?? hoverOpen
+  const [open, setOpen] = React.useState(false)
   const [flipped, setFlipped] = React.useState(false)
 
   const hasImage = typeof place.imageUrl === 'string' && place.imageUrl !== ''
@@ -123,7 +122,7 @@ export function PlaceMarker({
           }
         />
 
-        {open ? (
+        {showPopover && open ? (
           <div
             className={cn(
               'pointer-events-none absolute left-1/2 z-20 -translate-x-1/2',
@@ -135,10 +134,7 @@ export function PlaceMarker({
               data-motion-transform=""
             >
               <MarkerPopover
-                decorative={detailOpen !== true}
-                role={detailOpen ? 'region' : undefined}
-                aria-label={detailOpen ? place.name : undefined}
-                data-place-detail={detailOpen ? place.id : undefined}
+                decorative
                 name={place.name}
                 category={
                   category === null || category === undefined
@@ -216,8 +212,8 @@ export interface PlaceMarkersProps {
   readonly places: ReadonlyArray<MapPlace>
   /** The tenant's taxonomy, for pin colours and glyphs. */
   readonly categories?: ReadonlyArray<MapCategory>
-  /** Explicit detail selection; null suppresses cards while Day/closed owns the slot. */
-  readonly detailId?: string | null
+  /** False when the owner presents Place reading outside the map. */
+  readonly showPopover?: boolean
   readonly selectedId?: string | null
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -235,7 +231,7 @@ export interface PlaceMarkersProps {
  *
  * This is the component the planner mounts: hand it the trip's places and its
  * taxonomy and it decides, at each zoom step, what is a pin and what is a badge.
- * Selected and explicitly opened places are always drawn as themselves, never swallowed into a cluster —
+ * The selected place is always drawn as itself, never swallowed into a cluster —
  * losing the pin you just clicked is the one clustering behaviour readers
  * genuinely hate.
  */
@@ -243,7 +239,7 @@ export function PlaceMarkers({
   places,
   categories,
   selectedId = null,
-  detailId,
+  showPopover = true,
   size = 'md',
   interactive = true,
   clustering = true,
@@ -271,12 +267,8 @@ export function PlaceMarkers({
         isCluster: false,
       }))
     }
-    const pinned = places.filter(
-      (place) => place.id === selectedId || place.id === detailId,
-    )
-    const rest = places.filter(
-      (place) => place.id !== selectedId && place.id !== detailId,
-    )
+    const pinned = places.filter((place) => place.id === selectedId)
+    const rest = places.filter((place) => place.id !== selectedId)
     return [
       ...clusterPoints(rest, { zoom }),
       ...pinned.map((place) => ({
@@ -288,7 +280,7 @@ export function PlaceMarkers({
         isCluster: false,
       })),
     ]
-  }, [clustering, places, selectedId, detailId, zoom])
+  }, [clustering, places, selectedId, zoom])
 
   return (
     <>
@@ -306,11 +298,7 @@ export function PlaceMarkers({
             place={group.items[0]}
             category={categoryById.get(group.items[0].categoryId ?? '') ?? null}
             selected={group.items[0].id === selectedId}
-            detailOpen={
-              detailId === undefined
-                ? undefined
-                : group.items[0].id === detailId
-            }
+            showPopover={showPopover}
             size={size}
             interactive={interactive}
             meta={metaFor?.(group.items[0])}

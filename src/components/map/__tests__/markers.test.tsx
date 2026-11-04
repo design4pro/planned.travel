@@ -357,41 +357,18 @@ describe('PlaceMarkers', () => {
     expect(onBackground).not.toHaveBeenCalled()
   })
 
-  it('keeps explicit Place reading until its owner replaces it, without hover opening another card', async () => {
+  it('only emphasizes pins when its owner renders Place reading elsewhere', async () => {
     const user = userEvent.setup()
-    const onSelect = vi.fn()
-    const view = (detailId: string | null) => (
+    render(
       <MapCanvas label="Trip map">
-        <button type="button">Outside</button>
-        <PlaceMarkers
-          places={[KYOTO, TOKYO]}
-          categories={CATEGORIES}
-          detailId={detailId}
-          onSelect={onSelect}
-        />
-      </MapCanvas>
+        <PlaceMarkers places={[KYOTO]} showPopover={false} />
+      </MapCanvas>,
     )
-    const { rerender } = render(view(null))
     await mapMounted()
     const pin = await screen.findByRole('button', { name: /Fushimi Inari/ })
     await user.hover(pin)
     pin.focus()
     expect(screen.queryByText(KYOTO.address ?? '')).toBeNull()
-    await user.click(pin)
-    expect(onSelect).toHaveBeenCalledWith(KYOTO)
-    rerender(view(KYOTO.id))
-    await user.unhover(pin)
-    screen.getByRole('button', { name: 'Outside' }).focus()
-    const detail = screen.getByRole('region', { name: KYOTO.name })
-    expect(detail.textContent).toContain(KYOTO.address)
-    await user.hover(screen.getByRole('button', { name: /Sensoji/ }))
-    expect(screen.queryByRole('region', { name: TOKYO.name })).toBeNull()
-    expect(screen.getByRole('region', { name: KYOTO.name })).toBe(detail)
-    rerender(view(null))
-    expect(screen.queryByRole('region', { name: KYOTO.name })).toBeNull()
-    expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Outside' }),
-    )
   })
 
   it('opens the hover card on focus, so it is reachable by keyboard', async () => {

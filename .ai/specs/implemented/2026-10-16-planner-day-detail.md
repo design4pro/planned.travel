@@ -29,6 +29,8 @@ The screen owns composition and fetch lifetimes. New route-local `-ui/day-detail
 
 All panel-opening actions use the one detail state: Day header opens Day expanded, Place row or pin replaces Day, and opening Day replaces Place. Minimise retains the Day identifier; expand does not change selection or refetch solely because of the toggle. Repeated Day activation expands its minimised panel. Closing clears detail state without manufacturing a Place selection. Any consumer added to shared selection actions lands with those consumers in one slice (SPEC §8).
 
+Place reading reuses the existing marker presentation in the screen's shared detail slot, from the unfiltered Trip rows. Coordinates and map filters affect markers, never whether a selected Place can be read. Planner hover changes emphasis only; other map consumers retain their hover cards.
+
 The screen calls existing `loadBookingDeskFn({ data: { tripId } })` on first detail open, caches only for the current mounted Trip and invalidates alongside the board after a relevant write. Loading and rejection are guarded by request generation and Trip identity; late responses never populate another Trip or a closed/replaced detail. No fetch in `components/ui`, no direct repository call from the client, and no server function calling another server function. Existing route-local planner server functions remain untouched.
 
 ## Read contract
