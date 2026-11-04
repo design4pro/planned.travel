@@ -1,3 +1,6 @@
+// Configure the product catalogue before any import evaluates it.
+import './prices.fixture'
+
 import { describe, expect, it, vi } from 'vitest'
 import { SUBSCRIPTION_STATUSES } from '#/lib/plans'
 import { subscriptionBlocksWorkspaceDeletion } from '../workspace-deletion-rule'

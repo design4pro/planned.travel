@@ -1514,7 +1514,7 @@ sandbox dashboard (**Products → Discounts**), and do it at the latest when the
 
 ---
 
-### 9.12 Workspace deletion billing consumer (#1740)
+### 9.13 Workspace deletion billing consumer (#1740)
 
 The `workspace-late-subscription` handler ships inert, without a webhook or driver producer. It
 uses the same `POLAR_ACCESS_TOKEN` and `POLAR_SERVER` secrets as request billing, now declared on
