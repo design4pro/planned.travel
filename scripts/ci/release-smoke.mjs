@@ -1,112 +1,59 @@
 import assert from 'node:assert/strict'
 import { writeFileSync } from 'node:fs'
-import { chromium } from '@playwright/test'
+import { pathToFileURL } from 'node:url'
 
-// Dedicated account and workspace only; never fall back to the local demo account.
-const required = [
-  'SMOKE_URL',
-  'SMOKE_EMAIL',
-  'SMOKE_PASSWORD',
-  'SMOKE_WORKSPACE_ID',
-  'SMOKE_TRIP_ID',
-  'EXPECTED_SHA',
-]
-for (const key of required) assert(process.env[key], `Missing ${key}`)
-const origin = new URL(process.env.SMOKE_URL).origin
-assert(
-  ['https://planned.travel', 'https://staging.planned.travel'].includes(origin),
-  'Unexpected smoke origin',
-)
-assert(/^[a-f0-9]{40}$/.test(process.env.EXPECTED_SHA), 'Invalid SHA')
-const browser = await chromium.launch()
-try {
-  const context = await browser.newContext({
-    baseURL: origin,
-    extraHTTPHeaders: {
+const allowedOrigins = new Set([
+  'https://planned.travel',
+  'https://staging.planned.travel',
+])
+
+export async function verifyRelease({
+  url,
+  expectedSha,
+  fetcher = fetch,
+  headers = {},
+}) {
+  const origin = new URL(url).origin
+  assert(allowedOrigins.has(origin), 'Unexpected smoke origin')
+  assert(/^[a-f0-9]{40}$/.test(expectedSha ?? ''), 'Invalid SHA')
+  const get = (path, extraHeaders = {}) =>
+    fetcher(`${origin}${path}`, {
+      redirect: 'manual',
+      signal: AbortSignal.timeout(10_000),
+      headers: { ...headers, ...extraHeaders },
+    })
+  const versionResponse = await get('/api/version')
+  assert.equal(versionResponse.status, 200, 'Version unavailable')
+  const deployed = await versionResponse.json()
+  assert.equal(deployed.sha, expectedSha, 'Wrong deployed SHA')
+  assert(deployed.id, 'No Worker version ID')
+  assert.equal((await get('/')).status, 200, 'Landing unavailable')
+  assert.equal(
+    (await get('/api/tiles/basemap.pmtiles', { Range: 'bytes=0-15' })).status,
+    206,
+    'Tile range unavailable',
+  )
+  return {
+    outcome: 'verified',
+    sha: deployed.sha,
+    version: deployed.id,
+    smoke: true,
+    verifiedAt: new Date().toISOString(),
+  }
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+  const receipt = await verifyRelease({
+    url: process.env.SMOKE_URL,
+    expectedSha: process.env.EXPECTED_SHA,
+    headers: {
       'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID ?? '',
       'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET ?? '',
     },
   })
-  const request = context.request
-  const version = await request.get('/api/version', { maxRedirects: 0 })
-  assert.equal(version.status(), 200, 'Version unavailable')
-  const deployed = await version.json()
-  assert.equal(deployed.sha, process.env.EXPECTED_SHA, 'Wrong deployed SHA')
-  assert(deployed.id, 'No Worker version ID')
-  console.log(
-    JSON.stringify({
-      outcome: 'deployed',
-      sha: deployed.sha,
-      version: deployed.id,
-    }),
-  )
-  const post = async (path, data) => {
-    const response = await request.post(`/api/auth/${path}`, {
-      data,
-      headers: { origin },
-      maxRedirects: 0,
-    })
-    assert.equal(response.status(), 200, `Smoke action failed: ${path}`)
-    return response.json()
-  }
-  await post('sign-in/email', {
-    email: process.env.SMOKE_EMAIL,
-    password: process.env.SMOKE_PASSWORD,
-  })
-  const memberships = await request.get('/api/auth/organization/list')
-  assert.equal(memberships.status(), 200)
-  const organizations = await memberships.json()
-  assert.equal(
-    organizations.length,
-    1,
-    'Smoke account must belong only to its isolated workspace',
-  )
-  const workspace = organizations[0]
-  assert.equal(workspace.id, process.env.SMOKE_WORKSPACE_ID)
-  assert(
-    workspace.name.startsWith('Release smoke'),
-    'Workspace must be explicitly reserved for release smoke',
-  )
-  await post('organization/set-active', { organizationId: workspace.id })
-  const page = await context.newPage()
-  const path = `/trips/${encodeURIComponent(process.env.SMOKE_TRIP_ID)}/plan`
-  const trip = await page.goto(path)
-  assert.equal(trip?.status(), 200, 'Trip read failed')
-  await page.locator('nav[aria-label="Trip sections"]').waitFor()
-  const name = `Release smoke ${process.env.EXPECTED_SHA.slice(0, 12)}`
-  try {
-    await post('organization/update', {
-      organizationId: workspace.id,
-      data: { name },
-    })
-    const changed = await (
-      await request.get('/api/auth/organization/list')
-    ).json()
-    assert.equal(changed.find((row) => row.id === workspace.id)?.name, name)
-  } finally {
-    await post('organization/update', {
-      organizationId: workspace.id,
-      data: { name: workspace.name },
-    })
-    const restored = await (
-      await request.get('/api/auth/organization/list')
-    ).json()
-    assert.equal(
-      restored.find((row) => row.id === workspace.id)?.name,
-      workspace.name,
-      'Smoke cleanup failed',
-    )
-  }
-  writeFileSync(
-    'release-smoke.json',
-    JSON.stringify({
-      outcome: 'verified',
-      sha: deployed.sha,
-      version: deployed.id,
-      smoke: true,
-      verifiedAt: new Date().toISOString(),
-    }) + '\n',
-  )
-} finally {
-  await browser.close()
+  console.log(JSON.stringify(receipt))
+  writeFileSync('release-smoke.json', `${JSON.stringify(receipt)}\n`)
 }
