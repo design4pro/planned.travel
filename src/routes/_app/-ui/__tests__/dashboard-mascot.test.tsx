@@ -458,3 +458,43 @@ it('keeps a working notification visible and retries a failed source', async () 
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
   expect(retry).toHaveBeenCalledOnce()
 })
+
+it('removes a focused authorized candidate and restores focus after access is revoked', () => {
+  const trip = tripCard()
+  const candidate = {
+    source: 'event' as const,
+    id: 'event',
+    tripId: trip.id,
+    occurrence: '2026-04-02',
+  }
+  const view = (candidates: (typeof candidate)[]) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={trip}
+        trips={[trip]}
+        reservations={[]}
+        candidates={candidates}
+        nowMs={Date.parse('2026-04-01T12:00:00Z')}
+        today="2026-04-01"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view([candidate]))
+  const link = screen.getByRole('link', { name: 'View trip plan' })
+  link.focus()
+  expect(document.activeElement).toBe(link)
+  page.rerender(view([]))
+  expect(screen.queryByRole('link', { name: 'View trip plan' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+})

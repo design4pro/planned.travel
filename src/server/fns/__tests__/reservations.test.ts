@@ -42,9 +42,11 @@ import {
   listTripReservations,
   markShareSettled,
   restoreTrip,
+  removeTripMember,
   updateExpense,
 } from '#/server/repos'
 import { NotFoundError } from '#/server/repos/context'
+import { listMascotScheduled } from '#/server/repos/mascot-scheduled'
 import { captureError, createHarness } from '#/server/repos/__tests__/harness'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
@@ -217,6 +219,37 @@ async function onlyBooking() {
   }
   return row
 }
+
+describe('stale Nomi booking destination', () => {
+  it('reauthorizes a viewer after their trip access is removed', async () => {
+    const viewerId = await tenant.addUser('A reader')
+    const membership = await addTripMember(scope, {
+      tripId: trip.id,
+      userId: viewerId,
+      role: 'viewer',
+    })
+    const viewer = tenant.scopeFor(viewerId)
+    const booking = await createReservation(scope, {
+      tripId: trip.id,
+      title: 'Train',
+      status: 'confirmed',
+      startDate: '2026-04-10',
+    })
+    expect(
+      (await listMascotScheduled(viewer, '2026-04-10')).some(
+        (item) => item.id === booking.id,
+      ),
+    ).toBe(true)
+    expect(await bookingDeskPayload(viewer, trip.id)).toMatchObject({
+      canWrite: false,
+    })
+    await removeTripMember(scope, membership.id)
+    expect(await listMascotScheduled(viewer, '2026-04-10')).toEqual([])
+    expect(
+      await captureError(() => bookingDeskPayload(viewer, trip.id)),
+    ).toBeInstanceOf(NotFoundError)
+  })
+})
 
 describe('a priced booking and the trip’s ledger', () => {
   it('writes one cost line when a booking is created with a price', async () => {
