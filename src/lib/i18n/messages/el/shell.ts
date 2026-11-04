@@ -21,6 +21,16 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.reservation':
+    'Μια επιβεβαιωμένη κράτηση αρχίζει στις {date}.',
+  'dashboard.mascot.openReservation': 'Προβολή κρατήσεων',
+  'dashboard.mascot.openChat': 'Άνοιγμα συνομιλίας ταξιδιού',
+  'dashboard.mascot.chatUnavailableTitle':
+    'Η συνομιλία ταξιδιού δεν είναι διαθέσιμη',
+  'dashboard.mascot.chatUnavailableBody':
+    'Μπορείτε ακόμη να δείτε τις ειδοποιήσεις και τις λεπτομέρειες του ταξιδιού.',
+  'dashboard.mascot.openInbox': 'Άνοιγμα ειδοποιήσεων',
+  'dashboard.mascot.pause': 'Παύση κίνησης',
   'account.platformConsole': 'Κονσόλα πλατφόρμας',
   'toaster.label': 'Ειδοποιήσεις',
   /* -------------------------------------------------------------- navigation */

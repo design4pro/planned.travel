@@ -1,3 +1,4 @@
+import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 import { requestCollectionExit } from '#/lib/collection-exit'
 import { useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
@@ -72,6 +73,7 @@ function SecurityPage() {
       if (!response.ok) {
         throw new Error(`Sign out failed with ${response.status}`)
       }
+      clearBrowserSuppression()
       await router.invalidate()
       // An untyped href: the sign-in routes live outside this tree.
       window.location.assign('/login')

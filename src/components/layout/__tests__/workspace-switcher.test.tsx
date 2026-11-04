@@ -6,6 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import {
+  dismissOccurrence,
+  readSuppression,
+  writeSuppression,
+} from '#/lib/mascot-suppression'
 import { registerCollectionExit } from '#/lib/collection-exit'
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
@@ -357,6 +362,23 @@ describe('switching', () => {
       }
     },
   )
+
+  it('clears the active workspace suggestion suppressions on successful sign out', async () => {
+    const entries = dismissOccurrence(
+      [],
+      'reservation',
+      'r',
+      '2026-11-04',
+      1000,
+    )
+    writeSuppression(sessionStorage, 'usr_1', 'org_a', entries)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(null, { status: 200 }),
+    )
+    const { user } = await mount(sessionOf([ALPHA, BETA]))
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }))
+    expect(readSuppression(sessionStorage, 'usr_1', 'org_a', 1001)).toEqual([])
+  })
 
   it('asks before activating a workspace, signing out or creating a workspace', async () => {
     const confirm = vi.fn().mockResolvedValue(false)

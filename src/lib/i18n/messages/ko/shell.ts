@@ -16,6 +16,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.reservation': '확인된 예약이 {date}에 시작됩니다.',
+  'dashboard.mascot.openReservation': '예약 보기',
+  'dashboard.mascot.openChat': '여행 채팅 열기',
+  'dashboard.mascot.chatUnavailableTitle': '여행 채팅을 사용할 수 없습니다',
+  'dashboard.mascot.chatUnavailableBody': '알림과 여행 세부정보는 계속 확인할 수 있습니다.',
+  'dashboard.mascot.openInbox': '알림 열기',
+  'dashboard.mascot.pause': '애니메이션 일시정지',
   'account.platformConsole': '플랫폼 관리 콘솔',
   'toaster.label': '알림',
   'nav.primary': '주요 섹션',

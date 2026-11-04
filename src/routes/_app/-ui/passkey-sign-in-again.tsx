@@ -1,3 +1,4 @@
+import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 import { useState } from 'react'
 
 import { SIGN_OUT_ENDPOINT } from '#/components/layout/session'
@@ -31,6 +32,7 @@ export function SignInAgain({
         body: '{}',
       })
       if (!response.ok) throw new Error(`Sign out failed: ${response.status}`)
+      clearBrowserSuppression()
       // An untyped href: the sign-in routes live outside this tree.
       window.location.assign(
         `/login?redirect=${encodeURIComponent('/passkeys')}`,
