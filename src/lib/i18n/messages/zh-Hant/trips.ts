@@ -14,6 +14,8 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': '編輯圖片',
+  'plan.photo.unavailable': '暫時無法上傳和編輯圖片。目前的圖片將被保留。',
   'collab.readOnly.archived': '此旅行已封存。協作內容僅供閱讀。',
   'collab.readOnly.role': '只有旅行擁有者和編輯者可以變更對話、筆記和投票。',
   'notFound.title': '找不到此行程',

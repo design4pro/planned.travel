@@ -113,6 +113,7 @@ export function DragPreview(props: DragPreviewProps) {
       <PlaceThumb
         placeId={row.placeId}
         imageUrl={row.imageUrl}
+        photo={row.photo}
         icon={category?.icon}
         colour={category?.colour}
         size="sm"

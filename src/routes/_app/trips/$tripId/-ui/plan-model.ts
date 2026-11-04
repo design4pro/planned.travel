@@ -107,6 +107,7 @@ function rowIndexOf(payload: PlanBoardPayload): Map<string, PlannerRow> {
     location: place.address ?? place.city,
     categoryId: place.categoryId,
     imageUrl: place.imageUrl,
+    photo: place.photo,
     rating: place.rating,
     lng: place.lng,
     lat: place.lat,
@@ -312,6 +313,7 @@ export function mapPlacesOf(
       address: row.location,
       rating: row.rating,
       imageUrl: row.imageUrl,
+      photo: row.photo,
       dayNumber: dayNumberByPlace.get(row.placeId) ?? null,
       isVisited: row.visited,
     })

@@ -8,6 +8,7 @@
  * forty.
  */
 
+import { PlaceThumb } from '#/components/planner/place-thumb'
 import * as React from 'react'
 import {
   ArrowRightLeft,
@@ -418,6 +419,7 @@ export interface PlaceFormValues {
 }
 
 export interface PlaceDialogProps {
+  readonly photoPlace?: PlanBoardPlace
   readonly open: boolean
   readonly onOpenChange: (open: boolean) => void
   readonly mode: 'create' | 'edit'
@@ -452,6 +454,7 @@ export interface PlaceDialogProps {
  * under a half-typed number is worse than no help.
  */
 export function PlaceDialog({
+  photoPlace,
   open,
   onOpenChange,
   mode,
@@ -470,6 +473,7 @@ export function PlaceDialog({
   const [pasted, setPasted] = React.useState<GeoPosition | null>(null)
   const lngRef = React.useRef<HTMLInputElement>(null)
   const pastedHintId = React.useId()
+  const photoHintId = React.useId()
 
   // The dialog is a single instance reused for every row, so the draft is reset
   // from the row it was opened for rather than seeded once at mount.
@@ -529,6 +533,40 @@ export function PlaceDialog({
         </DialogHeader>
 
         <DialogBody>
+          {mode === 'edit' && photoPlace ? (
+            <div className="mb-4 flex items-center gap-3">
+              <PlaceThumb
+                placeId={photoPlace.id}
+                imageUrl={photoPlace.imageUrl}
+                photo={photoPlace.photo}
+                icon={
+                  categories.find(
+                    (category) => category.id === photoPlace.categoryId,
+                  )?.icon
+                }
+                colour={
+                  categories.find(
+                    (category) => category.id === photoPlace.categoryId,
+                  )?.colour
+                }
+                className="size-20"
+              />
+              <div className="min-w-0">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled
+                  aria-describedby={photoHintId}
+                >
+                  {t('trips.plan.photo.edit')}
+                </Button>
+                <p id={photoHintId} className="mt-1 text-caption text-ink-3">
+                  {t('trips.plan.photo.unavailable')}
+                </p>
+              </div>
+            </div>
+          ) : null}
           <form
             id={formId}
             className="flex flex-col gap-4"

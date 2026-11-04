@@ -10,6 +10,8 @@
 
 import type { Clusterable } from '#/lib/map/cluster'
 
+import type { PlacePhoto } from '#/lib/place-photo'
+
 /** A tenant's own taxonomy entry, as stored on the `categories` table. */
 export interface MapCategory {
   readonly id: string
@@ -33,6 +35,7 @@ export interface MapPlace extends Clusterable {
   /** 1–5, as stored. `null` when the place has not been rated. */
   readonly rating?: number | null
   readonly imageUrl?: string | null
+  readonly photo?: PlacePhoto
   /** Itinerary day, 1-based. Drives the numeral on the pin. */
   readonly dayNumber?: number | null
   readonly isVisited?: boolean
