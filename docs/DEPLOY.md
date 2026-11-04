@@ -1883,6 +1883,9 @@ itself fails, the call goes through and the Worker logs `provider gate unavailab
 call`, so a `block` is a strong cap and not an absolute one. If you pick `allow`, check
 `/console/providers` on a rhythm that suits your bill, and see the 90 % and blocked-count items in
 `docs/ARCHITECTURE.md` §9 ("Numbers worth alerting on") for what else to watch.
+Metering warnings retain the failure category and validated call labels, but omit raw exception
+messages, stacks and causes to keep SQL-bound tenant values out of logs. Rejected records log no
+input fields.
 
 **The ledger counts `here` from the deploy that adopted it.** Until that release `provider_usage` had no rows for
 `here`; it starts at zero and counts in UTC calendar months (or UTC days,

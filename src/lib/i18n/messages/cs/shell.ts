@@ -806,6 +806,24 @@ const messages = {
   'session.workspaceCheckPending': 'Ověřování přístupu k pracovnímu prostoru…',
   'session.workspaceCheckFailed':
     'Přístup k tomuto pracovnímu prostoru se nepodařilo ověřit. Žádná operace nebyla zopakována. Můžete to zkusit znovu.',
+  'dashboard.currency.label': 'Převodník měn',
+  'dashboard.currency.amount': 'Částka',
+  'dashboard.currency.from': 'Výchozí měna',
+  'dashboard.currency.to': 'Cílová měna',
+  'dashboard.currency.swap': 'Prohodit měny',
+  'dashboard.currency.refresh': 'Obnovit kurzy',
+  'dashboard.currency.result': 'Převedená částka',
+  'dashboard.currency.invalid': 'Zadejte částku od 0 do 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Tento měnový pár není dostupný.',
+  'dashboard.currency.stale': 'Tyto referenční kurzy mohou být zastaralé.',
+  'dashboard.currency.blocked': 'Byl dosažen limit kurzové služby.',
+  'dashboard.currency.failed': 'Kurzy se nepodařilo obnovit.',
+  'dashboard.currency.cooldown': 'Zkuste to znovu po {time}.',
+  'dashboard.currency.source': 'Referenční kurzy ECB přes Frankfurter',
+  'dashboard.currency.notice':
+    'Informativní výpočet; nejde o nabídku transakce.',
+  'dashboard.currency.free': 'Referenční kurzy ECB jsou zdarma dostupné u ECB.',
+  'dashboard.currency.date': 'Datum kurzu: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

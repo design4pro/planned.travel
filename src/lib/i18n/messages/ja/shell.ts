@@ -658,6 +658,25 @@ const messages = {
   'session.workspaceCheckPending': 'ワークスペースへのアクセスを確認中…',
   'session.workspaceCheckFailed':
     'このワークスペースへのアクセスを確認できませんでした。操作は再実行されていません。もう一度確認できます。',
+  'dashboard.currency.label': '通貨換算',
+  'dashboard.currency.amount': '金額',
+  'dashboard.currency.from': '換算元通貨',
+  'dashboard.currency.to': '換算先通貨',
+  'dashboard.currency.swap': '通貨を入れ替え',
+  'dashboard.currency.refresh': 'レートを更新',
+  'dashboard.currency.result': '換算後の金額',
+  'dashboard.currency.invalid':
+    '0から1,000,000,000までの金額を入力してください。',
+  'dashboard.currency.unsupported': 'この通貨ペアは利用できません。',
+  'dashboard.currency.stale': 'この参考レートは古い可能性があります。',
+  'dashboard.currency.blocked': 'レートサービスの上限に達しました。',
+  'dashboard.currency.failed': 'レートを更新できませんでした。',
+  'dashboard.currency.cooldown': '{time}以降に再試行してください。',
+  'dashboard.currency.source': 'Frankfurter経由のECB参考レート',
+  'dashboard.currency.notice':
+    '情報提供のための計算であり、取引の提示ではありません。',
+  'dashboard.currency.free': 'ECB参考レートはECBから無料で入手できます。',
+  'dashboard.currency.date': 'レートの日付：{date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

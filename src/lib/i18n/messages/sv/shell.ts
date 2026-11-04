@@ -749,6 +749,24 @@ const messages = {
   'session.workspaceCheckPending': 'Kontrollerar åtkomst till arbetsytan…',
   'session.workspaceCheckFailed':
     'Det gick inte att bekräfta åtkomsten till den här arbetsytan. Ingen åtgärd upprepades. Du kan kontrollera igen.',
+  'dashboard.currency.label': 'Valutaomvandlare',
+  'dashboard.currency.amount': 'Belopp',
+  'dashboard.currency.from': 'Från valuta',
+  'dashboard.currency.to': 'Till valuta',
+  'dashboard.currency.swap': 'Byt valutor',
+  'dashboard.currency.refresh': 'Uppdatera kurser',
+  'dashboard.currency.result': 'Omräknat belopp',
+  'dashboard.currency.invalid': 'Ange ett belopp från 0 till 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Det här valutaparet är inte tillgängligt.',
+  'dashboard.currency.stale': 'Dessa referenskurser kan vara inaktuella.',
+  'dashboard.currency.blocked': 'Kurstjänstens gräns har nåtts.',
+  'dashboard.currency.failed': 'Kurserna kunde inte uppdateras.',
+  'dashboard.currency.cooldown': 'Försök igen efter {time}.',
+  'dashboard.currency.source': 'ECB:s referenskurser via Frankfurter',
+  'dashboard.currency.notice':
+    'Beräkning för information; inget transaktionserbjudande.',
+  'dashboard.currency.free': 'ECB:s referenskurser finns gratis hos ECB.',
+  'dashboard.currency.date': 'Kursdatum: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

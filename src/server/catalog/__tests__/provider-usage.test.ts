@@ -215,7 +215,7 @@ describe('recordProviderCall', () => {
     expect(await tables.db.select().from(providerUsage)).toHaveLength(0)
     expect(logger.warn).toHaveBeenCalledWith(
       'provider usage record rejected',
-      expect.objectContaining({ provider: 'resend' }),
+      {},
     )
   })
 
@@ -236,6 +236,31 @@ describe('recordProviderCall', () => {
     expect(await tables.db.select().from(providerUsage)).toHaveLength(0)
     expect(logger.warn).toHaveBeenCalled()
   })
+
+  it.each([
+    null,
+    {
+      provider: 'private-person@example.test',
+      operation: 'private-trip-context',
+    },
+  ])(
+    'rejects malformed records without logging their contents: %j',
+    async (call) => {
+      await expect(
+        recordProviderCall(
+          tables.db,
+          PLATFORM_SYSTEM_ACTOR,
+          call as never,
+          logger,
+        ),
+      ).resolves.toBeUndefined()
+      expect(await tables.db.select().from(providerUsage)).toHaveLength(0)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'provider usage record rejected',
+        {},
+      )
+    },
+  )
 
   it('swallows a database failure and reports it instead of throwing', async () => {
     const broken = {

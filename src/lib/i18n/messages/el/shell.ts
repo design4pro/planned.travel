@@ -750,6 +750,27 @@ const messages = {
   'session.workspaceCheckPending': 'Έλεγχος πρόσβασης στον χώρο εργασίας…',
   'session.workspaceCheckFailed':
     'Δεν ήταν δυνατή η επιβεβαίωση πρόσβασης σε αυτόν τον χώρο εργασίας. Καμία ενέργεια δεν επαναλήφθηκε. Μπορείτε να ελέγξετε ξανά.',
+  'dashboard.currency.label': 'Μετατροπέας νομισμάτων',
+  'dashboard.currency.amount': 'Ποσό',
+  'dashboard.currency.from': 'Νόμισμα προέλευσης',
+  'dashboard.currency.to': 'Νόμισμα προορισμού',
+  'dashboard.currency.swap': 'Εναλλαγή νομισμάτων',
+  'dashboard.currency.refresh': 'Ανανέωση ισοτιμιών',
+  'dashboard.currency.result': 'Ποσό μετατροπής',
+  'dashboard.currency.invalid': 'Εισαγάγετε ποσό από 0 έως 1.000.000.000.',
+  'dashboard.currency.unsupported':
+    'Αυτό το ζεύγος νομισμάτων δεν είναι διαθέσιμο.',
+  'dashboard.currency.stale':
+    'Αυτές οι ισοτιμίες αναφοράς ενδέχεται να είναι παλιές.',
+  'dashboard.currency.blocked': 'Συμπληρώθηκε το όριο της υπηρεσίας ισοτιμιών.',
+  'dashboard.currency.failed': 'Δεν ήταν δυνατή η ανανέωση ισοτιμιών.',
+  'dashboard.currency.cooldown': 'Δοκιμάστε ξανά μετά τις {time}.',
+  'dashboard.currency.source': 'Ισοτιμίες αναφοράς ΕΚΤ μέσω Frankfurter',
+  'dashboard.currency.notice':
+    'Ενημερωτικός υπολογισμός· όχι προσφορά συναλλαγής.',
+  'dashboard.currency.free':
+    'Οι ισοτιμίες αναφοράς της ΕΚΤ διατίθενται δωρεάν από την ΕΚΤ.',
+  'dashboard.currency.date': 'Ημερομηνία ισοτιμίας: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

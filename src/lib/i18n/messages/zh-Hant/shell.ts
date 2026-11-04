@@ -613,6 +613,23 @@ const messages = {
   'session.workspaceCheckPending': '正在檢查工作空間存取權限…',
   'session.workspaceCheckFailed':
     '無法確認此工作空間的存取權限。未重新執行任何操作。你可以再次檢查。',
+  'dashboard.currency.label': '貨幣換算',
+  'dashboard.currency.amount': '金額',
+  'dashboard.currency.from': '來源貨幣',
+  'dashboard.currency.to': '目標貨幣',
+  'dashboard.currency.swap': '交換貨幣',
+  'dashboard.currency.refresh': '重新整理匯率',
+  'dashboard.currency.result': '換算金額',
+  'dashboard.currency.invalid': '請輸入0至1,000,000,000之間的金額。',
+  'dashboard.currency.unsupported': '此貨幣對無法使用。',
+  'dashboard.currency.stale': '這些參考匯率可能已過時。',
+  'dashboard.currency.blocked': '已達匯率服務上限。',
+  'dashboard.currency.failed': '無法更新匯率。',
+  'dashboard.currency.cooldown': '請在{time}後重試。',
+  'dashboard.currency.source': '透過Frankfurter提供的歐洲央行參考匯率',
+  'dashboard.currency.notice': '僅供參考的計算，並非交易報價。',
+  'dashboard.currency.free': '歐洲央行參考匯率可從歐洲央行免費取得。',
+  'dashboard.currency.date': '匯率日期：{date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

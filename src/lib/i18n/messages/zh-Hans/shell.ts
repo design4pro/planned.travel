@@ -611,6 +611,23 @@ const messages = {
   'session.workspaceCheckPending': '正在检查工作空间访问权限…',
   'session.workspaceCheckFailed':
     '无法确认此工作空间的访问权限。未重新执行任何操作。你可以再次检查。',
+  'dashboard.currency.label': '货币换算',
+  'dashboard.currency.amount': '金额',
+  'dashboard.currency.from': '源货币',
+  'dashboard.currency.to': '目标货币',
+  'dashboard.currency.swap': '交换货币',
+  'dashboard.currency.refresh': '刷新汇率',
+  'dashboard.currency.result': '换算金额',
+  'dashboard.currency.invalid': '请输入0至1,000,000,000之间的金额。',
+  'dashboard.currency.unsupported': '此货币对不可用。',
+  'dashboard.currency.stale': '这些参考汇率可能已过时。',
+  'dashboard.currency.blocked': '已达到汇率服务限额。',
+  'dashboard.currency.failed': '无法刷新汇率。',
+  'dashboard.currency.cooldown': '请在{time}后重试。',
+  'dashboard.currency.source': '通过Frankfurter提供的欧洲央行参考汇率',
+  'dashboard.currency.notice': '仅供参考的计算，并非交易报价。',
+  'dashboard.currency.free': '欧洲央行参考汇率可从欧洲央行免费获取。',
+  'dashboard.currency.date': '汇率日期：{date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

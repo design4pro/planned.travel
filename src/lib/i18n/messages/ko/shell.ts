@@ -644,6 +644,23 @@ const messages = {
   'session.workspaceCheckPending': '워크스페이스 접근 권한 확인 중…',
   'session.workspaceCheckFailed':
     '이 워크스페이스의 접근 권한을 확인할 수 없습니다. 어떤 작업도 다시 실행되지 않았습니다. 다시 확인할 수 있습니다.',
+  'dashboard.currency.label': '통화 변환기',
+  'dashboard.currency.amount': '금액',
+  'dashboard.currency.from': '원본 통화',
+  'dashboard.currency.to': '대상 통화',
+  'dashboard.currency.swap': '통화 바꾸기',
+  'dashboard.currency.refresh': '환율 새로고침',
+  'dashboard.currency.result': '변환된 금액',
+  'dashboard.currency.invalid': '0부터 1,000,000,000 사이의 금액을 입력하세요.',
+  'dashboard.currency.unsupported': '이 통화 쌍은 사용할 수 없습니다.',
+  'dashboard.currency.stale': '이 참고 환율은 오래되었을 수 있습니다.',
+  'dashboard.currency.blocked': '환율 서비스 한도에 도달했습니다.',
+  'dashboard.currency.failed': '환율을 새로고침하지 못했습니다.',
+  'dashboard.currency.cooldown': '{time} 이후에 다시 시도하세요.',
+  'dashboard.currency.source': 'Frankfurter를 통한 ECB 참고 환율',
+  'dashboard.currency.notice': '정보 제공용 계산이며 거래 견적이 아닙니다.',
+  'dashboard.currency.free': 'ECB 참고 환율은 ECB에서 무료로 제공됩니다.',
+  'dashboard.currency.date': '환율 기준일: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
