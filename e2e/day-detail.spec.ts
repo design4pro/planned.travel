@@ -408,6 +408,7 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     await tile.locator('[data-part="trip-actions-trigger"]').click()
     await page.getByRole('menuitem', { name: 'Archive', exact: true }).click()
     await expect(page.getByText('Trip archived', { exact: true })).toBeVisible()
+    await page.waitForLoadState('networkidle')
 
     await page.setViewportSize({ width: 360, height: 450 })
     const route = {
