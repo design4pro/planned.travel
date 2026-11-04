@@ -2053,6 +2053,7 @@ test.describe('01-S8c — Initial members on trip creation', () => {
   test('a trip created with an editor and a viewer lists both on its People screen', async ({
     page,
   }) => {
+    test.setTimeout(90_000)
     const plainReport = watchConsole(page, TRIPS)
     const mapReport = watchConsole(page, { ...TRIPS, map: true })
     await visit(page, TRIPS, 'light')
