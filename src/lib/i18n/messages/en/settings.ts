@@ -769,7 +769,7 @@ const messages = {
   'twoFactor.password.pending': 'Setting up',
   'twoFactor.password.invalid': 'That password is not right.',
   'twoFactor.key.intro':
-    'You need an authenticator app on your phone. Add this key to it, then come back to this page. Two-factor is not on yet.',
+    'Add this new key to your authenticator, then confirm a code. Your current sign-in method stays unchanged until confirmation.',
   'twoFactor.key.matrixLabel': 'Setup code. The same key is available as text',
   'twoFactor.key.matrixFailed':
     'We could not draw a code for this key. Enter the setup key in your app.',
@@ -781,21 +781,18 @@ const messages = {
   'twoFactor.key.open': 'Open in your authenticator app',
   'twoFactor.key.startOver': 'Start over',
   'twoFactor.key.startOverHint':
-    'Starting over makes a new key. A key you already added to an app will stop working.',
+    'Discarding this setup leaves your current sign-in method unchanged.',
   'twoFactor.key.next': 'I have added it',
   'twoFactor.code.label': 'Code from the app',
-  'twoFactor.code.hint': 'The six digits the app shows now.',
   'twoFactor.code.submit': 'Turn on two-factor',
   'twoFactor.code.pending': 'Checking',
   'twoFactor.code.invalid':
     'That code did not match. Check the time on your phone and enter the newest code the app shows.',
-  'twoFactor.code.unclear':
-    'We could not tell whether that worked. Enter the newest code to try again.',
   'twoFactor.rateLimited.title': 'Too many tries in a short time',
   'twoFactor.rateLimited.password':
-    'Wait about ten seconds, then try again. Nothing you typed was lost.',
+    'Wait until this action is available again, then retry. Nothing you typed was lost.',
   'twoFactor.rateLimited.code':
-    'Wait up to a minute, then try again. Nothing you typed was lost.',
+    'Wait until this action is available again, then retry. Nothing you typed was lost.',
   'twoFactor.codes.title': 'Your backup codes',
   'twoFactor.codes.body':
     'Each code works once if you lose your phone. They are shown only now, so keep them somewhere safe.',
@@ -828,21 +825,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Two-factor needs a password on this account. The next page asks for your email and sends a link to set one. Setting a password signs you out everywhere, so sign in again and come back here.',
   'twoFactor.nopassword.action': 'Set a password',
-  'twoFactor.setup.action': 'Show setup key again',
-  'twoFactor.setup.title': 'Setup key',
-  'twoFactor.setup.body':
-    'Add this key to another device. The key already on your other devices keeps working.',
-  'twoFactor.setup.done': 'Done',
-  'twoFactor.setup.confirm': 'Show key',
   'twoFactor.setup.pending': 'Checking',
   'twoFactor.off.action': 'Turn off two-factor',
   'twoFactor.off.title': 'Turn off two-factor?',
   'twoFactor.off.body':
-    'Anyone with your password will be able to sign in without a code. Your other signed-in devices stay signed in.',
+    'Anyone with your password will be able to sign in without a code.',
   'twoFactor.off.confirm': 'Turn off',
   'twoFactor.off.pending': 'Turning off',
   'twoFactor.off.cancel': 'Keep it on',
-  'twoFactor.off.done': 'Two-factor is off',
   'security.other.label': 'Sign out other devices',
   'security.other.description':
     'Other devices must sign in again. Connections close asynchronously; trusted browsers, Google, Apple and passkeys remain available.',
@@ -855,6 +845,26 @@ const messages = {
   'security.other.pending':
     'Other sessions are revoked. Connections may take longer to close.',
   'security.other.check': 'Check status',
+  'twoFactor.security.effect':
+    'This change signs out other devices and removes prior browser trust. This device receives a new session.',
+  'twoFactor.security.currentStep':
+    'Use the current authenticator code. Wait for a new code if you already used it for a security change.',
+  'twoFactor.security.invalidProof':
+    'This code is invalid or already used. Enter a new authenticator code or an unused backup code.',
+  'twoFactor.security.replace': 'Replace authenticator',
+  'twoFactor.security.codesLost':
+    'The change completed, but the new backup codes cannot be shown again. Sign in again to check your settings.',
+  'twoFactor.security.changed': 'Your security settings changed.',
+  'twoFactor.security.fresh':
+    'Sign in again, then confirm this security change within five minutes.',
+  'twoFactor.security.expired':
+    'This setup expired. Start again; your active authenticator is unchanged.',
+  'twoFactor.security.stale':
+    'Your security state changed. Reload it before starting another change.',
+  'twoFactor.security.upgrade':
+    'Refresh this page to use the updated security checks.',
+  'twoFactor.security.unavailable':
+    'Security changes are unavailable. Reload to check again.',
 } as const satisfies NamespaceMessages
 
 export default messages

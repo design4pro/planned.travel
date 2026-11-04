@@ -48,7 +48,9 @@ floor guard script; the review now does.
   arbitrary query API or expansion of FU-3. Proof revisions cannot be upgraded; acceptance/refresh/trust
   read primary authority, with missing metadata or errors refusing after cutover. Account and workspace
   isolation tests, winning-claim-gated real batch rollback/CAS tests, and complete installed-library
-  acceptance/writer inventory are mandatory. Contract and ADR need independent security approval
+  acceptance/writer inventory are mandatory. The #1759 amendment permits only the enumerated credential-version/encrypted-factor fields,
+  proposals, budgets and replay records; plaintext proofs and provider tokens remain excluded.
+  Contract and ADR need independent security approval
   before runtime implementation; the actual diff needs independent review before completion.
 - Better Auth's own tables reached through its adapter (`ctx.context.adapter`, as the passkey plugin does for the user-keyed `passkey` table) are not application SQL and not an exception: SPEC §6. Raw SQL against an auth table outside `auth/provisioning.ts` is still a blocker.
 - **Every new or changed repo method has a tenant-isolation test**: a row of another organisation

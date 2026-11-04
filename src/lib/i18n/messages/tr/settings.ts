@@ -684,7 +684,7 @@ const messages = {
   'twoFactor.password.pending': 'Ayarlanıyor',
   'twoFactor.password.invalid': 'Bu parola doğru değil.',
   'twoFactor.key.intro':
-    'Telefonunuzda bir doğrulayıcı uygulaması gerekiyor. Bu anahtarı ekleyip buraya dönün. İki faktör henüz açık değil.',
+    'Bu yeni anahtarı kimlik doğrulama uygulamanıza ekleyin, ardından bir kodu doğrulayın. Mevcut giriş yönteminiz doğrulamaya kadar değişmez.',
   'twoFactor.key.matrixLabel':
     'Kurulum kodu. Aynı anahtar metin olarak da mevcuttur',
   'twoFactor.key.matrixFailed':
@@ -697,21 +697,18 @@ const messages = {
   'twoFactor.key.open': 'Doğrulayıcı uygulamanızda aç',
   'twoFactor.key.startOver': 'Baştan başla',
   'twoFactor.key.startOverHint':
-    'Baştan başlamak yeni bir anahtar oluşturur. Bir uygulamaya eklediğiniz eski anahtar çalışmayı durdurur.',
+    'Bu kurulumu iptal etmek mevcut giriş yönteminizi değiştirmez.',
   'twoFactor.key.next': 'Ekledim',
   'twoFactor.code.label': 'Uygulamadaki kod',
-  'twoFactor.code.hint': 'Uygulamanın şu anda gösterdiği altı rakam.',
   'twoFactor.code.submit': 'İki faktörü aç',
   'twoFactor.code.pending': 'Kontrol ediliyor',
   'twoFactor.code.invalid':
     'Kod eşleşmedi. Telefonunuzun saatini kontrol edip uygulamadaki en yeni kodu girin.',
-  'twoFactor.code.unclear':
-    'İşlemin başarılı olup olmadığını anlayamadık. Tekrar denemek için en yeni kodu girin.',
   'twoFactor.rateLimited.title': 'Kısa sürede çok fazla deneme',
   'twoFactor.rateLimited.password':
-    'Yaklaşık on saniye bekleyip tekrar deneyin. Yazdıklarınız korundu.',
+    'Bu işlem yeniden kullanılabilir olana kadar bekleyin ve tekrar deneyin. Yazdıklarınız kaybolmadı.',
   'twoFactor.rateLimited.code':
-    'Bir dakikaya kadar bekleyip tekrar deneyin. Yazdıklarınız korundu.',
+    'Bu işlem yeniden kullanılabilir olana kadar bekleyin ve tekrar deneyin. Yazdıklarınız kaybolmadı.',
   'twoFactor.codes.title': 'Yedek kodlarınız',
   'twoFactor.codes.body':
     'Telefonunuzu kaybederseniz her kod bir kez çalışır. Yalnızca şimdi gösterilirler; güvenli bir yerde saklayın.',
@@ -744,21 +741,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'İki faktör bu hesapta bir parola gerektirir. Sonraki sayfa e-postanızı ister ve ayarlamak için bağlantı gönderir. Parola belirlemek her yerde oturumunuzu kapatır. Tekrar giriş yapıp buraya dönün.',
   'twoFactor.nopassword.action': 'Parola belirle',
-  'twoFactor.setup.action': 'Kurulum anahtarını yeniden göster',
-  'twoFactor.setup.title': 'Kurulum anahtarı',
-  'twoFactor.setup.body':
-    'Bu anahtarı başka bir cihaza ekleyin. Diğer cihazlarınızdaki anahtar çalışmaya devam eder.',
-  'twoFactor.setup.done': 'Bitti',
-  'twoFactor.setup.confirm': 'Anahtarı göster',
   'twoFactor.setup.pending': 'Kontrol ediliyor',
   'twoFactor.off.action': 'İki faktörlü doğrulamayı kapat',
   'twoFactor.off.title': 'İki faktörlü doğrulama kapatılsın mı?',
   'twoFactor.off.body':
-    'Parolanızı bilen herkes kod olmadan giriş yapabilecek. Diğer giriş yapılmış cihazlarınız açık kalacak.',
+    'Parolanızı bilen herkes kod olmadan giriş yapabilecek.',
   'twoFactor.off.confirm': 'Kapat',
   'twoFactor.off.pending': 'Kapatılıyor',
   'twoFactor.off.cancel': 'Açık tut',
-  'twoFactor.off.done': 'İki faktörlü doğrulama kapalı',
   'security.other.label': 'Diğer cihazlardan çıkış yap',
   'security.other.description':
     'Diğer cihazların yeniden giriş yapması gerekir. Bağlantılar eşzamansız kapanır; güvenilir tarayıcılar, Google, Apple ve geçiş anahtarları kullanılabilir kalır.',
@@ -771,6 +761,26 @@ const messages = {
   'security.other.pending':
     'Diğer oturumlar iptal edildi. Bağlantıların kapanması daha uzun sürebilir.',
   'security.other.check': 'Durumu kontrol et',
+  'twoFactor.security.effect':
+    'Bu değişiklik diğer cihazlardaki oturumları kapatır ve önceki tarayıcı güvenini kaldırır. Bu cihaz yeni bir oturum alır.',
+  'twoFactor.security.currentStep':
+    'Doğrulayıcının güncel kodunu kullanın. Güvenlik değişikliği için zaten kullandıysanız yeni bir kod bekleyin.',
+  'twoFactor.security.invalidProof':
+    'Bu kod geçersiz veya daha önce kullanılmış. Yeni bir doğrulama kodu ya da kullanılmamış bir yedek kod girin.',
+  'twoFactor.security.replace': 'Doğrulayıcıyı değiştir',
+  'twoFactor.security.codesLost':
+    'Değişiklik tamamlandı ancak yeni yedek kodlar tekrar gösterilemez. Ayarları kontrol etmek için yeniden giriş yapın.',
+  'twoFactor.security.changed': 'Güvenlik ayarlarınız değişti.',
+  'twoFactor.security.fresh':
+    'Yeniden giriş yapın ve bu güvenlik değişikliğini beş dakika içinde onaylayın.',
+  'twoFactor.security.expired':
+    'Bu kurulumun süresi doldu. Yeniden başlayın; etkin doğrulayıcınız değişmedi.',
+  'twoFactor.security.stale':
+    'Güvenlik durumunuz değişti. Başka bir değişiklikten önce yeniden yükleyin.',
+  'twoFactor.security.upgrade':
+    'Güncel güvenlik kontrollerini kullanmak için bu sayfayı yenileyin.',
+  'twoFactor.security.unavailable':
+    'Güvenlik değişiklikleri kullanılamıyor. Tekrar kontrol etmek için yeniden yükleyin.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

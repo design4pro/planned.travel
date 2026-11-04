@@ -706,7 +706,7 @@ const messages = {
   'twoFactor.password.pending': 'Wird eingerichtet',
   'twoFactor.password.invalid': 'Dieses Passwort stimmt nicht.',
   'twoFactor.key.intro':
-    'Du brauchst eine Authenticator-App auf deinem Handy. Füge diesen Schlüssel hinzu und kehre hierher zurück. Zwei-Faktor ist noch nicht aktiviert.',
+    'Füge diesen neuen Schlüssel deiner Authenticator-App hinzu und bestätige einen Code. Deine bisherige Anmeldemethode bleibt bis zur Bestätigung unverändert.',
   'twoFactor.key.matrixLabel':
     'Einrichtungscode. Derselbe Schlüssel ist als Text verfügbar',
   'twoFactor.key.matrixFailed':
@@ -719,21 +719,18 @@ const messages = {
   'twoFactor.key.open': 'In deiner Authenticator-App öffnen',
   'twoFactor.key.startOver': 'Neu beginnen',
   'twoFactor.key.startOverHint':
-    'Dabei wird ein neuer Schlüssel erstellt. Ein bereits zur App hinzugefügter Schlüssel funktioniert dann nicht mehr.',
+    'Wenn du diese Einrichtung verwirfst, bleibt deine bisherige Anmeldemethode unverändert.',
   'twoFactor.key.next': 'Ich habe ihn hinzugefügt',
   'twoFactor.code.label': 'Code aus der App',
-  'twoFactor.code.hint': 'Die sechs Ziffern, die die App gerade zeigt.',
   'twoFactor.code.submit': 'Zwei-Faktor aktivieren',
   'twoFactor.code.pending': 'Wird geprüft',
   'twoFactor.code.invalid':
     'Der Code stimmt nicht. Prüfe die Uhrzeit deines Handys und gib den neuesten Code der App ein.',
-  'twoFactor.code.unclear':
-    'Wir konnten nicht feststellen, ob es geklappt hat. Gib den neuesten Code ein, um es erneut zu versuchen.',
   'twoFactor.rateLimited.title': 'Zu viele Versuche in kurzer Zeit',
   'twoFactor.rateLimited.password':
-    'Warte etwa zehn Sekunden und versuche es erneut. Deine Eingaben bleiben erhalten.',
+    'Warte, bis diese Aktion wieder verfügbar ist, und versuche es erneut. Deine Eingaben bleiben erhalten.',
   'twoFactor.rateLimited.code':
-    'Warte bis zu einer Minute und versuche es erneut. Deine Eingaben bleiben erhalten.',
+    'Warte, bis diese Aktion wieder verfügbar ist, und versuche es erneut. Deine Eingaben bleiben erhalten.',
   'twoFactor.codes.title': 'Deine Ersatzcodes',
   'twoFactor.codes.body':
     'Jeder Code funktioniert einmal, falls du dein Handy verlierst. Sie werden nur jetzt angezeigt. Bewahre sie sicher auf.',
@@ -766,21 +763,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Zwei-Faktor benötigt ein Passwort für dieses Konto. Die nächste Seite fragt nach deiner E-Mail und sendet einen Link zum Festlegen. Dabei wirst du überall abgemeldet. Melde dich danach erneut an und kehre hierher zurück.',
   'twoFactor.nopassword.action': 'Passwort festlegen',
-  'twoFactor.setup.action': 'Einrichtungsschlüssel erneut anzeigen',
-  'twoFactor.setup.title': 'Einrichtungsschlüssel',
-  'twoFactor.setup.body':
-    'Füge diesen Schlüssel auf einem weiteren Gerät hinzu. Der Schlüssel auf deinen anderen Geräten funktioniert weiterhin.',
-  'twoFactor.setup.done': 'Fertig',
-  'twoFactor.setup.confirm': 'Schlüssel anzeigen',
   'twoFactor.setup.pending': 'Wird geprüft',
   'twoFactor.off.action': 'Zwei-Faktor-Authentifizierung ausschalten',
   'twoFactor.off.title': 'Zwei-Faktor-Authentifizierung ausschalten?',
   'twoFactor.off.body':
-    'Wer dein Passwort kennt, kann sich ohne Code anmelden. Deine anderen angemeldeten Geräte bleiben angemeldet.',
+    'Jeder mit deinem Passwort kann sich ohne Code anmelden.',
   'twoFactor.off.confirm': 'Ausschalten',
   'twoFactor.off.pending': 'Wird ausgeschaltet',
   'twoFactor.off.cancel': 'Eingeschaltet lassen',
-  'twoFactor.off.done': 'Zwei-Faktor-Authentifizierung ist ausgeschaltet',
   'security.other.label': 'Andere Geräte abmelden',
   'security.other.description':
     'Andere Geräte müssen sich erneut anmelden. Verbindungen werden zeitversetzt geschlossen; vertrauenswürdige Browser, Google, Apple und Passkeys bleiben verfügbar.',
@@ -793,6 +783,27 @@ const messages = {
   'security.other.pending':
     'Andere Sitzungen sind widerrufen. Das Schließen der Verbindungen kann länger dauern.',
   'security.other.check': 'Status prüfen',
+  'twoFactor.security.effect':
+    'Diese Änderung meldet andere Geräte ab und hebt das bisherige Browservertrauen auf. Dieses Gerät erhält eine neue Sitzung.',
+  'twoFactor.security.currentStep':
+    'Verwende den aktuellen Authenticator-Code. Warte auf einen neuen Code, wenn du ihn bereits für eine Sicherheitsänderung verwendet hast.',
+  'twoFactor.security.invalidProof':
+    'Dieser Code ist ungültig oder bereits verwendet. Gib einen neuen Authenticator-Code oder einen unbenutzten Ersatzcode ein.',
+  'twoFactor.security.replace': 'Authenticator ersetzen',
+  'twoFactor.security.codesLost':
+    'Die Änderung ist abgeschlossen, aber die neuen Ersatzcodes können nicht erneut angezeigt werden. Melde dich erneut an, um deine Einstellungen zu prüfen.',
+  'twoFactor.security.changed':
+    'Deine Sicherheitseinstellungen wurden geändert.',
+  'twoFactor.security.fresh':
+    'Melde dich erneut an und bestätige diese Sicherheitsänderung innerhalb von fünf Minuten.',
+  'twoFactor.security.expired':
+    'Diese Einrichtung ist abgelaufen. Beginne erneut; dein aktiver Authenticator ist unverändert.',
+  'twoFactor.security.stale':
+    'Dein Sicherheitsstatus hat sich geändert. Lade ihn vor einer weiteren Änderung neu.',
+  'twoFactor.security.upgrade':
+    'Aktualisiere diese Seite, um die neuen Sicherheitsprüfungen zu verwenden.',
+  'twoFactor.security.unavailable':
+    'Sicherheitsänderungen sind nicht verfügbar. Lade die Seite zur erneuten Prüfung neu.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
