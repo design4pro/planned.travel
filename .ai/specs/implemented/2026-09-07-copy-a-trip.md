@@ -99,6 +99,10 @@ the copy still reproduces the whole plan. This stage registers nothing; its own 
 `copyTripContents`'s own code, because those tables are this plan's. Until a module registers a
 copier the copy simply omits it.
 
+> Storage concurrency update (#1784, ADR 0050): Q6 tolerates failed cover copies, but a competing
+> delivery with an active reservation has not failed. That delivery remains retryable and must not
+> clear `copy_pending_at` before the first writer settles. Retained copies are reused idempotently.
+
 ### Alternatives considered
 
 - **One synchronous copy inside a transaction.** Loses on the unbounded write above, and D1 has no
