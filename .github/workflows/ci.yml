@@ -495,6 +495,11 @@ jobs:
     secrets: inherit
 
   deploy-production:
+    permissions:
+      contents: write
+      actions: read
+      issues: write
+      pull-requests: write
     name: deploy · production
     needs: [verify, test, e2e-report]
     if: ${{ !cancelled() && needs.verify.result == 'success' && needs.test.result == 'success' && needs.e2e-report.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}

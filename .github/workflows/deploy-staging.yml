@@ -26,7 +26,7 @@ jobs:
   deploy:
     name: Migrate and deploy to staging
     runs-on: ${{ fromJSON(vars.RUNNER_DEPLOY || '["self-hosted","linux","X64","ci"]') }}
-    timeout-minutes: 25
+    timeout-minutes: 65
     # Never run two deploys at once, and never cancel one half-way: an interrupted
     # `d1 migrations apply` would leave the schema between two versions. On the
     # job, so it holds the same way whether ci.yml calls this or a human dispatches it.
@@ -170,7 +170,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           packageManager: pnpm
-          command: deploy
+          command: deploy --tag ${{ github.sha }}
 
       # Cheap proof that the new version is actually serving: the tile endpoint
       # exercises the Worker, the R2 binding and the Range path in one request.
@@ -193,3 +193,38 @@ jobs:
             --header 'Range: bytes=0-15' --write-out '%{http_code}' "${auth[@]}" \
             https://staging.planned.travel/api/tiles/basemap.pmtiles)
           echo "tiles: $code"; test "$code" = 206
+
+      - name: Observe authenticated staging for thirty minutes
+        if: steps.gate.outputs.configured == 'true' && (vars.RELEASE_OBSERVATION == 'true' || vars.AUTONOMOUS_RELEASES == 'true')
+        env:
+          SMOKE_URL: https://staging.planned.travel
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+          SMOKE_WORKSPACE_ID: ${{ vars.SMOKE_WORKSPACE_ID }}
+          SMOKE_TRIP_ID: ${{ vars.SMOKE_TRIP_ID }}
+          EXPECTED_SHA: ${{ github.sha }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          pnpm exec playwright install chromium
+          export OBSERVED_FROM=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          for sample in 0 1 2 3 4 5 6; do
+            if [ "$sample" -gt 0 ]; then sleep 300; fi
+            node scripts/ci/release-smoke.mjs
+          done
+          node --input-type=module <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          const receipt = JSON.parse(readFileSync('release-smoke.json'));
+          receipt.observedFrom = process.env.OBSERVED_FROM;
+          writeFileSync('release-smoke.json', JSON.stringify(receipt));
+          JS
+
+      - name: Record staging deployment evidence
+        if: steps.gate.outputs.configured == 'true' && (vars.RELEASE_OBSERVATION == 'true' || vars.AUTONOMOUS_RELEASES == 'true')
+        uses: actions/upload-artifact@v6
+        with:
+          name: staging-evidence-${{ github.sha }}
+          path: release-smoke.json
+          if-no-files-found: error
+          retention-days: 14

@@ -16,3 +16,15 @@ Extends the installed skill: read `.claude/skills/om-auto-qa-pr/SKILL.md` and fo
     Sign off only when every member approves, and quote each verdict in the evidence comment. The persona agents can read files but not run `git`: write the diff to `$TMPDIR` and give its path in each brief. When one does not approve, post its findings in a 🤖 comment that starts `🤖 QA-PANEL: FAIL head=<sha>` (the PR's current head) as the fix list, remove `qa-approved` if the PR still carries one, apply `qa-failed` (the `--apply-failure` path) and return: `om-pr-autopilot` routes the PR to `om-auto-fix-pr` with that list, and QA runs again on the new head (the repo override of `om-pr-autopilot` says how many times).
 - A PR that carries `needs-qa` beside `skip-qa` is a `needs-qa` PR: remove `skip-qa` (**unlabel-pr**) before the sign-off, since the installed skill signs off only `needs-qa` without `skip-qa` and the pair would otherwise route here again on every run (`om-approve-merge-pr` treats it the same way).
 - Screenshots go under `.ai/qa/` only, never into the repo root (a stray image there has already broken the clean-room boundary once, docs/SPEC.md §2).
+
+## Evidence bound to the reviewed revision
+
+Inside Cezar (`CEZ_RUN_ID` is set), before repeating this stage, run `node .ai/scripts/pipeline-control.mjs evidence qa <pr>`.
+A reusable record is a pointer to the existing report, not an approval by itself: read that report
+and current findings/revocations. Reuse only completed passing coverage for its exact head, base
+and policy. Missing evidence or new concrete findings require fresh work. After publishing a
+passing report for the head actually inspected, verify the head and base have not moved and run
+`node .ai/scripts/pipeline-control.mjs record-evidence qa <pr> <report-url> <reviewed-head-sha> <reviewed-base-sha>`.
+Never record a failed, partial or waived stage as passed.
+
+Outside Cezar, use the published report and exact current head/base/policy checks directly; the local run-store commands require a Cezar run identity.

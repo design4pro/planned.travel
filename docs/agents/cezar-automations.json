@@ -1,54 +1,15 @@
 [
   {
-    "name": "Groom and triage new issues",
-    "description": "Retired and kept disabled for its `authors` gate alone (ADR 0033). The Reconciler starts triage from `backlog-status.mjs --plan`, so this event would start the same issue a second time. The definition stays because `backlog-status.mjs` and afk-unblock read the trusted authors from the `authors` gates of the issue automations, and a repository whose automations gate nobody trusts nobody: without it the Reconciler would start nothing. Enabled, it ran issue-groom (om-auto-manage-issues, then afk-triage) on an issue a maintainer opened.",
-    "enabled": false,
-    "events": ["issue.opened"],
-    "intervalSeconds": 120,
-    "filters": {
-      "authors": ["rafalwolak"],
-      "excludeLabels": ["in-progress", "blocked", "do-not-close"],
-      "lookbackDays": 7,
-      "maxRecords": 25
-    },
-    "task": {
-      "prompt": "{{github.number}}",
-      "workflow": "issue-groom",
-      "autonomous": true,
-      "worktree": true,
-      "variants": 1,
-      "generateFollowups": false
-    }
-  },
-  {
-    "name": "Re-triage when a hold is cleared",
-    "description": "Retired and kept disabled for its `authors` gate alone, like the one above (ADR 0033). The Reconciler starts unblock and triage from `backlog-status.mjs --plan`, so this event would start the same issue a second time. Enabled, it ran issue-groom again when a person removed `blocked` from an issue.",
-    "enabled": false,
-    "events": ["issue.unlabeled"],
-    "intervalSeconds": 300,
-    "filters": {
-      "authors": ["rafalwolak"],
-      "changedLabels": ["blocked"],
-      "excludeLabels": ["in-progress", "blocked", "do-not-close"],
-      "lookbackDays": 7,
-      "maxRecords": 10
-    },
-    "task": {
-      "prompt": "{{github.number}}",
-      "workflow": "issue-groom",
-      "autonomous": true,
-      "worktree": true,
-      "variants": 1,
-      "generateFollowups": false
-    }
-  },
-  {
     "name": "Autopilot new pull requests",
     "description": "A PR opened as `rafalwolak` gets om-pr-autopilot, which diagnoses it and runs the right chain through to the squash-merge into develop (ADR 0031). There is one GitHub identity: every agent PR is authored by `rafalwolak` too, so the author filter only keeps dependabot and outside contributors out. Agent PRs are told apart by their pipeline labels instead: om-open-pr opens one carrying `review` inside its own chain (implement-ticket, issue-autofix), so `excludeLabels` stands down on `review` and every later pipeline label rather than race that chain. The standing develop-to-main promotion PR is opened with the owner's token too, and no filter here reads the base branch, so .github/workflows/promote-develop.yml opens it carrying `do-not-merge`, which is excluded: an unattended run never touches the release (ADR 0032).",
-    "events": ["pull_request.opened"],
+    "events": [
+      "pull_request.opened"
+    ],
     "intervalSeconds": 300,
     "filters": {
-      "authors": ["rafalwolak"],
+      "authors": [
+        "rafalwolak"
+      ],
       "excludeLabels": [
         "in-progress",
         "review",
@@ -75,11 +36,17 @@
   {
     "name": "Merge reviewed agent pull requests",
     "description": "A PR that om-auto-review-pr approved into `merge-queue` gets om-pr-autopilot --allow-merge, which squash-merges it into develop through om-approve-merge-pr (ADR 0031). A backstop for the implement chain, which drives its own PR to the merge: a reviewed PR whose chain ended early is picked up here. `authors` stays `rafalwolak`: every agent PR is authored by that one account, and the filter keeps dependabot and outsider PRs out of the unattended merge (the pinned stack, AGENTS.md). The develop-to-main promotion PR carries `do-not-merge` and never `merge-queue`, so it never matches (ADR 0032).",
-    "events": ["pull_request.reviewed"],
+    "events": [
+      "pull_request.reviewed"
+    ],
     "intervalSeconds": 300,
     "filters": {
-      "authors": ["rafalwolak"],
-      "anyLabels": ["merge-queue"],
+      "authors": [
+        "rafalwolak"
+      ],
+      "anyLabels": [
+        "merge-queue"
+      ],
       "excludeLabels": [
         "in-progress",
         "changes-requested",
@@ -136,6 +103,66 @@
     "task": {
       "prompt": "Run the afk-lessons skill for {{project}} on {{date}}.",
       "workflow": "lessons",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Weekly skills update",
+    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
+    "enabled": false,
+    "kind": "schedule",
+    "schedule": {
+      "type": "weekly",
+      "day": 2,
+      "hour": 5,
+      "minute": 0
+    },
+    "task": {
+      "prompt": "Run skills-update for {{project}} on {{date}}.",
+      "workflow": "skills-update",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Weekly product radar",
+    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
+    "enabled": false,
+    "kind": "schedule",
+    "schedule": {
+      "type": "weekly",
+      "day": 3,
+      "hour": 6,
+      "minute": 0
+    },
+    "task": {
+      "prompt": "Run product-radar for {{project}} on {{date}}.",
+      "workflow": "product-radar",
+      "autonomous": true,
+      "worktree": true,
+      "variants": 1,
+      "generateFollowups": false
+    }
+  },
+  {
+    "name": "Weekly context rotation",
+    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
+    "enabled": false,
+    "kind": "schedule",
+    "schedule": {
+      "type": "weekly",
+      "day": 0,
+      "hour": 4,
+      "minute": 0
+    },
+    "task": {
+      "prompt": "Run context-maintenance for {{project}} on {{date}}.",
+      "workflow": "context-maintenance",
       "autonomous": true,
       "worktree": true,
       "variants": 1,

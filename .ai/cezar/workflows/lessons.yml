@@ -7,5 +7,8 @@ steps:
   - id: afk-lessons
     name: afk-lessons
     skill: afk-lessons
-    prompt: '{{task}}'
+    prompt: |
+      {{task}}
+      Run /om-pipeline-retro first and use its evidence in afk-lessons. Repeated failures
+      become regression tests or enforced rules. Open at most one PR; no extra prose-only rules.
     allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]

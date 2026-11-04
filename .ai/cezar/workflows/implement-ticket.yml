@@ -66,7 +66,7 @@ nodes:
 
       If a progress-log line of this run's handoff file starts with `STOP:`, end at once with CEZ:DONE.
 
-      Otherwise open the PR per om-open-pr as a draft (`--draft`, SDLC.md § Draft until the last push), with the issue number from the handoff file's `ISSUE:` line as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
+      First inspect PRs in all states for this branch. Reuse an existing open or merged PR; never create another after a restart. Otherwise open the PR per om-open-pr as a draft (`--draft`, SDLC.md § Draft until the last push), with the issue number from the handoff file's `ISSUE:` line as the issue id. Put the Resolved assumptions table from the handoff file in the PR body, and reference the issue with `Fixes #<number>`.
   # The chain does not stop at an open PR: om-pr-autopilot reviews, fixes, runs QA, waits for CI and
   # squash-merges into develop (ADR 0031) - the develop ruleset requires no approving review. It
   # never merges the develop -> main promotion. QA, `risk-high` and `security` are judged by
@@ -74,20 +74,25 @@ nodes:
   - id: merge
     type: agent
     name: Drive the PR to the merge into develop
+    verdicts: [merged, blocked, skipped, ready]
     # mcp__plugin_playwright_playwright: the QA step drives a browser; without it runs try to install one.
     allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent, mcp__plugin_playwright_playwright]
     prompt: |
       {{task}}
 
-      End at once with CEZ:DONE if either holds:
-      - a progress-log line of this run's handoff file starts with `STOP:`;
-      - no PR is open for this branch (`gh pr list --head "$(git branch --show-current)"`).
+      End with CEZ:VERDICT skipped when an anchored progress-log line starts with `STOP:`.
+      Otherwise inspect every PR state for this branch (`gh pr list --head "$(git branch --show-current)" --state all`).
+      No PR in any state means skipped/no work, not issue completion: end with CEZ:VERDICT skipped.
+      A closed, unmerged PR or a PR merged into another base means CEZ:VERDICT blocked.
+      A PR already merged into `develop` means CEZ:VERDICT merged only after fresh GitHub confirmation.
 
-      Otherwise run `/om-pr-autopilot <that PR number> --allow-merge`:
+      For an open PR run `/om-pr-autopilot <that PR number>` through review, QA and fixes only. The graph owns CI waiting and the final merge. Emit CEZ:VERDICT ready once review and QA pass; do not wait on CI in the agent.
       - Before QA needs the app, provision the worktree with `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`.
       - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
-      - The PR is a draft: keep it so through review, QA and fix rounds, and after the last push attest and run `gh pr ready <number>` before waiting on CI or merging (SDLC.md § Draft until the last push).
+      - The PR is a draft: keep it so through review, QA and fix rounds, and after the last push run `gh pr ready <number>` before waiting on CI or merging (SDLC.md § Draft until the last push).
       - Merge only into `develop`.
+      Already merged work ends with CEZ:VERDICT merged only after fresh GitHub confirmation.
+      Otherwise end with CEZ:VERDICT blocked, naming the unmet gate. Never waive QA/security or remove a hold to finish.
   - id: after-implement
     type: check
     command: node .ai/scripts/pipeline-control.mjs continue
@@ -96,7 +101,7 @@ nodes:
     condition: { kind: output, ref: after-implement.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
   - id: before-pr
     type: check
-    command: node .ai/scripts/pipeline-control.mjs continue
+    command: node .ai/scripts/pipeline-control.mjs implemented
   - id: before-pr-ready
     type: if
     condition: { kind: output, ref: before-pr.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
@@ -106,6 +111,25 @@ nodes:
   - id: before-merge-ready
     type: if
     condition: { kind: output, ref: before-merge.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
+  - id: ci
+    type: github.wait-ci
+    timeoutMs: 2400000
+    pollMs: 60000
+  - id: verify-ci
+    type: check
+    command: node .ai/scripts/pipeline-control.mjs ci
+  - id: approve
+    type: agent
+    verdicts: [merged, blocked]
+    allowedTools: [Read, Grep, Glob, Bash, Skill, Agent]
+    prompt: |
+      The graph completed CI waiting. Re-read the current PR head and all merge gates.
+      Run /om-approve-merge-pr for this branch's PR into develop only. Reuse passing
+      review/QA reports for the exact head and policy; new findings still block.
+      Emit CEZ:VERDICT merged only after GitHub confirms merge; otherwise blocked.
+  - id: confirm-merge
+    type: check
+    command: node .ai/scripts/pipeline-control.mjs confirm-merge
   - id: done
     type: end
     status: success
@@ -141,5 +165,19 @@ edges:
   - { from: before-merge.fail, to: failed }
   - { from: before-merge-ready.true, to: merge }
   - { from: before-merge-ready.false, to: noop }
-  - { from: merge.done, to: done }
+  - { from: merge.merged, to: confirm-merge }
+  - { from: merge.blocked, to: failed }
+  - { from: merge.skipped, to: noop }
   - { from: merge.failed, to: failed }
+  - { from: confirm-merge.pass, to: done }
+  - { from: confirm-merge.fail, to: failed }
+  - { from: merge.ready, to: ci }
+  - { from: ci.green, to: verify-ci }
+  - { from: ci.red, to: failed }
+  - { from: ci.timeout, to: failed }
+  - { from: ci.failed, to: failed }
+  - { from: verify-ci.pass, to: approve }
+  - { from: verify-ci.fail, to: failed }
+  - { from: approve.merged, to: confirm-merge }
+  - { from: approve.blocked, to: failed }
+  - { from: approve.failed, to: failed }

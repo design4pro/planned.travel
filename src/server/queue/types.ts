@@ -37,6 +37,8 @@ export const TASK_KINDS = [
   // One-off catch-up of the participation anchor (ADR 0043): a chain of messages, one workspace each.
   // Ships inert - nothing enqueues it in this release (BACKWARD_COMPATIBILITY.md section 6).
   'participant-backfill',
+  // Consumer-first release: no producer until this handler has been deployed.
+  'workspace-late-subscription',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   //
@@ -318,6 +320,12 @@ export const invoicePaidPayloadSchema = z.object({
 
 export type InvoicePaidPayload = z.infer<typeof invoicePaidPayloadSchema>
 
+export const workspaceLateSubscriptionPayloadSchema = z.strictObject({
+  ...billingTaskBase,
+  kind: z.literal('workspace-late-subscription'),
+  providerSubscriptionId: z.string().uuid(),
+})
+
 export interface TaskPayloadMap {
   email: EmailPayload
   'pdf-export': PdfExportPayload
@@ -329,6 +337,9 @@ export interface TaskPayloadMap {
   'trip-copy': TripCopyPayload
   'trip-room-evict': TripRoomEvictPayload
   'participant-backfill': ParticipantBackfillPayload
+  'workspace-late-subscription': z.infer<
+    typeof workspaceLateSubscriptionPayloadSchema
+  >
   'billing.subscription.changed': SubscriptionChangedPayload
   'billing.invoice.paid': InvoicePaidPayload
 }
@@ -352,6 +363,11 @@ const envelopeBase = {
 }
 
 export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('workspace-late-subscription'),
+    payload: workspaceLateSubscriptionPayloadSchema,
+  }),
   z.object({
     ...envelopeBase,
     kind: z.literal('email'),
@@ -429,6 +445,8 @@ export type TaskEnvelopeOf<TKind extends TaskKind> = Extract<
  * does when a secret is missing instead of assuming it is present.
  */
 export interface TaskSecrets {
+  POLAR_ACCESS_TOKEN?: string
+  POLAR_SERVER?: string
   /** Transactional email provider key (Resend-compatible REST API). */
   EMAIL_API_KEY?: string
   /** Account id used by the D1 export and Browser Rendering REST calls. */

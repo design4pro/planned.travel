@@ -1,0 +1,15 @@
+name: skills-update
+description: Prepare one pinned skills update PR, preserving local policy.
+steps:
+  - id: update
+    prompt: |
+      Check for one existing skills update PR before doing any work; reuse it if present.
+      Compare open-mercato/skills with the pin in docs/agents/cezar.md. If unchanged, stop.
+      Vendor the complete selected SHA, including references and scripts. Preserve the documented
+      local repairs in scripts/agents/skills-upstream.json; review each against upstream. Update
+      that manifest, skills-lock.json and the documentation pin together.
+      Read UPGRADE_NOTES.md and merge tracker/browser descriptors preserving local REST operations,
+      claim, QA, security and merge gates. Keep startup auto-update disabled.
+      Validate hashes, links and compatibility; open one draft PR. Do not merge this update,
+      install a harness or schedule a second PR owner.
+    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, Agent]
