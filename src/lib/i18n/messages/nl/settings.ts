@@ -702,7 +702,7 @@ const messages = {
   'twoFactor.password.pending': 'Wordt ingesteld',
   'twoFactor.password.invalid': 'Dit wachtwoord klopt niet.',
   'twoFactor.key.intro':
-    'Je hebt een authenticator-app op je telefoon nodig. Voeg deze sleutel toe en kom hier terug. Tweestapsverificatie staat nog niet aan.',
+    'Voeg deze nieuwe sleutel toe aan je authenticator en bevestig een code. Je huidige aanmeldmethode blijft ongewijzigd tot de bevestiging.',
   'twoFactor.key.matrixLabel':
     'Instelcode. Dezelfde sleutel is beschikbaar als tekst',
   'twoFactor.key.matrixFailed':
@@ -715,21 +715,18 @@ const messages = {
   'twoFactor.key.open': 'Openen in je authenticator-app',
   'twoFactor.key.startOver': 'Opnieuw beginnen',
   'twoFactor.key.startOverHint':
-    'Opnieuw beginnen maakt een nieuwe sleutel. Een sleutel die je al aan een app hebt toegevoegd, werkt dan niet meer.',
+    'Als je deze instelling verwerpt, blijft je huidige aanmeldmethode ongewijzigd.',
   'twoFactor.key.next': 'Ik heb hem toegevoegd',
   'twoFactor.code.label': 'Code uit de app',
-  'twoFactor.code.hint': 'De zes cijfers die de app nu toont.',
   'twoFactor.code.submit': 'Tweestapsverificatie aanzetten',
   'twoFactor.code.pending': 'Wordt gecontroleerd',
   'twoFactor.code.invalid':
     'Deze code klopt niet. Controleer de tijd op je telefoon en voer de nieuwste code uit de app in.',
-  'twoFactor.code.unclear':
-    'We konden niet vaststellen of het gelukt is. Voer de nieuwste code in om opnieuw te proberen.',
   'twoFactor.rateLimited.title': 'Te veel pogingen kort na elkaar',
   'twoFactor.rateLimited.password':
-    'Wacht ongeveer tien seconden en probeer opnieuw. Je invoer blijft bewaard.',
+    'Wacht tot deze actie weer beschikbaar is en probeer het opnieuw. Je invoer is bewaard.',
   'twoFactor.rateLimited.code':
-    'Wacht maximaal een minuut en probeer opnieuw. Je invoer blijft bewaard.',
+    'Wacht tot deze actie weer beschikbaar is en probeer het opnieuw. Je invoer is bewaard.',
   'twoFactor.codes.title': 'Je back-upcodes',
   'twoFactor.codes.body':
     'Elke code werkt eenmaal als je je telefoon verliest. Je ziet ze alleen nu, dus bewaar ze veilig.',
@@ -762,21 +759,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Tweestapsverificatie vereist een wachtwoord voor dit account. De volgende pagina vraagt je e-mail en stuurt een instellink. Een wachtwoord instellen meldt je overal af. Meld je opnieuw aan en kom hier terug.',
   'twoFactor.nopassword.action': 'Wachtwoord instellen',
-  'twoFactor.setup.action': 'Instelsleutel opnieuw tonen',
-  'twoFactor.setup.title': 'Instelsleutel',
-  'twoFactor.setup.body':
-    'Voeg deze sleutel toe op een ander apparaat. De sleutel op je andere apparaten blijft werken.',
-  'twoFactor.setup.done': 'Klaar',
-  'twoFactor.setup.confirm': 'Sleutel tonen',
   'twoFactor.setup.pending': 'Controleren',
   'twoFactor.off.action': 'Tweestapsverificatie uitschakelen',
   'twoFactor.off.title': 'Tweestapsverificatie uitschakelen?',
   'twoFactor.off.body':
-    'Iedereen met je wachtwoord kan zonder code inloggen. Je andere ingelogde apparaten blijven ingelogd.',
+    'Iedereen met je wachtwoord kan zich zonder code aanmelden.',
   'twoFactor.off.confirm': 'Uitschakelen',
   'twoFactor.off.pending': 'Bezig met uitschakelen',
   'twoFactor.off.cancel': 'Ingeschakeld houden',
-  'twoFactor.off.done': 'Tweestapsverificatie is uitgeschakeld',
   'security.other.label': 'Andere apparaten afmelden',
   'security.other.description':
     'Andere apparaten moeten opnieuw inloggen. Verbindingen sluiten asynchroon; vertrouwde browsers, Google, Apple en toegangssleutels blijven beschikbaar.',
@@ -789,6 +779,26 @@ const messages = {
   'security.other.pending':
     'Andere sessies zijn ingetrokken. Het sluiten van verbindingen kan langer duren.',
   'security.other.check': 'Status controleren',
+  'twoFactor.security.effect':
+    'Deze wijziging meldt andere apparaten af en verwijdert eerder browservertrouwen. Dit apparaat krijgt een nieuwe sessie.',
+  'twoFactor.security.currentStep':
+    'Gebruik de huidige code van je authenticator. Wacht op een nieuwe code als je deze al voor een beveiligingswijziging gebruikte.',
+  'twoFactor.security.invalidProof':
+    'Deze code is ongeldig of al gebruikt. Voer een nieuwe authenticatorcode of een ongebruikte back-upcode in.',
+  'twoFactor.security.replace': 'Authenticator vervangen',
+  'twoFactor.security.codesLost':
+    'De wijziging is voltooid, maar de nieuwe back-upcodes kunnen niet opnieuw worden getoond. Meld je opnieuw aan om je instellingen te controleren.',
+  'twoFactor.security.changed': 'Je beveiligingsinstellingen zijn gewijzigd.',
+  'twoFactor.security.fresh':
+    'Meld je opnieuw aan en bevestig deze beveiligingswijziging binnen vijf minuten.',
+  'twoFactor.security.expired':
+    'Deze configuratie is verlopen. Begin opnieuw; je actieve authenticator is niet gewijzigd.',
+  'twoFactor.security.stale':
+    'Je beveiligingsstatus is veranderd. Laad deze opnieuw voordat je iets anders wijzigt.',
+  'twoFactor.security.upgrade':
+    'Vernieuw deze pagina om de bijgewerkte beveiligingscontroles te gebruiken.',
+  'twoFactor.security.unavailable':
+    'Beveiligingswijzigingen zijn niet beschikbaar. Laad opnieuw om het nogmaals te controleren.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

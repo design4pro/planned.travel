@@ -59,7 +59,7 @@ import {
 import { createKvSecondaryStorage } from './secondary-storage'
 import { seedSignupLocale } from './signup-locale'
 import { passwordAttempts } from './password-attempts'
-import { twoFactorEnableGuard } from './two-factor-guard'
+import { createTwoFactorEnableGuard } from './two-factor-guard'
 import type { Database } from '#/server/db/types'
 import type { Logger } from '#/server/observability'
 import type { AuthReadAdapter } from '#/server/fns/console/adapter-reads'
@@ -420,6 +420,10 @@ function buildAuth() {
       customRules: {
         '/account-security/register-operation': { window: 300, max: 5 },
         '/account-security/revoke-other-sessions': { window: 300, max: 5 },
+        '/account-security/prepare-factor': { window: 300, max: 5 },
+        '/account-security/commit-factor': { window: 300, max: 10 },
+        '/account-security/disable-factor': { window: 300, max: 5 },
+        '/account-security/replace-backup-codes': { window: 300, max: 5 },
         '/account-security/operation-status': { window: 60, max: 20 },
         '/sign-in/email': { window: 60, max: 10 },
         '/sign-up/email': { window: 300, max: 5 },
@@ -455,7 +459,7 @@ function buildAuth() {
     // end their own session (#1093; its `before` half is the `roomEvictionPrepare` plugin below), and
     // deletes the cached session blobs a password reset, revoke-all or revoking password change ended (#1176),
     // and ends the other sessions a revoke-other-sessions missed because the per-user index did not name them (#1240).
-    hooks: { before: twoFactorEnableGuard, after: roomEvictionHook },
+    hooks: { before: createTwoFactorEnableGuard(authority.enforced), after: roomEvictionHook },
 
     databaseHooks: {
       user: {

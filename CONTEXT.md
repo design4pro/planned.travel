@@ -86,7 +86,7 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Collection label** - a named, coloured label belonging to one collection, used to group its saved places. A place can carry several labels.
 - **Place status** - where a saved place stands: idea, shortlisted, planned, visited or rejected. Any workspace member may change it.
 
-- **Setup key** - the shared authenticator secret used for two-factor codes. Showing it again adds the same secret to another device and keeps existing authenticators working.
+- **Setup key** - the shared authenticator secret used for two-factor codes. A proposed key becomes active only after a code from that new key is confirmed. Replacing an active key requires current possession; password alone cannot export it.
 - **Setup code** - a scannable QR representation of the authenticator setup URI. The same setup key remains available as text when the code cannot be drawn or scanned.
 - **Backup code** - a one-use code for signing in when the authenticator app is unavailable. A set is shown once when two-factor authentication is enabled or the codes are replaced. Replacing a set invalidates the previous set. Use “backup code”; avoid “recovery code”.
 - **Travel statistics** — a traveller’s stored roll-up of trips they are on, shown in the Atlas Stats tab. The all-time view also reads their live visited regions, visits and continents; a year view counts countries on that year’s trips instead of their visited-country list.
@@ -118,3 +118,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Session security revision** - the account-wide generation against which a device proved its right to remain signed in. Signing out other devices advances it and retains only the current device at the new generation.
 - **Operation receipt** - a restricted browser credential issued before an account-security action, allowing its result to be checked if the response is lost. It grants no access to trips or other account data.
 - **Cleanup pending** - access has already been revoked, while remaining cached session data or open connections are still being retired.
+
+- **Factor proposal** - an expiring, encrypted setup bound to one initiating session and security operation; it does not change the active authenticator until confirmed.
+- **Security receipt** - a restricted signed browser cookie issued before a security operation, used to recover its result without returning credentials or backup codes.

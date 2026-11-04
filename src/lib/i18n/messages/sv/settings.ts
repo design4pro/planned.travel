@@ -689,7 +689,7 @@ const messages = {
   'twoFactor.password.pending': 'Ställer in',
   'twoFactor.password.invalid': 'Lösenordet stämmer inte.',
   'twoFactor.key.intro':
-    'Du behöver en autentiseringsapp på telefonen. Lägg till nyckeln och kom tillbaka hit. Tvåfaktor är inte på ännu.',
+    'Lägg till den nya nyckeln i autentiseringsappen och bekräfta en kod. Din nuvarande inloggningsmetod ändras inte förrän du bekräftar.',
   'twoFactor.key.matrixLabel': 'Inställningskod. Samma nyckel finns som text',
   'twoFactor.key.matrixFailed':
     'Vi kunde inte skapa en kod för den här nyckeln. Ange inställningsnyckeln i din app.',
@@ -701,21 +701,18 @@ const messages = {
   'twoFactor.key.open': 'Öppna i din autentiseringsapp',
   'twoFactor.key.startOver': 'Börja om',
   'twoFactor.key.startOverHint':
-    'Om du börjar om skapas en ny nyckel. En nyckel som redan lagts till i en app slutar fungera.',
+    'Om du avbryter den här konfigurationen ändras inte din nuvarande inloggningsmetod.',
   'twoFactor.key.next': 'Jag har lagt till den',
   'twoFactor.code.label': 'Kod från appen',
-  'twoFactor.code.hint': 'De sex siffror som appen visar nu.',
   'twoFactor.code.submit': 'Slå på tvåfaktor',
   'twoFactor.code.pending': 'Kontrollerar',
   'twoFactor.code.invalid':
     'Koden stämde inte. Kontrollera tiden på telefonen och ange den senaste koden från appen.',
-  'twoFactor.code.unclear':
-    'Vi kunde inte avgöra om det fungerade. Ange den senaste koden för att försöka igen.',
   'twoFactor.rateLimited.title': 'För många försök på kort tid',
   'twoFactor.rateLimited.password':
-    'Vänta ungefär tio sekunder och försök igen. Det du skrev finns kvar.',
+    'Vänta tills åtgärden är tillgänglig igen och försök på nytt. Det du skrev finns kvar.',
   'twoFactor.rateLimited.code':
-    'Vänta upp till en minut och försök igen. Det du skrev finns kvar.',
+    'Vänta tills åtgärden är tillgänglig igen och försök på nytt. Det du skrev finns kvar.',
   'twoFactor.codes.title': 'Dina reservkoder',
   'twoFactor.codes.body':
     'Varje kod fungerar en gång om du tappar telefonen. De visas bara nu, så förvara dem säkert.',
@@ -748,21 +745,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Tvåfaktor kräver ett lösenord på kontot. Nästa sida ber om din e-post och skickar en länk för att ange ett. När du gör det loggas du ut överallt. Logga in igen och kom tillbaka hit.',
   'twoFactor.nopassword.action': 'Ange ett lösenord',
-  'twoFactor.setup.action': 'Visa inställningsnyckeln igen',
-  'twoFactor.setup.title': 'Inställningsnyckel',
-  'twoFactor.setup.body':
-    'Lägg till den här nyckeln på en annan enhet. Nyckeln på dina andra enheter fortsätter att fungera.',
-  'twoFactor.setup.done': 'Klart',
-  'twoFactor.setup.confirm': 'Visa nyckel',
   'twoFactor.setup.pending': 'Kontrollerar',
   'twoFactor.off.action': 'Stäng av tvåfaktorsautentisering',
   'twoFactor.off.title': 'Stäng av tvåfaktorsautentisering?',
   'twoFactor.off.body':
-    'Alla som har ditt lösenord kan logga in utan kod. Dina andra inloggade enheter förblir inloggade.',
+    'Alla som har ditt lösenord kommer att kunna logga in utan kod.',
   'twoFactor.off.confirm': 'Stäng av',
   'twoFactor.off.pending': 'Stänger av',
   'twoFactor.off.cancel': 'Behåll på',
-  'twoFactor.off.done': 'Tvåfaktorsautentisering är avstängd',
   'security.other.label': 'Logga ut andra enheter',
   'security.other.description':
     'Andra enheter måste logga in igen. Anslutningar stängs asynkront; betrodda webbläsare, Google, Apple och passnycklar är fortfarande tillgängliga.',
@@ -775,6 +765,26 @@ const messages = {
   'security.other.pending':
     'Andra sessioner har återkallats. Det kan ta längre tid att stänga anslutningar.',
   'security.other.check': 'Kontrollera status',
+  'twoFactor.security.effect':
+    'Ändringen loggar ut andra enheter och tar bort tidigare förtroende för webbläsare. Den här enheten får en ny session.',
+  'twoFactor.security.currentStep':
+    'Använd autentiseringsappens aktuella kod. Vänta på en ny kod om du redan har använt den för en säkerhetsändring.',
+  'twoFactor.security.invalidProof':
+    'Koden är ogiltig eller redan använd. Ange en ny autentiseringskod eller en oanvänd reservkod.',
+  'twoFactor.security.replace': 'Byt autentiseringsapp',
+  'twoFactor.security.codesLost':
+    'Ändringen är klar, men de nya reservkoderna kan inte visas igen. Logga in igen för att kontrollera inställningarna.',
+  'twoFactor.security.changed': 'Dina säkerhetsinställningar har ändrats.',
+  'twoFactor.security.fresh':
+    'Logga in igen och bekräfta säkerhetsändringen inom fem minuter.',
+  'twoFactor.security.expired':
+    'Konfigurationen har gått ut. Börja om; din aktiva autentiseringsapp är oförändrad.',
+  'twoFactor.security.stale':
+    'Ditt säkerhetsläge har ändrats. Läs in det igen före nästa ändring.',
+  'twoFactor.security.upgrade':
+    'Uppdatera sidan för att använda de nya säkerhetskontrollerna.',
+  'twoFactor.security.unavailable':
+    'Säkerhetsändringar är inte tillgängliga. Läs in sidan igen för att kontrollera.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

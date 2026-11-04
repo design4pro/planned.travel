@@ -852,3 +852,7 @@ term, and it does it silently. `documentHeight()` and `tripDocumentHeight()` sum
 slice and the row the slice leaves the fixed bar — which the shell's `min-h-svh` stretches over
 rather than pads for — and the tests beside that file assert both land on exactly one viewport
 at both breakpoints, with the impersonation bar present and absent.
+
+### Atomic factor lifecycle
+
+Factor management extends the ADR 0049 account authority and cleanup owners. Encrypted session-bound proposals are separate from the active factor. The winning bounded D1 batch changes factor/set state, consumes current proof/replay reservations, advances account/trust authority, inserts a replacement current session and records cleanup/outcome atomically. Primary authority immediately rejects all old sessions and browser trust even while KV/room cleanup is pending. Shared account proof budgets use versioned reservations; native sign-in and management share backup-set CAS. Restricted receipts reconcile lost responses without issuing credentials or redisplaying codes. See [the authority inventory](account-session-authority.md#factor-lifecycle-extension-1759) and [deployment compatibility](../BACKWARD_COMPATIBILITY.md#factor-lifecycle-security-exception-1759-adr-0049).

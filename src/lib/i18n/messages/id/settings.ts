@@ -683,7 +683,7 @@ const messages = {
   'twoFactor.password.pending': 'Menyiapkan',
   'twoFactor.password.invalid': 'Kata sandi itu salah.',
   'twoFactor.key.intro':
-    'Anda memerlukan aplikasi autentikator di ponsel. Tambahkan kunci ini lalu kembali ke sini. Dua faktor belum aktif.',
+    'Tambahkan kunci baru ini ke aplikasi autentikator, lalu konfirmasi kode. Metode masuk saat ini tidak berubah hingga konfirmasi.',
   'twoFactor.key.matrixLabel':
     'Kode penyiapan. Kunci yang sama tersedia sebagai teks',
   'twoFactor.key.matrixFailed':
@@ -696,21 +696,18 @@ const messages = {
   'twoFactor.key.open': 'Buka di aplikasi autentikator',
   'twoFactor.key.startOver': 'Mulai lagi',
   'twoFactor.key.startOverHint':
-    'Memulai lagi membuat kunci baru. Kunci yang sudah ditambahkan ke aplikasi akan berhenti berfungsi.',
+    'Membatalkan pengaturan ini tidak mengubah metode masuk saat ini.',
   'twoFactor.key.next': 'Sudah saya tambahkan',
   'twoFactor.code.label': 'Kode dari aplikasi',
-  'twoFactor.code.hint': 'Enam digit yang ditampilkan aplikasi saat ini.',
   'twoFactor.code.submit': 'Aktifkan dua faktor',
   'twoFactor.code.pending': 'Memeriksa',
   'twoFactor.code.invalid':
     'Kode tidak cocok. Periksa waktu ponsel dan masukkan kode terbaru dari aplikasi.',
-  'twoFactor.code.unclear':
-    'Kami tidak dapat memastikan apakah berhasil. Masukkan kode terbaru untuk mencoba lagi.',
   'twoFactor.rateLimited.title': 'Terlalu banyak percobaan dalam waktu singkat',
   'twoFactor.rateLimited.password':
-    'Tunggu sekitar sepuluh detik lalu coba lagi. Semua yang diketik tetap tersimpan.',
+    'Tunggu hingga tindakan ini tersedia lagi, lalu coba kembali. Data yang Anda ketik tidak hilang.',
   'twoFactor.rateLimited.code':
-    'Tunggu hingga satu menit lalu coba lagi. Semua yang diketik tetap tersimpan.',
+    'Tunggu hingga tindakan ini tersedia lagi, lalu coba kembali. Data yang Anda ketik tidak hilang.',
   'twoFactor.codes.title': 'Kode cadangan Anda',
   'twoFactor.codes.body':
     'Setiap kode dapat digunakan sekali jika ponsel hilang. Kode hanya ditampilkan sekarang, jadi simpan di tempat aman.',
@@ -743,21 +740,14 @@ const messages = {
   'twoFactor.nopassword.body':
     'Dua faktor memerlukan kata sandi di akun ini. Halaman berikut meminta email dan mengirim tautan untuk menetapkannya. Menetapkan kata sandi mengeluarkan Anda dari semua sesi. Masuk lagi dan kembali ke sini.',
   'twoFactor.nopassword.action': 'Tetapkan kata sandi',
-  'twoFactor.setup.action': 'Tampilkan kunci penyiapan lagi',
-  'twoFactor.setup.title': 'Kunci penyiapan',
-  'twoFactor.setup.body':
-    'Tambahkan kunci ini ke perangkat lain. Kunci di perangkat Anda yang lain tetap berfungsi.',
-  'twoFactor.setup.done': 'Selesai',
-  'twoFactor.setup.confirm': 'Tampilkan kunci',
   'twoFactor.setup.pending': 'Memeriksa',
   'twoFactor.off.action': 'Nonaktifkan autentikasi dua faktor',
   'twoFactor.off.title': 'Nonaktifkan autentikasi dua faktor?',
   'twoFactor.off.body':
-    'Siapa pun yang mengetahui kata sandi Anda dapat masuk tanpa kode. Perangkat lain yang sudah masuk akan tetap masuk.',
+    'Siapa pun yang mengetahui kata sandi Anda dapat masuk tanpa kode.',
   'twoFactor.off.confirm': 'Nonaktifkan',
   'twoFactor.off.pending': 'Menonaktifkan',
   'twoFactor.off.cancel': 'Tetap aktifkan',
-  'twoFactor.off.done': 'Autentikasi dua faktor nonaktif',
   'security.other.label': 'Keluar dari perangkat lain',
   'security.other.description':
     'Perangkat lain harus masuk lagi. Koneksi ditutup secara asinkron; browser tepercaya, Google, Apple, dan kunci sandi tetap tersedia.',
@@ -770,6 +760,26 @@ const messages = {
   'security.other.pending':
     'Sesi lain telah dicabut. Koneksi mungkin memerlukan waktu lebih lama untuk ditutup.',
   'security.other.check': 'Periksa status',
+  'twoFactor.security.effect':
+    'Perubahan ini mengeluarkan perangkat lain dan menghapus kepercayaan peramban sebelumnya. Perangkat ini menerima sesi baru.',
+  'twoFactor.security.currentStep':
+    'Gunakan kode autentikator saat ini. Tunggu kode baru jika kode tersebut sudah digunakan untuk perubahan keamanan.',
+  'twoFactor.security.invalidProof':
+    'Kode ini tidak valid atau sudah digunakan. Masukkan kode autentikator baru atau kode cadangan yang belum digunakan.',
+  'twoFactor.security.replace': 'Ganti autentikator',
+  'twoFactor.security.codesLost':
+    'Perubahan selesai, tetapi kode cadangan baru tidak dapat ditampilkan lagi. Masuk kembali untuk memeriksa pengaturan.',
+  'twoFactor.security.changed': 'Pengaturan keamanan Anda berubah.',
+  'twoFactor.security.fresh':
+    'Masuk kembali, lalu konfirmasikan perubahan keamanan ini dalam lima menit.',
+  'twoFactor.security.expired':
+    'Penyiapan ini kedaluwarsa. Mulai lagi; autentikator aktif Anda tidak berubah.',
+  'twoFactor.security.stale':
+    'Status keamanan Anda berubah. Muat ulang sebelum memulai perubahan lain.',
+  'twoFactor.security.upgrade':
+    'Segarkan halaman ini untuk menggunakan pemeriksaan keamanan terbaru.',
+  'twoFactor.security.unavailable':
+    'Perubahan keamanan tidak tersedia. Muat ulang untuk memeriksa lagi.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

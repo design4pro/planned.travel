@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import { toast } from 'sonner'
 import { ArrowLeft } from 'lucide-react'
 import {
   Alert,
@@ -21,8 +20,14 @@ import {
 } from '#/components/ui'
 import {
   authClient,
-  thrownToAuthFailure,
   toAuthFailure,
+  authRequestFailure,
+  factorAvailability,
+  registerFactorOperation,
+  prepareFactor,
+  commitFactorOperation,
+  cancelFactorOperation,
+  factorOperationStatus,
 } from '#/lib/auth/client'
 import { useTranslate } from '#/lib/i18n'
 import { extractSetupKey } from '../-lib/two-factor'
@@ -30,7 +35,14 @@ import { TwoFactorKey } from './two-factor-key'
 import { TwoFactorCodes } from './two-factor-codes'
 import { TwoFactorPasswordDialog } from './two-factor-password-dialog'
 import { TwoFactorFeedback, useTwoFactorFeedback } from './two-factor-feedback'
-import type { AuthFailure } from '#/lib/auth/client'
+import type { MessageKey } from '#/lib/i18n'
+import type {
+  AuthFailure,
+  FactorOperation,
+  FactorProof,
+  FactorRegistration,
+  FactorOutcome,
+} from '#/lib/auth/client'
 
 const STEP_KEYS = [
   'settings.twoFactor.steps.password',
@@ -46,6 +58,13 @@ export function TwoFactorSettings({
 }) {
   const t = useTranslate()
   const router = useRouter()
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const [enabled, setEnabled] = useState(twoFactorEnabled)
   const [loaderEnabled, setLoaderEnabled] = useState(twoFactorEnabled)
   if (loaderEnabled !== twoFactorEnabled) {
@@ -59,8 +78,34 @@ export function TwoFactorSettings({
   const [code, setCode] = useState('')
   const [setup, setSetup] = useState<{
     uri: string
-    codes: Array<string>
+    proposalId: string
+    registration: FactorRegistration
+    expiresAt: number
   } | null>(null)
+  const registration = useRef<FactorRegistration | null>(null)
+  const pendingIntent = useRef<{
+    operation: FactorOperation
+    intent: string
+  } | null>(null)
+  const [available, setAvailable] = useState<boolean | null>(null)
+  const [recovery, setRecovery] = useState<string | null>(null)
+  const [needsSignIn, setNeedsSignIn] = useState(false)
+  const [notice, setNotice] = useState<MessageKey | null>(null)
+  useEffect(() => {
+    let active = true
+    void factorAvailability()
+      .then((result) => {
+        if (!active) return
+        setAvailable(result.available)
+        if (result.recovery) setRecovery(result.recovery.id)
+      })
+      .catch(() => {
+        if (active) setAvailable(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
   const [codes, setCodes] = useState<Array<string> | null>(null)
   const [alreadyOn, setAlreadyOn] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -92,7 +137,7 @@ export function TwoFactorSettings({
   }, [on, codes])
   useEffect(() => {
     heading.current?.focus()
-  }, [step, on, credential, codes])
+  }, [step, on, credential, codes, recovery, needsSignIn, available])
   function clearSetup() {
     setPassword('')
     setCode('')
@@ -129,126 +174,311 @@ export function TwoFactorSettings({
       setPassword('')
     feedback.reject(failure, step === 2 ? 'code' : 'password')
   }
+  function applyOutcome(result: FactorOutcome, recovered = false) {
+    if (!mounted.current) return
+    if (result.status !== 'committed' || result.enabled === null) return
+    registration.current = null
+    pendingIntent.current = null
+    setRecovery(null)
+    clearSetup()
+    setStep(0)
+    setEnabled(result.enabled)
+    setCredential(null)
+    if (result.backupCodes && !recovered) showCodes(result.backupCodes)
+    else {
+      setCodes(null)
+      setNotice(
+        recovered && result.operation !== 'disable'
+          ? 'settings.twoFactor.security.codesLost'
+          : 'settings.twoFactor.security.changed',
+      )
+    }
+    if (result.cleanupPending) setNotice('settings.security.other.pending')
+    if (recovered) setNeedsSignIn(true)
+    else void router.invalidate().catch(() => undefined)
+    window.setTimeout(() => {
+      if (mounted.current) heading.current?.focus()
+    }, 0)
+  }
+  async function begin(operation: FactorOperation) {
+    if (!mounted.current) throw new Error('FactorViewClosed')
+    if (recovery) throw new Error('FactorOutcomePending')
+    if (registration.current?.operation === operation)
+      return registration.current
+    if (registration.current) {
+      const cancelled = await cancelFactorOperation(registration.current)
+      if (cancelled.status !== 'refused')
+        throw new Error('FactorOutcomePending')
+    }
+    if (!mounted.current) throw new Error('FactorViewClosed')
+    if (pendingIntent.current?.operation !== operation)
+      pendingIntent.current = { operation, intent: crypto.randomUUID() }
+    const value = await registerFactorOperation(
+      operation,
+      pendingIntent.current.intent,
+    )
+    if (!mounted.current) throw new Error('FactorViewClosed')
+    registration.current = value
+    return value
+  }
+  async function failed(cause: unknown): Promise<AuthFailure | null> {
+    if (!mounted.current) return null
+    const failure = authRequestFailure(cause)
+    if (
+      failure.status === 0 ||
+      failure.status >= 500 ||
+      failure.code === 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN' ||
+      failure.code === 'FACTOR_OUTCOME_UNKNOWN'
+    ) {
+      if (registration.current) {
+        setRecovery(registration.current.id)
+        setRestart(false)
+        clearSetup()
+        return null
+      }
+    }
+    if (
+      failure.code === 'FACTOR_STATE_CHANGED' ||
+      failure.code === 'FACTOR_SETUP_EXPIRED'
+    ) {
+      clearSetup()
+      setStep(0)
+      if (registration.current) {
+        const previous = registration.current
+        try {
+          await cancelFactorOperation(previous)
+          registration.current = null
+          pendingIntent.current = null
+        } catch {
+          setRecovery(previous.id)
+        }
+      }
+      try {
+        const session = await authClient.getSession({
+          query: { disableCookieCache: true },
+        })
+        if (!mounted.current) return null
+        if (session.error || !session.data) setNeedsSignIn(true)
+        else setEnabled(session.data.user.twoFactorEnabled === true)
+      } catch {
+        setNeedsSignIn(true)
+      }
+      setNotice(
+        failure.code === 'FACTOR_SETUP_EXPIRED'
+          ? 'settings.twoFactor.security.expired'
+          : 'settings.twoFactor.security.stale',
+      )
+      return null
+    }
+    if (
+      failure.code === 'FACTOR_FRESH_SESSION_REQUIRED' ||
+      failure.code === 'PASSWORD_ATTEMPTS_LOCKED' ||
+      failure.status === 401
+    ) {
+      setNeedsSignIn(true)
+      return null
+    }
+    return failure
+  }
   async function enable() {
     if (busy || feedback.wait || !password) return
+    heading.current?.focus()
     setBusy(true)
     setInvalid(false)
     feedback.setFailure(null)
     try {
-      const session = await authClient.getSession({
-        query: { disableCookieCache: true },
+      const value = await begin('enable')
+      const result = await prepareFactor(value, password)
+      if (!mounted.current) return
+      extractSetupKey(result.totpURI)
+      setSetup({
+        uri: result.totpURI,
+        proposalId: result.proposalId,
+        registration: value,
+        expiresAt: result.expiresAt,
       })
-      if (session.error) {
-        reject(toAuthFailure(session.error))
-        return
-      }
-      if (!session.data) {
-        reject(toAuthFailure(null))
-        return
-      }
-      if (session.data.user.twoFactorEnabled) {
-        showOn()
-        return
-      }
-      const result = await authClient.twoFactor.enable({ password })
-      if (result.error) {
-        reject(toAuthFailure(result.error))
-        return
-      }
-      if (!result.data || !('totpURI' in result.data)) {
-        reject(toAuthFailure(null))
-        return
-      }
-      extractSetupKey(result.data.totpURI)
-      setSetup({ uri: result.data.totpURI, codes: result.data.backupCodes })
       setPassword('')
       setStep(1)
     } catch (cause) {
-      reject(thrownToAuthFailure(cause))
+      const failure = await failed(cause)
+      if (failure) reject(failure)
     } finally {
       setBusy(false)
     }
   }
-  async function confirm() {
-    if (busy || feedback.wait || !/^\d{6}$/.test(code) || !setup) return
+  async function submitCode() {
+    if (busy || feedback.wait || !/^[0-9]{6}$/.test(code) || !setup) return
+    heading.current?.focus()
     setBusy(true)
     setInvalid(false)
     feedback.setFailure(null)
     try {
-      const result = await authClient.twoFactor.verifyTotp({ code })
-      if (result.error) {
-        const failure = toAuthFailure(result.error)
-        if (failure.status !== 0) {
-          reject(failure)
-          return
-        }
-      } else {
-        showCodes(setup.codes)
-        return
-      }
-    } catch {
-      /* A lost response may follow a committed verification; reconcile once below. */
-    }
-    try {
-      const session = await authClient.getSession({
-        query: { disableCookieCache: true },
+      const result = await commitFactorOperation(setup.registration, {
+        proposalId: setup.proposalId,
+        code,
       })
-      if (!session.error && session.data?.user.twoFactorEnabled) {
-        showCodes(setup.codes)
-        setBusy(false)
-        return
-      }
-    } catch {
-      /* An unavailable read leaves the outcome unknown. */
-    }
-    feedback.setFailure({
-      titleKey: 'auth.error.offline.title',
-      detailKey: 'settings.twoFactor.code.unclear',
-      tone: 'warning',
-    })
-    setBusy(false)
-  }
-  // A successful confirm returns from the try block; release its busy state on the next screen.
-  async function submitCode() {
-    try {
-      await confirm()
+      if (!mounted.current) return
+      if (result.status === 'committed') applyOutcome(result)
+      else setRecovery(setup.registration.id)
+    } catch (cause) {
+      const failure = await failed(cause)
+      if (failure) reject(failure)
     } finally {
       setBusy(false)
     }
   }
-  async function replace(value: string): Promise<AuthFailure | null> {
-    const result = await authClient.twoFactor.generateBackupCodes({
-      password: value,
-    })
-    if (result.error) return toAuthFailure(result.error)
-    if (!result.data) return toAuthFailure(null)
-    showCodes(result.data.backupCodes)
-    return null
+  async function change(
+    operation: 'disable' | 'backup',
+    password: string,
+    proof: FactorProof,
+  ): Promise<AuthFailure | null> {
+    try {
+      const value = await begin(operation)
+      const result = await commitFactorOperation(value, { password, proof })
+      if (!mounted.current) return null
+      if (result.status === 'committed') applyOutcome(result)
+      else setRecovery(value.id)
+      return null
+    } catch (cause) {
+      return failed(cause)
+    }
   }
-  async function showKey(value: string) {
-    const result = await authClient.twoFactor.getTotpUri({ password: value })
-    if (result.error) return toAuthFailure(result.error)
-    if (!result.data) return toAuthFailure(null)
-    extractSetupKey(result.data.totpURI)
-    return { uri: result.data.totpURI }
+  async function replaceAuthenticator(
+    password: string,
+    proof: FactorProof,
+  ): Promise<AuthFailure | null> {
+    try {
+      const value = await begin('replace')
+      const result = await prepareFactor(value, password, proof)
+      if (!mounted.current) return null
+      extractSetupKey(result.totpURI)
+      setSetup({
+        uri: result.totpURI,
+        proposalId: result.proposalId,
+        registration: value,
+        expiresAt: result.expiresAt,
+      })
+      setStep(1)
+      return null
+    } catch (cause) {
+      return failed(cause)
+    }
   }
-  async function turnOff(value: string): Promise<AuthFailure | null> {
-    const result = await authClient.twoFactor.disable({ password: value })
-    if (result.error) return toAuthFailure(result.error)
-    if (result.data?.status !== true) return toAuthFailure(null)
-    clearSetup()
-    setStep(0)
-    setCodes(null)
-    setAlreadyOn(false)
-    setCredential(null)
-    setEnabled(false)
-    feedback.setFailure(null)
-    toast.success(t('settings.twoFactor.off.done'))
-    void router.invalidate().catch(() => undefined)
-    return null
+  async function checkStatus() {
+    if (!recovery || busy) return
+    setBusy(true)
+    try {
+      const result = await factorOperationStatus(recovery)
+      if (!mounted.current) return
+      if (result.status === 'committed') applyOutcome(result, true)
+      else if (result.status === 'refused') {
+        registration.current = null
+        pendingIntent.current = null
+        setRecovery(null)
+        clearSetup()
+        setStep(0)
+        setNotice('settings.twoFactor.security.stale')
+        try {
+          const session = await authClient.getSession({
+            query: { disableCookieCache: true },
+          })
+          if (!mounted.current) return
+          if (!session.data || session.error) setNeedsSignIn(true)
+          else setEnabled(session.data.user.twoFactorEnabled === true)
+        } catch {
+          setNeedsSignIn(true)
+        }
+      }
+    } catch (cause) {
+      if (!mounted.current) return
+      const failure = authRequestFailure(cause)
+      if (
+        failure.code === 'ACCOUNT_SECURITY_REFUSED' &&
+        failure.status === 403
+      ) {
+        setRecovery(null)
+        setNeedsSignIn(true)
+        feedback.setFailure(null)
+      } else feedback.reject(failure, 'password')
+    } finally {
+      setBusy(false)
+    }
   }
+  async function cancelSetup() {
+    if (busy) return
+    setBusy(true)
+    try {
+      if (registration.current) {
+        const result = await cancelFactorOperation(registration.current)
+        if (!mounted.current) return
+        if (result.status === 'committed') {
+          applyOutcome(result, true)
+          return
+        }
+        if (result.status !== 'refused') {
+          setRecovery(registration.current.id)
+          return
+        }
+      }
+      registration.current = null
+      pendingIntent.current = null
+      clearSetup()
+      setStep(0)
+      setRestart(false)
+    } catch (cause) {
+      const failure = await failed(cause)
+      if (failure) reject(failure)
+    } finally {
+      setBusy(false)
+    }
+  }
+  let recoveryMessage: MessageKey = 'settings.twoFactor.security.unavailable'
+  if (needsSignIn) recoveryMessage = 'settings.twoFactor.security.fresh'
+  if (recovery) recoveryMessage = 'settings.security.other.unknown'
   let content
-  if (codes)
+  if (recovery || needsSignIn || available === false)
+    content = (
+      <Card className="flex flex-col gap-4 p-5">
+        <h3 ref={heading} tabIndex={-1} className="font-display text-title">
+          {t('settings.twoFactor.title')}
+        </h3>
+        <p>{t(recoveryMessage)}</p>
+        <TwoFactorFeedback failure={feedback.failure} />
+        {recovery ? (
+          <Button loading={busy} onClick={() => void checkStatus()}>
+            {t('settings.security.other.check')}
+          </Button>
+        ) : null}
+        {needsSignIn ? (
+          <Button
+            loading={busy}
+            onClick={() => {
+              setBusy(true)
+              void authClient
+                .signOut()
+                .then(({ error }) => {
+                  if (!error) window.location.assign('/login')
+                  else feedback.reject(toAuthFailure(error), 'password')
+                })
+                .catch((cause: unknown) =>
+                  feedback.reject(authRequestFailure(cause), 'password'),
+                )
+                .finally(() => setBusy(false))
+            }}
+          >
+            {t('auth.login.submit')}
+          </Button>
+        ) : null}
+        {available === false ? (
+          <Button onClick={() => window.location.reload()}>
+            {t('settings.passkeys.error.retry')}
+          </Button>
+        ) : null}
+      </Card>
+    )
+  else if (available === null)
+    content = <Skeleton className="h-64 rounded-xl" />
+  else if (codes)
     content = (
       <TwoFactorCodes
         codes={codes}
@@ -258,7 +488,7 @@ export function TwoFactorSettings({
         }}
       />
     )
-  else if (on)
+  else if (on && !setup)
     content = (
       <Card className="flex flex-col gap-4 p-5">
         <h3 ref={heading} tabIndex={-1} className="font-display text-title">
@@ -277,17 +507,16 @@ export function TwoFactorSettings({
           body={t('settings.twoFactor.replace.body')}
           confirm={t('settings.twoFactor.replace.confirm')}
           pending={t('settings.twoFactor.replace.pending')}
-          onConfirm={replace}
+          onConfirm={(password, proof) => change('backup', password, proof)}
           focusReplacement={() => heading.current?.focus()}
         />
         <TwoFactorPasswordDialog
-          action={t('settings.twoFactor.setup.action')}
-          title={t('settings.twoFactor.setup.title')}
-          body={t('settings.twoFactor.setup.body')}
-          confirm={t('settings.twoFactor.setup.confirm')}
+          action={t('settings.twoFactor.security.replace')}
+          title={t('settings.twoFactor.security.replace')}
+          body={t('settings.twoFactor.security.effect')}
+          confirm={t('settings.twoFactor.password.submit')}
           pending={t('settings.twoFactor.setup.pending')}
-          done={t('settings.twoFactor.setup.done')}
-          onConfirm={showKey}
+          onConfirm={replaceAuthenticator}
           focusReplacement={() => heading.current?.focus()}
         />
         <TwoFactorPasswordDialog
@@ -298,14 +527,14 @@ export function TwoFactorSettings({
           pending={t('settings.twoFactor.off.pending')}
           cancel={t('settings.twoFactor.off.cancel')}
           danger
-          onConfirm={turnOff}
+          onConfirm={(password, proof) => change('disable', password, proof)}
           focusReplacement={() => heading.current?.focus()}
         />
       </Card>
     )
-  else if (credential === null)
+  else if (credential === null && !setup)
     content = <Skeleton className="h-64 rounded-xl" />
-  else if (!credential)
+  else if (!credential && !setup)
     content = (
       <Card className="flex flex-col gap-4 p-5">
         <h3 ref={heading} tabIndex={-1} className="font-display text-title">
@@ -417,7 +646,7 @@ export function TwoFactorSettings({
           >
             <Field
               label={t('settings.twoFactor.code.label')}
-              hint={t('settings.twoFactor.code.hint')}
+              hint={t('settings.twoFactor.security.currentStep')}
               error={invalid ? t('settings.twoFactor.code.invalid') : undefined}
             >
               <CodeInput
@@ -436,7 +665,11 @@ export function TwoFactorSettings({
               loadingLabel={t('settings.twoFactor.code.pending')}
               disabled={!/^\d{6}$/.test(code) || !!feedback.wait}
             >
-              {t('settings.twoFactor.code.submit')}
+              {t(
+                setup?.registration.operation === 'replace'
+                  ? 'settings.twoFactor.security.replace'
+                  : 'settings.twoFactor.code.submit',
+              )}
             </Button>
           </form>
         ) : null}
@@ -458,6 +691,9 @@ export function TwoFactorSettings({
           {t('settings.twoFactor.description')}
         </p>
       </div>
+      <p role="status" aria-live="polite">
+        {notice ? t(notice) : ''}
+      </p>
       {content}
       <Dialog open={restart} onOpenChange={setRestart}>
         <DialogContent
@@ -485,12 +721,8 @@ export function TwoFactorSettings({
             </Button>
             <Button
               className="h-auto min-h-11 whitespace-normal py-2"
-              onClick={() => {
-                clearSetup()
-                feedback.setFailure(null)
-                setStep(0)
-                setRestart(false)
-              }}
+              loading={busy}
+              onClick={() => void cancelSetup()}
             >
               {t('settings.twoFactor.key.startOver')}
             </Button>
