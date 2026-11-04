@@ -741,6 +741,25 @@ const messages = {
   'session.workspaceCheckPending': 'Çalışma alanına erişim kontrol ediliyor…',
   'session.workspaceCheckFailed':
     'Bu çalışma alanına erişim doğrulanamadı. Hiçbir işlem tekrarlanmadı. Yeniden kontrol edebilirsiniz.',
+  'dashboard.currency.label': 'Döviz dönüştürücü',
+  'dashboard.currency.amount': 'Tutar',
+  'dashboard.currency.from': 'Kaynak para birimi',
+  'dashboard.currency.to': 'Hedef para birimi',
+  'dashboard.currency.swap': 'Para birimlerini değiştir',
+  'dashboard.currency.refresh': 'Kurları yenile',
+  'dashboard.currency.result': 'Dönüştürülen tutar',
+  'dashboard.currency.invalid': '0 ile 1.000.000.000 arasında bir tutar girin.',
+  'dashboard.currency.unsupported': 'Bu döviz çifti kullanılamıyor.',
+  'dashboard.currency.stale': 'Bu referans kurları güncel olmayabilir.',
+  'dashboard.currency.blocked': 'Kur hizmeti sınırına ulaşıldı.',
+  'dashboard.currency.failed': 'Kurlar yenilenemedi.',
+  'dashboard.currency.cooldown': '{time} sonrasında tekrar deneyin.',
+  'dashboard.currency.source': 'Frankfurter üzerinden ECB referans kurları',
+  'dashboard.currency.notice':
+    'Bilgilendirme amaçlı hesaplama; işlem teklifi değildir.',
+  'dashboard.currency.free':
+    'ECB referans kurları ECB üzerinden ücretsiz sunulur.',
+  'dashboard.currency.date': 'Kur tarihi: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

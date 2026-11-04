@@ -199,13 +199,12 @@ async function shutGate(
       used: gate.used,
       limitWindow: gate.limitWindow,
     })
-  } catch (cause) {
+  } catch {
     // Fails open, deliberately and loudly. A metering read that cannot answer must not be the
     // reason a customer's email does not send.
     runtime.logger.warn('provider gate unavailable; allowing the call', {
       provider: label.provider,
       operation: label.operation,
-      errorMessage: cause instanceof Error ? cause.message : String(cause),
     })
     return null
   }

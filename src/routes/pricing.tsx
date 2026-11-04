@@ -1,3 +1,4 @@
+import { FreeRateDisclosure } from '#/components/rates/free-rate-disclosure'
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { Check, Minus, Sparkles } from 'lucide-react'
@@ -202,6 +203,7 @@ function PlansBand({
           className="mt-10"
         />
 
+        <FreeRateDisclosure />
         <PlanCardGrid interval={interval} className="mt-12" />
 
         <p className="mx-auto mt-8 max-w-2xl text-center text-caption text-ink-4">
