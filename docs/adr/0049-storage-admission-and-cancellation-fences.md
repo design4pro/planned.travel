@@ -13,6 +13,8 @@ one SQL statement, through the tenant scope. Usage combines this ledger with pre
 owned row-less covers, without double counting. Metadata-only seed imports use the same admission
 predicate. Publishing an attachment inserts its file row and settles the reservation in one atomic
 batch. Copy finalization conditionally publishes a retained cover only while the target is pending.
+A duplicate delivery that meets an active cover reservation retries instead of clearing that pending
+stamp; a completed retained object is reused without a second charge.
 
 A reservation has fifteen minutes to start. It remains charged until a conditional cancellation
 invalidates it; a timestamp in a usage read never releases capacity. Starting changes `reserved` to

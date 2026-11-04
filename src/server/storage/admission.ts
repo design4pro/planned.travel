@@ -2,6 +2,7 @@
 import { createLogger } from '#/server/observability/logger'
 import {
   NotFoundError,
+  RepositoryError,
   assertStorageKey,
   beginStorageWrite,
   requireTrip,
@@ -125,17 +126,29 @@ export async function copyStoredCover(
   await cleanupStorage(scope, store)
   const existing = await findStorageObject(scope, targetKey)
   if (existing?.state === 'retained') return
+  if (existing?.state === 'reserved' || existing?.state === 'writing')
+    throw new RepositoryError('A cover copy is still writing.', 'STORAGE_WRITE_IN_PROGRESS')
   if (existing) throw new Error('A cover copy already owns this storage key.')
   if (!store.get) throw new Error('Storage does not support reads.')
   const source = await store.get(sourceKey)
   if (!source?.body || source.size === undefined)
     throw new Error('Cover size or content is unavailable.')
-  const reservation = await reserveStorage(scope, {
-    tripId,
-    storageKey: targetKey,
-    sizeBytes: source.size,
-    kind: 'image',
-  })
+  let reservation: StorageReservation
+  try {
+    reservation = await reserveStorage(scope, {
+      tripId,
+      storageKey: targetKey,
+      sizeBytes: source.size,
+      kind: 'image',
+    })
+  } catch (cause) {
+    // Another delivery can win the unique key after the initial lookup.
+    const concurrent = await findStorageObject(scope, targetKey)
+    if (concurrent?.state === 'retained') return
+    if (concurrent?.state === 'reserved' || concurrent?.state === 'writing')
+      throw new RepositoryError('A cover copy is still writing.', 'STORAGE_WRITE_IN_PROGRESS')
+    throw cause
+  }
   try {
     await writeStorageObject(scope, store, reservation, source.body, {
       httpMetadata: source.httpMetadata,

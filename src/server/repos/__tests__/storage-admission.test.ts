@@ -312,6 +312,41 @@ describe('shared storage admission', () => {
     },
   )
 
+  it('retries a duplicate cover copy that loses admission after both observe an unused key', async () => {
+    const source = input('source')
+    const target = await startTripCopy(tenant.scope, tripId, { title: 'Copy' })
+    const targetKey = `trips/${tenant.organizationId}/${target}/cover.jpg`
+    const store = fakeBucket({ [source.storageKey]: { body: '1234567890' } })
+    const get = store.get
+    const put = store.put
+    let readers = 0
+    let releaseReads = () => {}
+    let releasePut = () => {}
+    const reads = new Promise<void>((resolve) => { releaseReads = resolve })
+    const writing = new Promise<void>((resolve) => { releasePut = resolve })
+    store.get = async (key) => {
+      readers += 1
+      if (readers === 2) releaseReads()
+      await reads
+      return get(key)
+    }
+    store.put = async (...args) => {
+      await writing
+      return put(...args)
+    }
+    const attempts = [0, 1].map(() => copyStoredCover(tenant.scope, store, target, source.storageKey, targetKey)
+      .then(() => ({ ok: true, cause: undefined }), (cause: unknown) => ({ ok: false, cause })))
+    try {
+      const loser = await Promise.race(attempts)
+      expect(loser).toMatchObject({ ok: false, cause: { code: 'STORAGE_WRITE_IN_PROGRESS' } })
+    } finally {
+      releasePut()
+      await Promise.all(attempts)
+    }
+    expect(store.objects.get(targetKey)?.body).toBe('1234567890')
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ fileCount: 1, bytes: 10 })
+  })
+
   it('counts a copied cover once on redelivery and retains it after the trip cascades', async () => {
     const source = input('source')
     await recordFile(tenant.scope, {

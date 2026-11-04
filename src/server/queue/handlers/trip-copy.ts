@@ -39,6 +39,7 @@ import { isOrganizationRole } from '#/server/auth/tenant'
 import {
   NotFoundError,
   QuotaExceededError,
+  RepositoryError,
   copyTripContents,
   createScope,
   deleteTrip,
@@ -157,6 +158,7 @@ export function coverKeyFor(
  * **A cover failure is tolerated** (spec Q6): a missing cover is cosmetic, and deleting a fully
  * copied trip over it — or retrying an entire inventory copy for it — are both larger harms than
  * the loss. Logged once; the copy completes and the tile falls back to the shipped `CoverArt`.
+ * A competing delivery still writing the cover retries without clearing the pending stamp.
  */
 async function copyCover(
   scope: TenantScope,
@@ -197,6 +199,7 @@ async function copyCover(
       coverImageUrl: coverUrlFor(origin, targetTripId, fileId),
     }
   } catch (cause) {
+    if (cause instanceof RepositoryError && cause.code === 'STORAGE_WRITE_IN_PROGRESS') throw cause
     context.logger.warn('a trip cover was not copied', {
       tripId: targetTripId,
       ...serializeError(cause),
