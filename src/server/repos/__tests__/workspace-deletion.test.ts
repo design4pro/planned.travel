@@ -261,10 +261,10 @@ describe('the subscription gate', () => {
     'trialing',
     'active',
     'past_due',
-    'unpaid',
     'paused',
   ]
   const notLive: ReadonlyArray<Status> = [
+    'unpaid',
     'canceled',
     'incomplete',
     'incomplete_expired',
@@ -303,10 +303,10 @@ describe('the subscription gate', () => {
     },
   )
 
-  it('does not block on a subscription already set to end with the period', async () => {
+  it.each([...live, ...notLive])('does not block on an ending %s subscription', async (status) => {
     const a = await harness.seedTenant('a')
     await upsertSubscription(a.scope, {
-      status: 'active',
+      status,
       providerSubscriptionId: 'sub_a',
       cancelAtPeriodEnd: true,
     })
