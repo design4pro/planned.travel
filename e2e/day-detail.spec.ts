@@ -254,6 +254,8 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
       page.getByText('This day is no longer available.', { exact: true }),
     ).toBeVisible()
   } finally {
+    // Finish the held board reads before fixture deletion or context disposal.
+    await page.unrouteAll({ behavior: 'wait' })
     await page.goto('/trips', { waitUntil: 'networkidle', timeout: 60_000 })
     await expect
       .poll(async () => (await readCaptureState(page, tripsRoute)).hydrated, {
