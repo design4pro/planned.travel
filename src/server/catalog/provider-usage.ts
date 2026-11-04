@@ -66,7 +66,6 @@ import {
   providerRegistry,
   providerUsage,
 } from '#/server/db/schema'
-import { serializeError } from '#/server/observability'
 import { PLATFORM_SYSTEM_ACTOR } from './audit'
 import type { PlatformSystemActor } from './audit'
 /**
@@ -227,16 +226,10 @@ export async function recordProviderCall(
   call: ProviderCallRecord,
   logger: Logger,
 ): Promise<void> {
-  const report = (
-    message: string,
-    fields: LogFields,
-    cause?: unknown,
-  ): void => {
+  // Driver errors include bound SQL values; rejected records are untrusted too.
+  const report = (message: string, fields: LogFields): void => {
     emitSafely(() => {
-      logger.warn(
-        message,
-        cause === undefined ? fields : { ...fields, ...serializeError(cause) },
-      )
+      logger.warn(message, fields)
     })
   }
 
@@ -244,12 +237,8 @@ export async function recordProviderCall(
   try {
     systemActorSchema.parse(actor)
     parsed = recordSchema.parse(call)
-  } catch (cause) {
-    report(
-      'provider usage record rejected',
-      { provider: call.provider, operation: call.operation },
-      cause,
-    )
+  } catch {
+    report('provider usage record rejected', {})
     return
   }
 
@@ -295,17 +284,13 @@ export async function recordProviderCall(
           updatedAt: parsed.at,
         },
       })
-  } catch (cause) {
-    report(
-      'provider usage record failed',
-      {
-        provider: parsed.provider,
-        operation: parsed.operation,
-        bucket,
-        outcome: parsed.outcome,
-      },
-      cause,
-    )
+  } catch {
+    report('provider usage record failed', {
+      provider: parsed.provider,
+      operation: parsed.operation,
+      bucket,
+      outcome: parsed.outcome,
+    })
   }
 }
 

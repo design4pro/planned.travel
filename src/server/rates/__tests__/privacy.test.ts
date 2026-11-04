@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest'
+import { drizzle } from 'drizzle-orm/d1'
 import { createHarness } from '#/server/repos/__tests__/harness'
 import { createTrip } from '#/server/repos/trips'
 import { createExpense } from '#/server/repos/expenses'
@@ -46,6 +47,7 @@ it('shares public observations while leaving two private frozen-rate ledgers unt
       ]),
     )
     const now = () => Date.parse('2026-11-03T18:00:00Z')
+    const sink = createMemorySink()
     const runtime: PublicRatesRuntime = {
       fetch,
       now,
@@ -59,7 +61,7 @@ it('shares public observations while leaving two private frozen-rate ledgers unt
       outbound: {
         db: h.db,
         now: () => new Date(now()),
-        logger: createLogger({ sink: createMemorySink() }),
+        logger: createLogger({ sink }),
         waitUntil: (promise) => {
           pending.push(promise)
         },
@@ -73,10 +75,12 @@ it('shares public observations while leaving two private frozen-rate ledgers unt
       snapshot: { rates: { EUR: 1, USD: 1.25 } },
     })
     expect(fetch).toHaveBeenCalledTimes(1)
+    await Promise.all(pending)
     const publicData = JSON.stringify([
       first,
       [...values],
       [...fetch.mock.calls],
+      sink.records,
     ])
     for (const secret of [
       a.scope.ctx.organizationId,
@@ -93,4 +97,53 @@ it('shares public observations while leaving two private frozen-rate ledgers unt
   } finally {
     h.close()
   }
+})
+
+it('keeps workspace attribution out of real Drizzle write-failure logs without failing the quote', async () => {
+  const organizationId = 'private-rates-workspace'
+  const run = vi.fn(async () => {
+    throw new Error('private-driver-detail')
+  })
+  const statement = {
+    bind: vi.fn().mockReturnThis(),
+    all: async () => ({ results: [] }),
+    raw: async () => [],
+    run,
+  }
+  const db = drizzle({ prepare: () => statement } as unknown as D1Database)
+  const sink = createMemorySink()
+  const pending: Promise<unknown>[] = []
+  const now = () => Date.parse('2026-11-04T12:00:00Z')
+  const result = await createPublicRates()(
+    {
+      cache: { get: async () => null, put: async () => {} },
+      fetch: async () =>
+        Response.json([
+          { date: '2026-11-04', base: 'EUR', quote: 'EUR', rate: 1 },
+          { date: '2026-11-04', base: 'EUR', quote: 'USD', rate: 1.25 },
+        ]),
+      now,
+      sleep: async () => {},
+      outbound: {
+        db,
+        now: () => new Date(now()),
+        waitUntil: (promise) => pending.push(promise),
+        logger: createLogger({ sink }),
+      },
+    },
+    organizationId,
+  )
+  await Promise.all(pending)
+  expect(result.status).toBe('available')
+  expect(run).toHaveBeenCalledTimes(1)
+  expect(JSON.stringify(statement.bind.mock.calls)).toContain(organizationId)
+  expect(sink.records).toHaveLength(1)
+  expect(sink.records[0]).toMatchObject({
+    msg: 'provider usage record failed',
+    provider: 'frankfurter',
+  })
+  const logged = JSON.stringify(sink.records)
+  expect(logged).not.toContain(organizationId)
+  expect(logged).not.toContain('private-driver-detail')
+  expect(logged).not.toContain('errorStack')
 })

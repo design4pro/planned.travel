@@ -310,7 +310,7 @@ describe('the gate', () => {
       get(target, key, receiver) {
         if (key === 'select') {
           return () => {
-            throw new Error('D1_ERROR: connection lost')
+            throw new Error('D1_ERROR: private-workspace-context')
           }
         }
         return Reflect.get(target, key, receiver) as unknown
@@ -324,6 +324,9 @@ describe('the gate', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       'provider gate unavailable; allowing the call',
       expect.objectContaining({ provider: 'resend' }),
+    )
+    expect(JSON.stringify(vi.mocked(logger.warn).mock.calls)).not.toContain(
+      'private-workspace-context',
     )
   })
 
