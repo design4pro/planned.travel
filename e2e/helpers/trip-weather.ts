@@ -41,7 +41,16 @@ export async function showDays(page: Page): Promise<void> {
     return
   }
   await page.getByRole('button', { name: 'Days', exact: true }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet).toBeVisible()
+  // Geometry checks start after the Sheet entrance, while weather is still held.
+  await sheet.evaluate(async (element) => {
+    await Promise.all(
+      element
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => undefined)),
+    )
+  })
 }
 
 /** The planner's section for one day, by the title its header carries. */
@@ -50,7 +59,7 @@ export function dayRegion(page: Page, title: string): Locator {
   return page.getByRole('region', { name: new RegExp(`^${escaped}, `) })
 }
 
-/** A day's map-focus toggle, independent of its separate disclosure control. */
+/** The Day reading control, independent of its separate disclosure control. */
 export function dayHeader(region: Locator): Locator {
   return region.getByRole('button').and(region.locator('[aria-pressed]'))
 }

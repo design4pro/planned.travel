@@ -1626,7 +1626,10 @@ test.describe('the trip sections behind a route parameter', () => {
       .getByRole('button', { name: /^Add a stay for / })
       .first()
       .click()
-    const dialog = page.getByRole('dialog')
+    const dialog = page.getByRole('dialog', {
+      name: 'Add a booking',
+      exact: true,
+    })
     await expect(
       dialog.locator('[data-part="stay-check-in-day"] [role="combobox"]'),
       'the day the dialog was opened from is the first night',
