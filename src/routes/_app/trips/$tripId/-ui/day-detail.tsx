@@ -138,7 +138,7 @@ export function DayDetail({
             ref={heading}
             tabIndex={-1}
             className={cn(
-              'truncate font-display text-label font-bold text-ink outline-none',
+              'truncate font-display text-label font-bold text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
               compact && 'min-w-0 flex-1',
             )}
           >

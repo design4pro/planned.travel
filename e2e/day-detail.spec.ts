@@ -301,13 +301,17 @@ test('an undated Day adds a Stay with a real confirmation and refreshes undernea
       .fill('DAY-1718')
     await dialog
       .getByRole('button', { name: 'Add booking', exact: true })
-      .click()
+      .focus()
+    await page.keyboard.press('Enter')
     await expect(dialog).toHaveCount(0, { timeout: 30_000 })
     await expect(
       panel.getByText('Day detail hotel', { exact: true }).first(),
     ).toBeVisible()
     await expect(panel.getByText('DAY-1718', { exact: true })).toBeVisible()
-    await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
+    const heading = panel.getByRole('heading', { level: 2 })
+    await expect(heading).toBeFocused()
+    await expect(heading).toHaveCSS('outline-style', 'solid')
+    await expect(heading).toHaveCSS('outline-width', '2px')
     // Return a successful board generation without the selected identity after a real write.
     await page.route(
       (url) => callsServerFn(url, 'loadPlanBoard'),
@@ -420,10 +424,14 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     const report = watchConsole(page, route)
     await visit(page, route, 'light')
     await showDays(page)
-    await page.locator('[data-planner-day-header]').first().click()
+    await page.locator('[data-planner-day-header]').first().focus()
+    await page.keyboard.press('Enter')
     const panel = page.locator('[data-day-detail]')
     const body = panel.getByRole('group')
-    await expect(panel.getByRole('heading', { level: 2 })).toBeFocused()
+    const heading = panel.getByRole('heading', { level: 2 })
+    await expect(heading).toBeFocused()
+    await expect(heading).toHaveCSS('outline-style', 'solid')
+    await expect(heading).toHaveCSS('outline-width', '2px')
     await expect(panel.locator('section[aria-busy]')).toHaveAttribute(
       'aria-busy',
       'false',
@@ -467,6 +475,10 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     await expect(
       panel.getByRole('button', { name: 'Expand day details' }),
     ).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(heading).toBeFocused()
+    await expect(heading).toHaveCSS('outline-style', 'solid')
+    await expect(heading).toHaveCSS('outline-width', '2px')
     expect(report().fatal).toEqual([])
   } catch (error) {
     failures.push(error)
