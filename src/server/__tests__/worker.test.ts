@@ -44,6 +44,7 @@ const harness = vi.hoisted(() => {
       .fn()
       .mockResolvedValue({ listed: 0, deleted: 0, drained: true }),
     sweep: vi.fn(),
+    securitySweep: vi.fn(),
   }
 })
 
@@ -68,6 +69,7 @@ vi.mock('../audit/retention', () => ({
 }))
 
 vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
+vi.mock('../auth/account-security-scheduled', () => ({ sweepScheduledAccountSecurity: harness.securitySweep }))
 
 vi.mock('../catalog/audit', async (importOriginal) => {
   const actual = await importOriginal<typeof CatalogAudit>()

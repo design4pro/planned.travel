@@ -544,6 +544,47 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
   embedded('workspace_deletions', 'receipt_name', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary workspace receipt name, cleared when queued or refused; terminal retention is 30 days.'),
 
   /* ------------------------------------------------- auth tables (go with the user row) -- */
+  {
+    ...authPlace(
+      'account_security',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'session_authority',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'verification_authority',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+  {
+    ...authPlace(
+      'account_security_operation',
+      'user_id',
+      'auth',
+      'remove',
+      'Cascades from user after durable account-security cleanup has drained; native deletion reserves the account before teardown (ADR 0049).',
+    ),
+    owner: 'src/server/repos/account-security.ts',
+  },
+
   authPlace(
     'user',
     'id',

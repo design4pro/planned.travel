@@ -130,6 +130,7 @@ const shared = vi.hoisted((): SharedState => ({
 }))
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => false,
   APP_NAME: 'planned.travel',
   appUrl: () => BASE_URL,
   appleBundleIdentifier: () => undefined,

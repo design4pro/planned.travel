@@ -16,7 +16,7 @@ import {
 } from 'drizzle-kit/api'
 import { drizzle } from 'drizzle-orm/sqlite-proxy'
 import { expect } from 'vitest'
-import { authSchema } from '#/server/db/auth-schema'
+import { authSchema, accountSecuritySchema } from '#/server/db/auth-schema'
 import { workspaceParticipants } from '#/server/db/schema'
 import type { SqliteRemoteDatabase } from 'drizzle-orm/sqlite-proxy'
 
@@ -73,7 +73,11 @@ export async function openAuthDatabase(): Promise<{
 }> {
   const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson({ ...authSchema, workspaceParticipants }),
+    await generateSQLiteDrizzleJson({
+      ...authSchema,
+      ...accountSecuritySchema,
+      workspaceParticipants,
+    }),
   )
   const sqlite = new DatabaseSync(':memory:')
   for (const statement of statements) sqlite.exec(statement)
@@ -81,10 +85,19 @@ export async function openAuthDatabase(): Promise<{
   const database = drizzle(
     async (query, params, method) =>
       runStatement(sqlite, query, params, method),
-    async (queries) =>
-      queries.map((entry) =>
-        runStatement(sqlite, entry.sql, entry.params, entry.method),
-      ),
+    async (queries) => {
+      sqlite.exec('BEGIN')
+      try {
+        const results = queries.map((entry) =>
+          runStatement(sqlite, entry.sql, entry.params, entry.method),
+        )
+        sqlite.exec('COMMIT')
+        return results
+      } catch (error) {
+        sqlite.exec('ROLLBACK')
+        throw error
+      }
+    },
     { schema: authSchema },
   )
   return { sqlite, database }

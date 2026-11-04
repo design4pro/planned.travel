@@ -843,6 +843,18 @@ const messages = {
   'twoFactor.off.pending': 'Turning off',
   'twoFactor.off.cancel': 'Keep it on',
   'twoFactor.off.done': 'Two-factor is off',
+  'security.other.label': 'Sign out other devices',
+  'security.other.description':
+    'Other devices must sign in again. Connections close asynchronously; trusted browsers, Google, Apple and passkeys remain available.',
+  'security.other.committed':
+    'Other devices are signed out. This device stays signed in.',
+  'security.other.refused':
+    'This operation made no changes. Sign in again, then confirm within five minutes.',
+  'security.other.unknown':
+    'The result is unknown. Check status before starting another operation.',
+  'security.other.pending':
+    'Other sessions are revoked. Connections may take longer to close.',
+  'security.other.check': 'Check status',
 } as const satisfies NamespaceMessages
 
 export default messages

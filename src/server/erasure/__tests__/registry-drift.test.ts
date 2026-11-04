@@ -14,7 +14,7 @@ import { join } from 'node:path'
 import { is } from 'drizzle-orm'
 import { SQLiteTable, getTableConfig } from 'drizzle-orm/sqlite-core'
 import { describe, expect, it } from 'vitest'
-import { authSchema } from '#/server/db/auth-schema'
+import { authSchema, accountSecuritySchema } from '#/server/db/auth-schema'
 import * as domainSchema from '#/server/db/schema'
 import { ERASURE_OUTCOMES, ERASURE_REGISTRY } from '../registry'
 import {
@@ -40,7 +40,7 @@ const authSchemaSource = readFileSync(
 /** `table.column` for every column the two schema modules declare, as drizzle describes them. */
 function declaredColumns(): Set<string> {
   const exported: Array<unknown> = Object.values({
-    ...authSchema,
+    ...authSchema, ...accountSecuritySchema,
     ...domainSchema,
   })
   const keys = new Set<string>()

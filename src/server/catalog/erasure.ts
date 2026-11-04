@@ -1,7 +1,7 @@
 /**
  * Session-less erasure catalog (SPEC §5, ADR 0043).
- * Discovery stays ids-only, keyset-paged and read-only. The participation backfill is the sole
- * production importer until the engine lands. Worker-only scrub primitives additionally require an
+ * Discovery stays ids-only, keyset-paged and read-only. Production importers are the participation backfill and the account-security cleanup discovery
+ * (listWorkspacesHoldingUser only, routing ids only; ADR 0049). Worker-only scrub primitives additionally require an
  * explicit system PlatformActor before every query. They erase global auth leftovers, revoke and
  * anonymise staff tokens, anonymise provider attribution and count the remaining platform places.
  * Invitations retain an explicit organization predicate. No tenant content table is read or written;
