@@ -107,7 +107,11 @@ describe('dashboard mascot', () => {
       status: 'confirmed',
       startDate: '2026-04-01',
     }
-    const view = (trips: (typeof trip)[], reservations: (typeof first)[]) => (
+    const view = (
+      trips: (typeof trip)[],
+      reservations: (typeof first)[],
+      today = '2026-04-01',
+    ) => (
       <I18nProvider
         locale="en"
         messages={{
@@ -119,7 +123,7 @@ describe('dashboard mascot', () => {
           trip={trip}
           trips={trips}
           reservations={reservations}
-          today="2026-04-01"
+          today={today}
           userId="user"
           workspaceId="workspace"
           onRefresh={refresh}
@@ -128,13 +132,33 @@ describe('dashboard mascot', () => {
     )
     const page = render(view([trip], [first]))
     const link = screen.getByRole('link', { name: 'View reservations' })
-    fireEvent.focus(link)
+    link.focus()
+    expect(document.activeElement).toBe(link)
     page.rerender(view([trip], [first, second]))
     expect(
       screen.queryByText('A confirmed reservation starts on 2 Apr 2026.'),
     ).not.toBeNull()
+    page.rerender(view([trip], [{ ...first, status: 'cancelled' }, second]))
+    expect(
+      screen.queryByText('A confirmed reservation starts on 2 Apr 2026.'),
+    ).toBeNull()
+    expect(document.activeElement).toBe(link)
+    page.rerender(
+      view(
+        [trip],
+        [{ ...first, startDate: '2026-05-01' }, second],
+        '2026-04-03',
+      ),
+    )
+    expect(
+      screen.queryByText('A confirmed reservation starts on 2 Apr 2026.'),
+    ).toBeNull()
+    expect(document.activeElement).toBe(link)
     page.rerender(view([], [first, second]))
     expect(screen.queryByRole('link', { name: 'View reservations' })).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Open travel chat' }),
+    )
   })
   it('clears entry state when the workspace changes', () => {
     const trip = tripCard()

@@ -40,6 +40,8 @@ export function DashboardMascot(props: Props) {
     id: string
     tripId: string
     startDate: string
+    userId: string
+    workspaceId: string
   } | null>(null)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
@@ -127,17 +129,37 @@ export function DashboardMascot(props: Props) {
           reservations,
         })
       : null
-  const retained = focused
-    ? select(
+  const retained =
+    focused &&
+    snapshot &&
+    !hidden &&
+    !invalid &&
+    focused.userId === props.userId &&
+    focused.workspaceId === props.workspaceId &&
+    snapshot.scope.userId === props.userId &&
+    snapshot.scope.workspaceId === props.workspaceId &&
+    props.reservations.some(
+      (item) => item.id === focused.id && item.tripId === focused.tripId,
+    ) &&
+    props.trips.some(
+      (trip) => trip.id === focused.tripId && !trip.isArchived,
+    ) &&
+    !props.trips.some((trip) => trip.id === focused.tripId && trip.isArchived)
+      ? focused
+      : null
+  const prompt = focused ? retained : select(props.reservations)
+  const promptDetails =
+    !focused ||
+    Boolean(
+      select(
         props.reservations.filter(
           (item) =>
             item.id === focused.id &&
-            item.startDate === focused.startDate &&
-            item.tripId === focused.tripId,
+            item.tripId === focused.tripId &&
+            item.startDate === focused.startDate,
         ),
-      )
-    : null
-  const prompt = focused ? retained : select(props.reservations)
+      ),
+    )
   function dismiss() {
     if (!prompt || !snapshot) return
     const entries = dismissOccurrence(
@@ -162,8 +184,19 @@ export function DashboardMascot(props: Props) {
       reduceMotion={props.reduceMotion}
       today={snapshot?.today ?? props.today}
       prompt={prompt}
+      promptDetails={promptDetails}
       onDismiss={dismiss}
-      onPromptFocus={() => setFocused(prompt)}
+      onPromptFocus={() =>
+        setFocused(
+          prompt
+            ? {
+                ...prompt,
+                userId: props.userId,
+                workspaceId: props.workspaceId,
+              }
+            : null,
+        )
+      }
       onPromptBlur={() => setFocused(null)}
     />
   )

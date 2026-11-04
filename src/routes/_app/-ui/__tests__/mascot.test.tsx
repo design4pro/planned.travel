@@ -34,8 +34,18 @@ describe('dashboard mascot', () => {
     expect(
       screen
         .getByRole('link', { name: 'Open notifications' })
+        .classList.contains('min-w-11'),
+    ).toBe(true)
+    expect(
+      screen
+        .getByRole('link', { name: 'Open notifications' })
         .getAttribute('href'),
     ).toBe('/notifications')
+    expect(
+      screen
+        .getByRole('button', { name: 'Close' })
+        .classList.contains('min-w-11'),
+    ).toBe(true)
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByText('Travel chat is unavailable')).toBeNull()
     expect(document.activeElement).toBe(button)
@@ -58,8 +68,18 @@ describe('dashboard mascot', () => {
       </I18nProvider>,
     )
     expect(
+      screen
+        .getByRole('button', { name: 'Dismiss' })
+        .classList.contains('min-w-11'),
+    ).toBe(true)
+    expect(
       screen.getByText('A confirmed reservation starts on 1 Apr 2026.'),
     ).not.toBeNull()
+    expect(
+      screen
+        .getByRole('link', { name: 'View reservations' })
+        .classList.contains('min-w-11'),
+    ).toBe(true)
     expect(
       screen
         .getByRole('link', { name: 'View reservations' })

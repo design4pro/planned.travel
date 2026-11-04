@@ -23,6 +23,7 @@ export function Mascot({
   available = true,
   reduceMotion = false,
   prompt,
+  promptDetails = true,
   onDismiss,
   onPromptFocus,
   onPromptBlur,
@@ -33,6 +34,7 @@ export function Mascot({
   available?: boolean
   reduceMotion?: boolean
   prompt?: { id: string; tripId: string; startDate: string } | null
+  promptDetails?: boolean
   onDismiss?: () => void
   onPromptFocus?: () => void
   onPromptBlur?: () => void
@@ -294,13 +296,16 @@ export function Mascot({
               }
             }}
           >
-            <p>
-              {t('shell.dashboard.mascot.reservation', {
-                date: formatDate(prompt.startDate, locale) ?? prompt.startDate,
-              })}
-            </p>
+            {promptDetails ? (
+              <p>
+                {t('shell.dashboard.mascot.reservation', {
+                  date:
+                    formatDate(prompt.startDate, locale) ?? prompt.startDate,
+                })}
+              </p>
+            ) : null}
             <a
-              className="inline-flex min-h-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
               href={`/trips/${encodeURIComponent(prompt.tripId)}/book`}
             >
@@ -310,7 +315,7 @@ export function Mascot({
               type="button"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
               onClick={onDismiss}
-              className="min-h-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="min-h-11 min-w-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               {t('ui.action.dismiss')}
             </button>
@@ -331,7 +336,7 @@ export function Mascot({
             {t('shell.dashboard.mascot.chatUnavailableBody')}
           </p>
           <a
-            className="inline-flex min-h-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
             onFocus={(event) => revealFocusedControl(event.currentTarget)}
             href="/notifications"
           >
@@ -344,7 +349,7 @@ export function Mascot({
               setPanel(false)
               trigger.current?.focus()
             }}
-            className="min-h-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="min-h-11 min-w-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             {t('ui.action.close')}
           </button>
