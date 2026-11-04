@@ -702,6 +702,18 @@ const messages = {
   'twoFactor.off.pending': '끄는 중',
   'twoFactor.off.cancel': '켜진 상태로 유지',
   'twoFactor.off.done': '2단계 인증이 꺼졌습니다',
+  'security.other.label': '다른 기기에서 로그아웃',
+  'security.other.description':
+    '다른 기기는 다시 로그인해야 합니다. 연결은 비동기적으로 종료되며 신뢰하는 브라우저, Google, Apple 및 패스키는 계속 사용할 수 있습니다.',
+  'security.other.committed':
+    '다른 기기에서 로그아웃했습니다. 이 기기는 로그인 상태를 유지합니다.',
+  'security.other.refused':
+    '이 작업은 변경 사항을 적용하지 않았습니다. 다시 로그인하고 5분 이내에 확인하세요.',
+  'security.other.unknown':
+    '결과를 알 수 없습니다. 다른 작업을 시작하기 전에 상태를 확인하세요.',
+  'security.other.pending':
+    '다른 세션이 무효화되었습니다. 연결 종료에는 시간이 더 걸릴 수 있습니다.',
+  'security.other.check': '상태 확인',
 } satisfies TranslationOf<typeof En>
 
 export default messages

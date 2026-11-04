@@ -13,11 +13,16 @@ import type { TestProject } from 'vitest/node'
  * and reaches the workers through `inject('schemaDdl')`.
  */
 async function schemaDdl(): Promise<Array<string>> {
-  const { authSchema } = await import('#/server/db/auth-schema')
+  const { authSchema, accountSecuritySchema } =
+    await import('#/server/db/auth-schema')
   const domainSchema = await import('#/server/db/schema')
   return generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
-    await generateSQLiteDrizzleJson({ ...authSchema, ...domainSchema }),
+    await generateSQLiteDrizzleJson({
+      ...authSchema,
+      ...accountSecuritySchema,
+      ...domainSchema,
+    }),
   )
 }
 

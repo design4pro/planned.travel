@@ -1,4 +1,4 @@
-# 0049 - Shared storage admission survives interrupted writes
+# 0050 - Shared storage admission survives interrupted writes
 
 Date: 2026-11-03
 Status: accepted

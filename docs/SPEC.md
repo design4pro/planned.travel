@@ -598,8 +598,11 @@ of them is a change to this contract rather than a refactor.
 The third member is the erasure catalog, `src/server/catalog/erasure.ts` (ADR 0043,
 `.ai/specs/2026-10-08-erase-a-persons-data.md`, phase 3b amendment #1059).
 `listWorkspacesHoldingUser` and `listOrganizationIds` remain ids-only, read-only, keyset-paged
-with a fixed maximum page size. The participation backfill remains the sole production importer;
-the engine must explicitly amend the importer pin when it wires these primitives.
+with a fixed maximum page size. Production importers are the participation backfill and the bounded
+`auth/account-security-cleanup.ts` room discovery (ADR 0049); the latter may call only
+`listWorkspacesHoldingUser`, discards `erasureId`, and projects workspace routing ids from committed
+operation identity. It cannot invoke a scrub primitive. Historical backfill completion is a D1 cutover
+prerequisite. The engine must explicitly amend this pin when it wires additional primitives.
 
 Four additional primitives take a plain `Database` and validate an explicit system `PlatformActor`
 (`actorKind: system`, user/role/token null) before any query. `eraseWorkspaceInvitations` deletes
@@ -756,6 +759,24 @@ schedule ahead of its handler makes the next deploy invoke a branch that does no
 unrelated to the `17 4 * * 1` retention prune that runs seventeen minutes later the same
 morning; neither depends on the other's ordering.
 
+### Account-auth repository boundary (ADR 0049)
+
+`src/server/repos/account-security.ts` is a closed account-auth exception separate from FU-3.
+It accesses only native user identity (`id`, `banned`, `banExpires`), native sessions, the exact native challenge/trust verification shapes, and account
+revision/session-proof/verification-proof/operation/cleanup metadata and one global revocation-fence scalar. It cannot query organizations,
+members or tenant content. A branded account capability is issued only by `auth/account-authority.ts`
+from native identity resolution or an authenticated self session. Pre-authentication authority can
+read the proof revision but cannot authorize revocation. Revocation also requires the fresh,
+non-impersonated initiating session. Allowed production callers are `auth/account-authority.ts` and
+`auth/factor-management.ts`; `auth/account-security-cleanup.ts` gets a separate bounded scheduled
+capability for pending ids and encrypted cleanup references only. Arbitrary account selectors and
+generic query/table APIs are forbidden. See ADR 0049 and `docs/account-session-authority.md` for
+closed projections, authority and writer coverage. This exception grants no tenant-content access
+and does not widen any existing Unscoped function.
+The account-owned `account_security_room_cleanup.organization_id` is a routing target, not tenant
+content: it deliberately survives workspace deletion until queue acknowledgement, and cascades
+only with its account operation. Workspace deletion must not erase pending account cleanup.
+
 ## 6. Repo conventions
 
 ```
@@ -794,9 +815,9 @@ Rules:
 
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
-- All SQL lives in `server/repos`, normally through the tenant-scoped base repository; FU-3
+- All SQL lives in `server/repos`, normally through the tenant-scoped base repository; the closed account-auth boundary above and FU-3
   permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
+- The account-auth repository is the separately bounded fourth exception above (ADR 0049). The other stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
   and the identity-table access of the auth provisioning module. §5 states `server/catalog` as a closed list of four. The
   first member is thirteen global tables: eleven carry no `organization_id`, while
   `provider_usage` and `workspace_deletions` carry attribution only, so none of them can pass through the tenant
@@ -833,7 +854,7 @@ Rules:
   `passkey` table that way; that table is user-keyed and has no `organization_id`, but other
   Better Auth tables do relate to a workspace, so being auth-owned says nothing about tenancy.
   Application queries still pass through the tenant-scoped repository, and raw SQL against an auth
-  table stays limited to the provisioning module above.
+  table stays limited to the provisioning module above and the closed account-auth repository (ADR 0049).
 - `server/public` owns bearer-resolved public reads without a session, and holds no SQL of its own.
   Internal erasure and backfill workers use the bounded catalog reads and workspace scopes described in §5.
   Every response is a named read-only projection - an explicit column whitelist of what a

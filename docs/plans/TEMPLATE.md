@@ -124,7 +124,7 @@ Which metric this stage's writes consume, and where the ceiling is asserted.
   resolver is caught by `src/server/billing/__tests__/limits.test.ts`; a stage that adds one adds the
   case there too.
 - For workspace quota-bearing R2 writes, reserve both ceilings atomically before a create-only
-  put, then settle through the shared ledger; failed cleanup stays charged (ADR 0049).
+  put, then settle through the shared ledger; failed cleanup stays charged (ADR 0050).
 - If the stage creates no countable row, say so in one sentence and why.
 
 ### Tenant isolation test

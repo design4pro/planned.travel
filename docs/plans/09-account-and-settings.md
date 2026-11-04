@@ -1,6 +1,6 @@
 # Account and settings
 
-> Storage contract update (#1784, ADR 0049): historical R2-first/check-then-insert descriptions
+> Storage contract update (#1784, ADR 0050): historical R2-first/check-then-insert descriptions
 > below are superseded for workspace quota-bearing writes by atomic reservation before a
 > create-only put, followed by settlement. Failed cleanup remains charged. Future tenant writers
 > must extend and reuse the shared storage ledger; see `docs/ARCHITECTURE.md` §6.

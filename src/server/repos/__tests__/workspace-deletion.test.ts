@@ -553,6 +553,8 @@ describe('the schema the delete relies on', () => {
   const KEPT_AFTER_DELETE: ReadonlyArray<string> = [
     // Metering attribution for the platform's own cost accounting, not tenant content (SPEC §5).
     'provider_usage',
+    // Account-owned routing acknowledgements survive workspace deletion until the queue settles them.
+    'account_security_room_cleanup',
     // Durable deletion recovery must survive the cascade (ADR 0048).
     'workspace_deletions',
   ]

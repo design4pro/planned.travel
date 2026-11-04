@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const shared = vi.hoisted(() => ({ queueFails: false }))
 
 vi.mock('#/server/auth/env', () => ({
+  securityEnforcement: () => false,
   APP_NAME: 'planned.travel',
   appUrl: () => 'https://planned.test',
   taskQueue: () => ({

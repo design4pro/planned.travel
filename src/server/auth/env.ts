@@ -89,3 +89,8 @@ export function sessionStore(): KVNamespace {
 export function taskQueue(): Queue<unknown> {
   return env.TASKS
 }
+
+/** Optional rollout flag; only the explicit active value enables authority enforcement. */
+export function securityEnforcement(): boolean {
+  return Reflect.get(env, 'ACCOUNT_SECURITY_ENFORCEMENT') === 'active'
+}

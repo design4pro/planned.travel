@@ -689,7 +689,7 @@ No tenant-countable row: operator media is deliberately outside `resolveQuotas` 
 `PLAN_QUOTAS` - the bound is the staff permission model plus the per-object and per-request
 caps from `file-policy.ts`. R2 write order is object first, assert/validate second,
 compensating delete on throw. This operator-only protocol is separate from the tenant reservation
-ledger in ADR 0049; it does not describe the current `repos/files.ts` admission order.
+ledger in ADR 0050; it does not describe the current `repos/files.ts` admission order.
 
 ### Tenant isolation test
 

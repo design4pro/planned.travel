@@ -113,3 +113,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Release history** - the Settings record of reviewed improvements and fixes proven shipped to production, newest first. It remains a historical record after an application rollback.
 
 - **Storage reservation** - a workspace-scoped claim on bytes and one object slot, taken atomically before a write. It becomes retained usage when published, or releases capacity only after cancellation prevents a late write. Failed deletion keeps retained usage until cleanup succeeds.
+- **Session security revision** - the account-wide generation against which a device proved its right to remain signed in. Signing out other devices advances it and retains only the current device at the new generation.
+- **Operation receipt** - a restricted browser credential issued before an account-security action, allowing its result to be checked if the response is lost. It grants no access to trips or other account data.
+- **Cleanup pending** - access has already been revoked, while remaining cached session data or open connections are still being retired.
