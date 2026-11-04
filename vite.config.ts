@@ -139,7 +139,14 @@ export function stopWhenRootIsRemoved({
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  build: { sourcemap: uploadsSourceMaps ? 'hidden' : false },
+  build: {
+    sourcemap: uploadsSourceMaps ? 'hidden' : false,
+    modulePreload: {
+      // Native imports reuse loaded JS; Vite still loads CSS and handles import failures.
+      resolveDependencies: (_filename, deps, { hostType }) =>
+        hostType === 'js' ? [] : deps,
+    },
+  },
   define: { __E2E_SERVER_TODAY__: e2eServerToday },
   /**
    * `.claude/` sits inside the repo root, and `.claude/worktrees/` holds full git worktrees —
