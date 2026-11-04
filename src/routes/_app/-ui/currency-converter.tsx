@@ -189,11 +189,13 @@ export function CurrencyConverter({
         rates[state.to as keyof typeof rates],
       ))
   const cooldown = (result?.retryAt ?? 0) > now
-  const cooldownText = t('shell.dashboard.currency.cooldown', {
-    time: new Intl.DateTimeFormat(locale, {
-      timeStyle: 'short',
-    }).format(new Date(result?.retryAt ?? now)),
-  })
+  const cooldownText = result?.retryAt
+    ? t('shell.dashboard.currency.cooldown', {
+        time: new Intl.DateTimeFormat(locale, {
+          timeStyle: 'short',
+        }).format(new Date(result.retryAt)),
+      })
+    : ''
   const stale =
     result?.status === 'available' && (result.freshness === 'stale' || age > 4)
   let status = ''
@@ -324,12 +326,14 @@ export function CurrencyConverter({
             <p className="text-caption text-ink-3">
               {t('shell.dashboard.currency.source')}
               <br />
-              {t('shell.dashboard.currency.date', {
-                date: new Intl.DateTimeFormat(locale, {
-                  dateStyle: 'medium',
-                  timeZone: 'UTC',
-                }).format(new Date(snapshot?.effectiveOn ?? now)),
-              })}
+              {snapshot
+                ? t('shell.dashboard.currency.date', {
+                    date: new Intl.DateTimeFormat(locale, {
+                      dateStyle: 'medium',
+                      timeZone: 'UTC',
+                    }).format(new Date(snapshot.effectiveOn)),
+                  })
+                : '\u00a0'}
             </p>
             <p className="text-caption text-ink-3">
               {t('shell.dashboard.currency.notice')}

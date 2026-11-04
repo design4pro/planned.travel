@@ -11,6 +11,7 @@ import {
 import { useState } from 'react'
 import userEvent from '@testing-library/user-event'
 import { renderToString } from 'react-dom/server'
+import { hydrateRoot } from 'react-dom/client'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
@@ -413,6 +414,26 @@ it('shows loading before the first client read instead of claiming a failed requ
   expect(html).toContain('Loading')
   expect(html).not.toContain('Rates could not be refreshed.')
   expect(read).not.toHaveBeenCalled()
+})
+
+it('hydrates without time-dependent hidden metadata when the browser clock differs', async () => {
+  read.mockReturnValue(new Promise<PublicRatesResult>(() => {}))
+  const container = document.createElement('div')
+  container.innerHTML = renderToString(<Harness />)
+  document.body.appendChild(container)
+  vi.mocked(Date.now).mockReturnValue(at + 86_460_000)
+  const onRecoverableError = vi.fn()
+  let root: ReturnType<typeof hydrateRoot> | undefined
+  try {
+    await act(async () => {
+      root = hydrateRoot(container, <Harness />, { onRecoverableError })
+    })
+    expect(onRecoverableError).not.toHaveBeenCalled()
+    expect(container.textContent).not.toContain('2026')
+  } finally {
+    await act(async () => root?.unmount())
+    container.remove()
+  }
 })
 
 it('offers only reviewed codes until provider coverage is available', async () => {
