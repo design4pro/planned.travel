@@ -20,6 +20,8 @@ const CARD_CLEARANCE = 150
 export interface PlaceMarkerProps {
   readonly place: MapPlace
   readonly category?: MapCategory | null
+  /** Supplied by a shared detail owner; otherwise retain hover/focus cards. */
+  readonly detailOpen?: boolean
   readonly selected?: boolean
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -39,14 +41,16 @@ export interface PlaceMarkerProps {
  * pin when there is no room above, which is measured against the real projected
  * position rather than guessed.
  *
- * Hover and focus open it, so the card is reachable by keyboard; the pin's own
- * accessible name repeats everything the card shows, so the card itself is marked
+ * Without a detail owner, hover and focus open it; controlled cards follow explicit selection.
+ * For hover cards, the pin's own
+ * accessible name repeats everything shown, so that card is marked
  * decorative and nothing is announced twice.
  */
 export function PlaceMarker({
   place,
   category,
   selected = false,
+  detailOpen,
   size = 'md',
   interactive = true,
   meta,
@@ -55,7 +59,8 @@ export function PlaceMarker({
 }: PlaceMarkerProps) {
   const { locale, t } = useAtlasI18n()
   const { map } = useMapContext()
-  const [open, setOpen] = React.useState(false)
+  const [hoverOpen, setOpen] = React.useState(false)
+  const open = detailOpen ?? hoverOpen
   const [flipped, setFlipped] = React.useState(false)
 
   const hasImage = typeof place.imageUrl === 'string' && place.imageUrl !== ''
@@ -122,7 +127,10 @@ export function PlaceMarker({
               data-motion-transform=""
             >
               <MarkerPopover
-                decorative
+                decorative={detailOpen !== true}
+                role={detailOpen ? 'region' : undefined}
+                aria-label={detailOpen ? place.name : undefined}
+                data-place-detail={detailOpen ? place.id : undefined}
                 name={place.name}
                 category={
                   category === null || category === undefined
@@ -200,6 +208,8 @@ export interface PlaceMarkersProps {
   readonly places: ReadonlyArray<MapPlace>
   /** The tenant's taxonomy, for pin colours and glyphs. */
   readonly categories?: ReadonlyArray<MapCategory>
+  /** Explicit detail selection; null suppresses cards while Day/closed owns the slot. */
+  readonly detailId?: string | null
   readonly selectedId?: string | null
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -217,7 +227,7 @@ export interface PlaceMarkersProps {
  *
  * This is the component the planner mounts: hand it the trip's places and its
  * taxonomy and it decides, at each zoom step, what is a pin and what is a badge.
- * The selected place is always drawn as itself, never swallowed into a cluster —
+ * Selected and explicitly opened places are always drawn as themselves, never swallowed into a cluster —
  * losing the pin you just clicked is the one clustering behaviour readers
  * genuinely hate.
  */
@@ -225,6 +235,7 @@ export function PlaceMarkers({
   places,
   categories,
   selectedId = null,
+  detailId,
   size = 'md',
   interactive = true,
   clustering = true,
@@ -252,8 +263,12 @@ export function PlaceMarkers({
         isCluster: false,
       }))
     }
-    const pinned = places.filter((place) => place.id === selectedId)
-    const rest = places.filter((place) => place.id !== selectedId)
+    const pinned = places.filter(
+      (place) => place.id === selectedId || place.id === detailId,
+    )
+    const rest = places.filter(
+      (place) => place.id !== selectedId && place.id !== detailId,
+    )
     return [
       ...clusterPoints(rest, { zoom }),
       ...pinned.map((place) => ({
@@ -265,7 +280,7 @@ export function PlaceMarkers({
         isCluster: false,
       })),
     ]
-  }, [clustering, places, selectedId, zoom])
+  }, [clustering, places, selectedId, detailId, zoom])
 
   return (
     <>
@@ -283,6 +298,11 @@ export function PlaceMarkers({
             place={group.items[0]}
             category={categoryById.get(group.items[0].categoryId ?? '') ?? null}
             selected={group.items[0].id === selectedId}
+            detailOpen={
+              detailId === undefined
+                ? undefined
+                : group.items[0].id === detailId
+            }
             size={size}
             interactive={interactive}
             meta={metaFor?.(group.items[0])}

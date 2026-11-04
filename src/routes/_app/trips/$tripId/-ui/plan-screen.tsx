@@ -876,13 +876,14 @@ export function PlanScreen({
   const selectRow = React.useCallback(
     (row: PlannerRow): void => {
       detailDispatch({ type: 'place', placeId: row.placeId })
+      setSheet(null)
       dispatch({
         type: 'row-click',
         placeId: row.placeId,
         dayId: dayIdByPlace.get(row.placeId) ?? null,
       })
     },
-    [dayIdByPlace],
+    [dayIdByPlace, setSheet],
   )
 
   const hoverRow = React.useCallback(
@@ -1725,6 +1726,7 @@ export function PlanScreen({
             places={mapPlaces}
             categories={categories}
             selectedId={selection.placeId ?? selection.hoverId}
+            detailId={detail.kind === 'place' ? detail.placeId : null}
             onSelect={selectPin}
             onHoverChange={hoverPin}
             metaFor={metaFor}
@@ -1736,7 +1738,10 @@ export function PlanScreen({
             places={mapPlaces}
             picking={picking !== null}
             onPick={savePosition}
-            onBackgroundClick={() => dispatch({ type: 'clear' })}
+            onBackgroundClick={() => {
+              dispatch({ type: 'clear' })
+              if (detail.kind === 'place') detailDispatch({ type: 'close' })
+            }}
           />
 
           {/* A vertical toolbar is ~150px tall, which on a phone would sit straight
