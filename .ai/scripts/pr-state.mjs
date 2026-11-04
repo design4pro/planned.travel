@@ -42,7 +42,7 @@ export function judgeChecks({ checks, statuses, runs, required, readable }) {
           (c) =>
             c.name === r.context &&
             (!r.app_id || c.app === r.app_id) &&
-            passing.has(c.state),
+            c.state === 'success',
         ),
     )
     .map((r) => r.context)
@@ -69,6 +69,9 @@ export function judgeChecks({ checks, statuses, runs, required, readable }) {
     state,
     checks: rows.length,
     workflowRuns: runs.length,
+    pending:
+      rows.filter((r) => r.state === 'pending').length +
+      runs.filter((r) => r.status !== 'completed').length,
     missing: [...new Set(missing)],
     failed: [...new Set(failed)],
   }
@@ -143,6 +146,7 @@ export function readPrState(repo, number, read = gh) {
     rulesKnown = true
   } catch {
     warnings.push('Ruleset requirements unavailable')
+    readable = false
   }
   try {
     const classic = read([
@@ -155,8 +159,20 @@ export function readPrState(repo, number, read = gh) {
         : classic.contexts.map((context) => ({ context }))),
     )
     rulesKnown = true
-  } catch {
-    warnings.push('Classic protection unavailable')
+  } catch (error) {
+    let absent = false
+    // GitHub hides some resources with 404; confirm administrative visibility first.
+    if (/\(HTTP 404\)/.test(String(error.stderr ?? error.message))) {
+      try {
+        absent = read(['api', root]).permissions?.admin === true
+      } catch {
+        // Unknown permissions cannot establish absence of classic protection.
+      }
+    }
+    if (!absent) {
+      warnings.push('Classic protection unavailable')
+      readable = false
+    }
   }
   const reviews = optional(
     'Reviews',

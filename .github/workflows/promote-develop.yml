@@ -2,8 +2,8 @@ name: Promote develop
 
 # Git Flow's promotion leg, kept open automatically: after every push to `develop` - which is
 # every merge into staging - this opens the `develop` → `main` pull request if one is not already
-# open, and otherwise leaves the existing one alone. It never merges anything; the owner
-# reviews and merges it, and merging is what deploys production (deploy.yml).
+# open. With AUTONOMOUS_RELEASES enabled, the release job may merge the observed,
+# tested staging candidate; high-risk ranges require an exact-head owner approval.
 #
 # ADR 0003 makes `main` receive only what staging has already run. A promotion pull request that
 # always exists is what keeps that visible: the diff between staging and production is on screen
@@ -25,6 +25,8 @@ on:
   push:
     branches: [develop]
   workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
 
 # One at a time: two pushes landing together must not race into two duplicate pull requests.
 concurrency:
@@ -43,6 +45,7 @@ permissions:
 jobs:
   promote:
     name: Open the develop → main pull request
+    if: github.event_name != 'schedule' || vars.AUTONOMOUS_RELEASES == 'true'
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
     timeout-minutes: 5
 
@@ -82,7 +85,7 @@ jobs:
             'Automated promotion pull request, opened by `.github/workflows/promote-develop.yml`.' \
             '' \
             'Merging this deploys **production**: <https://planned.travel>. It stays open and keeps' \
-            'collecting commits until the owner merges it, so the diff between staging and production' \
+            'collecting commits until the release gates pass or the owner merges it; the diff' \
             'is always one click away.' \
             '' \
             'Before merging, check that staging has actually been exercised:' \
@@ -90,8 +93,9 @@ jobs:
             '' \
             'Every commit below has already passed the full gate on `develop`. Whether this pull' \
             'request runs its own CI checks depends on the token that opened it - see the header' \
-            'of `.github/workflows/promote-develop.yml`. The owner reviews the promotion before merging;' \
-            'it carries `do-not-merge`, so no unattended pipeline run merges it.')
+            'of `.github/workflows/promote-develop.yml`. High-risk ranges require a current-head' \
+            'release approval. `do-not-merge` excludes agent automerge; only the guarded release job' \
+            '(when enabled) or the owner can promote this branch.')
 
           gh pr create \
             --base main \
@@ -99,3 +103,28 @@ jobs:
             --title 'chore(release): promote develop to main' \
             --label do-not-merge \
             --body "$body"
+
+  release:
+    name: Promote the observed staging candidate
+    needs: promote
+    if: vars.AUTONOMOUS_RELEASES == 'true' && vars.RELEASE_INCIDENT != 'true'
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+      issues: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: develop
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Verify range, CI and staging receipt
+        env:
+          GH_TOKEN: ${{ secrets.PROMOTE_PR_TOKEN }}
+          RELEASE_INCIDENT: ${{ vars.RELEASE_INCIDENT }}
+        run: |
+          test -n "$GH_TOKEN" || { echo 'PROMOTE_PR_TOKEN is required to trigger production CI'; exit 1; }
+          node scripts/ci/promote-release.mjs --apply

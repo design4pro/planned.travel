@@ -41,3 +41,7 @@ automation-log.ndjson.*.tmp
 automation-poll.lock.guard/
 automation-mutation.lock.guard/
 automation-mutation.lock
+claims/
+close-fixed-issues.json
+close-fixed-issues.json.tmp
+close-fixed-issues.json.lock

@@ -36,7 +36,6 @@ Additional opinions are on demand through Cezar or `@codex review`. No bot findi
 
 The claim step stops on a merged or closed PR only at the start. Immediately before each `git push` of an autofix commit or a conflict-resolution merge to the PR head, run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
 
-
 ## Shared PR and CI evidence
 
 Use `node .ai/scripts/pr-state.mjs <pr>` for the read-only state snapshot and add `--wait` for
@@ -44,3 +43,15 @@ one bounded CI wait. Reuse its required-check and workflow-run evidence instead 
 API/polling loops in the agent. `unknown` is never green; inspect the warning rather than treating
 unreadable external checks as passed. This helper does not replace fresh-head checks before
 mutations, claims, unresolved-thread handling, security verdicts or current-head QA approval.
+
+## Evidence bound to the reviewed revision
+
+Inside Cezar (`CEZ_RUN_ID` is set), before repeating this stage, run `node .ai/scripts/pipeline-control.mjs evidence review <pr>`.
+A reusable record is a pointer to the existing report, not an approval by itself: read that report
+and current findings/revocations. Reuse only completed passing coverage for its exact head, base
+and policy. Missing evidence or new concrete findings require fresh work. After publishing a
+passing report for the head actually inspected, verify the head and base have not moved and run
+`node .ai/scripts/pipeline-control.mjs record-evidence review <pr> <report-url> <reviewed-head-sha> <reviewed-base-sha>`.
+Never record a failed, partial or waived stage as passed.
+
+Outside Cezar, use the published report and exact current head/base/policy checks directly; the local run-store commands require a Cezar run identity.

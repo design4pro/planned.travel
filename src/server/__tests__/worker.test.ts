@@ -30,14 +30,12 @@ const harness = vi.hoisted(() => {
         records.push(record)
       },
     },
-    tenantPrune: vi
-      .fn()
-      .mockResolvedValue({
-        deleted: 0,
-        batches: 0,
-        organizations: 0,
-        drained: true,
-      }),
+    tenantPrune: vi.fn().mockResolvedValue({
+      deleted: 0,
+      batches: 0,
+      organizations: 0,
+      drained: true,
+    }),
     prune: vi.fn(),
     rollUp: vi.fn(),
     deadLetters: vi
@@ -69,7 +67,9 @@ vi.mock('../audit/retention', () => ({
 }))
 
 vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
-vi.mock('../auth/account-security-scheduled', () => ({ sweepScheduledAccountSecurity: harness.securitySweep }))
+vi.mock('../auth/account-security-scheduled', () => ({
+  sweepScheduledAccountSecurity: harness.securitySweep,
+}))
 
 vi.mock('../catalog/audit', async (importOriginal) => {
   const actual = await importOriginal<typeof CatalogAudit>()
@@ -113,6 +113,22 @@ const env = {
   BACKUP_RETENTION_DAYS: 30,
   FILES: { binding: 'FILES' },
 } as unknown as Cloudflare.Env
+
+it('reports the actually serving version and never invents deployment evidence', async () => {
+  const request = new Request('https://planned.travel/api/version')
+  const unknown = await worker.fetch(request, env)
+  expect(unknown.status).toBe(503)
+  const known = await worker.fetch(request, {
+    ...env,
+    CF_VERSION_METADATA: {
+      id: 'version-id',
+      tag: 'sha',
+      timestamp: '2026-11-03T00:00:00Z',
+    },
+  })
+  expect(await known.json()).toEqual({ id: 'version-id', sha: 'sha' })
+  expect(known.headers.get('cache-control')).toBe('no-store')
+})
 
 function controller(cron: string): ScheduledController {
   return { cron, scheduledTime: SCHEDULED_AT, noRetry: () => undefined }

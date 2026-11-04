@@ -67,5 +67,11 @@
     "qa": ".ai/qa"
   },
   "reviewChecklist": "docs/agents/CODING_STANDARDS.md",
-  "closeKeywords": []
+  "closeKeywords": [],
+  "trustedAuthors": ["rafalwolak"],
+  "pipeline": {
+    "policyVersion": 1,
+    "requireExecutedCi": true,
+    "productDiscovery": false
+  }
 }
