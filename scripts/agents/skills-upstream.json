@@ -1,0 +1,3266 @@
+{
+  "sha": "75cf3146fd31aa6fa53af0866c076e5b7a3d9179",
+  "files": [
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/SKILL.md",
+      "sha": "3c65fcf7d1d0add789c8b66b606c083b501b3c15",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/references/agentic-setup.md",
+      "sha": "887622e91873dc732f7a1911b31e58635b4e55d8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/references/pr-delivery.md",
+      "sha": "b949e0ae9988dc4c57fc4a0c0635a290c32fe758",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/references/report-templates.md",
+      "sha": "320d24ac6998be968ce1e04334b6bcc7b967c304",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/references/rotation.md",
+      "sha": "7b7cd6f41363fa2b360b45908ca9b39263d68778",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/references/rules.md",
+      "sha": "0e71badcd4a2051750a0c2132f1364155fb4ec06",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ai-context-maintenance/scripts/rotate-runs.py",
+      "sha": "ce266a91c0f58d626a8808fe2a9f0634b62ccef4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/SKILL.md",
+      "sha": "d4cdc4cf3d19de4534abbccfa9cd9b28393b1e6b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/agentic-setup.md",
+      "sha": "57175c99f093a8b1f2ee09428a4a10fd2a0cc63b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/app-spec-template.md",
+      "sha": "93e5b150b7aeec75201a5353283b36b439c8c1dd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/challenger-prompt.md",
+      "sha": "fef0fe2f1a86dab4401b14cb52b99acedad6ae5b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/handoff.md",
+      "sha": "1505b3b545eb3a6a0beb5afdd7e7fcd36e5e4131",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/platform-knowledge.md",
+      "sha": "14a403c077be88e87f796ecdb7a75dd359920328",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/quality-gates.md",
+      "sha": "86372c90c063be87771c1bdca86b8c1c1cfc59c0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/report-templates.md",
+      "sha": "d42210e08f89a8331a6cf12b96d31e4c9ffd6a67",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-app-spec-writing/references/rules.md",
+      "sha": "aa1360af2fc9da5f9c92bf2eadb29c1a8a216974",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-apply-upgrade-notes/SKILL.md",
+      "sha": "9f073d28c61814065edd4de5d3be18ec4c8fa7cd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-apply-upgrade-notes/references/agentic-setup.md",
+      "sha": "995269e80123901c19656b7359965c103e4b6ad3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-apply-upgrade-notes/references/report-templates.md",
+      "sha": "02b9cf1f4bc55b2248ffa375c4c5481caa495ed9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-apply-upgrade-notes/references/rules.md",
+      "sha": "cc635706595c30478afc2505d30718e07d53d9df",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-approve-merge-pr/SKILL.md",
+      "sha": "86cdc9eff5e51e2d2ad94033bf0e6f58a9bb4aed",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-approve-merge-pr/references/agentic-setup.md",
+      "sha": "e3b166b69f3d7959e7333091f8913927e3f1af80",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-approve-merge-pr/references/report-templates.md",
+      "sha": "6e3874cc96c8775d8e92f47cb7ec42bf1987dd47",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-approve-merge-pr/references/rules.md",
+      "sha": "49fc727bc085dff5f746150629094ef47ae799f1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/SKILL.md",
+      "sha": "e1c777599c0c74f31bc58b66257b2fda66b037cf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/agentic-setup.md",
+      "sha": "3b78de9b7e2972a7ed6be426600f49609b3d377e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/ecosystems.md",
+      "sha": "81b4fa0dff712caac9bee50dda35c9863e6b74c1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/issue-filing.md",
+      "sha": "a6f641ae7848ce9330fe8c5b5778de669c65520c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/osv-scan.md",
+      "sha": "3c308fae1cabbc7db4fdd63a93c40bd6c812fa3a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/osv-scan.py",
+      "sha": "94679851c5a931ce7ebfae49b36582daeb9b91b4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/report-templates.md",
+      "sha": "bda1e687040c7835c336b92a8d96ee2d9f281553",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/rules.md",
+      "sha": "1ee05fdee948b86f33105d36b42ccc9ba1b30f87",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-audit-dependencies/references/upgrade-path.md",
+      "sha": "a4bf2f8cf56a728baac7bc2c4dc9928bbe98787b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/SKILL.md",
+      "sha": "7aa500c8d51838667defd1e9e65e087e782a158f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/agentic-setup.md",
+      "sha": "701f5b0f7432019930fb8237a41be5f78d7718b6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/checkpoint-pass.md",
+      "sha": "0d1df30c9bfe8008bbab4b8c5dfacf04b7456888",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/claim-pr.md",
+      "sha": "6e4bffe89af27d967247ec4367caf035cddfdcef",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/executor-dispatch.md",
+      "sha": "5e9d01a642c7ab0a1e108459cf9aeda9e384fe30",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/final-gate.md",
+      "sha": "f3d749c2f817370b473e1d22e99fb4493efaa798",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/per-step-loop.md",
+      "sha": "4061d6d50dc1a6fc9f401f53b90965fdd1b7942d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/pr-body-template.md",
+      "sha": "58225b05c2cbc12f23bc60254eb77633a365d07d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/pr-finalize.md",
+      "sha": "127fa482a583a2afb257028fe7a67b587782533f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/report-templates.md",
+      "sha": "bc1e2f7cdc90ce3fcfaea07d9abf06f3b219646d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/resume-orient.md",
+      "sha": "ca01088e43e8ae4bdcd14160ed07d70bdb31e973",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/review-report.md",
+      "sha": "1299b6405421be36258172010fcaf7f52d630e23",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/run-folder-lookup.md",
+      "sha": "caef231967d4617b1acecb196aaabf639ef13811",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/run-mode-contracts.md",
+      "sha": "08311816122df0a8c2f70ef8fb6f0719ca15b9e1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/step-review.md",
+      "sha": "f3a252eb31aa9d1da24d8b1f3ee354e86eb0867e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/summary-comment-template.md",
+      "sha": "655a89a12ce17f90b685fcfdf0e495dfbbc2175b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr-loop/references/worktree-setup.md",
+      "sha": "6c35e9b5593aae7dff0647317a7b662d45a48c2b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/SKILL.md",
+      "sha": "4588d247f47673fb8525a5b31b30de33f2ddee21",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/adopt-pr.md",
+      "sha": "d5e454c0261e2a391038b06223cb28efb845253f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/agentic-setup.md",
+      "sha": "02f9ca3255f716b15633acbc3e80c4c8660698b4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/claim-pr.md",
+      "sha": "9c59d911a5947a5de34b75b8e1a18a26024dd06d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/pr-body-template.md",
+      "sha": "478fe5ed6d6561f665f3ca36f53af4e57a95dc08",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/pr-finalize.md",
+      "sha": "6fd1095d0e297b7e6ee282e90d4cce42a1ef26f0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/report-templates.md",
+      "sha": "fe914b265b95ff5b95b2c6a44c6a882f7294d34c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/review-report.md",
+      "sha": "9eb3068fc76d098d3a741281a0ca0eeba9083c1b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/summary-comment-template.md",
+      "sha": "6192a54ce3050564d8454e97a4daf427cce8e464",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-continue-pr/references/worktree-setup.md",
+      "sha": "318f10df2a8d430a76e2b5070a834066e6704593",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/SKILL.md",
+      "sha": "b9bb4c4116cd16adc9e2c053ebf34e31639d8552",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/agentic-setup.md",
+      "sha": "3595f3e317fb21cade9e61d962ce59f702f48bc4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/checkpoint-pass.md",
+      "sha": "320d73ce678de7ffd663c63db84d616b7153dccc",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/claim-pr.md",
+      "sha": "f2a9b1972783e273aa6112ca9b1853939f97e42e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/executor-dispatch.md",
+      "sha": "8b0651156d21f4267d8aa6adaff15858f7f52f96",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/external-skill-urls.md",
+      "sha": "c7c1272c98320585dc4160bb28c44ad0b9e1390b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/final-gate.md",
+      "sha": "76db0781d910bc58a589db14863f529667fb6985",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/per-step-loop.md",
+      "sha": "bf8af02c6ce554f3630d9b909d8805b40cd6124c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/pr-body-template.md",
+      "sha": "2f29663f46ed35fc2f4b515444c157358e08cb80",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/pr-finalize.md",
+      "sha": "de47992c2eb51f51ec446dd98162adb8ed65995c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/report-templates.md",
+      "sha": "c79e460367ff48dad2607ead692e8d4ff631c4ea",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/review-report.md",
+      "sha": "16cdee2f8a6e1f5f9d138b08af32660aba260632",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/run-folder-layout.md",
+      "sha": "8f2809ab54d58433e48c6b0fe030b1ebdfc4b859",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/run-mode-contracts.md",
+      "sha": "4122772e068340a37f9cd24de39402955ebec2ee",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/step-review.md",
+      "sha": "f3a252eb31aa9d1da24d8b1f3ee354e86eb0867e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/summary-comment-template.md",
+      "sha": "5820db7d972f48ab5e823c5c97fa0b7c10e48e55",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/task-planning.md",
+      "sha": "9d9f5f6b1b1ee6b9e71670968f75e5669929b924",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/tracking-file-templates.md",
+      "sha": "824e8b1473e4ee1d79fa0d53e614f46f7131f67d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr-loop/references/worktree-setup.md",
+      "sha": "8d250f60de231f9cc9eab6013ea99831aedb1f40",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/SKILL.md",
+      "sha": "abc90b0ac9a2cc2ef9c31f32284e776633bfc27d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/agentic-setup.md",
+      "sha": "e595d4e316c514a1c885c9f865d916916d1d9e61",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/claim-pr.md",
+      "sha": "fd0fe173022ef624418a467c05461d3e20b68a7a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/engine-selection.md",
+      "sha": "88246e00e0437a5c8e7bc211b27d707efab46b3f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/external-skill-urls.md",
+      "sha": "a64d57e6d4adbfc32cbd2bc4fee53178145b76a2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/pr-body-template.md",
+      "sha": "5f895049411e1a62d09df6d0dad0a51da09b7602",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/pr-finalize.md",
+      "sha": "5534e076a8139cc90fd13357d438f0c83a1c473c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/report-templates.md",
+      "sha": "d029e4653f26122eb2697722895bdbc9c73cb5df",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/review-report.md",
+      "sha": "902908d069a07a1b96e05a59d47ec3bcd07258d5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/summary-comment-template.md",
+      "sha": "84a2b062caa61c7c648474ab24eab3fbf6ee6d27",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-create-pr/references/worktree-setup.md",
+      "sha": "3d4150e6ef41a5b29be3cf3609833a29c7bacb6e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/SKILL.md",
+      "sha": "78aaa3ef4808dcf90debfc6e18eadd75284cb742",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/agentic-setup.md",
+      "sha": "d6048acd4dc9ea2710b9033002eafa4d21bcadf7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/brief-mode.md",
+      "sha": "11d7e3b61af07bf398be88e4f346b055ac555057",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/claim-pr.md",
+      "sha": "b5e79222361cd1e4399ce9c089645cc8064c6da8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/feature-route.md",
+      "sha": "3a599511917eaf794a2b0229c4a89db210e9e7c4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/fr-triage.md",
+      "sha": "166c80e6d1449aa2ad2ae75e9c096629c9707d4f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/pr-finalize.md",
+      "sha": "0339d7fb4fc12a5bab4bccc01cbdb1f36397295b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/report-templates.md",
+      "sha": "778bdf92869414ba63f0246b1a2ed01d913ccfc5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/review-report.md",
+      "sha": "6fa6cf44a9522a8dd8a266f3c4cb5658baca4b3e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/spec-resolution.md",
+      "sha": "57f651751ac0eb10caf010e7ac96f46bdabb35d6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-issue/references/worktree-setup.md",
+      "sha": "ebe944db0bf76104bd1082f790711eff6043b9c1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/SKILL.md",
+      "sha": "976b34e3855b584017cb2c2b23a666f0e351139b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/agentic-setup.md",
+      "sha": "a9315583b7dba488c1e3ad21f8f2e5afb3308e8e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/base-merge.md",
+      "sha": "9bf19998f9fb45810e86d1eac893b9e2771d1d76",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/ci-baseline.md",
+      "sha": "cf5c527846ac9493d25900bb33a28b1b4e877b96",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/ci-followup.md",
+      "sha": "e11e7e591e47f8017adb5324ad91e079cb1dc283",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/claim-pr.md",
+      "sha": "d8a993793e05a6cf0d616b458ef998d2b5a356e0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/orchestrated-mode.md",
+      "sha": "8ee6f08c6281b406ecff57f5606dd43dbcc900c8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/pr-finalize.md",
+      "sha": "8f706dd772ed3bc4167b69ee3818f7fed2e9da4f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/report-templates.md",
+      "sha": "52bd376a36330e08b8fdc2a7d47d7a7c554be604",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/stabilize-ci.md",
+      "sha": "646f7005c7e29bc787d6f82b1d5e81b3360f26c1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-fix-pr/references/worktree-setup.md",
+      "sha": "3f043112290f37631981796d7add1601b4789755",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/SKILL.md",
+      "sha": "bff36d26bbdb4e4351a9da232b35ee9923105ae4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/agentic-setup.md",
+      "sha": "4be1ab7a2d56d925c1f81700de2c90a1232f4c20",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/pr-finalize.md",
+      "sha": "c163865ba24850ae513b66c570247a37381b0d18",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/report-templates.md",
+      "sha": "570d1886960d01c7b03e8d38f30e758287731eca",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/rules.md",
+      "sha": "62066c32f2726c08f05899da92aac481d829e242",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/spec-resolution.md",
+      "sha": "68a9c26e4bc3e222575d184447ee6c4a2b76039b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/SKILL.md",
+      "sha": "9355dba13d8c208acc9f1a444d2c2b54bfdbbb94",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/references/agentic-setup.md",
+      "sha": "297d0c44b10d46001eef99e8dd372277fba58f9f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/references/eligibility.md",
+      "sha": "7f844d980a086322b5a9d2f74fe4bbe8082b04fa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/references/report-templates.md",
+      "sha": "49ecb414caddb0fb97df1db9e0a434c333474fa5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/references/rules.md",
+      "sha": "a63c748f8b6a6b478429848ad709a82d1b896425",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-issue-triage/scripts/select-issues.mjs",
+      "sha": "f82ee3ecfc27295ce203a3b1ee744d689c5853d6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/SKILL.md",
+      "sha": "f0b9371a6b9e0aa74ac14af3319e3ec69efe47e8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/agentic-setup.md",
+      "sha": "eced83bedf51330dda212a9f08f462f79a4fbd40",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/batch-selection.md",
+      "sha": "c9c8f8f4c544c7817e8de21d9368347495875781",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/claim-pr.md",
+      "sha": "65a419784aa8f858a8c0725c8afc8ac8fb11ab9c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/enrich-existing-issue.md",
+      "sha": "2939d4af5ada75499519fffd038e226d282f9f34",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/implementation-prep.md",
+      "sha": "53727194a2800c5b09caf69fe1d0368322097c72",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/report-templates.md",
+      "sha": "3591cea3c4d9d1db538c6cc8e23b6dff306f89f8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-manage-issues/references/screenshot-analysis.md",
+      "sha": "fa57292a7f47a35a84ce3c5a9b6e578d6a4bcf49",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/SKILL.md",
+      "sha": "ccd7daa3de173e16c39a07e8b4c61775d890d7e9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/agentic-setup.md",
+      "sha": "f15ede527e8f6449977494796cbb9ad36ef4ef49",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/chaining.md",
+      "sha": "6e85ccb29f3b8ca4e94fa2d43a73d7925df83796",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/ci-approval.md",
+      "sha": "eb2d1cf094cb989afd87d0518006347c7ce4f187",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/ci-baseline.md",
+      "sha": "eb9f7ca7c8b277b3bb5a53d53b7d4d53b27aba12",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/claim-pr.md",
+      "sha": "61a293b8120c9ce4fc8d1d4670008c0fffd901a5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/concurrency.md",
+      "sha": "86fec249b0932b56326009fdb6a71acf6765ecb9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/dashboard-commands.md",
+      "sha": "5c16718dcc7f3dca7fae2b990c93097674aeca21",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/dashboard.md",
+      "sha": "bd968ed7bcc3ec60d7f367da30f241ba756fea99",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/entrance.md",
+      "sha": "a22fa015f7f129ed590b6fe93c1443576d05dd96",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/followups.md",
+      "sha": "e131eba162bb5877e987fb899388e4555463696c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/human-gates.md",
+      "sha": "482a58cb6227f53f9a196de433749edb95b62ecf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/independent-review.md",
+      "sha": "590c077933e0f2dffef6f1825cff8f0b4a276134",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/item-policy.md",
+      "sha": "631520143ddc3a7c89f27ed8b3a67fcd97b5fbf0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/merge-summary.md",
+      "sha": "a8904e2e718488697e03deddccbce9beda50d097",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/obsolete-prs.md",
+      "sha": "a21f684e87e731d38360f45ac2d9658586e8b2ec",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/qa-evidence.md",
+      "sha": "7dba027a1be1762bce90c0aed04ae2910b75fd3d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/qa-routing.md",
+      "sha": "b2fe14c161d4d4fbfc248da127dbe274f3fa9f84",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/reconcile.md",
+      "sha": "968d31d0a9a1db3c6ce8a96cddc435f299cd832d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/report-templates.md",
+      "sha": "a750f59c5fa3d060ddccfc9cff3343f105720875",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/risk-override.md",
+      "sha": "8b0ba34f46187c07142870ef7036da6fdf8ad112",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/run-log.md",
+      "sha": "112563a9cc3acfc2fdc460d7a1401b2870a161bc",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/scheduler.md",
+      "sha": "404bec0da6d99766d7b4a178fe69c7a87ec2965f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/signals.md",
+      "sha": "fa136a8718be81dc2859464a78b0f60b67fd8ea8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/stages.md",
+      "sha": "61e4a2bcca4f270b5958c9c3c4b877c25ca8184e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/window.md",
+      "sha": "7b7d5726f8b23bf57890bb63174cb8a765285c17",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/scripts/dashboard.mjs",
+      "sha": "dcdc9f1d60105cad9b90e0dde86267744babc325",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/SKILL.md",
+      "sha": "9ab8937611338bf64dd5a64dfdf6e1bf0b259230",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/agentic-setup.md",
+      "sha": "1a9afa67046c630d9214d569069b40db5e23355c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/ai-judgment.md",
+      "sha": "b8eb9b3f40efc0cb86efde832f497bfd982cffff",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/eligibility.md",
+      "sha": "340f5a1e0d98f55c4416ff463a68a2ea71bf6229",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/human-lane.md",
+      "sha": "443b882fc1a483f1cb08aaf74d180e160af615af",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/report-templates.md",
+      "sha": "492d6d4a1ba98c3d094b165bf260b18c9231dce1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-triage/references/rules.md",
+      "sha": "dac5393cfa0f7911167ca2b647a553db6998b291",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/SKILL.md",
+      "sha": "1e572b183802069c9d09d2229013b430e3d7f463",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/agentic-setup.md",
+      "sha": "19a980a285732e18add12d7129797232ed5b4b46",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/boot-env.md",
+      "sha": "cb033e9a14d2c22171874c665dcd9c7dc73673de",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/claim-pr.md",
+      "sha": "7b20b1d7704ab0dd46bc268067d09c0ad44d613e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/complex-mode.md",
+      "sha": "22cbeb7ebf5b3bf6fac19c561215ae52f4ad7dd5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/driving-scenario.md",
+      "sha": "e0195b4a5dc248a96039cbf227a83a7c2c59bfee",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/orchestrated-mode.md",
+      "sha": "7d2ea9c9a2fa7472a11a110e6133a34f346c2adf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/report-templates.md",
+      "sha": "64aac3a64ac2f4f157ecf9aee8ce5a0e8cd3a541",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-pr/references/worktree-setup.md",
+      "sha": "d002f9a58a71b63b683b8b456d68c59b11ac2c57",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/SKILL.md",
+      "sha": "c651899139193caa41fd4ab54fe234a18a9f1357",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/agentic-setup.md",
+      "sha": "038dcfcb9b894cd2684a39940c53296a1c99770c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/artifact-format.md",
+      "sha": "833cef754c8d83c837344716667d68079384f17e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/pr-window.md",
+      "sha": "ab9220de7aa94668b5813efce73622806612b9e0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/report-templates.md",
+      "sha": "191f7dd7a8abe5c7e76a42dcd57757ba4585fdda",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/rules.md",
+      "sha": "a338a98aff0069d4ee5972891244b99c18ca823a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-qa-scenarios/references/scenario-design.md",
+      "sha": "d75796ee5ebfb665b7f29d35e864bc58587e892d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/SKILL.md",
+      "sha": "647bf710c34ab1b49ce504a5b6fdf36bc30ba420",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/agentic-setup.md",
+      "sha": "f4d33e51c829ecde3a56f18838dbf849d88e132a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/ci-followup.md",
+      "sha": "59d6ca4147614b16c80ad5bc02cb73c79ad5352a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/claim-pr.md",
+      "sha": "ec5d42b2ee6918b7f1e9ad14e9d6ab4bcd1ae9ec",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/diff-auto-detections.md",
+      "sha": "7c4514bf38242b49f05edc2b324e09b08f459813",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/duplicate-detection.md",
+      "sha": "9207d10cb6ec169ba8dbe13e3df17bf153b3a4fa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/fork-pr-flow.md",
+      "sha": "ffe984936c7a2acb97d325f1ce7ead209222614d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/label-transitions.md",
+      "sha": "4046ff1ac5a39879294d7cd4aa2dded63d41a274",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/manual-qa-template.md",
+      "sha": "fac31461f3c0831a71e1fdecb0bd721de3104049",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/orchestrated-mode.md",
+      "sha": "b5727521482035c0fc3c87e7354ececc3ddb8ac3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/pr-metadata.md",
+      "sha": "a564bb4fa806061778b003fd536d6631cdfa504b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/pre-review-signals.md",
+      "sha": "eceac2229e14b139a45c2fe8d18e0ac28ebecdc9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/report-templates.md",
+      "sha": "936e61cc9b2a07eda1c1e29671e19d40a585f156",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/review-report.md",
+      "sha": "2a50c03f8bf0f0f1aada01fc2908dde64376900b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/spec-review.md",
+      "sha": "45a5ef8ade41c817b80f9a80f911a8ff326595d9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/verdict-and-labels.md",
+      "sha": "8d800935a05507e77bb3d1a059154116604a3409",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-review-pr/references/worktree-setup.md",
+      "sha": "e3fb655aa0d53da92cf41f846d4b91321cfad7ec",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/SKILL.md",
+      "sha": "5f07b3504a96d42620d9b2b667ea05ffd0463a8e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/references/agentic-setup.md",
+      "sha": "c33ec0e4086e5d9f4f733d8427f34c421e6b7a03",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/references/deep-attack-vectors.md",
+      "sha": "7ed43aa66488cb5c63cd945a51971ac1eb8add3e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/references/report-templates.md",
+      "sha": "fdd78645643c34ce150271bfcf5f3080e34952ab",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/references/rules.md",
+      "sha": "4611cf9cbc3761fa9d31dc5c8e5ff09ac15259a7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report-pr/references/worktree-setup.md",
+      "sha": "a27bc3fd743aadc192093261632869227c7059e8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report/SKILL.md",
+      "sha": "8f6e12a8d198a255765cc21f24557a3debe56601",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report/references/agentic-setup.md",
+      "sha": "347cd71792dbf235432cf62d760f0367f8e4dfcb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report/references/report-templates.md",
+      "sha": "76ac27550e1f406a622823d33865372bb3f726eb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report/references/rules.md",
+      "sha": "4da2b3e83dae292bdd4cd750978e7ea2d8a4f41f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-sec-report/references/unit-queue.md",
+      "sha": "e8a67991463470f34b477330394cc1bd3226aca8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/SKILL.md",
+      "sha": "a9aafbdfc71325cf756e579bfd90d20f0b2cbede",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/references/agentic-setup.md",
+      "sha": "9bd743ced3106144d0883eaf5406139ce5fdbf81",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/references/release-window.md",
+      "sha": "2e52c57b5b28ce085796213c5f3262b5774f4906",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/references/report-templates.md",
+      "sha": "940471d8e70b92278eb458646b3c2465c3ecec2b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/references/rules.md",
+      "sha": "17a0c37c49c1023e13be7ba867f642e20e3e4763",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-update-changelog/references/supersede-credit-rule.md",
+      "sha": "ed2830cedd35b5aa363021947a7c8eece570ef52",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/SKILL.md",
+      "sha": "005be29fdb54a51a5a8d964f9b503ac5c99ade03",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/agentic-setup.md",
+      "sha": "fe11cd0c0791d66aacf4031c8c551362c586fffb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/assumptions-comment.md",
+      "sha": "b523d398457728c9bb2cffa5199d49cc3afe0f65",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/claim-pr.md",
+      "sha": "6e9f6c90ee8c8dc307873cab483ff4d1087b654a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/mockups.md",
+      "sha": "011cb1b0cf93e578052737a7031d2252298a4094",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/pr-finalize.md",
+      "sha": "970160a27825306f471de8077080c52d65c740b7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/report-templates.md",
+      "sha": "edc64009184a3135a5c230ffadeb1e995ea1872a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-write-spec/references/worktree-setup.md",
+      "sha": "6b9ea4ef83135d94804da43d863ffe4b7d16e3e6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/SKILL.md",
+      "sha": "512ca4cee25a38f4bb3fceeb5e8c432d58377d0d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/agentic-setup.md",
+      "sha": "e78163e401f41f0d5e1fd827fd7bbca9fbd9fd87",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/backlog-tree.md",
+      "sha": "8064a27061ee793561af3dfa04e5af439f46cb17",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/filing.md",
+      "sha": "a6ffb14b86ad35c653d61d7cbfdaed3161dc04c7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/identity.md",
+      "sha": "aedc19ccf815d7e8432463f28733d3a5ba771c36",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/report-templates.md",
+      "sha": "0e1ba4fa43b914414a79663d43546816d4d4e7a4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-backlog/references/rules.md",
+      "sha": "61a8fa31a2f14a4ccf323d83710ec9c3dc11408f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/SKILL.md",
+      "sha": "62505b73f6a7944ed624d2d2d87c4a563f441588",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/agentic-setup.md",
+      "sha": "5ead2de4ba6b4aba678dd617eff3c602b3fbb3d1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/brief-template.md",
+      "sha": "6721a684de783ec6854dc3bd950bb239532cf4ef",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/challenger-prompt.md",
+      "sha": "43ceb715aa5d12bd28eec60a6328f13ce66426ac",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/conversation-guide.md",
+      "sha": "7d87724e68de2f6c0331e120ee275b6f34142ea2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/exit-ramps.md",
+      "sha": "94a82258df9cf61edf1814f146e446fe61da6fa1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/report-templates.md",
+      "sha": "8d2744f35af963987ba81dd5def1fb631778e2ab",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-brainstorm/references/rules.md",
+      "sha": "9e27a96497c7eba01de68b97786de03be0be0b63",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-check-and-commit/SKILL.md",
+      "sha": "4d51dd1483b7d824be1334e2402e60d05cc45a05",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-check-and-commit/references/agentic-setup.md",
+      "sha": "a0fe729107d5807b922e88ae6726654148384db4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-check-and-commit/references/report-templates.md",
+      "sha": "be76c8e65db9a76cd96e934c8f325017cdac1daa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-check-and-commit/references/rules.md",
+      "sha": "4e93840f5ee39da8e5858b109f7bc0efbda39f96",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/SKILL.md",
+      "sha": "5e7467f8a4d8b33bb238aaf6d193ea89650686d5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/references/agentic-setup.md",
+      "sha": "75466019ea0e8cdcd4143bf4347e51def2b5cb77",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/references/claim-pr.md",
+      "sha": "e8fd00973cd018250408367ff3e65d85e9c5d4a5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/references/examples.md",
+      "sha": "a80f1ee430be6148bdf96002341f800e0d8a5236",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/references/report-templates.md",
+      "sha": "d68f7422d9ec89be729cf799f991c62f89a9b1b9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-close-fixed-issues/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-code-review/SKILL.md",
+      "sha": "84ae60b665ce8aa8bc4a3ac73a3113c743b4cf3a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-code-review/references/agentic-setup.md",
+      "sha": "2fb25e208f38c726bb05bd49cbbded7c54a63523",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-code-review/references/output-format.md",
+      "sha": "b7615f0758e1abe221727a3f2aa5a1449aa1e254",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-code-review/references/review-checklist.md",
+      "sha": "d0bc07f0a256349b531301978bd4844db148e5cf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-code-review/references/rules.md",
+      "sha": "03a73cc450730453d1881331be3d417824242f11",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/SKILL.md",
+      "sha": "9bff663c4269a231dba95b1d2b8bb9e92bc00aaa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/agentic-setup.md",
+      "sha": "fff16a9d89b0696f87c8d9f80532c02ad42d41a7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/codebase-discovery.md",
+      "sha": "500f1944fcf81b86c1ff6a553b220216007f5058",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/default-template.md",
+      "sha": "d15dacd921400325fd4139c7821ddde8c8897aa7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/report-templates.md",
+      "sha": "576026ce15494cd3546e4eca59d49b0d7bcf761f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/rewrite-and-refresh.md",
+      "sha": "0cd3ae8f694a2ad3da89dccc756d325e2fb15a37",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/rules.md",
+      "sha": "70b59037a99449839ea097ce9bb94595b67ca24f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/template-contract.md",
+      "sha": "be1e386f54b03cb3cbb0a2e0e5a172c4952af4a2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/verification.md",
+      "sha": "95673b729b515599b264687be9fc8ab41d13dce6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-agents-md/references/writing-rules.md",
+      "sha": "7594cff716674b9d23f0b12e45398cf974faad8e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/SKILL.md",
+      "sha": "ef82242c722650c922df56079c4310a2c43a0d30",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/agentic-setup.md",
+      "sha": "cffb9e3f35aad80b37bd5b8ffc79d70fe61df221",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/author-workflow.md",
+      "sha": "a57cec3322759bf4f2a097918d73c7b2aa122b0d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/authoring-patterns.md",
+      "sha": "420bf73bd8c21777a6c49bb09f24f581b9fa558c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/description-guide.md",
+      "sha": "60189d2a2b74463bf73db4f81da6b136036df74e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/gates.md",
+      "sha": "b1e28967c854bc8bee8b25e39453e3993aa63f85",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/overlay-contract.md",
+      "sha": "a6e4b7127ea444f18047a8adab81f9c2881a091f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/philosophy.md",
+      "sha": "868b63b4d05482f3bcf325120290dac1b0c0af00",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/pr-finalize.md",
+      "sha": "acae3f3157f6df0093e737fa7ab469043640eb1f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/repo-invariants.md",
+      "sha": "e49f56546582b87b99ac21df054449271c224218",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/rules.md",
+      "sha": "d7a2591c4bf17bebd178aa9e15ba74c165f094ae",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/shared-boilerplate.md",
+      "sha": "0ff6aed57fa2ec56757afa088e713e707c125531",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/split-workflow.md",
+      "sha": "770004b449d3a3006a4c1227150e3d96a216f5f6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/templates/reference-skeleton.md",
+      "sha": "676ff989c921021296c5e2b0bdb101334deb3edd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/templates/repo-local-stub.md",
+      "sha": "ce73cf994106e14f31bc987f2853c9512782e172",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-create-skill/references/templates/skill-skeleton.md",
+      "sha": "b2881978e1b110575df6fe595c7d6dd9b8cb3a3a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/SKILL.md",
+      "sha": "b7f5b1a4a6f28227195028e13fd2e1a1bd411dc4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/agentic-setup.md",
+      "sha": "94e274fff9a858a4927721206bfe3472377f03e3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/brief-template.md",
+      "sha": "445b4e78bf588b9cee949ffba9c2a78c5f87295b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/context-gate.md",
+      "sha": "9b6ed7d04a88328b3764609ce68c5ee873054051",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/evidence-tiers.md",
+      "sha": "a7414796a0eb038f46044d65da4343dc2ebbed95",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/interview-rounds.md",
+      "sha": "662a177ae078648da714b405592a7b9ccbb57622",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/modes.md",
+      "sha": "1eb014be2a2aeb651202a582fed9ba7d1448b8e3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/prototype-handoff.md",
+      "sha": "1829cdb1ad787d170aef4075e894fa6be97e4dad",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/quality-gate.md",
+      "sha": "7b3f2da3027751fa178bc45b245e36e421ae99a4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/report-templates.md",
+      "sha": "edcbea87f8542e4b61e3fbdadd7ea6dcada8465b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/rules.md",
+      "sha": "62fdcdc6124faf92087f08573211d6aab1cd2ebe",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/skeptic-prompt.md",
+      "sha": "cff80208e92463cfb83e95f8125b2c4537b35fe9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-discover/references/voice.md",
+      "sha": "99ec278a51b8d86778668a5eeb00040999510faa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/SKILL.md",
+      "sha": "f4f4030457b7d70c6b6e0298c3bf35eccd44903d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/references/agentic-setup.md",
+      "sha": "abc0e8d3667d6631f3b01f2e642edcb7ec79120e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/references/decision-and-procedure.md",
+      "sha": "75fc75ba39c17221163e77ac1387b86508fc11a7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/references/recipe-contract.md",
+      "sha": "abee6b982607d6745425bf1a5fc266648b6b24e3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/references/report-templates.md",
+      "sha": "b029382d534ca34c339000a196f7563f31afc5d0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-eject-and-customize/references/rules.md",
+      "sha": "562338e93ee110fc66bb92f4e1d9c3365bf53ad9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/SKILL.md",
+      "sha": "95822e00415cfb4a0a85a6ddf342fb0e38cb4e37",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/agentic-setup.md",
+      "sha": "21a5db90dbafee1fc8cb389932d6cbf03cb2c832",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/case-template.md",
+      "sha": "59cf62566230b14e8b1ca60d17c32b93035f3619",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/case-workflow.md",
+      "sha": "a1e686a9df33a88d40664d41c561cbdc88bdcf51",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/knowledge-change.md",
+      "sha": "de205ce395b1624984cbbe6c0fbc0d6eb8646953",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/owner-selection.md",
+      "sha": "9406f2e9b4805f56fc33fb5829680e249c56affe",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/report-templates.md",
+      "sha": "9602f7b5251c6f5155eeca18ee9024eafb511ddb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-evolve-harness/references/rules.md",
+      "sha": "b30666acacb636e7dd474ba79f343fea7cf67e5b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/SKILL.md",
+      "sha": "e7225052b850c1ae936c934535d32f2cc32c2698",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/references/agentic-setup.md",
+      "sha": "1e73aa8230007ce32461eff61dec1886751940ca",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/references/audit-checks.md",
+      "sha": "553b8a6c8fd9d8f9d37b5cbe5f47c53917eb1799",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/references/design-tool-provider.md",
+      "sha": "a3261ca95ce18c0feaf541d3c475002e0b2b078a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/references/report-templates.md",
+      "sha": "d945ce109b7cabdb33d36ce271ba53952b3ec874",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-figma-design-with-ds/references/rules.md",
+      "sha": "5e34d8d085f4bc8169cc6c8e9bc6e24c0bf6c239",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi-optimized/SKILL.md",
+      "sha": "9af2d9fe6383105afb7db31a5b51e84a131ea7c8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi-optimized/agents/openai.yaml",
+      "sha": "0892a2867eb37227d892bb13b67ab3459a14cf31",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi-optimized/references/agentic-setup.md",
+      "sha": "bee3f903bc516c97732109d3fd1fd044deb57df7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi-optimized/references/claim-pr.md",
+      "sha": "44cde41f7b20af1bc68ca738b6aa8c2fb4dc2f10",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi-optimized/references/rules.md",
+      "sha": "fda5c907df5c0096455b04d2cea27d89f0c44629",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi/SKILL.md",
+      "sha": "d60eed29c3c0652a9744ef12f3cde5047f92bad3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi/agents/openai.yaml",
+      "sha": "a1d31c9e56ab4da18c3674c4dcbb1c7b239d760f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi/references/agentic-setup.md",
+      "sha": "e821efb3074a012d322509966528245411722f2f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi/references/claim-pr.md",
+      "sha": "7728a41f32334240ae00700e77387d83c3c1cec8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-multi/references/rules.md",
+      "sha": "f0667cdd4e843c89ac86a37fc672963d853cc5b4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-optimized/SKILL.md",
+      "sha": "4fe20852884b8d0b8a34469347678cdd7ed965aa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-optimized/agents/openai.yaml",
+      "sha": "71ab0a211c356ca471055dcf18845594811400cb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-optimized/references/agentic-setup.md",
+      "sha": "eaa7dec2bde71dc490a20cc983790f3a72d5cb15",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-optimized/references/claim-pr.md",
+      "sha": "608a1599f450e590079616fd07ba4ed6d41823f1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue-optimized/references/rules.md",
+      "sha": "3b2b45beacc4edd78b40aa16dae8d42d661a66e9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/SKILL.md",
+      "sha": "a548261201f1fffa166fda20fba33cac41749e5a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/agents/openai.yaml",
+      "sha": "82ff2a1db334b9b0478b6002dc16c225b3ac3d49",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/agentic-setup.md",
+      "sha": "3fdf25a57152b92dfcb643ee667dc81c2081dada",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/claim-pr.md",
+      "sha": "f89f070d5f339ca9c536196772e66a7c5cb3a100",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/handoff-report.md",
+      "sha": "545010cd0d4027fb90cce8521cec99b3f24d98e0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/issue-workflow.md",
+      "sha": "b4798617242907f81cf7337f83868ed969a16922",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/report-templates.md",
+      "sha": "001d8aa994ccb4c3be99906f977f2d33cbb892e4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix-issue/references/rules.md",
+      "sha": "b91a2a9a7685fbb7c5fcdf7c50c688b4a65cfae2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix/SKILL.md",
+      "sha": "43c6c258e5fa9157fc79edc7dff76c1fe3f7ffcd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix/references/agentic-setup.md",
+      "sha": "3957dc0691c92b81dd9875fa2fc62687b5db282b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix/references/claim-pr.md",
+      "sha": "3666ef0dfd2372feecfff6002621c2195edb65a1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix/references/review-report.md",
+      "sha": "b39924a3ba970995b9ab091ad1f3df930cdae383",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-fix/references/rules.md",
+      "sha": "9768b3a6b288bc876ea6b578f84133cfc4d26854",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-followup-issue-from-pr/SKILL.md",
+      "sha": "6b6f3f5ccc40ac5a4a9a047ef7c0a124a9a47a6a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-followup-issue-from-pr/references/agentic-setup.md",
+      "sha": "8f85a3c456b0d7fada5d131d0bd868f98211cffd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-followup-issue-from-pr/references/report-templates.md",
+      "sha": "7bc0ec62c433233f080fca64602fe3895e4f0d27",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-followup-issue-from-pr/references/rules.md",
+      "sha": "ac421b278b6c92da9682a5ac1f2f319a16569ad1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/SKILL.md",
+      "sha": "5796321128d26632c568c80c97f378fbc99456db",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/agentic-setup.md",
+      "sha": "b95dcb579fb361c17a1401ce9d027b61785b96b3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/ecosystem-detection.md",
+      "sha": "7410493c58e1e946d43e17a57e6ea9d7a389170f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/knowledge-sources.md",
+      "sha": "60a8b9806f04af44136dcb99faab2683b6a8c135",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/report-templates.md",
+      "sha": "7290d52c9487779d0e99db84e8333b29eb5d1ec6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/rules.md",
+      "sha": "8e952492650970785f0724ac6b63de20f0adab03",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-framework-context/references/skew-and-escalation.md",
+      "sha": "2a6cd701021f66ecc25e7aa0c30a7b14f65c083b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/SKILL.md",
+      "sha": "2496e0d0171672ead00e7e1bafd00f7be12b947b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/bin/gap-checklist-gate",
+      "sha": "8a88912021b6a3ec30f62f3a62cd944da06a28ff",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/bin/gap-depth-check",
+      "sha": "adacbf6a0098208ac3e9460fcac3494408bc80db",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/bin/gap-orientation-preflight",
+      "sha": "1edd9b16bb8bba33f080c56c99515ed1a433cf5f",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/bin/gap-pipeline-crosscheck",
+      "sha": "1ab14090ff57a0d0361cd59105bd679bf2205843",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/bin/gap-validate-finding",
+      "sha": "cad2df10117c4842987cbdf2637e977d70d8babd",
+      "mode": "100755",
+      "localSha": "aa7710bb33ce0d210241d1d2602435eb3a5e979e",
+      "reason": "Preserve strict unique sequential criterion IDs."
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/README.md",
+      "sha": "b9262338d67bdaded5ff49ea2ccad1312a202a0d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-checklist/complete.md",
+      "sha": "a03a8a0135eb1b73b4826d94f66aaf8539324714",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-checklist/happy-path-only.md",
+      "sha": "0522e074018d77416cb31d6bdc6da29a13f0ba93",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-checklist/no-categories.md",
+      "sha": "a3bc4a7711cb92a56309d99b6a016a23f3b1b686",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-crosscheck/snapshot.md",
+      "sha": "a8f38c0b63f8430ecd64bac1aa62fc7d1c41ed8f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-crosscheck/tree-cited.md",
+      "sha": "65760bf4cfdc1edb7009aad8444bf3a9561f375e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-crosscheck/tree.md",
+      "sha": "465d9f83151a356c8dbc19b43e0f99abce6cf7d9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-depth/snapshot.md",
+      "sha": "89a40f2d37cbb3156ca02d95d3d1e3a4477dd9b4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-depth/summary-fail.md",
+      "sha": "f6a52f1a067763c68bafb97efd4d8772a8d1c246",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-depth/summary-pass.md",
+      "sha": "321f5219d02baa0024e56b8eff0934205f793d33",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/fixtures/gap-depth/tree.md",
+      "sha": "b9052f4ef28f5270f4bfaafb9a84a479a4bb5183",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/agentic-setup.md",
+      "sha": "b25c98bbd86cb30d54f1706a8fd89df4a006f649",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/engagement-workflow.md",
+      "sha": "d448bf97bc414a8007bd14b17e27447a6668b999",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/platform-knowledge.md",
+      "sha": "547d4813b0acc0744c9e1e88d8966fc2d94a3417",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/report-templates.md",
+      "sha": "be531b1d17b104ce35d87a31720110a79f83fd8b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/rules.md",
+      "sha": "481ef9640bdd22d6d7f35dba347b5c208bf60c67",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/scoping.md",
+      "sha": "84fcb30c6520cea94a11ce48f016e5fc09edfeed",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/subagent-prompt.md",
+      "sha": "7ff4645a4eec606cc0c3336d27750bf2e456d146",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/synthesis.md",
+      "sha": "32961baac1fed7e8e51c9da038e0b8c95ca0bda0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-gap-analysis/references/verification.md",
+      "sha": "6ed6e9d9aa1846a13a7e97e1ee6621872bb52f22",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/README.md",
+      "sha": "bdbe6ef5a7ef17ddb693ef81e88a10c57aa634d1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/SKILL.md",
+      "sha": "b4e26b969f91d86b1ad8683560ef5782712fa02e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/agents/openai.yaml",
+      "sha": "eec7051d978908ba8600f44586055b1b61ecf87e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/hooks/block-push-and-pr.sh",
+      "sha": "207dab5e48000614f879cbc6cb54f672ecd7a0b9",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-harness/hooks/freeze-tests.sh",
+      "sha": "77d72967e619fec94d95246a7a9dcbcbaf4cf8d6",
+      "mode": "100755"
+    },
+    {
+      "path": ".agents/skills/om-harness/hooks/guard.mjs",
+      "sha": "f9565eafee56cb1b5ce31b717d03c8f2fa7977e9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/hooks/hooks-settings-snippet.json",
+      "sha": "ffb7a5c70cfa2cc1aaf9662f0794c943c2a355f7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/adapter-contract.md",
+      "sha": "df7c4fb7cf9d6043362c910f637eb242caa4198e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/agentic-setup.md",
+      "sha": "e190e6083d652d324ae3957d028762d5a913ac65",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/claim-pr.md",
+      "sha": "05cd21aad69bf46c2f1441312b7734b10cb5047b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/code-review-contract.md",
+      "sha": "44340d09574a51e26de25700256ff519ab6c33fa",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/code-review-packet.schema.json",
+      "sha": "e307d248672d4094efad171dd8608dac696b43dc",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/configuration.md",
+      "sha": "6dd0bbc4315812eb6dfad059a02ba0b528467116",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/fresh-review-result.schema.json",
+      "sha": "8a5afbc9428eea900ba10c351c7b9b2b89ab5d37",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/packet-contract.md",
+      "sha": "ee5f742c5224b9cf37d89405763477a0aff474ae",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/packet-gate.schema.json",
+      "sha": "93cb65f1885ed12db516e659c22f803ffe53b1cf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/packet-manifest.schema.json",
+      "sha": "576eacc4a4e0ea5bcbd25dd11cc7c7b1be87fac7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/reporting.md",
+      "sha": "8600974fcd07fe08031ed5a4c187476aaf446966",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/review-result.schema.json",
+      "sha": "0c377e5c6c9fcc06debddf319fd4f9df7e7227bf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/rules.md",
+      "sha": "8899c883bdae134f16345389b95cdec1f31fc8c5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/references/stage-only-contract.md",
+      "sha": "c92b909db45ef5a8e40b6d7fab7b03ef1d4f5723",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-harness/scripts/harness.mjs",
+      "sha": "b2a86ceeb22896f6c7a6c1311c9f259f6c8b8012",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/SKILL.md",
+      "sha": "5fb9be858683c924a654322941be9ebce894de39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/agentic-setup.md",
+      "sha": "be27350dde951f528c49ac6f8c4e0660c1c5501c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/context-signals.md",
+      "sha": "81fec59e6051e0f13226fd0815dc9c33877730c6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/report-templates.md",
+      "sha": "f79b89e8bb72b160abc0d65e95753af2b95f9809",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/routing-sources.md",
+      "sha": "e23a8295bc160acaa41b6da9f47bb57b419993c4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/rules.md",
+      "sha": "38e1ed0ef2ecdffd7f4696dbda745d8e3fc2060d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-help/references/skill-discovery.md",
+      "sha": "9f570e5ea01993e7a0ad2e4a91f320083966716c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi-optimized/SKILL.md",
+      "sha": "c0b1664a5984e7b3a0944bbd95923e5c34252b16",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi-optimized/agents/openai.yaml",
+      "sha": "28adac4334b2b60e09161e288bb99e9b7d74f683",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi-optimized/references/agentic-setup.md",
+      "sha": "18c92634ba55e54036100e6b814e873a91dd387a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi-optimized/references/claim-pr.md",
+      "sha": "39aa27d5f47ba396dc55dc19ee707b9ef1f7f69f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi-optimized/references/rules.md",
+      "sha": "058b3aa47864cfee42cf019d54fcb8e42cf0f9d5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi/SKILL.md",
+      "sha": "00d45661f3660aa79ecb47dd6eba99baf549e643",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi/agents/openai.yaml",
+      "sha": "48067772466b755fc970fc81b59c251ee3d1a38c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi/references/agentic-setup.md",
+      "sha": "5e05935277e0ac273c4de2a6dce473fdec5d80b2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi/references/claim-pr.md",
+      "sha": "326d4a7e25a9eca1c25b500c8702fbdbf77613ec",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-multi/references/rules.md",
+      "sha": "ac9d768190985c6fdef2ef734a1645425a0cbb46",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-optimized/SKILL.md",
+      "sha": "cc78306b48d1a703262817747e3885f31f1a0782",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-optimized/agents/openai.yaml",
+      "sha": "c986599597d7544207eda8fc5c8bb6e868744bee",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-optimized/references/agentic-setup.md",
+      "sha": "054ded843ff215a70d550f9e59378f2ae7e50be8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-optimized/references/claim-pr.md",
+      "sha": "36efbdceb84ebf5bafbcaa807c6a08f4ba52be2a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature-optimized/references/rules.md",
+      "sha": "c01d560a0497a385ac4a38d5f50d0695e946bf8e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/SKILL.md",
+      "sha": "7097b00af0af7a2ea5f85ef8a82c26527cae0da1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/agents/openai.yaml",
+      "sha": "85b4efcc113a1585db1c2534447dd81584118c52",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/agentic-setup.md",
+      "sha": "2f50cee972174aca22e71faf5ef561b9cacb4987",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/claim-pr.md",
+      "sha": "71553a0b8c480b0eb6f23e73cd0a103105fb973b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/feature-workflow.md",
+      "sha": "acc8e8a763b67dcdf9284c7a21802eda3fb5fc36",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/handoff-report.md",
+      "sha": "545010cd0d4027fb90cce8521cec99b3f24d98e0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/report-templates.md",
+      "sha": "caa0f2d390a3ea2f088f6ace4e7407999556e3cb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-implement-feature/references/rules.md",
+      "sha": "77b154b360606225705c686eb0657ef0fd9cca94",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-integration-tests/SKILL.md",
+      "sha": "19e40669cc4c609d89a7f0d87f1b13bd28903c4d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-integration-tests/references/agentic-setup.md",
+      "sha": "47bb11aac12f5dbf76828b4cd6aef1b2103c7d21",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-integration-tests/references/report-templates.md",
+      "sha": "34318a99c93a195e5129f7511533ae72258aa1f4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-integration-tests/references/rules.md",
+      "sha": "00cdbe375f1279546c9c3d4e31386c94288f7be4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-integration-tests/references/test-env-reuse.md",
+      "sha": "977d8ef5945027dbe973c3cfbf9162e26fbbbaf4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/SKILL.md",
+      "sha": "3f99c62f5dbdb2328a8d165a59b6fab7729c7b25",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/agents/openai.yaml",
+      "sha": "138d2410d6d6ed32e62446c3e75f489f6463c5c5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/agentic-setup.md",
+      "sha": "a9a2ccd7aaffdb2e917038f9dce5e5867280f819",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/criteria-format.md",
+      "sha": "172d811fe86e465a7c59adab0d0fe196e92287ad",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/input-normalization.md",
+      "sha": "1cbb4f8c1ca42ba621e724e8299e6e0d775c2765",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/judge-workflow.md",
+      "sha": "228710daa1b473b04e87e3875eb540c018fc8105",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/report-templates.md",
+      "sha": "5b11175c166f228b5cd44039ea63f2867491432c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-judge-agent-session/references/rules.md",
+      "sha": "8d4eb80a208c2c74d76144e0b93582a1c03f0957",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-merge-buddy/SKILL.md",
+      "sha": "892204baaa9090e1ed5dca6c5dd5f196a2aec5f0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-merge-buddy/references/agentic-setup.md",
+      "sha": "12f550c245dbfe39b1827daf28b20b35d7b012f8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-merge-buddy/references/report-templates.md",
+      "sha": "2a3c19d76f273eeff5c18b676edc1389f5a8e04e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-merge-buddy/references/rules.md",
+      "sha": "d757e9545345f6d9b63c19339b5ca5d04d96655a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/SKILL.md",
+      "sha": "3f57d56374a321b9485fe90da4b346ac9dc02ee0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/references/agentic-setup.md",
+      "sha": "86d9323ab4e658181c6bed6941524f2c6ad00fe4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/references/prototype-format.md",
+      "sha": "befe52b3d97e22bc3700773f582443e33c89cb6a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/references/quality-gate.md",
+      "sha": "1dffaa16fbd1a591cdcfe93eae2149aef4d511b2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/references/report-templates.md",
+      "sha": "640ebac6b28bd1223a0931e3e14f4bacb8265985",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-mockup-prototype/references/rules.md",
+      "sha": "a06cc11fd6a137bb22a689548c72861df6566c4f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/SKILL.md",
+      "sha": "db842ef71cd88f43e1b7a750648b4f1615460e2d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/references/agentic-setup.md",
+      "sha": "a985f47c0a0d7c0b29e20bbc72279592ab9ff907",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/references/claim-pr.md",
+      "sha": "ff988e5fafcfc294efd426df3b59238bbe1853a1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/references/pr-body-template.md",
+      "sha": "e45ae8dbc40f07da866f3619ec059fc46b29ed79",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/references/pr-finalize.md",
+      "sha": "a2d810a497e78d413a6d1898a7810b88acafbdef",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-open-pr/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pipeline-retro/SKILL.md",
+      "sha": "c1145a42815238278cdf68545a687ab518cdc72d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pipeline-retro/references/agentic-setup.md",
+      "sha": "213594b7180e08973ae141346a20c1db0f85f637",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pipeline-retro/references/classify-runs.sh",
+      "sha": "852662f2bb6098139f3b35e4c27473f4f9398f9a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pipeline-retro/references/report-templates.md",
+      "sha": "7b245f6f236fd3139d307ec6cf7f186831944ed7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pipeline-retro/references/rules.md",
+      "sha": "f7ecacc9520428c0b7a407fd587f5977a5a596b8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/SKILL.md",
+      "sha": "1e458bf7e5471364c74f24bd8c9392347b1d4d2d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/agentic-setup.md",
+      "sha": "bf273b8c3a67853830d4574ddb470b3e5e029075",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/ci-followup.md",
+      "sha": "f8feb89b7952a26162cf973bab23d0b4b030c869",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/claim-pr.md",
+      "sha": "575c3375f21af249e4cfdc951e927f148653eb8f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/diagnose.md",
+      "sha": "7433ff5fe9465fd6868a220d727276377ab8a7be",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/report-templates.md",
+      "sha": "b4b75da630e95bfad38751c9e308fc6ddaca4c32",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/rules.md",
+      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pr-autopilot/references/state-matrix.md",
+      "sha": "97a5b52644c5abad77c92d15cfe5ebf662c99d98",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/SKILL.md",
+      "sha": "8dda1d6ccbbf7662ed92fa0fbf374c76b1beb6c4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/agentic-setup.md",
+      "sha": "5635b432f3ba82106892b072bb65e3b37d7d30b3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/bc-audit.md",
+      "sha": "8bfc588c28598bbe6ebf8618d940c5e81f19c3be",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/compliance-and-risk.md",
+      "sha": "6c9b89d2ace8a898377ec2309b7d5577d22e49b3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/readiness-gate.md",
+      "sha": "6e3d6ff22fb2a6b05bba903bf8d7aaf705ae1792",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/report-templates.md",
+      "sha": "ecbc3d507531a648c28099968eb341897e34948b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/rules.md",
+      "sha": "250869ae6c5bb8d215674200bd3ac391b8803f48",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-pre-implement-spec/references/spec-resolution.md",
+      "sha": "cf06b6ee8ed3ccfa664172e2725eb2c779148438",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-issue/SKILL.md",
+      "sha": "14abc2e0bd541821c8083ce21f4f092edd884671",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-issue/references/agentic-setup.md",
+      "sha": "19a39770b725e726c5e8da17a6915c65b726a834",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-issue/references/report-templates.md",
+      "sha": "4c797400835ae1edfc0dd53b7cd83a7395567c96",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-issue/references/rules.md",
+      "sha": "ac79f53b86f55e65aeedbfea62029b86859f3313",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-issue/references/spec-when-missing.md",
+      "sha": "a88c80725f69ffa0ca0f063f1656bff771acf1b4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/SKILL.md",
+      "sha": "d7d8b23a54b109eeec4a7052c4d5de8335ae6b53",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/agentic-setup.md",
+      "sha": "81790f390d3cafbb2888ee563b5e3c3db2b8a726",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/build-cache.md",
+      "sha": "b5c01953e2ca2a21cf2f6a3066760a9ac28d4851",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/entrypoint-contract.md",
+      "sha": "6e43a92f29d45e4a0178d68869f6fd3d20317647",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/env-descriptor.md",
+      "sha": "d987623f5262277115e358a973c761ebd44bbbc0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/phase-2-generate.md",
+      "sha": "3d9c495012d4fdb542ce350f6bd86cc12879097f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/report-templates.md",
+      "sha": "b3d34145fb1608df0aab64e8d91f39fbd57378e3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-prepare-test-env/references/rules.md",
+      "sha": "d104ec6d11e7ed4da716615182f207c4c4c530c5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/SKILL.md",
+      "sha": "262b997311e5787b43d1f6097acd94ed8da6ff8b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/agentic-setup.md",
+      "sha": "b9ba788f6a479b13c305490f101994f00acbad74",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/bug-report-template.md",
+      "sha": "0ffc64628e94eaeb39054dd9e37d836377956780",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/context-gathering.md",
+      "sha": "09275aee3543cf97ee1b2bbb550ef49dec12eda8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/execution-and-evidence.md",
+      "sha": "ae7acc78ac3a84edb7c8eb6936ebbf3e24226519",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/knowledge-base.md",
+      "sha": "486ea1f9a69cb1e7120ce23f2b9df92ae5417537",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/report-templates.md",
+      "sha": "94e3dfe4e4f03eeca1711e8f2a380b152214b9b3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/rules.md",
+      "sha": "561461ae8479127c8371f1039189dcfe31f7f806",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/runbook.md",
+      "sha": "5fcfdba06ca786d6e25f8050f2a6bd8390b698d1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/test-plan-template.md",
+      "sha": "83dd4ac7a2314f4c4a3f344be66de1a4197afb9c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-qa-buddy/references/worktree-and-env.md",
+      "sha": "798f3286221eaeafe7a702a1186d53f575e4eabb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/SKILL.md",
+      "sha": "2ff1d35830996cc3153c9f8aaeb808bb6cb64c1c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/references/agentic-setup.md",
+      "sha": "b6dfd211a197f132d51786117ea3ae93101e49c6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/references/claim-pr.md",
+      "sha": "384df2d160c8fd79e9f0ead2101ae1db8d9c423d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/references/rules.md",
+      "sha": "d072559fad8a81146d1733097ad5c12e74ccccc6",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/references/subagent-dispatch.md",
+      "sha": "7c1b569fe00fef9752198f9e9ccab38ecae5e1d1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-review-prs/references/subagent-isolation.md",
+      "sha": "e27fd37b7dff1251f91a0d917894d2a8f6ce3fb3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-root-cause/SKILL.md",
+      "sha": "869e9b0f743e4ac4a4093578a3b429e3c121c8a2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-root-cause/references/agentic-setup.md",
+      "sha": "6aa8e8b1d65e9faea80b335d6430d10854528054",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-root-cause/references/rules.md",
+      "sha": "74f3befe4ee0070d51b17c3047fddf640bb33902",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/SKILL.md",
+      "sha": "24d4750f8fb3526d93b0e4ff073dc0dea28b21b5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/agents/openai.yaml",
+      "sha": "fd2ca75cfd3c22f809412630095a6ab486c74a90",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/assets/claude-review-output-style.md",
+      "sha": "57dbacb88414dc38536b59d732a5311705be95e8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/references/agentic-setup.md",
+      "sha": "15bfcac69659166c9e27a36968959272f05f7fed",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/references/claim-pr.md",
+      "sha": "b2508a435220b9a82a410cf6c9c7c32b5d890bd1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/references/configuration-template.json",
+      "sha": "fa4f3be8b77ec38bc4920f4cc17ac65b6efc12f8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/references/provider-catalog.md",
+      "sha": "3333cfd9759e1b9200cd1e595b5d946d46d67683",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-harness/references/rules.md",
+      "sha": "77aac645022d023978ecec1391822c6ea53772df",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/SKILL.md",
+      "sha": "a22653cfa7834255ec842220460369ed81dcda6a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/agentic-setup.md",
+      "sha": "f63489509edd84bd28cdb236abe8a665ad5a76c1",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/browser-providers.md",
+      "sha": "dfd1505e208a9fda56d21b4383313064ac746daf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/browsers/TEMPLATE.md",
+      "sha": "79249502039848ac728813e7cb8b263f05472851",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/browsers/agent-browser.md",
+      "sha": "e16b4ce1f8678077086cee0f9d97a2cf8dd1a824",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/browsers/playwright.md",
+      "sha": "e8ba8da79f5d987243bc6f14e2b980bac7063534",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/config-capabilities.md",
+      "sha": "956f4281a222540a0ab123fd2b671d887165eca9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/interview-questions.md",
+      "sha": "46f3d3dae0a187347fe7a548b6b399a3fcdba0c4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/project-docs.md",
+      "sha": "89596b6c270da9e1885a27270ccba85672d8a5b0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/report-templates.md",
+      "sha": "4132c34336b0a0f5fcad62653a5fea5d95cfb1de",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/rules.md",
+      "sha": "aac5e3eba5edf449fbfac6eb2dff1ef6213adacd",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/sdlc-template.md",
+      "sha": "4f34bdfde29f44be8bd050028bbbf260a7994867",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/skill-coverage.md",
+      "sha": "81d1118723e44fe2f8794ebe89a4db17c7a99dc4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/TEMPLATE.md",
+      "sha": "21b5c4d8033725cef7c24c5b7876c853d51c7155",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/forgejo.md",
+      "sha": "d4d2242637ff9dcb846e8b4b5a049de8f8d7ff2b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/github.md",
+      "sha": "b5e9a8e1be5b1b5d948e101d19b7c881ed3523a7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/gitlab.md",
+      "sha": "8ef2999c8235124ba1bc8fb65e667df68d45ff74",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/jira.md",
+      "sha": "163f4d0e238c51066f6a80ad1e083f4d90c7aeb0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/linear.md",
+      "sha": "989b6a12e09c2729fd27fb622856fe74591913b7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/SKILL.md",
+      "sha": "c605c585995e0546461329e8437ece08c493410b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/agentic-setup.md",
+      "sha": "2fdc234219b8efc66bc61ba7867911a8c342fc2f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/interview-questions.md",
+      "sha": "43b1caf9c7fd99ec6f5a83dee9ff271e95ba5f33",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/report-templates.md",
+      "sha": "eb9bc41c399de9d00d3176d330d2987650e33d38",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/rules.md",
+      "sha": "ac54dea06f300c29dff9ff1a581eb5408058aa89",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/sdlc-sections.md",
+      "sha": "2af736347d43ec5a2da7d535757b67183ff23cd3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/sdlc-template.md",
+      "sha": "4f34bdfde29f44be8bd050028bbbf260a7994867",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/skill-coverage.md",
+      "sha": "a626adace4770a46e1196a5dc5d5f1ed9c72a6ab",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-setup-discovery-pipeline/references/voice.md",
+      "sha": "da41c9204ea36ceaa8c447f09997a935a953d67f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/SKILL.md",
+      "sha": "d546bcfdcd5f6d874d466fa202745dfa95cdd80d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/agentic-setup.md",
+      "sha": "3ea84ba99290096d6aabde230f9e104ac8f775a0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/bundle-preparation.md",
+      "sha": "2f9b437131af5c2d1610e2ee8133944e1f775837",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/consent-and-review.md",
+      "sha": "3ac9c85f5a882072d6974f3276746f18ac7dad04",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/publication.md",
+      "sha": "ea4df78b0bb8e1890c2aeec4e193c880ea3b1411",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/report-templates.md",
+      "sha": "75ad93fd613131255d13e890c9e8fa3181356b94",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/rules.md",
+      "sha": "7e0b56601fdc4077c3fd6d5beb84528c9b828a1c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/references/trackers/github-session-share.md",
+      "sha": "d476c41bc2237c5399fbf174b3ff53e501e79bda",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/scripts/export-codex-session.mjs",
+      "sha": "0fefa0b29900791cae7e7f78c8efd19968ef99f2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-share-this-session/scripts/prepare-share-bundle.mjs",
+      "sha": "a3578c987730260215d5962c85de8478546fe97d",
+      "mode": "100644",
+      "localSha": "39ac3e8e909effe37d3ec51163d4cc8d03948c87",
+      "reason": "Preserve credential redaction, including structured and serialized secrets."
+    },
+    {
+      "path": ".agents/skills/om-smart-test/SKILL.md",
+      "sha": "ba2ae94cfd95583d8ffb4ac291b86275c2456fcf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/agentic-setup.md",
+      "sha": "f2a3737f14109f2a5e44730c74b909066d6e87c2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/cache.md",
+      "sha": "f761bf4e2302173d13e7f2a45c7ec4d5a386d8ae",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/report-templates.md",
+      "sha": "24816800092a0bbfeee97fcf9a8963eb22a48f90",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/rules.md",
+      "sha": "0ce7f871609fb2f1561c583a323d9887613be591",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/selection.md",
+      "sha": "b9b4a21e6123a349ca86e24451e81c573d9098f0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/suites.md",
+      "sha": "7bfaa5fdb6dd473f118b1dc1188161facf35ed86",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-smart-test/references/test-map.md",
+      "sha": "68fa9c83e8a330cbd7414ad1f5a59206293fac6d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-spec-writing/SKILL.md",
+      "sha": "8b54a28b92d385fa3838cc64bb8223ed9647a476",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-spec-writing/references/agentic-setup.md",
+      "sha": "eb156f14959b0ca48281a034f15f8427fc25226f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-spec-writing/references/data-model-graph.md",
+      "sha": "d71fc35218ba93ffa9bba24d5095cce13749154c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-spec-writing/references/rules.md",
+      "sha": "b44dc2417e8aaa0ef5d8800d75209801443c7bab",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/SKILL.md",
+      "sha": "700fa97530931d351c94d1f6d56b09aa76b80543",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/agentic-setup.md",
+      "sha": "59b38e218980dfda46e88c18c57b25c80b93f71d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/interview-script.md",
+      "sha": "87ec254ebf1054ca67fbeaeb977d5786e691e0bc",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/panels-and-repeats.md",
+      "sha": "40a76ed10658902f7e07720403fc1db584fb9edf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/parity-check.md",
+      "sha": "9ba48cfb306fcbf272324dc1b90d46aaa701ec8f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/persona-template.md",
+      "sha": "4c9b3631bbb4b959d942818567cad728b2a94135",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/quality-gate.md",
+      "sha": "57a0eedf2042a432e87064ea527ce63c7d739adb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/report-templates.md",
+      "sha": "e0cd6973894e12e67a01f26556743dbb6a48a672",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/research-basis.md",
+      "sha": "db33f792132422b35ca4b24d5dd0daddf4581f5a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/rules.md",
+      "sha": "142527660ed70d905241512354758ad64ef15377",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/session-artifacts.md",
+      "sha": "518e53290a0c01a228692c1300651da8c959bf47",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-synthetic-users/references/walkthrough.md",
+      "sha": "4cca910acdc2a2972dc96a6b1567272913edc57d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/SKILL.md",
+      "sha": "e6fc0c3348883a23247e8254bb2b867489ee6b72",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/references/agentic-setup.md",
+      "sha": "4cd9f507e3c3629bd7cdf870c0af1e8e7e5c26a7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/references/diagnosis-map.md",
+      "sha": "5d982ef5d257fc3bd7c59abe5fee5aaf505a95a5",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/references/regression-oracles.md",
+      "sha": "96efe79857f36437d74b65436f3e64b5453827f2",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/references/report-templates.md",
+      "sha": "af351323695560fd3a30037be660da9c5b05e148",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-troubleshooter/references/rules.md",
+      "sha": "7c39bb2794e89071285ed8dc084b6d2c01efa977",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/SKILL.md",
+      "sha": "83d4ba6e7a823e851c0a33f9b34966cc56f97262",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/agentic-setup.md",
+      "sha": "b3839457ce16e79d372e9209322425d322338a61",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/README.md",
+      "sha": "7f3c19116a5a3876115c97bcf648a1d0fbb59f0d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/comments.js",
+      "sha": "2ed4a636a1a14085596f406f65fb6c75521a7229",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/components.css",
+      "sha": "65b2124013df72f7b8c1d8120f50deb9b8585fec",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/index.html",
+      "sha": "0117528efe1bcc38241f9154461b887907e71d69",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/prototype.css",
+      "sha": "0e4b65c0d80fc5adc4b076cbb8f3a2ed22c3d349",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/prototype.js",
+      "sha": "90af8a419800ad262bd938f0a1dcc4bb70fdbd5a",
+      "mode": "100644",
+      "localSha": "7e75819deaefdb57bb292491ad297ef5c6852f88",
+      "reason": "Preserve concurrent feedback tombstones and keyboard focus."
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/screens.css",
+      "sha": "745e33aade5cba7fb97fa0c1714043cd86b83786",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/assets/theme.css",
+      "sha": "e66824437fc2abe952909723c2af5606c7ed452d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/design-contract.md",
+      "sha": "ccaf154b5746f3296b76211a0a6719ff51615df4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/design-workflow.md",
+      "sha": "3919867c4f8808f69ce0c67bc5d13f08aade6a0d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/ds-tokens.default.json",
+      "sha": "07e92b3eafc76bbc2f73635335d168704d9fed0c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/ds-tokens.md",
+      "sha": "3367d2f21da4d7ff58d2d55e9c982af6cad2d896",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/prototype-format.md",
+      "sha": "0d7ffc06d623de7ce8b43406386c5c6e709b6cbf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/quality-gate.md",
+      "sha": "917bd82c79010c0bed83828a06e76fcaeeafcda8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/report-templates.md",
+      "sha": "ed7718dc3c1e96958335c77b60d07a12579bc84a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/rules.md",
+      "sha": "8a17f759f1b221838880f25457d56e6bafe9335b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/references/screen-patterns.md",
+      "sha": "b2110f5c6b0e1b31bf30f407ce73f5b460d00132",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/scripts/init-mockup.mjs",
+      "sha": "564d0b9f656a58e050045968840450c9d2a60ee3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-design/scripts/sync-tokens.mjs",
+      "sha": "b08547f6d1de51c9fe99fa0766fe57b795d22bba",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/SKILL.md",
+      "sha": "30ede9a2e6d22d274aa2067f0fe32c65872135bf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/agentic-setup.md",
+      "sha": "ce03ffc32b6ff9ba0796b2d81f5f28300bbf61c8",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/evidence-tiers.md",
+      "sha": "cd96b4df1f1e23e526a4845138432b8d4e0f24ea",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/guard-pass.md",
+      "sha": "29b2c8b39361d491771ea06e207cf830babf425b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/humane-patterns.md",
+      "sha": "ad9fc57cb9e30b625179d93c5e73d44b5a93b96f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/report-templates.md",
+      "sha": "c1ccf1d19fcb65940b47f8fe3d62ccc6a08435dc",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-review-pr/references/rules.md",
+      "sha": "17cf512e72a6aaf5df6afb3363a120bab454cb24",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/SKILL.md",
+      "sha": "df50d9ab86bb6a5abc96f50dfbfe6a2c7b2a0768",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/references/agentic-setup.md",
+      "sha": "e203f45e80a718ac5a119c4384462d372ec79048",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/references/contract-format.md",
+      "sha": "f546a5b4c59dcda7a2eb2290b32718d82527912f",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/references/design-sources.md",
+      "sha": "1dd401c525d6f887ad8b233090ed053bac23f8ca",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/references/report-templates.md",
+      "sha": "b0a64a38a90de9461e85067068cd2a37505c048c",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-setup/references/rules.md",
+      "sha": "568ae3c9450ea3b32bfb2530a3b6b286adf5622e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/SKILL.md",
+      "sha": "3a8a989aa9fce9bcf6286e661d98af5e987ce5bb",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/agents/openai.yaml",
+      "sha": "19d5a4c24188886228f73af217169a43eba1f814",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/agentic-setup.md",
+      "sha": "e3f83e353a3b8e76675a662ae514bd5a8b75814a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/ai-interaction.md",
+      "sha": "fb0ef528f90df4d7b977abaaa8728cca9a72c3cf",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/decision-framework.md",
+      "sha": "7b45a7cd58b618b9857bbb2b5f7d44e047e75cef",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/evidence-tiers.md",
+      "sha": "0299a4ad707998a5feb03abd69574dc0d35717c7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/foundations.md",
+      "sha": "a0bfbe1d7addaa1e65fc371f225dc9e443612995",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/hai-guidelines.md",
+      "sha": "07dd7ab98aac4ed38f6c4d62a3bb929502b16ac4",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/human-value-metrics.md",
+      "sha": "4fd6f0808a9a7b87ce3adcacb81a9374f0ca48e7",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/quality-rubric.md",
+      "sha": "bd57fa4b3885fd9615eedf8f450c7b429f83f5a0",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/report-templates.md",
+      "sha": "bb5de4db52b27ea39a5b7d26c4a51d5bc8bdab25",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/reward-and-mental-models.md",
+      "sha": "2904471137cd2aa4ee084e1109a76e5f15ae123a",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-ux-shape/references/rules.md",
+      "sha": "26b0e452853f8219545ca853a99079d84e46ec57",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-verify-in-repo/SKILL.md",
+      "sha": "c95ad23c984a4c5261e795087e58dbc65bb2109b",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-verify-in-repo/references/agentic-setup.md",
+      "sha": "5dfbfee0e635a8054031c9fcf711e5424d7290e9",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-verify-in-repo/references/claim-pr.md",
+      "sha": "2c6755f09cd115bb1a9f0163a7473aec240389e3",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-verify-in-repo/references/rules.md",
+      "sha": "1ac65428c4cbfcf5e5c1e5acfc4f72a59c3ab2fa",
+      "mode": "100644"
+    }
+  ]
+}
