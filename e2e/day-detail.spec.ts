@@ -126,7 +126,7 @@ test('Day reading stays nonmodal, minimises, reopens and switches to a Place', a
   await expect(outside).toBeFocused()
   const openPlaces = async () => {
     const toggle = page.getByRole('button', { name: 'Places', exact: true })
-    if (await toggle.isVisible()) await toggle.click()
+    if ((page.viewportSize()?.width ?? 1440) < 1024) await toggle.click()
   }
   await openPlaces()
   const search = page.getByRole('searchbox', {
