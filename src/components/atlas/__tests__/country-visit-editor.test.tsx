@@ -36,6 +36,27 @@ beforeEach(() => {
   api.invalidate.mockResolvedValue(undefined)
 })
 afterEach(() => vi.restoreAllMocks())
+it('keeps focus moved elsewhere while the visit is loading', async () => {
+  let finish: (value: unknown) => void = () => {}
+  api.load.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  mount()
+  const other = document.createElement('button')
+  document.body.appendChild(other)
+  try {
+    await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+    other.focus()
+    finish({ country: { visit }, today: '2026-08-20' })
+    await screen.findByLabelText('First visit')
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(document.activeElement).toBe(other)
+  } finally {
+    other.remove()
+  }
+})
 it('does not steal focus from a draft before the opening frame runs', async () => {
   let frame: FrameRequestCallback = () => {}
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {

@@ -323,7 +323,7 @@ printf 'http://%s:%s' "$host" "$port" > fixture-origin
     expect(pid()).toBe(previous)
   })
 
-  it('retires the verified Vite child of a legacy pnpm PID', async () => {
+  it('refuses a legacy pnpm PID and leaves its Vite child alive', async () => {
     mkdirSync(join(root, 'node_modules/.bin'))
     writeFileSync(join(root, 'package.json'), '{}')
     const executable = join(root, 'node_modules/.bin/vite')
@@ -345,9 +345,28 @@ printf 'http://%s:%s' "$host" "$port" > fixture-origin
     const child = Number(data.toString().trim())
     children.add(child)
     writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${wrapper.pid}\n`)
-    await run('--force')
-    expect(live(wrapper.pid)).toBe(false)
-    expect(live(child)).toBe(false)
+    await expect(run('--force')).rejects.toThrow(
+      'Refusing to signal unverified pid',
+    )
+    expect(live(wrapper.pid)).toBe(true)
+    expect(live(child)).toBe(true)
+  })
+
+  it('refuses a legacy PID matching Vite in this checkout', async () => {
+    const child = spawn(
+      process.execPath,
+      ['node_modules/vite/bin/vite.js', 'dev'],
+      { cwd: root, stdio: 'ignore' },
+    )
+    children.add(child.pid)
+    await vi.waitFor(() =>
+      expect(processInfo(child.pid).command).toContain('vite.js dev'),
+    )
+    writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${child.pid}\n`)
+    await expect(run('--force')).rejects.toThrow(
+      'Refusing to signal unverified pid',
+    )
+    expect(live(child.pid)).toBe(true)
   })
 
   it('does not signal a foreign process that imitates a pnpm wrapper and its Vite child', async () => {

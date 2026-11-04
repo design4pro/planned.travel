@@ -107,18 +107,6 @@ const isVite = (info, root) =>
     : /^(?:\S*\/)?node(?:\.exe)?\s+(?:\S*\/)?vite(?:\.js)?\s+(?:dev|--port)\b/.test(
         info.command,
       ))
-const isWrapper = (info, root) =>
-  info.cwd === root &&
-  info.started &&
-  (info.argv
-    ? basename(info.executable) === 'node' &&
-      /^pnpm(?:\.(?:c?js))?$/.test(basename(info.argv[1] || '')) &&
-      info.argv[2] === 'exec' &&
-      info.argv[3] === 'vite' &&
-      info.argv[4] === 'dev'
-    : /^(?:\S*\/)?node(?:\.exe)?\s+(?:\S*\/)?pnpm(?:\.(?:c?js))?\s+exec vite dev(?:\s|$)/.test(
-        info.command,
-      ))
 const matches = (saved, current) =>
   ['pid', 'cwd', 'command', 'started'].every(
     (key) => saved[key] === current[key],
@@ -135,7 +123,6 @@ function recorded(root) {
   const files = paths(root)
   if (existsSync(files.identity))
     return [JSON.parse(readFileSync(files.identity, 'utf8'))]
-  // Migrate the old PID-only format conservatively, including pnpm's actual Vite child.
   let pid = existsSync(files.pid)
     ? Number(readFileSync(files.pid, 'utf8').trim())
     : null
@@ -144,20 +131,6 @@ function recorded(root) {
     pid = JSON.parse(readFileSync(descriptor, 'utf8')).app?.pid
   if (!pid || !live(pid)) return []
   const info = processInfo(pid)
-  if (isVite(info, root)) return [info]
-  if (isWrapper(info, root)) {
-    const processPairs =
-      process.platform === 'linux'
-        ? linuxPids().map((child) => [child, Number(procStat(child)[1])])
-        : output('ps', ['-axo', 'pid=,ppid='])
-            .split('\n')
-            .map((line) => line.trim().split(/\s+/).map(Number))
-    const children = processPairs
-      .filter(([, parent]) => parent === pid)
-      .map(([child]) => processInfo(child))
-      .filter((child) => isVite(child, root))
-    if (children.length === 1) return [...children, info]
-  }
   throw new Error(
     `Refusing to signal unverified pid ${pid} (cwd: ${info.cwd || 'unavailable'})`,
   )
@@ -171,9 +144,9 @@ export function ownsServer(root, port) {
     records.every(
       (saved) =>
         live(saved.pid) &&
-        ((current) =>
-          (isVite(current, root) || isWrapper(current, root)) &&
-          matches(saved, current))(processInfo(saved.pid)),
+        ((current) => isVite(current, root) && matches(saved, current))(
+          processInfo(saved.pid),
+        ),
     ) &&
     records[0].port === Number(port)
   )
@@ -212,10 +185,7 @@ export async function stopServer(root) {
   for (const saved of recorded(root)) {
     if (!live(saved.pid)) continue
     const current = processInfo(saved.pid)
-    if (
-      !(isVite(current, root) || isWrapper(current, root)) ||
-      !matches(saved, current)
-    ) {
+    if (!isVite(current, root) || !matches(saved, current)) {
       throw new Error(
         `Refusing to signal reused or unverified pid ${saved.pid}`,
       )
