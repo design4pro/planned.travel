@@ -1,4 +1,5 @@
 import { requestCollectionExit } from '#/lib/collection-exit'
+import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 import { useId, useRef, useState } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
 import {
@@ -84,6 +85,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
       })
       if (!response.ok)
         throw new Error(`Sign out failed with ${response.status}`)
+      clearBrowserSuppression()
       await router.invalidate()
       await router.navigate({ to: '/login', replace: true })
     } catch {

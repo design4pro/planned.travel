@@ -27,6 +27,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.reservation': 'Підтверджене бронювання починається {date}.',
+  'dashboard.mascot.openReservation': 'Переглянути бронювання',
+  'dashboard.mascot.openChat': 'Відкрити чат подорожі',
+  'dashboard.mascot.chatUnavailableTitle': 'Чат подорожі недоступний',
+  'dashboard.mascot.chatUnavailableBody':
+    'Ви можете переглянути сповіщення та деталі подорожі.',
+  'dashboard.mascot.openInbox': 'Відкрити сповіщення',
+  'dashboard.mascot.pause': 'Призупинити анімацію',
   'account.platformConsole': 'Консоль платформи',
   'toaster.label': 'Сповіщення',
   /* -------------------------------------------------------------- navigation */

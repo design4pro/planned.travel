@@ -1,3 +1,4 @@
+import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 /**
  * Every state `/join/<secret>` can be in, one card each.
  *
@@ -403,6 +404,7 @@ function NeedsWorkspaceCard({
       setPending(false)
       return
     }
+    clearBrowserSuppression()
     // A document load, so nothing of the old session survives in the client.
     window.location.assign(loginHrefFor(path))
   }

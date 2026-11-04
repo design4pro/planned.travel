@@ -55,6 +55,8 @@ const APP_FILES = [
   join('-ui', 'trip-card.tsx'),
   join('-ui', 'trip-list-row.tsx'),
   join('-ui', 'trip-hero-strip.tsx'),
+  join('-ui', 'mascot.tsx'),
+  join('-ui', 'dashboard-mascot.tsx'),
   join('-ui', 'dashboard-widgets.tsx'),
   join('-ui', 'timezone-clock.tsx'),
   join('-ui', 'currency-converter.tsx'),
