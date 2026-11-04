@@ -4,7 +4,7 @@
 | --- | --- |
 | **Status** | ready |
 | **Issue** | none |
-| **Spec PR** | none |
+| **Spec PR** | #1846 |
 | **Implementation** | none |
 | **Plan** | 13-S1 (docs/plans/13-community-gallery.md) |
 
