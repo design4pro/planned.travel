@@ -49,7 +49,7 @@ test('Files preview and adjacent download', async ({
     await opener.hover()
     await expect(control).toHaveCSS('opacity', '1')
   }
-  let failure: unknown
+  const failures: unknown[] = []
   try {
     await opener.click()
     const dialog = page.getByRole('dialog', { name })
@@ -85,8 +85,7 @@ test('Files preview and adjacent download', async ({
     await control.click()
     expect((await downloaded).suggestedFilename()).toBe(name)
   } catch (error) {
-    failure = error
-    throw error
+    failures.push(error)
   } finally {
     try {
       const dialog = page.getByRole('dialog', { name })
@@ -104,11 +103,11 @@ test('Files preview and adjacent download', async ({
         .click()
       await expect(opener).toHaveCount(0)
     } catch (error) {
-      if (failure !== undefined)
-        throw new AggregateError([failure, error], 'Preview and cleanup failed')
-      throw error
+      failures.push(error)
     }
   }
+  if (failures.length > 0)
+    throw new AggregateError(failures, 'Preview or cleanup failed')
   expect(console().fatal).toEqual([])
 })
 
