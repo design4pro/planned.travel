@@ -572,6 +572,18 @@ is involved. No row in another plan gates this one.
 
 ## Stage 09-S2 — Turning two-factor on, instead of being challenged by it
 
+**Lifecycle amendment (#1759).** This stage records the original enrolment repair. Its
+library measurements, owned paths and verification recipe below describe that earlier slice,
+not the current factor-management contract. The delivered hardening supersedes native writes,
+client-only expiry, password-only management, replayable proof and repeat-on-error recovery.
+Current ownership, additive migration 0024, atomic account authority, server-enforced proposal
+expiry, proof budgets, receipt recovery and the forward-fix-only cutover are defined in
+[the lifecycle contract](../account-session-authority.md#factor-lifecycle-extension-1759),
+[ADR 0049](../adr/0049-account-session-authority-is-primary-and-account-scoped.md) and the
+[two-factor hardening spec](../../.ai/specs/2026-10-21-two-factor-account-hardening.md).
+The configured validation gate and blind A/B evidence in `docs/SPEC.md` §7 supersede the
+historical baseline procedure below.
+
 ### Stage id
 
 `09-S2` · Wave 1 · effort **M**. The second dead-affordance repair. Its target route exists but shows
@@ -652,17 +664,17 @@ eight-attempt, fifteen-minute lockout; `twoFactorClient()` is already in the bro
 `src/lib/auth/client.ts:30-33`. This stage adds neither, changes neither, and does not touch
 `src/server/auth/index.ts` at all.
 
-**The Better Auth client calls this stage uses**, all five on the `twoFactor` namespace the installed
-`twoFactorClient()` contributes — the endpoint list is measured in
-`node_modules/better-auth/dist/plugins/two-factor/client.d.mts` under `pathMethods`:
+**Current management calls (#1759).** Settings use the factor client in `src/lib/auth/client.ts`
+and the receipt-bound `/account-security/*` endpoints. Register an intent before preparation or
+commit; `prepare-factor` stages an encrypted, session-bound enable/replacement proposal,
+`commit-factor` activates it only after new-secret TOTP confirmation, and `disable-factor` or
+`replace-backup-codes` require the password plus current authenticator/unused old backup proof.
+Status recovery never repeats a destructive request or redisplays plaintext codes.
 
-| Call                                                     | Endpoint                                 | What it returns                       |
-| -------------------------------------------------------- | ---------------------------------------- | ------------------------------------- |
-| `authClient.twoFactor.enable({ password })`              | `POST /two-factor/enable`                | `{ totpURI, backupCodes }`            |
-| `authClient.twoFactor.verifyTotp({ code })`              | `POST /two-factor/verify-totp`           | activates the factor on first success |
-| `authClient.twoFactor.getTotpUri({ password })`          | `POST /two-factor/get-totp-uri`          | `{ totpURI }`, for re-adding a device |
-| `authClient.twoFactor.generateBackupCodes({ password })` | `POST /two-factor/generate-backup-codes` | a fresh set of ten                    |
-| `authClient.twoFactor.disable({ password })`             | `POST /two-factor/disable`               | clears the factor                     |
+The former `authClient.twoFactor.enable`, signed-in mutating `verifyTotp`, `getTotpUri`,
+`generateBackupCodes` and `disable` management paths now refuse with `CLIENT_UPGRADE_REQUIRED`.
+Active-key redisplay is not an alternative to current-possession proof. Sessionless revision-bound
+sign-in verification remains supported; the proposal key is password-gated.
 
 Every failure goes through `toAuthFailure` from `src/lib/auth/client.ts:56-67`, so the screen branches
 on a code, detects `429` by status, and renders a message the server already made safe. No second
@@ -683,16 +695,13 @@ rather than declaring a second one, and are validated for real by the library en
 permission, and none of these calls trusts a client-supplied identity: every endpoint runs under
 `sessionMiddleware` and acts on `ctx.context.session.user.id`.
 
-**Authorisation.** Decided by the library endpoint, from the session cookie. `enable`, `getTotpUri`,
-`generateBackupCodes` and `disable` all require the account password when the account has one
-(`index.mjs:106-113`), which is the re-authentication this stage relies on rather than reimplementing.
-
-**Rate limiting is already configured and is deliberately not widened.** `src/server/auth/index.ts:167-168`
-carries per-endpoint rules for `/two-factor/verify-totp` (ten per minute) and
-`/two-factor/verify-backup-code` (five per five minutes). The enrolment endpoints fall under the
-global rule at `:159-161` — one hundred per minute — which is appropriate for an authenticated
-password-gated call and needs no change. Stating this is the point: a stage that "hardens" the rate
-limits would have to claim `src/server/auth/index.ts`, which `09-S3` owns in this same wave.
+**Authorisation and limits (#1759).** Management requires a fresh initiating self session and
+password authorization. Replacement, disable and backup replacement also prove current possession;
+activation proves the proposal's new secret. The existing account-authority owner atomically
+consumes proof, changes factor/set state, advances revisions and rotates the current session while
+retiring prior sessions and trust. Shared account proof budgets, matched-step replay refusal,
+password reservations and endpoint rate limits cover HTTP and in-process sibling paths. A refused
+or abandoned proposal preserves active authority; an unknown result is reconciled by receipt.
 
 **The matrix-code encoder, and its bound.** `11-S2` entry 6 records the missing capability and fixes
 the disposition as **hand-roll a restricted subset**. `src/lib/matrix-code/encode.ts` implements
@@ -723,21 +732,24 @@ re-declared rather than inverted) so it themes with everything else and never sh
 
 **The enrolment flow, three steps in one screen.**
 
-1. **Prove it is you.** A password field, then `enable`. The button carries `loading` and
+1. **Prove it is you.** Register the intent, then authorize `prepare-factor` with the password
+   (and current possession for replacement). The button carries `loading` and
    `loadingLabel="Setting up"`.
 2. **Add it to your app.** The matrix beside the typed secret, always both, because the typed secret
    is the documented path for anyone who cannot scan and it must never be a hidden fallback. A
    "Copy secret" button with a `Tooltip` and a confirmed state. The step states in words that the
    factor is not on yet.
-3. **Confirm the code.** `CodeInput`, then `verifyTotp`. On success the recovery codes are revealed
+3. **Confirm the code.** `CodeInput`, then proposal-bound `commit-factor`. On success the recovery codes are revealed
    once, with "Copy all" and "Download as a text file" — the download is a `Blob` and an object URL,
    revoked after the click, needing no package — and a checkbox the reader must tick to acknowledge
    they have been stored before the screen closes the sheet.
 
-**The management view**, when `twoFactorEnabled` is already true: a status `Card`, "Show recovery
-codes" (password-gated, via `getTotpUri` for a replacement device and `generateBackupCodes` for a
-fresh set, each stating that the old set stops working), and "Turn off two-factor" as a `danger`
-`Dialog` requiring the password.
+**The management view (#1759)** shows the authoritative On status and actions to replace the
+authenticator, replace backup codes or turn two-factor off. Each requires the password and a choice
+of current authenticator code or unused old backup code; switching proof type clears the input.
+Replacement stages a new secret without exposing the active one. Backup codes appear only once
+after a committed change, with an acknowledgement/leave guard. Off appears only after authoritative
+commit reconciliation; complete response/cookie loss requires sign-in under the final state.
 
 **States, named rather than promised.**
 
@@ -748,12 +760,12 @@ fresh set, each stating that the old set stops working), and "Turn off two-facto
 - **Skeleton** — the route's `pendingComponent` renders the card outline at its final height on
   `--color-surface-2`, matching the shape `SecurityPending` already establishes at
   `security.tsx:214-231`.
-- **Error** — `Alert` `tone="danger"` on `--color-surface-2` naming the failure, with a retry that
-  re-runs the last call. `INVALID_CODE` is rendered inline on the code field rather than as a page
+- **Error** — `Alert` `tone="danger"` on `--color-surface-2` naming the failure, with receipt-based status recovery for an unknown
+  mutation outcome; never blindly repeat the last destructive call. `INVALID_CODE` is rendered inline on the code field rather than as a page
   alert, because it is a field-level mistake. `ACCOUNT_TEMPORARILY_LOCKED` gets its own copy naming
   the fifteen-minute lockout the configuration actually sets.
-- **Expired display** — fifteen minutes after the secret was shown, the matrix is replaced by a
-  panel offering to start again, and the pending secret on screen is discarded from React state.
+- **Expired proposal (#1759)** — server-enforced expiry refuses activation, discards the pending
+  display and offers a new setup; the active factor and account authority remain unchanged.
 
 **Motion.** Step transitions are 220ms on `--ease-out-quint`, opacity and transform only. The
 recovery-code reveal is a 220ms fade with a 24ms stagger across the ten codes, capped as the token
