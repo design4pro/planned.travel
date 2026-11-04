@@ -14,6 +14,9 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'plan.photo.edit': 'Upravit obrázek',
+  'plan.photo.unavailable':
+    'Nahrávání a úpravy obrázků nejsou dostupné. Aktuální obrázek zůstane zachován.',
   'collab.readOnly.archived':
     'Tato cesta je archivována. Spolupráce je pouze pro čtení.',
   'collab.readOnly.role':

@@ -450,6 +450,11 @@ approved. Implementation and activation still require the gates above.
 
 1. **Selection and fallback:** independent release preserving legacy URLs and resolving one stable
    photo projection everywhere, with secure unavailable controls until runtime prerequisites land.
+   #1785 stores only tenant/trip/place, version and `legacy`/`fallback` mode. The URL remains in
+   `places.image_url`; absent metadata is version zero. A pure resolver tests explicit/default
+   precedence on opaque candidates, but only legacy/local candidates are available in production.
+   Asset columns and verified provider metadata land with #1787/#1789 and their complete lifecycle,
+   not as unverified URLs or inert ownership fields in this release.
 2. **Private photo editing:** after approved decoder provisioning, one complete upload/edit/remove
    journey including delivery, lifecycle, quotas, copy/purge and accessibility. No partial unsafe
    upload endpoint is released.

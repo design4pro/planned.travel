@@ -18,6 +18,7 @@ import {
 import { UNLIMITED } from '#/server/db/types'
 import { assertQuota, createTenantRepository, createTenantTableAccess, resolveQuotas, tenantFilter } from './base'
 import { runBatch } from './batch'
+import { updateLegacyPlacePhoto } from './place-photos'
 import { categoriesRepository } from './categories'
 import { NotFoundError } from './context'
 import { TRIP_WRITE_ROLES, assertExpectedTripCurrency, assertTripRole, requireTrip } from './trips'
@@ -125,7 +126,11 @@ const placeFields = {
 export const createPlaceInput = z.object({ tripId: idSchema, ...placeFields })
 export type CreatePlaceInput = z.infer<typeof createPlaceInput>
 
-export const updatePlaceInput = z.object({ ...placeFields, name: titleSchema.optional() })
+export const updatePlaceInput = z.object({
+  ...placeFields,
+  name: titleSchema.optional(),
+  expectedPhotoVersion: nonNegativeIntSchema.optional(),
+})
 export type UpdatePlaceInput = z.infer<typeof updatePlaceInput>
 
 export const listPlacesInput = z.object({
@@ -348,12 +353,19 @@ export async function updatePlace(
   placeId: string,
   input: UpdatePlaceInput,
 ): Promise<Place> {
-  const { expectedTripCurrency, ...values } = definedOnly(
+  const { expectedTripCurrency, expectedPhotoVersion, ...values } = definedOnly(
     updatePlaceInput.parse(input),
   )
   await requireEditablePlace(scope, placeId, expectedTripCurrency)
   if (values.categoryId) {
     await categoriesRepository.requireById(scope, values.categoryId)
+  }
+  if (values.imageUrl !== undefined) {
+    return updateLegacyPlacePhoto(scope, placeId, {
+      ...values,
+      expectedPhotoVersion,
+      expectedTripCurrency,
+    })
   }
   return placesRepository.requireUpdate(scope, placeId, values)
 }

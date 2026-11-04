@@ -22,6 +22,7 @@
  *    have to earn.
  */
 
+import { usePlanPhotoVersions } from './use-plan-photo-versions'
 import * as React from 'react'
 import { useKeyedPreference } from '#/lib/local-preference'
 import { plannerDaysPreference, isDayExpanded } from './plan-layout'
@@ -302,11 +303,12 @@ export interface PlanScreenProps {
 }
 
 export function PlanScreen({
-  payload,
+  payload: incomingPayload,
   notes,
   transports,
   tripTitle,
 }: PlanScreenProps) {
+  const payload = usePlanPhotoVersions(incomingPayload)
   const locale = useLocale()
   const t = useTranslate()
   const router = useRouter()
@@ -1683,6 +1685,9 @@ export function PlanScreen({
       {/* ------------------------------------------------------------ dialogs */}
 
       <PlaceDialog
+        photoPlace={
+          dialog?.kind === 'edit' ? placeById.get(dialog.placeId) : undefined
+        }
         open={dialog?.kind === 'create' || dialog?.kind === 'edit'}
         onOpenChange={(open) => {
           if (!open) closeDialog()

@@ -17,6 +17,7 @@
  * | `days`          | `days`, `day_notes` |
  * | `itinerary`     | `day_assignments`, `assignment_participants`, `day_accommodations` |
  * | `places`        | `places`, `place_tags` |
+ * | `place-photos`  | `place_photo_selections`; serializes legacy `places.image_url` writes |
  * | `categories`    | `categories` |
  * | `tags`          | `tags` |
  * | `transports`    | `transports` |
@@ -77,6 +78,7 @@ export * from './members'
 export * from './notifications'
 export * from './participants'
 export * from './places'
+export { listTripPlacePhotos, readPlacePhoto } from './place-photos'
 export * from './rates'
 export * from './reservations'
 export * from './stay-pairs'

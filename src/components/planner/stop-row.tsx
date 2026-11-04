@@ -220,6 +220,7 @@ export function StopRow({
           <PlaceThumb
             placeId={row.placeId}
             imageUrl={row.imageUrl}
+            photo={row.photo}
             icon={category?.icon}
             colour={category?.colour}
           />
