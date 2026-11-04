@@ -818,6 +818,24 @@ const messages = {
   'session.workspaceCheckPending': 'Проверка доступа к рабочему пространству…',
   'session.workspaceCheckFailed':
     'Не удалось подтвердить доступ к этому рабочему пространству. Ни одно действие не было повторено. Можно проверить ещё раз.',
+  'dashboard.currency.label': 'Конвертер валют',
+  'dashboard.currency.amount': 'Сумма',
+  'dashboard.currency.from': 'Исходная валюта',
+  'dashboard.currency.to': 'Целевая валюта',
+  'dashboard.currency.swap': 'Поменять валюты',
+  'dashboard.currency.refresh': 'Обновить курсы',
+  'dashboard.currency.result': 'Сумма после пересчёта',
+  'dashboard.currency.invalid': 'Введите сумму от 0 до 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Эта валютная пара недоступна.',
+  'dashboard.currency.stale': 'Эти справочные курсы могут быть устаревшими.',
+  'dashboard.currency.blocked': 'Достигнут лимит сервиса курсов.',
+  'dashboard.currency.failed': 'Не удалось обновить курсы.',
+  'dashboard.currency.cooldown': 'Повторите после {time}.',
+  'dashboard.currency.source': 'Справочные курсы ЕЦБ через Frankfurter',
+  'dashboard.currency.notice': 'Расчёт для информации, не предложение сделки.',
+  'dashboard.currency.free':
+    'Справочные курсы ЕЦБ доступны бесплатно на сайте ЕЦБ.',
+  'dashboard.currency.date': 'Дата курса: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

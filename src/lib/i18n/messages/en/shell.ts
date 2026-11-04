@@ -879,6 +879,25 @@ const messages = {
   'session.workspaceCheckPending': 'Checking workspace access…',
   'session.workspaceCheckFailed':
     'Could not verify access to this workspace. Nothing was retried. You can check again.',
+  'dashboard.currency.label': 'Currency converter',
+  'dashboard.currency.amount': 'Amount',
+  'dashboard.currency.from': 'From currency',
+  'dashboard.currency.to': 'To currency',
+  'dashboard.currency.swap': 'Swap currencies',
+  'dashboard.currency.refresh': 'Refresh rates',
+  'dashboard.currency.result': 'Converted amount',
+  'dashboard.currency.invalid': 'Enter an amount from 0 to 1,000,000,000.',
+  'dashboard.currency.unsupported': 'This currency pair is unavailable.',
+  'dashboard.currency.stale': 'These reference rates may be out of date.',
+  'dashboard.currency.blocked': 'The rate service limit has been reached.',
+  'dashboard.currency.failed': 'Rates could not be refreshed.',
+  'dashboard.currency.cooldown': 'Try again after {time}.',
+  'dashboard.currency.source': 'ECB reference rates via Frankfurter',
+  'dashboard.currency.notice':
+    'Calculated for information; not a transaction quote.',
+  'dashboard.currency.free':
+    'ECB reference rates are freely available from the ECB.',
+  'dashboard.currency.date': 'Effective date: {date}',
 } as const satisfies NamespaceMessages
 
 export default messages
