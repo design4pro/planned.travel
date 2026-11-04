@@ -775,6 +775,8 @@ is still not a green row.
 - `provider gate unavailable; allowing the call` in the logs. The gate fails open on purpose — a
   metering read must not stop transactional email — so this line is the only evidence that a
   ceiling is not being enforced while it is not being enforced.
+  Metering warnings omit raw exception messages, stacks and causes, which can contain SQL-bound
+  tenant values. Rejected usage records log only their rejection, never their unvalidated fields.
 
 ## 10. Chrome geometry and stacking order
 

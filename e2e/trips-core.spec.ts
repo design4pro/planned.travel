@@ -1154,10 +1154,10 @@ test.describe('01-S5 — The dashboard’s reference column, and the clock in it
     const menu = page.getByRole('menu')
     await expect(menu).toBeVisible()
 
-    // Four, because the clock joined the three panels the rail already carried.
+    // Five, including the currency converter alongside the original four widgets.
     // A menu that governed only the clock could not honour the claim below.
     const items = menu.getByRole('menuitemcheckbox')
-    await expect(items).toHaveCount(4)
+    await expect(items).toHaveCount(5)
 
     const count = await items.count()
     for (let index = 0; index < count; index += 1) {

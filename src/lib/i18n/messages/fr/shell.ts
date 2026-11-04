@@ -799,6 +799,25 @@ const messages = {
     'Vérification de l’accès à l’espace de travail…',
   'session.workspaceCheckFailed':
     'Impossible de confirmer l’accès à cet espace de travail. Aucune opération n’a été relancée. Vous pouvez vérifier à nouveau.',
+  'dashboard.currency.label': 'Convertisseur de devises',
+  'dashboard.currency.amount': 'Montant',
+  'dashboard.currency.from': 'Devise de départ',
+  'dashboard.currency.to': 'Devise cible',
+  'dashboard.currency.swap': 'Inverser les devises',
+  'dashboard.currency.refresh': 'Actualiser les taux',
+  'dashboard.currency.result': 'Montant converti',
+  'dashboard.currency.invalid': 'Saisissez un montant de 0 à 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Cette paire de devises est indisponible.',
+  'dashboard.currency.stale': 'Ces taux de référence peuvent être périmés.',
+  'dashboard.currency.blocked': 'La limite du service de taux est atteinte.',
+  'dashboard.currency.failed': 'Impossible d’actualiser les taux.',
+  'dashboard.currency.cooldown': 'Réessayez après {time}.',
+  'dashboard.currency.source': 'Taux de référence de la BCE via Frankfurter',
+  'dashboard.currency.notice':
+    'Calcul indicatif ; ce n’est pas une offre de transaction.',
+  'dashboard.currency.free':
+    'Les taux de référence de la BCE sont disponibles gratuitement auprès de la BCE.',
+  'dashboard.currency.date': 'Date du taux : {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

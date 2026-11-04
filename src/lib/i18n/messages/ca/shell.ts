@@ -795,6 +795,28 @@ const messages = {
     'S’està comprovant l’accés a l’espai de treball…',
   'session.workspaceCheckFailed':
     'No s’ha pogut verificar l’accés a aquest espai de treball. No s’ha repetit cap operació. Pots tornar-ho a comprovar.',
+  'dashboard.currency.label': 'Conversor de divises',
+  'dashboard.currency.amount': 'Import',
+  'dashboard.currency.from': 'Moneda d’origen',
+  'dashboard.currency.to': 'Moneda de destinació',
+  'dashboard.currency.swap': 'Intercanvia les monedes',
+  'dashboard.currency.refresh': 'Actualitza els tipus',
+  'dashboard.currency.result': 'Import convertit',
+  'dashboard.currency.invalid': 'Introdueix un import de 0 a 1.000.000.000.',
+  'dashboard.currency.unsupported':
+    'Aquest parell de monedes no està disponible.',
+  'dashboard.currency.stale':
+    'Aquests tipus de referència poden estar desactualitzats.',
+  'dashboard.currency.blocked': 'S’ha arribat al límit del servei de tipus.',
+  'dashboard.currency.failed': 'No s’han pogut actualitzar els tipus.',
+  'dashboard.currency.cooldown': 'Torna-ho a provar després de {time}.',
+  'dashboard.currency.source':
+    'Tipus de referència del BCE a través de Frankfurter',
+  'dashboard.currency.notice':
+    'Càlcul informatiu; no és una oferta de transacció.',
+  'dashboard.currency.free':
+    'Els tipus de referència del BCE estan disponibles gratuïtament al BCE.',
+  'dashboard.currency.date': 'Data del tipus: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages

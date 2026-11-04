@@ -806,6 +806,24 @@ const messages = {
   'session.workspaceCheckPending': 'Перевірка доступу до робочого простору…',
   'session.workspaceCheckFailed':
     'Не вдалося підтвердити доступ до цього робочого простору. Жодну дію не було повторено. Можна перевірити ще раз.',
+  'dashboard.currency.label': 'Конвертер валют',
+  'dashboard.currency.amount': 'Сума',
+  'dashboard.currency.from': 'Вихідна валюта',
+  'dashboard.currency.to': 'Цільова валюта',
+  'dashboard.currency.swap': 'Поміняти валюти',
+  'dashboard.currency.refresh': 'Оновити курси',
+  'dashboard.currency.result': 'Сума після перерахунку',
+  'dashboard.currency.invalid': 'Введіть суму від 0 до 1 000 000 000.',
+  'dashboard.currency.unsupported': 'Ця валютна пара недоступна.',
+  'dashboard.currency.stale': 'Ці довідкові курси можуть бути застарілими.',
+  'dashboard.currency.blocked': 'Досягнуто ліміту сервісу курсів.',
+  'dashboard.currency.failed': 'Не вдалося оновити курси.',
+  'dashboard.currency.cooldown': 'Повторіть після {time}.',
+  'dashboard.currency.source': 'Довідкові курси ЄЦБ через Frankfurter',
+  'dashboard.currency.notice': 'Інформаційний розрахунок, не пропозиція угоди.',
+  'dashboard.currency.free':
+    'Довідкові курси ЄЦБ доступні безкоштовно на сайті ЄЦБ.',
+  'dashboard.currency.date': 'Дата курсу: {date}',
 } satisfies TranslationOf<typeof En>
 
 export default messages
