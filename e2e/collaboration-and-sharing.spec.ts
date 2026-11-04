@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import {
   useSession,
   hasSession,
@@ -127,7 +128,7 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
     const plainReport = watchConsole(page, consoleRoute)
     const mapReport = watchConsole(page, { ...consoleRoute, map: true })
     await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
-    const title = `Invite link proof ${Date.now()}`
+    const title = `Invite link proof ${randomUUID()}`
     await page
       .getByRole('button', { name: 'New trip', exact: true })
       .first()
@@ -191,11 +192,13 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
       }).observe({ type: 'layout-shift' })
     })
     const failures: unknown[] = []
+    let created = false
     try {
       await creation
         .getByRole('button', { name: 'Create trip', exact: true })
         .click()
       await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+      created = true
       await settle(page, {
         name: 'new-trip-plan',
         path: new URL(page.url()).pathname,
@@ -383,6 +386,7 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
           name: `Actions for ${title}`,
           exact: true,
         })
+        if (created) await expect(actions).toHaveCount(1)
         if ((await actions.count()) > 0) {
           await actions.click()
           await page
