@@ -1715,9 +1715,12 @@ export function PlanScreen({
         titleRef={titleRef}
         sheetTitleRef={sheetTitleRef}
         onSheetCloseAutoFocus={(event) => {
-          if (detail.kind !== 'closed') {
+          const panel = detailPanel.current
+          if (detail.kind !== 'closed' && panel) {
             event.preventDefault()
-            detailPanel.current?.querySelector<HTMLElement>('h2')?.focus()
+            if (!panel.contains(document.activeElement)) {
+              panel.querySelector<HTMLElement>('h2')?.focus()
+            }
           }
         }}
         scheduledCount={String(model.scheduledCount)}

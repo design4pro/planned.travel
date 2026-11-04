@@ -380,6 +380,7 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     .locator('[data-part="trip-tile"], [data-part="trip-row"]')
     .filter({ hasText: title, visible: true })
     .first()
+  let primaryFailure: unknown
   try {
     await expect(page.locator('[data-workspace-splash]')).toHaveCount(0, {
       timeout: 60_000,
@@ -432,6 +433,7 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
     await expect(body).toBeFocused()
     const headerBefore = await panel.locator('header').boundingBox()
     const cameraBefore = await restingCamera(page, () => null)
+    await expect(body).toBeFocused()
     await page.keyboard.press('PageDown')
     await expect
       .poll(() => body.evaluate((node) => node.scrollTop))
@@ -465,20 +467,40 @@ test('an archived Day with only static Notes scrolls by keyboard and lets Tab le
       panel.getByRole('button', { name: 'Expand day details' }),
     ).toBeFocused()
     expect(report().fatal).toEqual([])
+  } catch (error) {
+    primaryFailure = error
+    throw error
   } finally {
-    await visit(page, tripsRoute, 'light')
-    if (!(await tile.count()))
-      await page.locator('[data-part="trip-archive-disclosure"]').click()
-    await tile.locator('[data-part="trip-actions-trigger"]').click()
-    await page
-      .getByRole('menuitem', { name: /^Delete( permanently)?$/ })
-      .click()
-    const remove = page.locator('[data-part="trip-delete-dialog"]')
-    await expect(remove.getByRole('listitem').first()).toBeVisible()
-    const name = remove.getByLabel(/Type the trip’s name/)
-    if (await name.count()) await name.fill(title)
-    await remove.getByRole('button', { name: 'Delete permanently' }).click()
-    await expect(remove).toBeHidden()
+    try {
+      await visit(page, tripsRoute, 'light')
+      if (!(await tile.count()))
+        await page.locator('[data-part="trip-archive-disclosure"]').click()
+      const deleteAction = page.getByRole('menuitem', {
+        name: /^Delete( permanently)?$/,
+      })
+      await expect(async () => {
+        if (!(await page.getByRole('menu').count())) {
+          await tile.locator('[data-part="trip-actions-trigger"]').click()
+        }
+        await expect(deleteAction).toBeEnabled()
+      }).toPass({ timeout: 15_000 })
+      await deleteAction.click()
+      const remove = page.locator('[data-part="trip-delete-dialog"]')
+      await expect(remove.getByRole('listitem').first()).toBeVisible()
+      const name = remove.getByLabel(/Type the trip’s name/)
+      if (await name.count()) await name.fill(title)
+      await remove.getByRole('button', { name: 'Delete permanently' }).click()
+      await expect(remove).toBeHidden()
+      await expect(tile).toHaveCount(0)
+    } catch (cleanupError) {
+      if (primaryFailure !== undefined) {
+        throw new AggregateError(
+          [primaryFailure, cleanupError],
+          'Keyboard regression and fixture cleanup failed',
+        )
+      }
+      throw cleanupError
+    }
   }
 })
 
