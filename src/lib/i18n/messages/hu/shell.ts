@@ -27,6 +27,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.reservation':
+    'Egy megerősített foglalás kezdőnapja: {date}.',
+  'dashboard.mascot.openReservation': 'Foglalások megtekintése',
+  'dashboard.mascot.openChat': 'Utazási csevegés megnyitása',
+  'dashboard.mascot.chatUnavailableTitle': 'Az utazási csevegés nem érhető el',
+  'dashboard.mascot.chatUnavailableBody':
+    'Az értesítéseket és az utazás adatait továbbra is megtekintheti.',
+  'dashboard.mascot.openInbox': 'Értesítések megnyitása',
+  'dashboard.mascot.pause': 'Animáció szüneteltetése',
   'account.platformConsole': 'Platformkonzol',
   'toaster.label': 'Értesítések',
   /* -------------------------------------------------------------- navigation */

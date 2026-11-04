@@ -1,4 +1,14 @@
-import { readFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 
 import {
@@ -236,6 +246,55 @@ describe('reconcilePair', () => {
     reconcilePair(other, 311, options, retry)
     expect(retry.comment).not.toHaveBeenCalled()
     expect(retry.close).not.toHaveBeenCalled()
+  })
+})
+
+describe('close-fixed-issues CLI', () => {
+  it('skips merged PRs with no changed files without failing the sweep', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'close-fixed-issues-'))
+    const gh = join(dir, 'gh')
+    writeFileSync(
+      gh,
+      `#!/usr/bin/env node
+const args = process.argv.slice(2)
+if (args[0] === 'api' && args[1] === 'user') process.stdout.write('bot\\n')
+else if (args[0] === 'api' && args[1] === 'repos/owner/repo/pulls/1710') {
+  process.stdout.write(JSON.stringify({
+    number: 1710,
+    title: 'Merge branch',
+    body: 'Resolve #1697 through a merge commit.',
+    merged_at: '2026-11-01T23:46:06Z',
+    merge_commit_sha: 'abc123',
+    base: { ref: 'develop' },
+    head: { ref: 'cez/merge' },
+    draft: false,
+    changed_files: 0,
+  }))
+} else process.exit(1)
+`,
+    )
+    chmodSync(gh, 0o755)
+    try {
+      const output = execFileSync(
+        process.execPath,
+        [
+          fileURLToPath(new URL('../close-fixed-issues.mjs', import.meta.url)),
+          '--dry-run',
+          '--pr',
+          '1710',
+          '--repo',
+          'owner/repo',
+        ],
+        {
+          encoding: 'utf8',
+          env: { ...process.env, PATH: `${dir}:${process.env.PATH}` },
+        },
+      )
+      expect(output).toContain('the merged PR has no changed files')
+      expect(output).toContain('0 failure(s)')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

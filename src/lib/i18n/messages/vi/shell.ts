@@ -50,6 +50,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.reservation': 'Đặt chỗ đã xác nhận bắt đầu vào {date}.',
+  'dashboard.mascot.openReservation': 'Xem đặt chỗ',
+  'dashboard.mascot.openChat': 'Mở trò chuyện du lịch',
+  'dashboard.mascot.chatUnavailableTitle': 'Trò chuyện du lịch không khả dụng',
+  'dashboard.mascot.chatUnavailableBody':
+    'Bạn vẫn có thể xem thông báo và chi tiết chuyến đi.',
+  'dashboard.mascot.openInbox': 'Mở thông báo',
+  'dashboard.mascot.pause': 'Tạm dừng hoạt ảnh',
   'account.platformConsole': 'Bảng điều khiển nền tảng',
   'toaster.label': 'Thông báo',
   'nav.primary': 'Các mục chính',

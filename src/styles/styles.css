@@ -1231,6 +1231,19 @@ html[dir='rtl'] #sentry-feedback {
   }
 }
 
+@keyframes pt-mascot-sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-3deg); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-band][data-moving='true'] { animation: pt-mascot-sway 3s ease-in-out infinite; transform-origin: bottom center; }
+  [data-band][data-paused='true'], [data-band][data-hidden='true'] { animation-play-state: paused; }
+  [data-band][data-reduced='true'] { animation: none; }
+  [data-band='eager'][data-moving='true'] { animation-duration: 2s; }
+  [data-band='countdown'][data-moving='true'] { animation-duration: 1s; }
+}
+
 /* ==========================================================================
    Reduced motion — collapse to opacity, or to nothing
    ========================================================================== */

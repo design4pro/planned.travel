@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { DashboardMascot } from './-ui/dashboard-mascot'
+import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -36,6 +37,8 @@ import {
   formatTimeRange,
   formatWeekday,
 } from './-lib/format'
+import { projectMascotReservations } from './-lib/mascot-state'
+import { refreshMascotDashboard } from './-lib/mascot-refresh'
 import { RESERVATION_STATUS_TONE, TRIP_STATUS_TONE, toneFor } from './-lib/tone'
 import {
   DashboardWidget,
@@ -132,6 +135,12 @@ function DashboardError({ error }: { error: unknown }) {
 
 function DashboardPage() {
   const data = Route.useLoaderData()
+  const { shell } = Route.useRouteContext()
+  const router = useRouter()
+  const refreshMascot = useCallback(
+    () => refreshMascotDashboard(router),
+    [router],
+  )
   const [converter, setConverter] = useState({
     amount: '1',
     from: 'EUR',
@@ -177,7 +186,13 @@ function DashboardPage() {
   return (
     <AppFrame>
       <AppSections>
-        <UpNext data={data} />
+        <UpNext
+          data={data}
+          userId={shell.session.user.id}
+          workspaceId={shell.session.organization?.id ?? null}
+          onRefresh={refreshMascot}
+          reduceMotion={shell.reduceMotion ?? true}
+        />
         <StatRow data={data} />
 
         {/* The column's own controls, deliberately outside it: the menu can
@@ -213,9 +228,50 @@ function DashboardPage() {
 
 /* ----------------------------------------------------------------- up next */
 
-function UpNext({ data }: { data: DashboardPayload }) {
+function UpNext({
+  data,
+  userId,
+  workspaceId,
+  onRefresh,
+  reduceMotion,
+}: {
+  data: DashboardPayload
+  userId: string
+  workspaceId: string | null
+  onRefresh: () => Promise<boolean>
+  reduceMotion: boolean
+}) {
   const t = useTranslate()
   const trip = data.upNext
+  const mascotReservations = useMemo(
+    () => projectMascotReservations(data.reservations),
+    [data.reservations],
+  )
+  const mascotTrips = useMemo(
+    () =>
+      [...(trip ? [trip] : []), ...data.upcoming, ...data.mine].map(
+        ({ id, isArchived }) => ({ id, isArchived }),
+      ),
+    [trip, data.upcoming, data.mine],
+  )
+  const mascot =
+    workspaceId === null ? null : (
+      <DashboardMascot
+        key={JSON.stringify([userId, workspaceId])}
+        trip={
+          trip
+            ? { id: trip.id, startDate: trip.startDate, endDate: trip.endDate }
+            : null
+        }
+        trips={mascotTrips}
+        reservations={mascotReservations}
+        onRefresh={onRefresh}
+        reduceMotion={reduceMotion}
+        today={data.today}
+        userId={userId}
+        workspaceId={workspaceId}
+      />
+    )
 
   if (trip === null) {
     return (
@@ -246,6 +302,7 @@ function UpNext({ data }: { data: DashboardPayload }) {
             </Button>
           }
         />
+        {mascot}
       </Card>
     )
   }
@@ -325,6 +382,7 @@ function UpNext({ data }: { data: DashboardPayload }) {
         </div>
 
         <TripHeroStrip trip={trip} today={data.today} elapsed={data.elapsed} />
+        {mascot}
       </div>
     </Card>
   )
