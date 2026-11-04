@@ -892,45 +892,51 @@ test.describe('authenticated routes', () => {
       'a 360x640 phone is exactly the viewport the panel gives up height on',
     ).toHaveAttribute('data-fit', 'squeezed')
 
-    const fold = await page.evaluate(() => {
-      const region = document.querySelector('[data-part="actions-scroll"]')
-      if (region === null) return null
-      const viewport = region.querySelector('[data-radix-scroll-area-viewport]')
-      const bar = region.querySelector('[data-orientation="vertical"]')
-      const thumb = bar?.firstElementChild ?? null
-      if (viewport === null || bar === null || thumb === null) return null
-      const style = getComputedStyle(bar)
-      return {
-        overflows: viewport.scrollHeight > viewport.clientHeight + 1,
-        faded: getComputedStyle(region).maskImage !== 'none',
-        barState: bar.getAttribute('data-state'),
-        barOpacity: Number.parseFloat(style.opacity),
-        thumb: thumb.getBoundingClientRect().width,
-        thumbInk: getComputedStyle(thumb).backgroundColor,
-        restingInk: getComputedStyle(document.documentElement)
-          .getPropertyValue('--color-scrollbar-thumb')
-          .trim(),
-      }
-    })
-    expect(
-      fold,
-      'the action block has to be on screen to be judged',
-    ).not.toBeNull()
-    if (fold === null) return
-    expect(
-      fold.overflows,
-      'this is the viewport where the block genuinely does not fit',
-    ).toBe(true)
-    expect(fold.faded, 'the fold is masked rather than sliced').toBe(true)
-    expect(fold.barState, 'and the bar is drawn, not waiting for a hover').toBe(
-      'visible',
-    )
-    expect(fold.barOpacity).toBe(1)
-    expect(fold.thumb, 'with a thumb wide enough to see').toBeGreaterThan(0)
-    expect(
-      fold.thumbInk,
-      'at the strength the primitive keeps for a pointer that is never coming',
-    ).not.toBe(fold.restingInk)
+    // Radix measures overflow before mounting the thumb; assess the complete settled fold.
+    await expect(async () => {
+      const fold = await page.evaluate(() => {
+        const region = document.querySelector('[data-part="actions-scroll"]')
+        if (region === null) return null
+        const viewport = region.querySelector(
+          '[data-radix-scroll-area-viewport]',
+        )
+        const bar = region.querySelector('[data-orientation="vertical"]')
+        const thumb = bar?.firstElementChild ?? null
+        if (viewport === null || bar === null || thumb === null) return null
+        const style = getComputedStyle(bar)
+        return {
+          overflows: viewport.scrollHeight > viewport.clientHeight + 1,
+          faded: getComputedStyle(region).maskImage !== 'none',
+          barState: bar.getAttribute('data-state'),
+          barOpacity: Number.parseFloat(style.opacity),
+          thumb: thumb.getBoundingClientRect().width,
+          thumbInk: getComputedStyle(thumb).backgroundColor,
+          restingInk: getComputedStyle(document.documentElement)
+            .getPropertyValue('--color-scrollbar-thumb')
+            .trim(),
+        }
+      })
+      expect(
+        fold,
+        'the action block has to be on screen to be judged',
+      ).not.toBeNull()
+      if (fold === null) return
+      expect(
+        fold.overflows,
+        'this is the viewport where the block genuinely does not fit',
+      ).toBe(true)
+      expect(fold.faded, 'the fold is masked rather than sliced').toBe(true)
+      expect(
+        fold.barState,
+        'and the bar is drawn, not waiting for a hover',
+      ).toBe('visible')
+      expect(fold.barOpacity).toBe(1)
+      expect(fold.thumb, 'with a thumb wide enough to see').toBeGreaterThan(0)
+      expect(
+        fold.thumbInk,
+        'at the strength the primitive keeps for a pointer that is never coming',
+      ).not.toBe(fold.restingInk)
+    }).toPass({ timeout: 5_000 })
 
     expect(
       watched().fatal,

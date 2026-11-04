@@ -840,6 +840,9 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
             >
               <TabsTrigger
                 value="country"
+                onClick={() => {
+                  if (!open && tab === 'country') onExpandedChange(true)
+                }}
                 icon={<MapPinned />}
                 className={layout.tab}
               >
@@ -847,6 +850,9 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
               </TabsTrigger>
               <TabsTrigger
                 value="stats"
+                onClick={() => {
+                  if (!open && tab === 'stats') onExpandedChange(true)
+                }}
                 icon={<Globe />}
                 className={layout.tab}
               >
@@ -854,6 +860,9 @@ export const AtlasPanel = React.forwardRef<HTMLDivElement, AtlasPanelProps>(
               </TabsTrigger>
               <TabsTrigger
                 value="bucket"
+                onClick={() => {
+                  if (!open && tab === 'bucket') onExpandedChange(true)
+                }}
                 icon={<Telescope />}
                 className={layout.tab}
               >
