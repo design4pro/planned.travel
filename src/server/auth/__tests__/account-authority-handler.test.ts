@@ -956,7 +956,8 @@ describe('factor lifecycle recovery and contested proofs', () => {
           intent: registered.intent,
           operation: 'replace',
           password: PASSWORD,
-          proof: { kind: 'totp', code: await codeFor(person.userId) },
+          // Proposal staleness is independent of the wall-clock TOTP boundary.
+          proof: { kind: 'backup', code: (await backupFor(person.userId))[0] },
         },
         registered.cookie,
       )
