@@ -1,5 +1,5 @@
 /**
- * The one place this product moves bytes in R2 — deleting them, and duplicating them.
+ * Low-level R2 byte operations. Quota-bearing writers use storage/admission.ts (ADR 0050).
  *
  * Two callers will reach it and they live on opposite sides of the request boundary: a server
  * function, which has the bucket from `filesBucket()` (`src/server/fns/context.ts`), and the
@@ -26,15 +26,19 @@
  * says so at run time instead, with {@link ObjectCopyError}.
  */
 export interface ObjectStore {
+  head?: (key: string) => Promise<{ size: number } | null>
   delete: (keys: string | Array<string>) => Promise<void>
   get?: (key: string) => Promise<{
     body: ReadableStream | null
+    size?: number
     httpMetadata?: { contentType?: string; contentDisposition?: string }
   } | null>
   put?: (
     key: string,
     value: ReadableStream,
     options?: {
+      onlyIf?: { etagDoesNotMatch: string }
+      customMetadata?: Record<string, string>
       httpMetadata?: { contentType?: string; contentDisposition?: string }
     },
   ) => Promise<unknown>

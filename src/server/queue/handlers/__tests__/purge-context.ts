@@ -21,9 +21,10 @@ export function purgeBindings(bucket: FakeBucket): TaskBindings {
       delete: async () => undefined,
       list: async () => ({ keys: [], list_complete: true }),
     },
+    DB: {} as TaskBindings['DB'],
     FILES: {
-      get: async () => null,
-      put: async () => undefined,
+      get: async (key) => { const object = await bucket.get(key); return object ? { ...object, size: object.size ?? 0 } : null },
+      put: (key, value, options) => bucket.put(key, new Response(value).body as ReadableStream, options),
       head: async () => null,
       delete: bucket.delete,
       list: async () => ({ objects: [], truncated: false }),

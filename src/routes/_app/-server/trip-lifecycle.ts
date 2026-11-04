@@ -25,6 +25,7 @@
  * defect, not the omission of one, which is why `__tests__/trip-lifecycle-side-effects.test.ts`
  * asserts the absence structurally.
  */
+import { cleanupStorage } from '#/server/storage/admission'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -59,7 +60,6 @@ import { tripCopyTaskId } from '#/server/queue/handlers/trip-copy'
 import { tripPurgeTaskId } from '#/server/queue/handlers/trip-purge'
 import { MAX_PURGE_KEYS } from '#/server/queue/types'
 import { listExportKeys } from '#/server/storage/export-artifacts'
-import { deleteObjects } from '#/server/storage/objects'
 import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
 import { TRIP_DAY_COUNT_MAX } from '#/lib/trip-dates'
 import {
@@ -712,7 +712,7 @@ async function reclaimReplacedCover(
       return
     }
     const { filesBucket } = await import('#/server/fns/context')
-    await deleteObjects(filesBucket(), [previousKey])
+    await cleanupStorage(scope, filesBucket())
   } catch (cause) {
     log().warn('the previous cover of a trip could not be reclaimed', {
       organizationId: scope.ctx.organizationId,

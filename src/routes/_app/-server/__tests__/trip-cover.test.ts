@@ -17,6 +17,8 @@ import {
   archiveTrip,
   createTrip,
   getFileByStorageKey,
+  findStorageObject,
+  getStorageUsage,
   getTrip,
   recordFile,
   updateTrip as writeTrip,
@@ -30,7 +32,7 @@ import { fakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { FakeBucket } from '#/server/storage/__tests__/fake-bucket'
 import type { TenantScope } from '#/server/repos'
-import type * as Observability from '#/server/observability'
+import type * as Observability from '#/server/observability/logger'
 
 const ORIGIN = 'https://planned.travel'
 
@@ -53,7 +55,7 @@ vi.mock('#/server/fns/context', () => ({
 }))
 
 /** The module's logger, replaced with a recorder so a case can assert what a failed delete says. */
-vi.mock('#/server/observability', async (importOriginal) => {
+vi.mock('#/server/observability/logger', async (importOriginal) => {
   const actual = await importOriginal<typeof Observability>()
   return {
     ...actual,
@@ -522,9 +524,13 @@ describe('updateTripFn reclaiming the cover it leaves behind', () => {
 
     expect((await getTrip(tenant.scope, tripId))?.coverImageKey).toBeNull()
     expect(stubs.warnings).toHaveLength(1)
-    expect(stubs.warnings[0]?.fields).toMatchObject({
-      tripId,
-      storageKey: coverKey,
+    const retained = await findStorageObject(tenant.scope, coverKey)
+    expect(retained).toMatchObject({ state: 'garbage', storageKey: coverKey })
+    expect(stubs.bucket?.remaining.has(coverKey)).toBe(true)
+    expect(await getStorageUsage(tenant.scope)).toMatchObject({ fileCount: 1, bytes: retained?.sizeBytes })
+    expect(stubs.warnings[0]).toEqual({
+      message: 'opportunistic storage cleanup failed; usage retained for retry',
+      fields: { orgId: tenant.organizationId, reservationId: retained?.id },
     })
   })
 
