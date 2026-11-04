@@ -51,6 +51,15 @@ test('Files preview and adjacent download', async ({
   }
   const failures: unknown[] = []
   try {
+    // Let the upload toast clear before testing the row's native pointer target.
+    await expect(
+      page.locator('[data-sonner-toast][data-type="success"]'),
+    ).toHaveCount(0, {
+      timeout: 15_000,
+    })
+    await opener.evaluate((button) =>
+      button.scrollIntoView({ block: 'center', behavior: 'instant' }),
+    )
     await opener.click()
     const dialog = page.getByRole('dialog', { name })
     const image = dialog.getByRole('img', { name })
