@@ -382,6 +382,9 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         // Delete only this journey's uniquely named trip, if creation succeeded.
         await page.goto(`${baseURL}/trips`)
         await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
+        await expect(
+          page.getByRole('button', { name: 'New trip', exact: true }).first(),
+        ).toBeVisible()
         const actions = page.getByRole('button', {
           name: `Actions for ${title}`,
           exact: true,
