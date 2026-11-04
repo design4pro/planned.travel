@@ -6,7 +6,7 @@ import {
   rmSync,
 } from 'node:fs'
 import { spawn, execFileSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { resolve as resolvePath } from 'node:path'
 import { request } from 'node:http'
 import { once } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -196,7 +196,7 @@ describe('collector process ownership', () => {
       execFileSync(
         process.execPath,
         ['scripts/ci/sentry-fixture.ts', '--dsn'],
-        { encoding: 'utf8' },
+        { encoding: 'utf8', timeout: 10000 },
       ).trim(),
     ).toBe(FIXTURE_SENTRY_DSN)
     const action = readFileSync('.github/actions/e2e-env/action.yml', 'utf8')
@@ -231,7 +231,7 @@ describe('collector process ownership', () => {
     'Playwright releases its collector after %s',
     async (mode) => {
       mkdirSync('.ai/tmp', { recursive: true })
-      const dir = mkdtempSync(resolve('.ai/tmp/sentry-lifecycle-'))
+      const dir = mkdtempSync(resolvePath('.ai/tmp/sentry-lifecycle-'))
       const root = process.cwd()
       writeFileSync(
         dir + '/probe.spec.js',
@@ -239,7 +239,7 @@ describe('collector process ownership', () => {
       )
       writeFileSync(
         dir + '/playwright.config.ts',
-        `import { feedbackWebServers, FIXTURE_SENTRY_DSN } from ${JSON.stringify(resolve('scripts/ci/sentry-fixture.ts'))}; export default { testDir: '.', retries: 0, workers: 1, reporter: 'line', outputDir: './results', webServer: feedbackWebServers(FIXTURE_SENTRY_DSN, 'http://localhost:3000').map(server => ({...server, cwd: ${JSON.stringify(root)}})) };`,
+        `import { feedbackWebServers, FIXTURE_SENTRY_DSN } from ${JSON.stringify(resolvePath('scripts/ci/sentry-fixture.ts'))}; export default { testDir: '.', retries: 0, workers: 1, reporter: 'line', outputDir: './results', webServer: feedbackWebServers(FIXTURE_SENTRY_DSN, 'http://localhost:3000').map(server => ({...server, cwd: ${JSON.stringify(root)}})) };`,
       )
       const child = spawn(
         process.execPath,
@@ -249,7 +249,11 @@ describe('collector process ownership', () => {
           '--config',
           dir + '/playwright.config.ts',
         ],
-        { stdio: 'pipe', env: { ...process.env, FIXTURE_TEST_MODE: mode } },
+        {
+          stdio: 'pipe',
+          timeout: 10000,
+          env: { ...process.env, FIXTURE_TEST_MODE: mode },
+        },
       )
       let output = ''
       child.stdout.on('data', (bytes) => {

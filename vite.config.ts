@@ -182,11 +182,19 @@ const config = defineConfig({
      */
     cloudflare({ viteEnvironment: { name: 'ssr' }, remoteBindings: false }),
     tailwindcss(),
-    tanstackStart(
-      isE2EBuild
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          // Start preloads every route chunk; co-load fallbacks so healthy routes consume them.
+          defaultBehavior: [
+            ['component', 'errorComponent', 'notFoundComponent'],
+          ],
+        },
+      },
+      ...(isE2EBuild
         ? { serverFns: { generateFunctionId: readableServerFnId } }
-        : undefined,
-    ),
+        : {}),
+    }),
     viteReact(),
     // Last on purpose: it reads the bundle other plugins produced, so it has to run after them.
     // Inert without a token - `disable` short-circuits it before it looks for anything to upload.
