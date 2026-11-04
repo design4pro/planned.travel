@@ -20,12 +20,10 @@ uncommitted merge-outcome changes were copied into the isolated worktree and pre
 3. Pass the configured validation gate and inspect independent security review. Exercise two
    competing ticks, a restart after push/merge, inaccessible GitHub pages and a failed runner
    in a test project. Cezar's Reconciler change is a separate host-repository change.
-4. Provision a dedicated English-language test account belonging to exactly one workspace
-   named `Release smoke…`, with one readable trip. In each GitHub environment configure
-   `SMOKE_EMAIL`, `SMOKE_PASSWORD` secrets, `SMOKE_WORKSPACE_ID`, `SMOKE_TRIP_ID` variables and
-   existing Cloudflare Access credentials. Never use an ordinary customer account. The smoke
-   signs in, reads that trip, changes the isolated workspace's name and restores it, verifying
-   both writes. Missing credentials or cleanup failure produce no passing receipt.
+4. No application user account is needed for the Cezar workflow release. With
+   `RELEASE_OBSERVATION=true`, staging and production receipts verify the exact Worker SHA,
+   version, landing page and tile range through the existing Cloudflare Access credentials.
+   Cezar workflow behavior is covered by the repository CI suite, not by mutating an app workspace.
 5. Verify production environment protections and token permissions, including `PROMOTE_PR_TOKEN` (required so a merge triggers production CI and a recovery draft triggers PR CI). Ruleset requirements must be readable. Classic protection may be absent only when a 404 is accompanied by confirmed repository administrator visibility; other inaccessible requirements are not treated as empty protection. Enable `RELEASE_OBSERVATION=true` to collect staging/production receipts without automatic
    promotion or rollback. Run the staging observation and `node scripts/ci/promote-release.mjs` without `--apply` first. Confirm the actual Worker
    version and SHA through `/api/version`, seven successful samples spanning thirty minutes,
@@ -35,8 +33,8 @@ uncommitted merge-outcome changes were copied into the isolated worktree and pre
    author). `/revoke-release <SHA>` withdraws it; the latest trusted decision wins. An unreadable gate stops
    the release. The separate release workflow preserves the promotion's `do-not-merge` label;
    agent workflows continue to refuse that PR.
-6. Only after that test enable `AUTONOMOUS_RELEASES=true`. This enables receipts, authenticated
-   production smoke and deterministic promotion. A failed production verification opens one
+6. Only after that test enable `AUTONOMOUS_RELEASES=true`. This enables receipts, production
+   health checks and deterministic promotion. A failed production verification opens one
    release-lock incident before any rollback attempt. All future production deploys and
    promotions must respect that incident until recovery is complete. Rollback requires a
    previously successful production receipt, a known currently serving failed version and no
@@ -104,15 +102,17 @@ remain rollout gates, not assumptions.
 - Both main/develop rulesets require `lint · typecheck · build`, `unit tests` and
   `e2e · merged report`. Classic main protection returns 404, "Branch not protected".
   The production environment currently has no protection rules or deployment branch restriction.
-  Repository and environment queries found no release flags, SMOKE_EMAIL/SMOKE_PASSWORD secrets or SMOKE_WORKSPACE_ID/SMOKE_TRIP_ID variables. PROMOTE_PR_TOKEN exists; its runtime permissions remain untested.
+  Repository and environment queries found no release flags; no application account is needed for health checks. PROMOTE_PR_TOKEN exists; its runtime permissions remain untested.
 - Cezar workflow dispatch returns HTTP 422, "Actions has been disabled for this repository",
   although the repository permissions API reports enabled=true. No CI run was created.
-- Crontab and live cockpit inspection remain inaccessible. No schedules, production flags,
-  merges or deployments were activated. The original checkout's diff remains unchanged.
+- Crontab and live cockpit inspection remain inaccessible. No host schedules or autonomous
+  release flags were activated. PR #1831 merged to develop and PR #1832 merged to main. Staging
+  deployed commit `2b62d51` and passed its landing/tile smoke checks; production was not deployed.
 
-The staging observation currently occupies one Actions runner for thirty minutes. Measure that
-queue cost before increasing release frequency. New weekly definitions remain disabled until
-host schedule reconciliation and the staged rollout above are complete.
+The optional thirty-minute staging observation checks the exact Worker SHA, landing page and tile
+range; it does not need an application user account. Measure its Actions runner cost before
+increasing release frequency. New weekly definitions remain disabled until host schedule
+reconciliation and the staged rollout above are complete.
 
 The integration branch's normal pre-commit validation failed: 233 files / 6119 tests passed,
 15 files / 56 tests failed, 19 tests skipped and three localhost-listen EPERM errors. No commit

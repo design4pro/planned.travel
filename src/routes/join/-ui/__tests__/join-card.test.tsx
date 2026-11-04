@@ -211,6 +211,7 @@ describe('JoinCard', () => {
   })
 
   it('ends the session before it goes to sign in as someone else', async () => {
+    sessionStorage.setItem('planned.mascot.dismissed:test', '[]')
     const assign = vi.fn()
     vi.stubGlobal('location', { ...window.location, assign })
     const fetched = vi.fn(() => Promise.resolve({ ok: true }))
@@ -225,6 +226,7 @@ describe('JoinCard', () => {
       screen.getByRole('button', { name: 'Sign in with another account' }),
     )
     await waitFor(() => expect(assign).toHaveBeenCalledOnce())
+    expect(sessionStorage.getItem('planned.mascot.dismissed:test')).toBeNull()
     expect(fetched).toHaveBeenCalledWith(
       SIGN_OUT_ENDPOINT,
       expect.objectContaining({ method: 'POST' }),

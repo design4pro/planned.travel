@@ -43,6 +43,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.reservation':
+    'Reservasi yang dikonfirmasi dimulai pada {date}.',
+  'dashboard.mascot.openReservation': 'Lihat reservasi',
+  'dashboard.mascot.openChat': 'Buka chat perjalanan',
+  'dashboard.mascot.chatUnavailableTitle': 'Chat perjalanan tidak tersedia',
+  'dashboard.mascot.chatUnavailableBody':
+    'Anda masih dapat melihat notifikasi dan detail perjalanan.',
+  'dashboard.mascot.openInbox': 'Buka notifikasi',
+  'dashboard.mascot.pause': 'Jeda animasi',
   'account.platformConsole': 'Konsol platform',
   'toaster.label': 'Notifikasi',
   'nav.primary': 'Bagian utama',

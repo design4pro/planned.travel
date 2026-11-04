@@ -62,6 +62,7 @@ export interface ShellPayload {
    * the precedence rule stays in the repository and nothing re-derives it.
    */
   readonly mapStyle: string
+  readonly reduceMotion?: boolean
 }
 
 /**
@@ -327,6 +328,7 @@ export const loadShell = createServerFn({ method: 'GET' })
       role,
       unreadCount,
       mapStyle: settings.mapStyle,
+      reduceMotion: settings.reduceMotion,
       session: buildShellSession({
         session,
         organizationRole: role,
