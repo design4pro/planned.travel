@@ -366,6 +366,28 @@ describe('factor proof and rollout at the real auth handler', () => {
     expect(recovered.status).toBe('committed')
     expect(recovered.enabled).toBe(true)
     expect('backupCodes' in recovered || 'token' in recovered).toBe(false)
+    const challenge = await post('/sign-in/email', {
+      email: 'lifecycle-complete@planned.travel',
+      password: PASSWORD,
+    })
+    const reauthenticated = await post(
+      '/two-factor/verify-backup-code',
+      { code: result.backupCodes[9] },
+      cookies(challenge),
+    )
+    expect(reauthenticated.status).toBe(200)
+    for (const cookie of [currentCookie, cookies(reauthenticated)]) {
+      const availability = await getAuth().handler(
+        new Request(`${BASE_URL}/api/auth/account-security/availability`, {
+          headers: { cookie: `${cookie}; ${registration.receipt}` },
+        }),
+      )
+      expect(availability.status).toBe(200)
+      expect(await availability.json()).toEqual({
+        available: true,
+        recovery: null,
+      })
+    }
     const disable = await factorRegistration(currentCookie, 'disable')
     const reused = await post(
       '/account-security/disable-factor',

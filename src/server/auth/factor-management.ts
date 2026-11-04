@@ -547,7 +547,11 @@ export function accountSessionManagement(
           return ctx.json({
             available: enabled(),
             recovery:
-              previous && id && ownerMatches
+              previous &&
+              id &&
+              ownerMatches &&
+              (previous.kind === 'revoke-others' ||
+                previous.committedAt === null)
                 ? { id, ...outcomeOf(previous, Date.now()) }
                 : null,
           })

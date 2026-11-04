@@ -294,6 +294,28 @@ describe('factor lifecycle', () => {
     expect(mocks.register).not.toHaveBeenCalled()
     expect(mocks.status).toHaveBeenCalledWith('prior')
   })
+  it('offers fresh sign-in when an unknown receipt is no longer readable', async () => {
+    mocks.availability.mockResolvedValue({
+      available: true,
+      recovery: { id: 'prior', status: 'unknown' },
+    })
+    mocks.status.mockRejectedValue(failure('ACCOUNT_SECURITY_REFUSED', 403))
+    render(page())
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole('button', {
+        name: Settings['security.other.check'],
+      }),
+    )
+    await screen.findByRole('button', { name: Auth['login.submit'] })
+    expect(
+      screen.queryByRole('button', { name: Settings['security.other.check'] }),
+    ).toBeNull()
+    expect(mocks.register).not.toHaveBeenCalled()
+    expect(mocks.commit).not.toHaveBeenCalled()
+    expect(mocks.getSession).not.toHaveBeenCalled()
+    expect(screen.queryByText(codes[0])).toBeNull()
+  })
   it.each(['PASSWORD_ATTEMPTS_LOCKED', 'FACTOR_FRESH_SESSION_REQUIRED'])(
     'provides fresh sign-in for %s',
     async (code) => {

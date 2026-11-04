@@ -390,7 +390,16 @@ export function TwoFactorSettings({
         }
       }
     } catch (cause) {
-      feedback.reject(authRequestFailure(cause), 'password')
+      if (!mounted.current) return
+      const failure = authRequestFailure(cause)
+      if (
+        failure.code === 'ACCOUNT_SECURITY_REFUSED' &&
+        failure.status === 403
+      ) {
+        setRecovery(null)
+        setNeedsSignIn(true)
+        feedback.setFailure(null)
+      } else feedback.reject(failure, 'password')
     } finally {
       setBusy(false)
     }
