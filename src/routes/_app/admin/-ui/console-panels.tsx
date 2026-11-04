@@ -1,8 +1,7 @@
 import { useCallback } from 'react'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { Link, useRouter } from '@tanstack/react-router'
 import {
   Activity,
-  Building2,
   Database,
   ScrollText,
   ShieldCheck,
@@ -15,19 +14,15 @@ import {
   resendWorkspaceInvitationFn,
   revokeWorkspaceInvitationFn,
 } from '#/server/fns/workspace-invitations'
-import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { ErrorPanel } from '#/components/layout/error-state'
 import { MemberDepartureControl } from '#/components/layout/member-departure-control'
 import { useMemberDeparture } from '#/components/layout/use-member-departure'
 import { MemberRoleControl } from '#/components/layout/member-role-control'
-import { PageHeader } from '#/components/layout/page-header'
 import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Alert,
   Avatar,
   AvatarStack,
   Button,
-  Card,
   EmptyState,
   Progress,
   StatCard,
@@ -39,19 +34,15 @@ import {
   TableRow,
 } from '#/components/ui'
 import { isMemberRoleImpersonation } from '#/lib/member-role-refusals'
-import { useI18n, useTranslate } from '#/lib/i18n'
+import { useI18n } from '#/lib/i18n'
 import { changeMemberRoleFn } from '#/server/fns/members'
-import { loadAdmin } from './-server/overview'
-import { formatDate, formatNumber, formatRelative } from './-lib/format'
+import { formatDate, formatNumber, formatRelative } from '../../-lib/format'
 import {
-  HeaderSkeleton,
   Panel,
   PanelRow,
-  RowsSkeleton,
-  StatsSkeleton,
-} from './-ui/scaffold'
+} from '../../-ui/scaffold'
 
-import type { AdminPayload } from './-server/overview'
+import type { AdminPayload } from '../../-server/overview'
 import type {
   MemberRole,
   MemberRoleOutcome,
@@ -122,56 +113,7 @@ function metricValue(metric: string, value: number, locale: Locale): string {
     : formatNumber(value, locale)
 }
 
-export const Route = createFileRoute('/_app/admin')({
-  loader: () => loadAdmin(),
-  pendingComponent: AdminPending,
-  errorComponent: AdminError,
-  component: AdminPage,
-})
-
-function AdminError({ error }: { error: unknown }) {
-  const t = useTranslate()
-  return (
-    <AppFrame>
-      <ErrorPanel error={error} title={t('shell.admin.error')} />
-    </AppFrame>
-  )
-}
-
-function AdminPage() {
-  const data = Route.useLoaderData()
-
-  /*
-   * `null` is the server saying "not for you", and it is the only gate.
-   * `session.user.isAdmin` used to decide this in the component while the loader
-   * ran regardless, so the roster, the emails, the audit trail and the quotas
-   * were already in the page a member was told they could not see.
-   */
-  return data === null ? <AdminDenied /> : <AdminConsole data={data} />
-}
-
-function AdminDenied() {
-  const t = useTranslate()
-  return (
-    <AppFrame>
-      <Card variant="dashed" padding="none" className="bg-surface-2">
-        <EmptyState
-          size="lg"
-          icon={<ShieldCheck />}
-          title={t('shell.admin.denied.title')}
-          description={t('shell.admin.denied.body')}
-          action={
-            <Button asChild variant="primary" shape="pill">
-              <Link to="/dashboard">{t('shell.admin.denied.action')}</Link>
-            </Button>
-          }
-        />
-      </Card>
-    </AppFrame>
-  )
-}
-
-function AdminConsole({ data }: { data: AdminPayload }) {
+export function ConsolePanels({ data, room }: { data: AdminPayload; room: 'overview' | 'members' | 'audit' }) {
   const { depart, recover, membersRef } = useMemberDeparture()
   const { t, locale } = useI18n()
   const storage = data.limits.find((row) => row.metric === 'storage_bytes')
@@ -204,32 +146,9 @@ function AdminConsole({ data }: { data: AdminPayload }) {
   )
 
   return (
-    <AppFrame>
-      <AppSections>
-        <PageHeader
-          eyebrow={t('shell.admin.eyebrow')}
-          title={data.organization.name}
-          description={t('shell.admin.description', {
-            plan: planName,
-            date:
-              formatDate(data.organization.createdAt, locale) ??
-              t('shell.admin.createdUnknown'),
-          })}
-          actions={
-            <>
-              <Button asChild variant="secondary" size="sm" shape="pill">
-                <Link to="/settings/organization">
-                  <Building2 aria-hidden />
-                  {t('shell.admin.workspaceSettings')}
-                </Link>
-              </Button>
-              <Button asChild variant="primary" size="sm" shape="pill">
-                <Link to="/settings/billing">{t('shell.admin.billing')}</Link>
-              </Button>
-            </>
-          }
-        />
-
+    <>
+      {room === 'overview' ? (
+        <>
         {data.pendingInvitations === 0 ? null : (
           <Alert
             tone="info"
@@ -239,7 +158,7 @@ function AdminConsole({ data }: { data: AdminPayload }) {
             })}
             actions={
               <Button asChild variant="secondary" size="sm" shape="pill">
-                <Link to="/settings/organization">
+                <Link to="/admin/members">
                   {t('shell.admin.invitations.action')}
                 </Link>
               </Button>
@@ -308,7 +227,7 @@ function AdminConsole({ data }: { data: AdminPayload }) {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
-          <div className="flex min-w-0 flex-col gap-6">
+          <div className="min-w-0">
             <Panel
               label={t('shell.admin.quotas.label')}
               count={t('shell.admin.quotas.count', {
@@ -366,6 +285,37 @@ function AdminConsole({ data }: { data: AdminPayload }) {
               </ul>
             </Panel>
 
+          </div>
+          <aside className="min-w-0">
+            {data.actionCounts.length === 0 ? null : (
+              <Panel
+                label={t('shell.admin.actions.label')}
+                count={t('shell.admin.actions.count', {
+                  count: data.actionCounts.length,
+                  actions: formatNumber(data.actionCounts.length, locale),
+                })}
+              >
+                <ul className="flex flex-col gap-3">
+                  {data.actionCounts.map((row) => (
+                    <li key={row.action}>
+                      <Progress
+                        value={row.value}
+                        max={Math.max(data.actionCounts[0]?.value ?? 1, 1)}
+                        size="xs"
+                        tone="accent"
+                        label={<code className="font-mono">{row.action}</code>}
+                        valueText={formatNumber(row.value, locale)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </Panel>
+            )}
+          </aside>
+        </div>
+        </>
+      ) : room === 'members' ? (
+        <div className="flex min-w-0 flex-col gap-6">
             <WorkspaceInvitations
               invitations={data.invitations}
               roles={data.invitationRoles}
@@ -478,9 +428,8 @@ function AdminConsole({ data }: { data: AdminPayload }) {
                 </TableBody>
               </Table>
             </Panel>
-          </div>
-
-          <aside className="flex min-w-0 flex-col gap-6">
+        </div>
+      ) : (
             <Panel
               label={t('shell.admin.activity.label')}
               count={
@@ -541,52 +490,8 @@ function AdminConsole({ data }: { data: AdminPayload }) {
               )}
             </Panel>
 
-            {data.actionCounts.length === 0 ? null : (
-              <Panel
-                label={t('shell.admin.actions.label')}
-                count={t('shell.admin.actions.count', {
-                  count: data.actionCounts.length,
-                  actions: formatNumber(data.actionCounts.length, locale),
-                })}
-              >
-                <ul className="flex flex-col gap-3">
-                  {data.actionCounts.map((row) => (
-                    <li key={row.action}>
-                      <Progress
-                        value={row.value}
-                        max={Math.max(data.actionCounts[0]?.value ?? 1, 1)}
-                        size="xs"
-                        tone="accent"
-                        label={<code className="font-mono">{row.action}</code>}
-                        valueText={formatNumber(row.value, locale)}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            )}
-          </aside>
-        </div>
-      </AppSections>
-    </AppFrame>
+      )}
+    </>
   )
 }
 
-function AdminPending() {
-  return (
-    <AppFrame>
-      <AppSections>
-        <HeaderSkeleton />
-        <StatsSkeleton />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
-          <Card variant="inset" padding="none">
-            <RowsSkeleton rows={6} />
-          </Card>
-          <Card variant="inset" padding="none">
-            <RowsSkeleton rows={4} />
-          </Card>
-        </div>
-      </AppSections>
-    </AppFrame>
-  )
-}
