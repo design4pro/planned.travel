@@ -112,7 +112,15 @@ export function PlaceMarker({
           onPointerLeave={hide}
           onFocus={show}
           onBlur={hide}
-          onClick={onSelect === undefined ? undefined : () => onSelect(place)}
+          onClick={
+            onSelect === undefined
+              ? undefined
+              : (event) => {
+                  // A pin activation must not also dismiss selection through the map's background click.
+                  event.stopPropagation()
+                  onSelect(place)
+                }
+          }
         />
 
         {open ? (

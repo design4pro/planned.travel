@@ -336,14 +336,17 @@ describe('PlaceMarkers', () => {
   it('reports the place that was clicked', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
+    const onBackground = vi.fn()
     render(
-      <MapCanvas label="Trip map">
-        <PlaceMarkers
-          places={[KYOTO]}
-          categories={CATEGORIES}
-          onSelect={onSelect}
-        />
-      </MapCanvas>,
+      <div onClick={onBackground}>
+        <MapCanvas label="Trip map">
+          <PlaceMarkers
+            places={[KYOTO]}
+            categories={CATEGORIES}
+            onSelect={onSelect}
+          />
+        </MapCanvas>
+      </div>,
     )
     await mapMounted()
 
@@ -351,6 +354,7 @@ describe('PlaceMarkers', () => {
       await screen.findByRole('button', { name: /Fushimi Inari/ }),
     )
     expect(onSelect).toHaveBeenCalledWith(KYOTO)
+    expect(onBackground).not.toHaveBeenCalled()
   })
 
   it('keeps explicit Place reading until its owner replaces it, without hover opening another card', async () => {
