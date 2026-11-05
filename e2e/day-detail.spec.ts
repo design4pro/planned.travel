@@ -1150,6 +1150,28 @@ test('a short Arabic Day detail keeps its full date and a readable scrolling bod
     await expect(
       panel.getByRole('button', { name: 'توسيع تفاصيل اليوم' }),
     ).toBeFocused()
+    const minimisedTitle = panel.getByRole('heading', { level: 2 })
+    await expect(minimisedTitle).toContainText('Land and climb')
+    expect(
+      await minimisedTitle.evaluate((node) => {
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const bounds = node.getBoundingClientRect()
+        return [...range.getClientRects()].every(
+          (box) =>
+            box.left >= bounds.left - 1 &&
+            box.right <= bounds.right + 1 &&
+            box.top >= bounds.top - 1 &&
+            box.bottom <= bounds.bottom + 1,
+        )
+      }),
+    ).toBe(true)
+    const minimisedBounds = await panel.boundingBox()
+    expect(
+      minimisedBounds &&
+        mapBounds &&
+        minimisedBounds.height <= mapBounds.height / 2 + 1,
+    ).toBe(true)
     await expect(date).toBeInViewport({ ratio: 1 })
     await panel.getByRole('button', { name: 'توسيع تفاصيل اليوم' }).click()
     for (const name of ['الأيام', 'الأماكن']) {

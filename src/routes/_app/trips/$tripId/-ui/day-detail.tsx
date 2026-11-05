@@ -136,10 +136,13 @@ export function DayDetail({
           <h2
             id={headingId}
             ref={heading}
-            tabIndex={-1}
+            tabIndex={compact && minimised ? 0 : -1}
             className={cn(
-              'truncate font-display text-label font-bold text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-              compact && 'min-w-0 flex-1',
+              'font-display text-label font-bold text-ink focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+              compact && minimised
+                ? 'order-last max-h-10 basis-full overflow-y-auto [overflow-wrap:anywhere]'
+                : 'truncate',
+              compact && !minimised && 'min-w-0 flex-1',
             )}
           >
             {dayName}

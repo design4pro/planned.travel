@@ -87,12 +87,15 @@ it('keeps identity on minimising and removes body controls', async () => {
   ).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Add stay' })).toBeNull()
 })
-it('keeps the full stored title readable in a compact expanded Day', () => {
+it('keeps the full stored title readable in compact Day states', () => {
   const { update } = setup({ compact: true })
   expect(screen.getByRole('heading', { name: 'Day 1 · Tokyo' })).toBeTruthy()
   expect(screen.getByText('Tokyo').getAttribute('aria-hidden')).toBe('true')
   update({ minimised: true })
   expect(screen.queryByText('Tokyo')).toBeNull()
+  const heading = screen.getByRole('heading', { name: 'Day 1 · Tokyo' })
+  expect(heading.classList.contains('truncate')).toBe(false)
+  expect(heading.getAttribute('tabindex')).toBe('0')
 })
 
 it('shows read failure instead of empty reservations and offers Retry', async () => {
