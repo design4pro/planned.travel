@@ -67,7 +67,16 @@ export function observeNativeFetch(nativeFetch, report, failures) {
   }
 }
 
+export function certifyProvisional(trial, request) {
+  return Boolean(
+    request &&
+    request.token === trial.replacementToken &&
+    trial.createdAt >= request.startedAt,
+  )
+}
+
 export function classifyTrial(trial) {
+  if (trial.conditionEstablished === false) return []
   return trial.ids.map((id) => {
     const attempt = trial.events.find(
       (e) => e.kind === 'attempt' && e.id === id,
@@ -160,7 +169,7 @@ async function main() {
   let receipts = [],
     guards = [],
     count = 0,
-    documentStartedAt = 0
+    documentRequest = null
   const timers = new Set()
   const lifetime = setTimeout(() => {
     report.failure = {
@@ -258,7 +267,10 @@ async function main() {
       return
     }
     if (req.url?.startsWith('/destination')) {
-      documentStartedAt = Date.now()
+      documentRequest = {
+        token: new URL(req.url, origin).searchParams.get('trial'),
+        startedAt: Date.now(),
+      }
       const timer = setTimeout(
         () => {
           timers.delete(timer)
@@ -403,20 +415,37 @@ window.probe={snapshot:()=>({documentId,failures:failures.slice()}),send:(spec)=
                 window.probe.snapshot(),
               )
               if (timing === 'provisional') {
+                trial.replacementToken = String(report.trials.length)
+                documentRequest = null
                 await page.evaluate((spec) => {
                   setTimeout(() => window.probe.send(spec), 100)
                 }, profile)
-                const navigation = page.goto(origin + '/destination?hold=1')
+                const navigation = page
+                  .goto(
+                    origin +
+                      '/destination?hold=1&trial=' +
+                      trial.replacementToken,
+                  )
+                  .then(
+                    () => null,
+                    (error) => error,
+                  )
+                await until(
+                  () => documentRequest?.token === trial.replacementToken,
+                )
                 await until(() =>
                   trial.events.some((e) => e.kind === 'created'),
                 )
                 const created = trial.events.find((e) => e.kind === 'created')
                 trial.ids = created.ids
-                trial.conditionEstablished =
-                  created.createdAt >= documentStartedAt
-                trial.documentStartedAt = documentStartedAt
                 trial.createdAt = created.createdAt
-                await navigation
+                trial.conditionEstablished = certifyProvisional(
+                  trial,
+                  documentRequest,
+                )
+                trial.documentStartedAt = documentRequest.startedAt
+                const navigationError = await navigation
+                if (navigationError) throw navigationError
               } else {
                 trial.ids = await page.evaluate(
                   (spec) => window.probe.send(spec),
@@ -440,6 +469,9 @@ window.probe={snapshot:()=>({documentId,failures:failures.slice()}),send:(spec)=
                 await page.goto(origin + '/destination')
                 trial.conditionEstablished = true
               }
+              trial.phase = trial.conditionEstablished
+                ? 'complete'
+                : 'condition-not-established'
               trial.navigation = 'complete'
               await wait(220)
               trial.terminalDiagnostics = null
@@ -471,7 +503,12 @@ window.probe={snapshot:()=>({documentId,failures:failures.slice()}),send:(spec)=
     process.exitCode = 1
   } finally {
     clearTimeout(lifetime)
-    report.completed = report.trials.filter((t) => !t.failure).length
+    report.completed = report.trials.filter(
+      (t) => t.phase === 'complete',
+    ).length
+    report.conditionNotEstablished = report.trials.filter(
+      (t) => t.phase === 'condition-not-established',
+    ).length
     process.stdout.write(JSON.stringify(report, null, 2) + '\n')
     await browser?.close()
     for (const timer of timers) clearTimeout(timer)

@@ -1,7 +1,11 @@
 import { test } from 'vitest'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { observeNativeFetch, classifyTrial } from '../fetch-lifecycle.mjs'
+import {
+  observeNativeFetch,
+  classifyTrial,
+  certifyProvisional,
+} from '../fetch-lifecycle.mjs'
 
 const pause = () => new Promise((resolve) => setTimeout(resolve, 20))
 test('native receiver/options/arguments and original promise survive exactly one invocation', async () => {
@@ -157,4 +161,30 @@ test('real SDK retains response headers/backoff and buffer overflow/drain behavi
   })
   await pause()
   assert.deepEqual(failures, [])
+})
+
+test('provisional certification rejects a previous request and a send before the current request', () => {
+  const trial = { replacementToken: 'current', createdAt: 200 }
+  assert.equal(
+    certifyProvisional(trial, { token: 'previous', startedAt: 100 }),
+    false,
+  )
+  assert.equal(certifyProvisional(trial, null), false)
+  assert.equal(
+    certifyProvisional(trial, { token: 'current', startedAt: 300 }),
+    false,
+  )
+  assert.equal(
+    certifyProvisional(trial, { token: 'current', startedAt: 150 }),
+    true,
+  )
+  assert.deepEqual(
+    classifyTrial({
+      conditionEstablished: false,
+      ids: ['old'],
+      events: [],
+      receipts: [],
+    }),
+    [],
+  )
 })
