@@ -139,6 +139,11 @@ const { WORKSPACE_LIMIT, createOrganizationFor } = await import(
   '../provisioning'
 )
 const { getSession } = await import('../session')
+const {
+  inviteToWorkspace,
+  resendWorkspaceInvitation,
+  revokeWorkspaceInvitation,
+} = await import('#/server/fns/workspace-invitation-writes')
 const { backfillLegacyAuthority, recordAnchorBackfillCompletion, AccountAuthorityError } = await import('#/server/repos/account-security')
 
 /* -------------------------------------------------------------------------------------------------
@@ -1690,11 +1695,6 @@ describe('product workspace invitations and the recipient HTTP endpoints', () =>
   it('accepts once, rejects expired/revoked invitations, and preserves the participation anchor', async () => {
     const { createScope } = await import('#/server/repos/base')
     const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
-    const {
-      inviteToWorkspace,
-      resendWorkspaceInvitation,
-      revokeWorkspaceInvitation,
-    } = await import('#/server/fns/workspace-invitation-writes')
     const inviterId = await createAccount('lifecycle-owner@planned.travel')
     const recipientEmail = 'lifecycle-recipient@planned.travel'
     const recipientId = await createAccount(recipientEmail)
@@ -1814,11 +1814,6 @@ describe('product workspace invitations and the recipient HTTP endpoints', () =>
 it('keeps recipient rejection open and lets only one of acceptance or revocation win', async () => {
   const { createScope } = await import('#/server/repos/base')
   const { subscribeTenant } = await import('#/server/repos/__tests__/harness')
-  const {
-    inviteToWorkspace,
-    resendWorkspaceInvitation,
-    revokeWorkspaceInvitation,
-  } = await import('#/server/fns/workspace-invitation-writes')
   const inviterId = await createAccount('race-owner@planned.travel')
   const recipientEmail = 'race-recipient@planned.travel'
   const recipientId = await createAccount(recipientEmail)

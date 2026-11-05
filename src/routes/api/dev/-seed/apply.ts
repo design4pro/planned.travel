@@ -124,14 +124,8 @@ import type { PersonKey } from './types'
 /** `app_settings` key holding the marker that makes a second run a no-op. */
 const MARKER_KEY = 'demo.seed'
 
-/**
- * Names per `resolveTags` call.
- *
- * Not the fifty `resolveTagsInput` allows: a `tags` row binds seven columns, and D1 refuses a
- * statement with more than a hundred bound parameters, so one call may create at most fourteen rows
- * before the insert fails. Twelve leaves room for a column.
- */
-const TAG_BATCH = 12
+/** The public resolver's bound; its JSON insert stays below D1's binding limit. */
+const TAG_BATCH = 50
 
 /** How far back the inbox and audit sweep looks for rows an earlier run of this dataset wrote. */
 const INBOX_SWEEP_LIMIT = 500

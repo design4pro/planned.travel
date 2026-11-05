@@ -249,6 +249,7 @@ export const USAGE_METRICS = [
   'exports',
   'collections',
   'journeys',
+  'taxonomy',
 ] as const
 
 export const TRIP_STATUSES = [

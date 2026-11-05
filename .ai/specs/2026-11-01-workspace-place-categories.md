@@ -14,7 +14,16 @@ and select them. Once-only defaults and a bounded, shared taxonomy quota must sh
 editor. This is a design-only deliverable: its PR uses `Refs #1369`, a person merges it, and
 `afk-to-tickets` produces implementation slices. No feature code ships with this document.
 
-## Problem and evidence at HEAD
+## Implementation progress
+
+Issue #1842 implements Phase 1 step 1: the shared quota and generated usage-metric expansion.
+Until #1843 implements step 2, `ensureDefaultCategories` remains a development-only refill whose
+entire missing set is quota-guarded. It has no bootstrap exception and normal consumers do not
+call it. The once-only lifecycle below remains the acceptance contract for #1843.
+The current base has no implemented carry overlay; this slice preserves the existing limits resolver
+and does not implement the separate carry spec.
+
+## Problem and evidence at authoring HEAD
 
 `src/server/repos/categories.ts` provides reads, usage counts and CRUD, but its product management
 screen and server functions are absent. `ensureDefaultCategories` is called only by the development

@@ -450,7 +450,7 @@ it was nowhere near, while `/files` and the repositories enforced the row's real
 | --- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0   | `subscriptions.status`                                      | A row that no longer entitles (`canceled`, `unpaid`, `paused`, `incomplete…`) resolves to Free **with no escapes**: a lapsed subscription grandfathers nothing.                                                                                                                                                                                                                                                   |
 | 1   | `provider_product_id`                                       | The plan. It is what the customer is charged for: the Polar product id, a UUID, since the interval is a property of the product. Phase A renamed it from `stripe_price_id` in migration `0003`, along with the other two provider columns and their indexes (`docs/DEPLOY.md` §9.10). A row with no product id, or one this deployment no longer sells, falls back to the legacy `plan` tier plus the seat count. |
-| 2   | The catalogue in `src/lib/plans.ts`                         | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys.                                                                                                                                      |
+| 2   | The catalogue in `src/lib/plans.ts`                         | That plan's own limits — seats (narrowed to the seats purchased), trips, storage, every module switch. `PLAN_QUOTAS[tier]` in `src/server/db/types.ts` supplies **only** the operational metrics the catalogue does not sell: places, files, exports, collections, journeys, taxonomy.                                                                                                                                      |
 | 3   | `seat_limit`, `storage_limit_bytes`, then `quota_overrides` | The last word. This is the deliberate escape hatch that grandfathers a customer above the plan they pay for, and it stays.                                                                                                                                                                                                                                                                                        |
 
 Two consequences worth stating out loud. First, **the published number is the enforced number**:
@@ -482,6 +482,15 @@ Two reasons this sits at the repository boundary rather than in the route:
 - **It is the noisy-neighbour control.** Quotas are what stop one tenant's 50 000-place import
   from consuming the D1 write budget everyone else shares. Tenant isolation (`organization_id`
   on every query) is correctness; quotas are capacity.
+
+Taxonomy has a shared operational ceiling of 256 live categories plus tags on every tier, resolved
+through the same limits/overrides seam and excluded from pricing. Category/tag creation and the
+bounded 50-name tag resolver enforce capacity inside the INSERT using tenant-scoped live counts;
+no `usage_records` taxonomy counter is maintained. Bulk tag resolution deduplicates normalized
+slugs, reuses existing rows and inserts the entire missing set or none. Existing over-limit data
+remains editable and deletable. The development default-category refill also inserts its missing
+set atomically within this ceiling; #1843 owns the later once-only marker and bounded bootstrap
+exception, so normal consumers do not yet invoke that refill.
 
 Storage writers reserve both ceilings atomically through `src/server/repos/storage-admission.ts`
 before a create-only R2 put. Attachment metadata and reservation settlement publish in one D1

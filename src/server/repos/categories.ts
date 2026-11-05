@@ -2,14 +2,19 @@
  * Place categories — the tenant-owned taxonomy behind map pin colours and itinerary icons.
  *
  * Categories are per tenant rather than global so a workspace can rename or recolour them, which is
- * why {@link ensureDefaultCategories} seeds a starter set on first use instead of shipping a fixed
- * global list.
+ * why the development seeder uses {@link ensureDefaultCategories} rather than a global list.
  */
 
-import { and, asc, count, eq, ne } from 'drizzle-orm'
+import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { categories, places } from '#/server/db/schema'
-import { createTenantRepository, tenantFilter } from './base'
+import { categories, places, newId } from '#/server/db/schema'
+import { createTenantRepository, prepareTenantInsert, tenantFilter } from './base'
+import {
+  taxonomyCapacity,
+  taxonomyLimit,
+  refuseTaxonomyQuota,
+} from './taxonomy-quota'
+import { isUniqueConstraintViolation, RepositoryError } from './context'
 import {
   colourSchema,
   definedOnly,
@@ -118,8 +123,26 @@ export async function createCategory(
   input: CreateCategoryInput,
 ): Promise<Category> {
   const values = createCategoryInput.parse(input)
-  const slug = await reserveSlug(scope, values.slug ?? values.name)
-  return categoriesRepository.insert(scope, { ...values, slug })
+  const limit = await taxonomyLimit(scope)
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const slug = await reserveSlug(scope, values.slug ?? values.name)
+    try {
+      const [row] = await prepareTenantInsert(
+        scope,
+        categories,
+        { ...values, slug },
+        taxonomyCapacity(scope, limit),
+      ).returning()
+      if (!row) return refuseTaxonomyQuota(scope, limit)
+      return row
+    } catch (error) {
+      if (!isUniqueConstraintViolation(error)) throw error
+    }
+  }
+  throw new RepositoryError(
+    'Category slug conflicts exhausted retries.',
+    'CONFLICT',
+  )
 }
 
 export async function updateCategory(
@@ -140,8 +163,7 @@ export async function deleteCategory(scope: TenantScope, categoryId: string): Pr
 }
 
 /**
- * The starter taxonomy a new workspace gets. Marked `isSystem` so the settings UI can offer
- * "restore defaults" without guessing which rows the tenant added themselves.
+ * The starter taxonomy a new workspace gets. `isSystem` records provenance only.
  */
 const DEFAULT_CATEGORIES: ReadonlyArray<{
   readonly name: string
@@ -161,19 +183,48 @@ const DEFAULT_CATEGORIES: ReadonlyArray<{
 ]
 
 /**
- * Seeds the starter taxonomy the first time a workspace needs it. Idempotent: it only inserts the
- * slugs that are missing, so calling it on every dashboard load is safe.
+ * Development seeder refill, quota-guarded as one missing set. Normal reads never call it.
+ * The durable once-only initializer and its bounded bootstrap exception belong to #1843.
  */
-export async function ensureDefaultCategories(scope: TenantScope): Promise<Array<Category>> {
+export async function ensureDefaultCategories(
+  scope: TenantScope,
+): Promise<Array<Category>> {
   const existing = await listCategories(scope)
-  const known = new Set(existing.map((row) => row.slug))
-  const missing = DEFAULT_CATEGORIES.filter((row) => !known.has(row.slug))
-  if (missing.length === 0) {
-    return existing
-  }
-  await categoriesRepository.insertMany(
-    scope,
-    missing.map((row) => ({ ...row, isSystem: true })),
+  if (
+    DEFAULT_CATEGORIES.every((candidate) =>
+      existing.some((row) => row.slug === candidate.slug),
+    )
   )
-  return listCategories(scope)
+    return existing
+  const limit = await taxonomyLimit(scope)
+  const candidates = JSON.stringify(
+    DEFAULT_CATEGORIES.map((row) => ({
+      ...row,
+      id: newId(),
+      createdAt: Number(categories.createdAt.defaultFn?.()),
+      updatedAt: Number(categories.updatedAt.defaultFn?.()),
+    })),
+  )
+  await scope.db.insert(categories).select(sql`
+    with missing as materialized (
+      select json_extract(value, '$.id') as id, json_extract(value, '$.name') as name,
+        json_extract(value, '$.slug') as slug, json_extract(value, '$.colour') as colour,
+        json_extract(value, '$.icon') as icon, json_extract(value, '$.sortOrder') as sort_order,
+        json_extract(value, '$.createdAt') as created_at, json_extract(value, '$.updatedAt') as updated_at
+      from json_each(${candidates})
+      where not exists (select 1 from ${categories} where ${tenantFilter(scope, categories)}
+        and ${categories.slug} = json_extract(value, '$.slug'))
+    )
+    select id, ${scope.ctx.organizationId}, name, slug, colour, icon, 1, sort_order, created_at, updated_at
+    from missing where ${taxonomyCapacity(scope, limit, sql`(select count(*) from missing)`)}
+  `)
+  const rows = await listCategories(scope)
+  if (
+    DEFAULT_CATEGORIES.some(
+      (candidate) => !rows.some((row) => row.slug === candidate.slug),
+    )
+  ) {
+    return refuseTaxonomyQuota(scope, limit)
+  }
+  return rows
 }
