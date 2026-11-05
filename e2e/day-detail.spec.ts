@@ -891,10 +891,16 @@ test('overlapping Stays keep their actual windows and chronological order', asyn
   ).toBeVisible()
 })
 
-test('short planner controls and feedback stay usable by pointer @chromium-only', async ({
+test('short planner controls and feedback stay usable by pointer @chromium-only @feedback-sdk', async ({
   page,
 }) => {
   test.setTimeout(180_000)
+  const consoleReport = watchConsole(page, {
+    name: 'trip-plan',
+    path,
+    ready: 'nav[aria-label="Trip sections"]',
+    map: true,
+  })
   for (const viewport of [
     { width: 720, height: 450 },
     { width: 360, height: 450 },
@@ -1006,7 +1012,24 @@ test('short planner controls and feedback stay usable by pointer @chromium-only'
     expect(await report.evaluate((node) => node.matches(':focus'))).toBe(
       compactFocus,
     )
+    await report.click()
+    await expect(feedback).toBeVisible()
+    await feedback.locator('textarea').fill('Local feedback delivery test')
+    const delivered = page.waitForResponse((response) => {
+      const request = response.request()
+      return (
+        request.method() === 'POST' &&
+        new URL(response.url()).origin === 'http://127.0.0.1:4318' &&
+        request.postData()?.includes('"type":"feedback"') === true
+      )
+    })
+    await feedback.getByRole('button', { name: 'Send report' }).click()
+    expect((await delivered).status()).toBe(204)
+    await expect(
+      page.getByText('Thank you — we have your report.'),
+    ).toBeVisible()
   }
+  expect(consoleReport().fatal).toEqual([])
 })
 
 test('a short Arabic Day detail keeps its full date and a readable scrolling body', async ({

@@ -33,6 +33,29 @@ describe('CI feedback prerequisite', () => {
   })
 })
 
+describe('required feedback journey', () => {
+  it('keeps baseline shards separate and requires the SDK job in the aggregate', () => {
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const action = readFileSync('.github/actions/e2e-env/action.yml', 'utf8')
+    const journey = readFileSync('e2e/day-detail.spec.ts', 'utf8')
+    expect(action).toContain("if [ '${{ inputs.feedback }}' = 'true' ]")
+    expect(action).toContain('VITE_SENTRY_DSN= pnpm exec vite build')
+    expect(workflow).toContain('--grep-invert @feedback-sdk --shard=')
+    expect(workflow).toContain('--project=chromium --grep @feedback-sdk')
+    expect(workflow).toContain("feedback: 'true'")
+    expect(workflow).toContain(
+      'needs: [scope, e2e, e2e-feedback, verify, test]',
+    )
+    expect(workflow).toContain('[ "$FEEDBACK_RESULT" = success ]')
+    expect(workflow).toContain('[ "$FEEDBACK_RESULT" = skipped ]')
+    expect(journey).toContain('{ width: 720, height: 450 }')
+    expect(journey).toContain('{ width: 360, height: 450 }')
+    expect(journey).toContain(
+      'request.postData()?.includes(\'"type":"feedback"\')',
+    )
+  })
+})
+
 describe('fixture activation', () => {
   it('leaves ordinary local and deployed-preview runs alone', () => {
     expect(feedbackWebServers(undefined, 'http://localhost:3030')).toEqual([])
