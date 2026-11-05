@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  FieldError,
   IconButton,
   Input,
   SwitchField,
@@ -220,12 +221,9 @@ export function PollDialog({
                 ))}
               </ul>
               {(touched || invisibleOption) && optionsError !== undefined ? (
-                <p
-                  id={optionsErrorId}
-                  className="mt-2 text-caption text-danger"
-                >
+                <FieldError id={optionsErrorId} className="mt-2">
                   {optionsError}
-                </p>
+                </FieldError>
               ) : null}
               <Button
                 type="button"

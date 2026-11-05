@@ -85,6 +85,10 @@ it.each(cases)(
       .map((id) => document.getElementById(id)?.textContent)
       .join(' ')
     expect(description).toMatch(/visible character|name/i)
+    const error = describedBy
+      .map((id) => document.getElementById(id))
+      .find((element) => element?.getAttribute('role') === 'status')
+    expect(error?.getAttribute('aria-live')).toBe('polite')
     if (!_name.startsWith('poll')) {
       expect(
         document

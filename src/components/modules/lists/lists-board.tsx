@@ -61,6 +61,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   EmptyState,
+  FieldError,
   IconButton,
   Input,
   Progress,
@@ -1261,9 +1262,9 @@ function InlineItemComposer({
         />
       </Tooltip>
       {invalidName ? (
-        <p id={nameErrorId} className="w-full text-caption text-danger">
+        <FieldError id={nameErrorId} className="w-full">
           {t('shell.validation.visibleName')}
-        </p>
+        </FieldError>
       ) : null}
     </form>
   )

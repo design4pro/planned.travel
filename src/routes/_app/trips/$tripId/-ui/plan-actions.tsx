@@ -616,7 +616,7 @@ export function PlaceDialog({
               label={t('modules.field.name')}
               required
               error={
-                touched && !named
+                (touched || draft.name !== '') && !named
                   ? t('trips.plan.editor.nameRequired')
                   : undefined
               }
