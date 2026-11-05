@@ -17,17 +17,32 @@ async function expectUnobscured(control: Locator) {
   ).toBe(true)
 }
 
+async function openReadyDashboard(page: import('@playwright/test').Page) {
+  const refreshed = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+    return (
+      callsServerFn(url, 'loadDashboard') &&
+      !callsServerFn(url, 'loadDashboardMascot')
+    )
+  })
+  await page.goto('/dashboard')
+  await expect(
+    page.getByRole('button', { name: 'Open travel chat' }),
+  ).toBeVisible()
+  await expect(page.locator('svg[data-band][data-moving]')).toBeAttached({
+    timeout: 60_000,
+  })
+  await refreshed
+  await page.waitForLoadState('networkidle')
+}
+
 test('dashboard refresh failure focuses recovery and retry rechecks access', async ({
   page,
   context,
   baseURL,
 }) => {
   await useSession(context, page, baseURL)
-  await page.goto('/dashboard')
-  await expect(
-    page.getByRole('button', { name: 'Open travel chat' }),
-  ).toBeVisible()
-  await page.waitForLoadState('networkidle')
+  await openReadyDashboard(page)
   let blocked = true
   let attempts = 0
   await page.route('**/_serverFn/**', async (route) => {
@@ -43,9 +58,15 @@ test('dashboard refresh failure focuses recovery and retry rechecks access', asy
     }
     await route.continue()
   })
-  await page.evaluate(() =>
-    document.dispatchEvent(new Event('visibilitychange')),
-  )
+  await expect
+    .poll(async () => {
+      if (attempts === 0)
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('visibilitychange')),
+        )
+      return attempts
+    })
+    .toBeGreaterThanOrEqual(1)
   const error = page.getByRole('group', { name: 'The dashboard did not load' })
   await expect(error).toBeFocused()
   const retry = error.getByRole('button', { name: 'Try again' })
@@ -67,11 +88,7 @@ test('a delayed failed retry does not take focus back from the shell', async ({
   baseURL,
 }) => {
   await useSession(context, page, baseURL)
-  await page.goto('/dashboard')
-  await expect(
-    page.getByRole('button', { name: 'Open travel chat' }),
-  ).toBeVisible()
-  await page.waitForLoadState('networkidle')
+  await openReadyDashboard(page)
   let attempts = 0
   let release = () => {}
   const held = new Promise<void>((resolve) => {
@@ -90,9 +107,15 @@ test('a delayed failed retry does not take focus back from the shell', async ({
     }
     await route.continue()
   })
-  await page.evaluate(() =>
-    document.dispatchEvent(new Event('visibilitychange')),
-  )
+  await expect
+    .poll(async () => {
+      if (attempts === 0)
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('visibilitychange')),
+        )
+      return attempts
+    })
+    .toBeGreaterThanOrEqual(1)
   const error = page.getByRole('group', { name: 'The dashboard did not load' })
   await expect(error).toBeFocused()
   await error.getByRole('button', { name: 'Try again' }).focus()
@@ -112,11 +135,7 @@ test('a delayed successful retry respects a click outside recovery', async ({
   baseURL,
 }) => {
   await useSession(context, page, baseURL)
-  await page.goto('/dashboard')
-  await expect(
-    page.getByRole('button', { name: 'Open travel chat' }),
-  ).toBeVisible()
-  await page.waitForLoadState('networkidle')
+  await openReadyDashboard(page)
   let attempts = 0
   let release = () => {}
   const held = new Promise<void>((resolve) => {
@@ -137,9 +156,15 @@ test('a delayed successful retry respects a click outside recovery', async ({
     }
     await route.continue()
   })
-  await page.evaluate(() =>
-    document.dispatchEvent(new Event('visibilitychange')),
-  )
+  await expect
+    .poll(async () => {
+      if (attempts === 0)
+        await page.evaluate(() =>
+          document.dispatchEvent(new Event('visibilitychange')),
+        )
+      return attempts
+    })
+    .toBeGreaterThanOrEqual(1)
   const error = page.getByRole('group', { name: 'The dashboard did not load' })
   await expect(error).toBeFocused()
   await error.getByRole('button', { name: 'Try again' }).focus()
