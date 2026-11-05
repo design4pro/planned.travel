@@ -151,6 +151,10 @@ function DashboardPage() {
     initial: typeof initial
     data: DashboardPayload
   } | null>(null)
+  const [refreshFailure, setRefreshFailure] = useState<{
+    initial: typeof initial
+    error: unknown
+  } | null>(null)
   const data = refreshed?.initial === initial ? refreshed.data : initial
   const refreshMascot = useCallback(async () => {
     try {
@@ -168,7 +172,8 @@ function DashboardPage() {
       if (!next) return false
       setRefreshed({ initial, data: next })
       return true
-    } catch {
+    } catch (error) {
+      setRefreshFailure({ initial, error })
       return false
     }
   }, [initial])
@@ -179,6 +184,7 @@ function DashboardPage() {
   })
   const widgets = useDashboardWidgets()
   const inSheet = useWidgetsInSheet()
+  if (refreshFailure?.initial === initial) throw refreshFailure.error
 
   /**
    * What each widget draws. Built as a table rather than as a chain of

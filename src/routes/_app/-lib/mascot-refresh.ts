@@ -21,14 +21,20 @@ export async function refreshMascotDashboard<T>(
   const current = workspaceClaimState()
   if (current.stale || current.organizationId !== organizationId) return null
   const generation = workspaceClaimGeneration()
-  const result = await read()
-  const next = workspaceClaimState()
-  if (
-    next.stale ||
-    next.switching ||
-    next.organizationId !== organizationId ||
-    workspaceClaimGeneration() !== generation
-  )
-    return null
-  return result
+  const isCurrent = () => {
+    const next = workspaceClaimState()
+    return (
+      !next.stale &&
+      !next.switching &&
+      next.organizationId === organizationId &&
+      workspaceClaimGeneration() === generation
+    )
+  }
+  try {
+    const result = await read()
+    return isCurrent() ? result : null
+  } catch (error) {
+    if (!isCurrent()) return null
+    throw error
+  }
 }

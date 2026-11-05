@@ -65,3 +65,18 @@ it('drops a read started before a workspace switch', async () => {
   expect(await refresh).toBeNull()
   endWorkspaceSwitch(transition)
 })
+
+it('ignores a failed read superseded by a workspace switch', async () => {
+  setWorkspaceClaim('first')
+  let fail: (reason: Error) => void = () => {}
+  const refresh = refreshMascotDashboard(
+    () =>
+      new Promise<string>((_, reject) => {
+        fail = reject
+      }),
+  )
+  const transition = beginWorkspaceSwitch()
+  fail(new Error('obsolete'))
+  await expect(refresh).resolves.toBeNull()
+  endWorkspaceSwitch(transition)
+})

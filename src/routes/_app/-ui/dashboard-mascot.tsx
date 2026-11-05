@@ -306,7 +306,7 @@ export function DashboardMascot(props: Props) {
       today={snapshot?.today ?? props.today}
       prompt={prompt}
       promptDetails={promptDetails}
-      partial={props.partial}
+      partial={props.partial || invalid}
       showEmpty={Boolean(
         props.candidates &&
         snapshot &&

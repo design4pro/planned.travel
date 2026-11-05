@@ -497,6 +497,37 @@ it('removes a suggestion when retry loses access', async () => {
   expect(screen.queryByText('A notification is waiting.')).toBeNull()
 })
 
+it('offers retry when a previously healthy refresh fails', async () => {
+  const visibility = vi
+    .spyOn(document, 'visibilityState', 'get')
+    .mockReturnValue('visible')
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={async () => false}
+        candidates={[]}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  expect(screen.getByRole('button', { name: 'Try again' })).not.toBeNull()
+  visibility.mockRestore()
+})
+
 it('shares a pending refresh between retry and visibility changes', async () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
