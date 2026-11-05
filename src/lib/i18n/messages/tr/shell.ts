@@ -342,6 +342,12 @@ const messages = {
   'admin.denied.body':
     'Gerekiyorsa bu çalışma alanının sahibinden ya da bir yöneticisinden rolünüzü değiştirmesini isteyin.',
   'admin.denied.action': 'Panoya dön',
+  'admin.nav.label': 'Çalışma alanı yönetimi',
+  'admin.nav.overview': 'Genel bakış',
+  'admin.nav.members': 'Üyeler',
+  'admin.nav.audit': 'Denetim',
+  'admin.members.error': 'Üyeler yüklenemedi',
+  'admin.audit.error': 'Son etkinlik yüklenemedi',
   'admin.eyebrow': 'Çalışma alanı konsolu',
   'admin.description': '{plan} paketi · {date} tarihinde oluşturuldu',
   'admin.createdUnknown': 'kısa süre önce',
@@ -365,8 +371,8 @@ const messages = {
   'admin.stat.storageUnit': '{limit} üzerinden',
   'admin.stat.storageUnlimited': 'sınır yok',
   'admin.stat.storageCaption': 'Dosyalar, fotoğraflar ve dışa aktarmalar',
-  'admin.stat.audit': 'Denetim kayıtları',
-  'admin.stat.auditCaption': 'En son etkinlik aşağıda görünüyor',
+  'admin.stat.audit': 'Son denetim kayıtları',
+  'admin.stat.auditCaption': 'Denetimdeki en son 25 kayda kadar',
   'admin.stat.plan': 'Paket',
   'admin.stat.planCaption': 'Sınırlar veri deposu sınırında uygulanır',
 

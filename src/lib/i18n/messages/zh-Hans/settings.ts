@@ -48,6 +48,8 @@ const messages = {
   'nav.notifications.hint': '收件箱、邮件和推送',
   'nav.workspace': '工作区',
   'nav.workspace.hint': '成员与共享的默认值',
+  'nav.admin': '工作区控制台',
+  'nav.admin.hint': '成员、邀请和近期活动',
   'nav.billing': '账单',
   'nav.billing.hint': '方案、席位和发票',
   'action.save': '保存更改',

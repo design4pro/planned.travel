@@ -65,6 +65,8 @@ const messages = {
   'nav.notifications.hint': 'Inkorg, mejl och telefon',
   'nav.workspace': 'Arbetsyta',
   'nav.workspace.hint': 'Medlemmar och förval',
+  'nav.admin': 'Arbetsytans konsol',
+  'nav.admin.hint': 'Medlemmar, inbjudningar och senaste aktivitet',
   'nav.billing': 'Fakturering',
   'nav.billing.hint': 'Abonnemang, platser och fakturor',
 

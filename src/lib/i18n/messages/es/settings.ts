@@ -69,6 +69,8 @@ const messages = {
   'nav.notifications.hint': 'Bandeja, correo y móvil',
   'nav.workspace': 'Espacio de trabajo',
   'nav.workspace.hint': 'Miembros y valores comunes',
+  'nav.admin': 'Consola del espacio de trabajo',
+  'nav.admin.hint': 'Miembros, invitaciones y actividad reciente',
   'nav.billing': 'Facturación',
   'nav.billing.hint': 'Plan, plazas y facturas',
 

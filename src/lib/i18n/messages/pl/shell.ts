@@ -384,6 +384,12 @@ const messages = {
   'admin.denied.body':
     'Jeśli potrzebujesz tu wejść, poproś właściciela lub administratora tej przestrzeni o zmianę Twojej roli.',
   'admin.denied.action': 'Powrót do pulpitu',
+  'admin.nav.label': 'Administracja przestrzenią roboczą',
+  'admin.nav.overview': 'Przegląd',
+  'admin.nav.members': 'Członkowie',
+  'admin.nav.audit': 'Audyt',
+  'admin.members.error': 'Nie udało się wczytać członków',
+  'admin.audit.error': 'Nie udało się wczytać ostatniej aktywności',
   'admin.eyebrow': 'Konsola przestrzeni',
   'admin.description': 'Abonament {plan} · utworzono {date}',
   'admin.createdUnknown': 'niedawno',
@@ -411,8 +417,8 @@ const messages = {
   'admin.stat.storageUnit': 'z {limit}',
   'admin.stat.storageUnlimited': 'bez limitu',
   'admin.stat.storageCaption': 'Pliki, zdjęcia i eksporty',
-  'admin.stat.audit': 'Wpisy audytu',
-  'admin.stat.auditCaption': 'Najnowsza aktywność jest poniżej',
+  'admin.stat.audit': 'Ostatnie wpisy audytu',
+  'admin.stat.auditCaption': 'Do 25 najnowszych wpisów w audycie',
   'admin.stat.plan': 'Abonament',
   'admin.stat.planCaption': 'Limity pilnowane są na granicy repozytoriów',
 

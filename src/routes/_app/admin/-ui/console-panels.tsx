@@ -1,0 +1,503 @@
+import { useCallback } from 'react'
+import { Link, useRouter } from '@tanstack/react-router'
+import {
+  Activity,
+  Database,
+  ScrollText,
+  ShieldCheck,
+  Users,
+} from 'lucide-react'
+
+import { WorkspaceInvitations } from '#/components/layout/workspace-invitations'
+import {
+  inviteWorkspaceFn,
+  resendWorkspaceInvitationFn,
+  revokeWorkspaceInvitationFn,
+} from '#/server/fns/workspace-invitations'
+import { MemberDepartureControl } from '#/components/layout/member-departure-control'
+import { useMemberDeparture } from '#/components/layout/use-member-departure'
+import { MemberRoleControl } from '#/components/layout/member-role-control'
+import { formatStorageSize } from '#/components/layout/storage-size'
+import {
+  Alert,
+  Avatar,
+  AvatarStack,
+  Button,
+  EmptyState,
+  Progress,
+  StatCard,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '#/components/ui'
+import { isMemberRoleImpersonation } from '#/lib/member-role-refusals'
+import { useI18n } from '#/lib/i18n'
+import { changeMemberRoleFn } from '#/server/fns/members'
+import { formatDate, formatNumber, formatRelative } from '../../-lib/format'
+import { Panel, PanelRow } from '../../-ui/scaffold'
+
+import type { AdminPayload } from '../../-server/overview'
+import type {
+  MemberRole,
+  MemberRoleOutcome,
+} from '#/components/layout/member-role-control'
+import type { Locale, MessageKey, Translate } from '#/lib/i18n'
+
+/**
+ * The workspace roles and the quota metrics, as message keys.
+ *
+ * Both are closed sets in `src/server/auth/tenant.ts` and `resolveQuotas`, so
+ * the tables are total. A token a later migration adds falls through to itself —
+ * a reportable data value rather than an English word posing as translated copy.
+ */
+const ROLE_LABEL: Record<string, MessageKey | undefined> = {
+  owner: 'shell.role.owner',
+  admin: 'shell.role.admin',
+  member: 'shell.role.member',
+}
+
+const METRIC_LABEL: Record<string, MessageKey | undefined> = {
+  trips: 'shell.metric.trips',
+  places: 'shell.metric.places',
+  members: 'shell.metric.members',
+  files: 'shell.metric.files',
+  storage_bytes: 'shell.metric.storage_bytes',
+  collections: 'shell.metric.collections',
+  journeys: 'shell.metric.journeys',
+}
+
+/**
+ * The three catalogue plans, by the name a reader sees.
+ *
+ * The words come from the `settings` namespace rather than from
+ * `src/lib/plans.ts`, which is the decision the billing screen recorded: a plan
+ * *price* and a plan *quota* are facts and stay in `plans.ts`, a plan *name* is a
+ * word on a screen. Reading the billing screen's keys rather than declaring
+ * `shell.plan.*` keeps one spelling of `Crew` in the product instead of two for
+ * twenty-two translators to hold in step. An id the catalogue does not know falls
+ * through to itself — a reportable value, not an English word posing as copy.
+ *
+ * The mapping is declared here rather than imported from
+ * `#/lib/plan-copy.ts`, which carries the same three keys plus the
+ * taglines and feature bullets the comparison cards need. That module belongs to
+ * the settings item and is scoped by TanStack's `-` convention to the screens
+ * beside it; the two should converge on one home once it has settled, and this
+ * console needs only the `name` third of it in the shape its three sibling
+ * tables above already use.
+ */
+const PLAN_NAME: Record<string, MessageKey | undefined> = {
+  free: 'settings.billing.plan.free.name',
+  solo: 'settings.billing.plan.solo.name',
+  crew: 'settings.billing.plan.crew.name',
+}
+
+function labelFor(
+  table: Record<string, MessageKey | undefined>,
+  token: string,
+  t: Translate,
+): string {
+  const key = table[token]
+  return key === undefined ? token : t(key)
+}
+
+export function planLabel(plan: string, t: Translate): string {
+  return labelFor(PLAN_NAME, plan, t)
+}
+
+/** A quota's used or limit side, in the units that metric is measured in. */
+function metricValue(metric: string, value: number, locale: Locale): string {
+  return metric === 'storage_bytes'
+    ? formatStorageSize(value, locale)
+    : formatNumber(value, locale)
+}
+
+export function ConsolePanels({
+  data,
+  room,
+}: {
+  data: AdminPayload
+  room: 'overview' | 'members' | 'audit'
+}) {
+  const { depart, recover, membersRef } = useMemberDeparture()
+  const { t, locale } = useI18n()
+  const storage = data.limits.find((row) => row.metric === 'storage_bytes')
+  const planName = planLabel(data.plan, t)
+  const router = useRouter()
+
+  /*
+   * The server function answers a refusal the reader can act on as a value and throws the one it
+   * cannot (an impersonated session). Either way the list is read again: a refusal may mean the
+   * roster this tab holds is stale, and a failure leaves the outcome unknown.
+   */
+  const changeRole = useCallback(
+    async (memberId: string, role: MemberRole): Promise<MemberRoleOutcome> => {
+      let outcome: MemberRoleOutcome
+      try {
+        const result = await changeMemberRoleFn({ data: { memberId, role } })
+        outcome = result.ok
+          ? { ok: true }
+          : { ok: false, reason: result.reason }
+      } catch (cause) {
+        outcome = {
+          ok: false,
+          reason: isMemberRoleImpersonation(cause) ? 'impersonated' : 'failed',
+        }
+      }
+      await router.invalidate().catch(() => undefined)
+      return outcome
+    },
+    [router],
+  )
+
+  return (
+    <>
+      {room === 'overview' ? (
+        <>
+          {data.pendingInvitations === 0 ? null : (
+            <Alert
+              tone="info"
+              title={t('shell.admin.invitations.title', {
+                count: data.pendingInvitations,
+                invitations: formatNumber(data.pendingInvitations, locale),
+              })}
+              actions={
+                <Button asChild variant="secondary" size="sm" shape="pill">
+                  <Link to="/admin/members">
+                    {t('shell.admin.invitations.action')}
+                  </Link>
+                </Button>
+              }
+            >
+              {t('shell.admin.invitations.body')}
+            </Alert>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              tone="inverse"
+              icon={<Users />}
+              label={t('shell.admin.stat.members')}
+              value={formatNumber(data.members.length, locale)}
+              caption={t('shell.admin.stat.membersCaption', {
+                count: data.pendingInvitations,
+                invitations: formatNumber(data.pendingInvitations, locale),
+              })}
+            />
+            <StatCard
+              icon={<Database />}
+              label={t('shell.admin.stat.storage')}
+              value={
+                storage === undefined
+                  ? '—'
+                  : formatStorageSize(storage.used, locale)
+              }
+              unit={
+                storage === undefined
+                  ? undefined
+                  : t('shell.admin.stat.storageUnit', {
+                      limit:
+                        storage.limit === null
+                          ? t('shell.admin.stat.storageUnlimited')
+                          : formatStorageSize(storage.limit, locale),
+                    })
+              }
+              caption={t('shell.admin.stat.storageCaption')}
+            />
+            <StatCard
+              icon={<Activity />}
+              label={t('shell.admin.stat.audit')}
+              value={formatNumber(data.audit.length, locale)}
+              caption={t('shell.admin.stat.auditCaption')}
+            />
+            <StatCard
+              icon={<ShieldCheck />}
+              label={t('shell.admin.stat.plan')}
+              /* The only tile on the product whose display numeral is a word, so
+               the only one that can meet a run with no break opportunity in it.
+               A plan name is one short word in every language we ship, but a
+               locale whose catalogue has not landed falls back to the key, and
+               `settings.billing.plan.crew.name` measures 523px at the display
+               size inside a 328px column — enough to widen the whole stat grid
+               and give the page 221px of horizontal scroll at 360.
+               `wrap-anywhere`, not `wrap-break-word`: `overflow-wrap:
+               break-word` breaks a word to avoid painting outside its box but
+               does not lower the element's *min-content* size, so the grid's
+               auto column still measured the unbroken run and sized itself to
+               it. Wrapping is handed to an element of ours rather than asked of
+               `StatCard`, whose numerals must never break mid-figure. */
+              value={<span className="wrap-anywhere">{planName}</span>}
+              caption={t('shell.admin.stat.planCaption')}
+            />
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-8">
+            <div className="min-w-0">
+              <Panel
+                label={t('shell.admin.quotas.label')}
+                count={t('shell.admin.quotas.count', {
+                  count: data.limits.length,
+                  metrics: formatNumber(data.limits.length, locale),
+                })}
+              >
+                <ul className="flex flex-col gap-4">
+                  {data.limits.map((row) => {
+                    const used = metricValue(row.metric, row.used, locale)
+                    // An uncapped metric arrives as `null`, and a bar with no ceiling has
+                    // no ratio to draw: show it filled, the way the billing meters do,
+                    // rather than a red bar against a ceiling of one.
+                    if (row.limit === null) {
+                      return (
+                        <li key={row.metric}>
+                          <Progress
+                            value={1}
+                            max={1}
+                            size="sm"
+                            tone="brand"
+                            label={labelFor(METRIC_LABEL, row.metric, t)}
+                            valueText={t('shell.admin.quotas.value', {
+                              used,
+                              limit: t('shell.admin.quotas.unlimited'),
+                            })}
+                          />
+                        </li>
+                      )
+                    }
+                    const limit = Math.max(row.limit, 1)
+                    const ratio = row.used / limit
+                    return (
+                      <li key={row.metric}>
+                        <Progress
+                          value={row.used}
+                          max={limit}
+                          size="sm"
+                          tone={
+                            ratio > 0.9
+                              ? 'danger'
+                              : ratio > 0.7
+                                ? 'warning'
+                                : 'brand'
+                          }
+                          label={labelFor(METRIC_LABEL, row.metric, t)}
+                          valueText={t('shell.admin.quotas.value', {
+                            used,
+                            limit: metricValue(row.metric, row.limit, locale),
+                          })}
+                        />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </Panel>
+            </div>
+            <aside className="min-w-0">
+              {data.actionCounts.length === 0 ? null : (
+                <Panel
+                  label={t('shell.admin.actions.label')}
+                  count={t('shell.admin.actions.count', {
+                    count: data.actionCounts.length,
+                    actions: formatNumber(data.actionCounts.length, locale),
+                  })}
+                >
+                  <ul className="flex flex-col gap-3">
+                    {data.actionCounts.map((row) => (
+                      <li key={row.action}>
+                        <Progress
+                          value={row.value}
+                          max={Math.max(data.actionCounts[0]?.value ?? 1, 1)}
+                          size="xs"
+                          tone="accent"
+                          label={
+                            <code className="font-mono">{row.action}</code>
+                          }
+                          valueText={formatNumber(row.value, locale)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </Panel>
+              )}
+            </aside>
+          </div>
+        </>
+      ) : room === 'members' ? (
+        <div className="flex min-w-0 flex-col gap-6">
+          <WorkspaceInvitations
+            invitations={data.invitations}
+            roles={data.invitationRoles}
+            now={data.now}
+            reload={async () => {
+              await router.invalidate()
+            }}
+            onAction={async (action, input) => {
+              if (action === 'invite' && 'email' in input)
+                return inviteWorkspaceFn({ data: input })
+              if ('invitationId' in input) {
+                if (action === 'resend')
+                  return resendWorkspaceInvitationFn({ data: input })
+                return revokeWorkspaceInvitationFn({ data: input })
+              }
+              return { ok: false, reason: 'not-permitted' }
+            }}
+          />
+
+          <Panel
+            label={t('shell.admin.members.label')}
+            count={formatNumber(data.members.length, locale)}
+            /* The roster's faces beside its heading — the shipped
+                 `AvatarStack`, whose `+n` tail and whose spoken party list are
+                 both composed through the catalogue and `formatList`, so the
+                 overflow chip reads `+3` in `en` and takes this locale's own
+                 sign order and grouping everywhere else. `-space-x-*` compiles
+                 to `margin-inline-end`, so the overlap stacks the other way
+                 round in `ar` without a rule of its own. */
+            action={
+              <AvatarStack
+                size="sm"
+                max={5}
+                people={data.members.map((member) => ({
+                  id: member.memberId,
+                  name: member.name,
+                  src: member.image,
+                }))}
+              />
+            }
+            flush
+            bodyClassName="p-0"
+          >
+            <Table
+              ref={membersRef}
+              tabIndex={-1}
+              label={t('shell.admin.members.table')}
+              fixed
+            >
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('shell.admin.members.person')}</TableHead>
+                  <TableHead className="w-36">
+                    {t('shell.admin.members.role')}
+                  </TableHead>
+                  {/* At 360px a fixed 128px date column left the person
+                        column too narrow to hold a name, so the join date is
+                        dropped there rather than truncated: `/settings/organization`
+                        is where a member's history belongs anyway. */}
+                  <TableHead className="hidden w-32 sm:table-cell">
+                    {t('shell.admin.members.joined')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.members.map((member) => (
+                  <TableRow key={member.memberId}>
+                    <TableCell truncate>
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Avatar
+                          name={member.name}
+                          src={member.image}
+                          size="sm"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-ink">
+                            {member.name}
+                          </span>
+                          <span className="block truncate text-caption text-ink-3">
+                            {member.email}
+                          </span>
+                          {member.userId === data.viewerUserId ||
+                          member.assignableRoles.length > 0 ? (
+                            <MemberDepartureControl
+                              name={member.name}
+                              workspace={data.organization.name}
+                              self={member.userId === data.viewerUserId}
+                              onConfirm={() => depart(member.memberId)}
+                              onRecover={recover}
+                            />
+                          ) : null}
+                        </span>
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <MemberRoleControl
+                        isSelf={member.userId === data.viewerUserId}
+                        memberName={member.name}
+                        role={member.role}
+                        assignable={member.assignableRoles}
+                        roleLabel={(role) => labelFor(ROLE_LABEL, role, t)}
+                        onChange={(role) => changeRole(member.memberId, role)}
+                      />
+                    </TableCell>
+                    <TableCell muted className="hidden sm:table-cell">
+                      {formatDate(member.joinedAt, locale)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Panel>
+        </div>
+      ) : (
+        <Panel
+          label={t('shell.admin.activity.label')}
+          count={
+            data.audit.length === 0
+              ? undefined
+              : formatNumber(data.audit.length, locale)
+          }
+          flush
+        >
+          {data.audit.length === 0 ? (
+            <div className="px-5 py-8">
+              <EmptyState
+                size="sm"
+                icon={<ScrollText />}
+                title={t('shell.admin.activity.empty.title')}
+                description={t('shell.admin.activity.empty.body')}
+              />
+            </div>
+          ) : (
+            <ul>
+              {data.audit.map((row) => (
+                <li key={row.id}>
+                  <PanelRow>
+                    <div className="min-w-0 flex-1">
+                      {/* An action name and an entity id are identifiers, not
+                              copy: `code` sets them in the mono face and the
+                              direction layer keeps them left-to-right in `ar`. */}
+                      <code className="block truncate font-mono text-caption text-ink-2">
+                        {row.action}
+                      </code>
+                      <p className="truncate text-caption text-ink-4">
+                        {row.entityType === null ? (
+                          t('shell.admin.activity.workspace')
+                        ) : (
+                          <code className="font-mono">
+                            {row.entityType}
+                            {row.entityId === null
+                              ? ''
+                              : ` · ${row.entityId.slice(0, 8)}`}
+                          </code>
+                        )}
+                      </p>
+                    </div>
+                    {/* No `data-numeric` here. A relative time is prose with
+                            a figure in it — `قبل 3 أيام` — and the direction
+                            layer's `direction: ltr` would push the Arabic words
+                            to the wrong side of their own number. The attribute
+                            belongs to a run that is *only* digits and
+                            punctuation; `tabular-nums` is what this needs, and
+                            it says so itself. */}
+                    <span className="shrink-0 text-caption tabular-nums text-ink-4">
+                      {formatRelative(row.createdAt, data.now, locale)}
+                    </span>
+                  </PanelRow>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
+    </>
+  )
+}

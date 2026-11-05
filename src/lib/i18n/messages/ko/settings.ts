@@ -51,6 +51,8 @@ const messages = {
   'nav.notifications.hint': '알림함과 이메일, 푸시',
   'nav.workspace': '워크스페이스',
   'nav.workspace.hint': '멤버와 공용 기본값',
+  'nav.admin': '워크스페이스 콘솔',
+  'nav.admin.hint': '멤버, 초대 및 최근 활동',
   'nav.billing': '결제',
   'nav.billing.hint': '플랜과 좌석, 청구서',
   'action.save': '변경 사항 저장',

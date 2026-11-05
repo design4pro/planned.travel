@@ -10,7 +10,7 @@ test('workspace invitation create, duplicate refusal, resend recovery and revoke
   expect(await useSession(context, page, baseURL)).toBe(true)
   await visit(
     page,
-    { name: 'workspace', path: '/admin', ready: 'main' },
+    { name: 'workspace', path: '/admin/members', ready: 'main' },
     'light',
   )
   const email = `invite-${Date.now()}@example.com`

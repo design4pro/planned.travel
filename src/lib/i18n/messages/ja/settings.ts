@@ -53,6 +53,8 @@ const messages = {
   'nav.notifications.hint': '受信箱、メール、プッシュ',
   'nav.workspace': 'ワークスペース',
   'nav.workspace.hint': 'メンバーと共有の初期値',
+  'nav.admin': 'ワークスペースコンソール',
+  'nav.admin.hint': 'メンバー、招待、最近のアクティビティ',
   'nav.billing': '請求',
   'nav.billing.hint': 'プラン、席数、請求書',
   'action.save': '変更を保存',

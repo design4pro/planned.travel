@@ -364,6 +364,12 @@ const messages = {
   'admin.denied.body':
     'Demandez à un propriétaire ou à un administrateur de cet espace de changer votre rôle si vous en avez besoin.',
   'admin.denied.action': 'Retour au tableau de bord',
+  'admin.nav.label': 'Administration de l’espace de travail',
+  'admin.nav.overview': 'Vue d’ensemble',
+  'admin.nav.members': 'Membres',
+  'admin.nav.audit': 'Journal d’audit',
+  'admin.members.error': 'Les membres n’ont pas été chargés',
+  'admin.audit.error': 'L’activité récente n’a pas été chargée',
   'admin.eyebrow': 'Console de l’espace',
   'admin.description': 'Formule {plan} · créé le {date}',
   'admin.createdUnknown': 'récemment',
@@ -389,8 +395,8 @@ const messages = {
   'admin.stat.storageUnit': 'sur {limit}',
   'admin.stat.storageUnlimited': 'sans plafond',
   'admin.stat.storageCaption': 'Fichiers, photos et exports',
-  'admin.stat.audit': 'Entrées du journal',
-  'admin.stat.auditCaption': 'L’activité la plus récente est ci-dessous',
+  'admin.stat.audit': 'Entrées d’audit récentes',
+  'admin.stat.auditCaption': 'Jusqu’à 25 entrées les plus récentes dans Audit',
   'admin.stat.plan': 'Formule',
   'admin.stat.planCaption': 'Les quotas sont appliqués côté données',
 

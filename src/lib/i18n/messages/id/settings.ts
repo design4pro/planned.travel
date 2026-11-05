@@ -76,6 +76,8 @@ const messages = {
   'nav.notifications.hint': 'Kotak masuk, surel dan perangkat',
   'nav.workspace': 'Ruang kerja',
   'nav.workspace.hint': 'Anggota dan setelan bersama',
+  'nav.admin': 'Konsol ruang kerja',
+  'nav.admin.hint': 'Anggota, undangan, dan aktivitas terbaru',
   'nav.billing': 'Tagihan',
   'nav.billing.hint': 'Paket, kursi dan faktur',
 

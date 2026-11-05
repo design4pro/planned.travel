@@ -86,6 +86,8 @@ const messages = {
   'nav.notifications.hint': 'Inbox, email and push',
   'nav.workspace': 'Workspace',
   'nav.workspace.hint': 'Members and shared defaults',
+  'nav.admin': 'Workspace console',
+  'nav.admin.hint': 'Members, invitations and recent activity',
   'nav.billing': 'Billing',
   'nav.billing.hint': 'Plan, seats and invoices',
 
