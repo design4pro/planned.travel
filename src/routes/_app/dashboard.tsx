@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
 import { DashboardMascot } from './-ui/dashboard-mascot'
+import { DashboardRefreshError } from './-ui/dashboard-refresh-error'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ArrowUpRight,
@@ -15,7 +16,6 @@ import {
 } from 'lucide-react'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { ErrorPanel } from '#/components/layout/error-state'
 import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Badge,
@@ -131,18 +131,9 @@ export const Route = createFileRoute('/_app/dashboard')({
     return { ...dashboard, mascot }
   },
   pendingComponent: DashboardPending,
-  errorComponent: DashboardError,
+  errorComponent: DashboardRefreshError,
   component: DashboardPage,
 })
-
-function DashboardError({ error }: { error: unknown }) {
-  const t = useTranslate()
-  return (
-    <AppFrame>
-      <ErrorPanel error={error} title={t('shell.dashboard.error')} />
-    </AppFrame>
-  )
-}
 
 function DashboardPage() {
   const initial = Route.useLoaderData()
