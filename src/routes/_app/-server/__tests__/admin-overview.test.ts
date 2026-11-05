@@ -167,6 +167,15 @@ describe('the workspace console authorization boundary', () => {
     expect(await load()).toBeNull()
   })
 
+  it('denies a platform administrator with only workspace member access', async () => {
+    const operator = await tenant.addUser('Platform operator')
+    harness.sqlite
+      .prepare('UPDATE user SET role = ? WHERE id = ?')
+      .run('admin', operator)
+    stubs.scope = tenant.scopeFor(operator, 'member')
+    expect(await load()).toBeNull()
+  })
+
   it('returns only the acting workspace roster, invitations and audit', async () => {
     const other = await harness.seedTenant('console-other')
     await subscribeTenant(tenant.scope, 'crew', 10)
