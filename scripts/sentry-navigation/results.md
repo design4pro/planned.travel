@@ -145,9 +145,9 @@ Reference check: inspected TREK demo HTML and client dependency manifest exposed
 Sentry solution. No implementation was copied; this limited inspection does not establish absence
 from the whole reference product.
 
-Final gate: typecheck and lint passed (inherited no-shadow warnings only); all three test projects
+Initial implementation gate: typecheck and lint passed (inherited no-shadow warnings only); all three test projects
 covered 14615 tests as detailed above. Generated-file check passed with no drift, and the ordinary
-production build passed. Source-map uploads were disabled. Final targeted tests pass 9/9, explicit
+production build passed. Source-map uploads were disabled. Initial targeted tests passed 9/9, explicit
 Node/browser no-undef check passes, and staged diff whitespace checks pass. No runtime regression
 is fixed: the diagnostic WebKit failures above are expected evidence, not a passing repair test.
 
@@ -183,3 +183,14 @@ reviewed design. A byte-aware keepalive executor would address quota selection a
 non-keepalive provisional sends still fail. No such production adoption is approved. The final
 native-fetch rerun certifies each provisional condition by its own request token; see the linked
 recovery section. Runtime acceptance remains technically blocked, with no human-only prerequisite.
+
+## Current-head validation after recovery
+
+All configured local gates pass after integration and the request-token correction: typecheck,
+lint (six inherited shadow warnings), all 14,644 Vitest tests (server 6,815, tooling 833, UI 6,996),
+generated-file freshness and the ordinary production build. Server and UI projects ran in four
+separate bounded shards; the initial complete server run exceeded 540 seconds and exited 124, then
+all current-base shards passed. No assertions were weakened or tests excluded. Source-map upload
+was disabled for the local build. These checks verify the diagnostic change; criterion 5's runtime
+repair and clean-console real-SDK delivery regression remain unmet. Native CI and merge are not
+attested by these local results.
