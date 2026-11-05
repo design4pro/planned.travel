@@ -651,3 +651,63 @@ it.each(['2026-01-05T12:00:00Z', '2026-01-10T12:00:00Z'])(
     expect(screen.getByText('A notification is waiting.')).not.toBeNull()
   },
 )
+
+it('uses the mascot snapshot date when independent requests cross midnight', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-09T00:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          { source: 'event', id: 'e', tripId: 't', occurrence: '2026-01-16' },
+        ]}
+        nowMs={Date.parse('2026-01-09T00:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>,
+  )
+  expect(
+    screen.getByText('A planned event starts on 16 Jan 2026.'),
+  ).not.toBeNull()
+})
+
+it('revalidates once on hydration when the snapshot may have crossed midnight', async () => {
+  const onRefresh = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})

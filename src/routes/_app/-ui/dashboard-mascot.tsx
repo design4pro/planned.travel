@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { selectReservationPrompt } from '../-lib/mascot-state'
 import { selectMascotPrompt } from '#/lib/mascot-prompts'
 import type { MascotCandidate } from '#/lib/mascot-prompts'
@@ -40,6 +40,7 @@ export function DashboardMascot(props: Props) {
     dismissed: ReturnType<typeof readSuppression>
     suppressionNow: number
   } | null>(null)
+  const hydratedScope = useRef<string | null>(null)
   const [hidden, setHidden] = useState(false)
   const [invalid, setInvalid] = useState(false)
   const [focused, setFocused] = useState<{
@@ -105,8 +106,17 @@ export function DashboardMascot(props: Props) {
       )
     }
     setInvalid(false)
-    refresh(props.today, props.nowMs)
+    const snapshotToday =
+      props.nowMs === undefined
+        ? props.today
+        : new Date(props.nowMs).toISOString().slice(0, 10)
+    refresh(snapshotToday, props.nowMs)
     schedule()
+    const scopeKey = JSON.stringify([props.userId, props.workspaceId])
+    if (props.nowMs !== undefined && hydratedScope.current !== scopeKey) {
+      hydratedScope.current = scopeKey
+      void revalidate()
+    }
     const visible = () => {
       if (document.visibilityState === 'visible') void revalidate()
       schedule()
