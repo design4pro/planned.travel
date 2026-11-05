@@ -1,6 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import {
   chmodSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -65,6 +66,11 @@ function assertRequiredJob(config: Record<string, Value>) {
   const base = object(jobs.e2e)
   const feedback = object(jobs['e2e-feedback'])
   const report = object(jobs['e2e-report'])
+  const expectedCondition =
+    "${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('[\"develop\",\"main\"]'), github.event.pull_request.head.ref))) && needs.scope.outputs.e2e != 'false' }}"
+  expect(base.if).toBe(expectedCondition)
+  expect(object(object(base.strategy).matrix)).toEqual({ shard: ['1', '2'] })
+  expect(base['continue-on-error']).toBeUndefined()
   const baseSteps = base.steps
   if (!Array.isArray(baseSteps)) throw new Error('Missing baseline steps')
   const baseRun = baseSteps.map(object).find((step) => step.id === 'tests')
@@ -72,6 +78,7 @@ function assertRequiredJob(config: Record<string, Value>) {
     'pnpm exec playwright test --grep-invert @feedback-sdk --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json',
   )
   expect(baseRun?.if).toBeUndefined()
+  expect(baseRun?.['continue-on-error']).toBeUndefined()
   expect(feedback.if).toBe(base.if)
   expect(feedback.needs).toBe('scope')
   expect(feedback['continue-on-error']).toBeUndefined()
@@ -164,6 +171,19 @@ describe('feedback CI coverage', () => {
     delete jobs['e2e-feedback']
     expect(() => assertRequiredJob(parsed)).toThrow()
     jobs['e2e-feedback'] = feedback
+    const strategy = object(object(jobs.e2e).strategy)
+    const matrix = object(strategy.matrix)
+    matrix.exclude = [{ shard: '2' }]
+    expect(() => assertRequiredJob(parsed)).toThrow()
+    delete matrix.exclude
+    const base = object(jobs.e2e)
+    const baseIf = base.if
+    const feedbackIf = feedback.if
+    base.if = 'false'
+    feedback.if = 'false'
+    expect(() => assertRequiredJob(parsed)).toThrow()
+    base.if = baseIf as Value
+    feedback.if = feedbackIf as Value
     const savedIf = feedback.if
     feedback.if = 'false'
     expect(() => assertRequiredJob(parsed)).toThrow()
@@ -202,6 +222,7 @@ describe('feedback CI coverage', () => {
       .find((step) => step.name === 'Build the application')
     expect(object(build?.env).E2E_BUILD).toBe('1')
     const script = String(build?.run)
+    mkdirSync(resolve('.ai/tmp'), { recursive: true })
     const temp = mkdtempSync(resolve('.ai/tmp/feedback-build-'))
     try {
       const bin = join(temp, 'bin')
@@ -304,6 +325,21 @@ describe('feedback CI coverage', () => {
       (await workflow(readFileSync('.github/workflows/e2e-webkit.yml', 'utf8')))
         .jobs,
     )
+    const nightlyJob = object(nightly['e2e-webkit'])
+    const nightlyMatrix = object(object(nightlyJob.strategy).matrix)
+    expect(nightlyMatrix).toEqual({ shard: ['1', '2'] })
+    nightlyMatrix.exclude = [{ shard: '2' }]
+    expect(() => expect(nightlyMatrix).toEqual({ shard: ['1', '2'] })).toThrow()
+    delete nightlyMatrix.exclude
+    expect(nightlyJob.if).toBeUndefined()
+    expect(nightlyJob['continue-on-error']).toBeUndefined()
+    if (!Array.isArray(nightlyJob.steps))
+      throw new Error('Missing nightly steps')
+    const nightlyRun = nightlyJob.steps
+      .map(object)
+      .find((step) => step.id === 'tests')
+    expect(nightlyRun?.if).toBeUndefined()
+    expect(nightlyRun?.['continue-on-error']).toBeUndefined()
     function command(job: Value | undefined, id: string, shard?: number) {
       const steps = object(job).steps
       if (!Array.isArray(steps)) throw new Error('Missing test steps')
