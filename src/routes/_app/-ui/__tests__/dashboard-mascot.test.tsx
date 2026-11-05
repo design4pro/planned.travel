@@ -1091,3 +1091,55 @@ it('restores keyboard focus after a successful retry and announces changed statu
   )
   expect(status.textContent).toContain('No suggestions right now.')
 })
+
+it('keeps an unchanged failure status separate from changing prompt content', async () => {
+  const view = (id: string) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'event',
+            id,
+            tripId: 'trip',
+            occurrence: id === 'a' ? '2026-01-08' : '2026-01-09',
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+        partial
+      />
+    </I18nProvider>
+  )
+  const page = render(view('a'))
+  const status = screen.getByRole('status')
+  expect(status.textContent).toBe('Some suggestions could not be loaded.')
+  const changes: MutationRecord[] = []
+  const observer = new MutationObserver((records) => changes.push(...records))
+  observer.observe(status, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  })
+  page.rerender(view('b'))
+  await act(async () => {
+    await Promise.resolve()
+  })
+  observer.disconnect()
+  expect(changes).toHaveLength(0)
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  expect(retry.className).toContain('min-h-11')
+  expect(retry.className).toContain('min-w-11')
+  expect(retry.className).toContain('focus-visible:outline')
+})

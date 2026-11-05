@@ -330,12 +330,8 @@ export function Mascot({
       ) : null}
       <div className="min-h-48 ps-32 sm:min-h-36">
         <p role="status" aria-live="polite">
-          {prompt && promptDetails ? <span>{promptText}</span> : null}
-          {showEmpty ? <span>{t('shell.dashboard.mascot.empty')}</span> : null}
-          {partial && prompt && promptDetails ? ' ' : null}
-          {partial ? (
-            <span>{t('shell.dashboard.mascot.sourceUnavailable')}</span>
-          ) : null}
+          {showEmpty ? t('shell.dashboard.mascot.empty') : ''}
+          {partial ? t('shell.dashboard.mascot.sourceUnavailable') : ''}
         </p>
         {prompt ? (
           <div
@@ -351,6 +347,7 @@ export function Mascot({
               }
             }}
           >
+            {promptDetails ? <p>{promptText}</p> : null}
             <a
               className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
@@ -373,6 +370,7 @@ export function Mascot({
         <div>
           <button
             type="button"
+            className="min-h-11 min-w-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
             onFocus={() => {
               retryFocused.current = true
             }}
