@@ -120,7 +120,14 @@ export function DashboardMascot(props: Props) {
       )
     }
     setInvalid(false)
-    refresh(props.today, props.nowMs)
+    const serverNow = props.nowMs ?? Date.now()
+    const arrivalNow = Date.now()
+    const expiredOnArrival = (props.candidates ?? []).some((candidate) => {
+      if (candidate.source !== 'notification') return false
+      const expiry = Date.parse(candidate.occurrence) + 7 * 86_400_000
+      return expiry >= serverNow && expiry < arrivalNow
+    })
+    refresh(props.today, expiredOnArrival ? arrivalNow : serverNow)
     schedule()
     scheduleExpiry()
     const visible = () => {

@@ -540,3 +540,80 @@ it('expires a notification while the dashboard stays visible', async () => {
     screen.getByRole('button', { name: 'Open travel chat' }),
   )
 })
+
+it('rejects a notification that expires before a delayed response arrives', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:02Z'))
+  const candidate = {
+    source: 'notification' as const,
+    id: 'n',
+    occurrence: '2026-01-01T12:00:01Z',
+    action: false,
+  }
+  const view = (nowMs: number) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[candidate]}
+        nowMs={nowMs}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(Date.parse('2026-01-08T12:00:00Z')))
+  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
+  page.rerender(view(Date.parse('2026-01-08T12:00:00Z')))
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
+})
+
+it('removes a focused notification when a delayed refresh arrives after expiry', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-01T12:00:01Z',
+            action: false,
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  screen.getByRole('link', { name: 'Open notifications' }).focus()
+  vi.setSystemTime(new Date('2026-01-08T12:00:02Z'))
+  page.rerender(view())
+  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+})
