@@ -43,6 +43,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Ada notifikasi yang menunggu.',
+  'dashboard.mascot.actionNotification':
+    'Ada notifikasi yang menunggu tanggapan Anda.',
+  'dashboard.mascot.event': 'Acara yang direncanakan dimulai pada {date}.',
+  'dashboard.mascot.openEvent': 'Lihat rencana perjalanan',
+  'dashboard.mascot.empty': 'Belum ada saran saat ini.',
+  'dashboard.mascot.sourceUnavailable': 'Beberapa saran tidak dapat dimuat.',
+  'dashboard.mascot.retry': 'Coba lagi',
   'dashboard.mascot.reservation':
     'Reservasi yang dikonfirmasi dimulai pada {date}.',
   'dashboard.mascot.openReservation': 'Lihat reservasi',

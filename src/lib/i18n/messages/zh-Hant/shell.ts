@@ -16,6 +16,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': '有一則通知等候查看。',
+  'dashboard.mascot.actionNotification': '有一則通知等候您的回覆。',
+  'dashboard.mascot.event': '一項已規劃的活動將於 {date} 開始。',
+  'dashboard.mascot.openEvent': '查看旅程計畫',
+  'dashboard.mascot.empty': '目前沒有建議。',
+  'dashboard.mascot.sourceUnavailable': '部分建議無法載入。',
+  'dashboard.mascot.retry': '重試',
   'dashboard.mascot.reservation': '已確認的預訂將於{date}開始。',
   'dashboard.mascot.openReservation': '查看預訂',
   'dashboard.mascot.openChat': '開啟旅行聊天',

@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { selectReservationPrompt } from '../-lib/mascot-state'
+import { selectMascotPrompt } from '#/lib/mascot-prompts'
+import type { MascotCandidate } from '#/lib/mascot-prompts'
 import {
   dismissOccurrence,
   readSuppression,
@@ -23,6 +25,9 @@ type Props = {
   userId: string
   workspaceId: string
   onRefresh: () => Promise<boolean>
+  candidates?: ReadonlyArray<MascotCandidate>
+  nowMs?: number
+  partial?: boolean
   reduceMotion?: boolean
   adapter?: Parameters<typeof createChatLauncher>[0]
 }
@@ -33,29 +38,42 @@ export function DashboardMascot(props: Props) {
     scope: { userId: string; workspaceId: string }
     today: string
     dismissed: ReturnType<typeof readSuppression>
+    suppressionNow: number
   } | null>(null)
+  const request = useRef<{ scope: string; promise: Promise<boolean> } | null>(
+    null,
+  )
+  const retry = useRef<() => Promise<boolean>>(async () => false)
+  const pendingBoundary = useRef<string | null>(null)
+  const hydratedScope = useRef<string | null>(null)
+  const completedBoundary = useRef<string | null>(null)
+  const boundaryDeadline = useRef<{ key: string; deadline: number } | null>(
+    null,
+  )
   const [hidden, setHidden] = useState(false)
   const [invalid, setInvalid] = useState(false)
   const [focused, setFocused] = useState<{
     id: string
-    tripId: string
+    tripId?: string
     startDate: string
+    source: 'reservation' | 'event' | 'notification'
+    action?: boolean
     userId: string
     workspaceId: string
   } | null>(null)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
-    let inFlight = false
-    const refresh = (today: string) => {
-      const now = Date.now()
+    const scopeKey = JSON.stringify([props.userId, props.workspaceId])
+    const refresh = (today: string, now = Date.now()) => {
+      const suppressionNow = Date.now()
       let dismissed: ReturnType<typeof readSuppression> = []
       try {
         dismissed = readSuppression(
           sessionStorage,
           props.userId,
           props.workspaceId,
-          now,
+          suppressionNow,
         )
       } catch {
         // Browser storage can be blocked.
@@ -64,39 +82,104 @@ export function DashboardMascot(props: Props) {
         now,
         today,
         dismissed,
+        suppressionNow,
         scope: { userId: props.userId, workspaceId: props.workspaceId },
       })
     }
     const revalidate = async () => {
-      if (inFlight || document.visibilityState !== 'visible') return
-      inFlight = true
-      let valid = false
-      try {
-        valid = await props.onRefresh()
-      } catch {
-        /* Failed refresh removes stale context. */
+      if (document.visibilityState !== 'visible') return false
+      let pending = request.current
+      if (pending?.scope !== scopeKey) {
+        let promise: Promise<boolean>
+        try {
+          promise = props.onRefresh().catch(() => false)
+        } catch {
+          promise = Promise.resolve(false)
+        }
+        pending = { scope: scopeKey, promise }
+        request.current = pending
       }
-      if (!active) return
-      inFlight = false
+      const valid = await pending.promise
+      if (request.current === pending) request.current = null
+      if (!active) return false
       setInvalid(!valid)
-      if (valid) refresh(new Date().toISOString().slice(0, 10))
-      else setSnapshot(null)
+      if (!valid) {
+        setSnapshot(null)
+        if (pendingBoundary.current === scopeKey) pendingBoundary.current = null
+        if (timer !== undefined) clearTimeout(timer)
+        if (props.nowMs !== undefined)
+          completedBoundary.current = JSON.stringify([
+            props.userId,
+            props.workspaceId,
+            props.nowMs,
+          ])
+      } else {
+        if (props.nowMs === undefined)
+          refresh(new Date().toISOString().slice(0, 10))
+        if (pendingBoundary.current === scopeKey) {
+          pendingBoundary.current = null
+          if (props.nowMs !== undefined)
+            completedBoundary.current = JSON.stringify([
+              props.userId,
+              props.workspaceId,
+              props.nowMs,
+            ])
+          void revalidate()
+        }
+      }
+      return valid
     }
+    retry.current = revalidate
     const schedule = () => {
       if (timer !== undefined) clearTimeout(timer)
       if (document.visibilityState !== 'visible') return
-      const now = Date.now()
-      timer = setTimeout(
-        () => {
+      const now = props.nowMs ?? Date.now()
+      const boundaryKey =
+        props.nowMs === undefined
+          ? null
+          : JSON.stringify([props.userId, props.workspaceId, props.nowMs])
+      if (boundaryKey !== null && completedBoundary.current === boundaryKey)
+        return
+      if (
+        boundaryKey !== null &&
+        boundaryDeadline.current?.key !== boundaryKey
+      ) {
+        boundaryDeadline.current = {
+          key: boundaryKey,
+          deadline: performance.now() + 86_400_000 - (now % 86_400_000),
+        }
+      }
+      const delay =
+        boundaryKey === null
+          ? 86_400_000 - (now % 86_400_000)
+          : Math.max(
+              0,
+              (boundaryDeadline.current?.deadline ?? performance.now()) -
+                performance.now(),
+            )
+      timer = setTimeout(() => {
+        if (request.current?.scope === scopeKey) {
+          pendingBoundary.current = scopeKey
           void revalidate()
-          schedule()
-        },
-        86_400_000 - (now % 86_400_000),
-      )
+        } else {
+          if (boundaryKey !== null) completedBoundary.current = boundaryKey
+          void revalidate()
+        }
+        if (boundaryKey === null) schedule()
+      }, delay)
     }
     setInvalid(false)
-    refresh(props.today)
+    const snapshotToday =
+      props.nowMs === undefined
+        ? props.today
+        : new Date(props.nowMs).toISOString().slice(0, 10)
+    refresh(snapshotToday, props.nowMs)
     schedule()
+    if (request.current?.scope === scopeKey) void revalidate()
+    if (props.nowMs !== undefined && hydratedScope.current !== scopeKey) {
+      hydratedScope.current = scopeKey
+      void revalidate()
+    }
     const visible = () => {
       if (document.visibilityState === 'visible') void revalidate()
       schedule()
@@ -104,6 +187,7 @@ export function DashboardMascot(props: Props) {
     document.addEventListener('visibilitychange', visible)
     return () => {
       active = false
+      if (retry.current === revalidate) retry.current = async () => false
       if (timer !== undefined) clearTimeout(timer)
       document.removeEventListener('visibilitychange', visible)
     }
@@ -112,23 +196,45 @@ export function DashboardMascot(props: Props) {
     props.userId,
     props.workspaceId,
     props.reservations,
+    props.candidates,
+    props.nowMs,
     props.onRefresh,
   ])
-  const select = (reservations: ReadonlyArray<Reservation>) =>
-    snapshot && !hidden && !invalid
-      ? selectReservationPrompt({
-          today: snapshot.today,
-          currentScope: {
-            userId: props.userId,
-            workspaceId: props.workspaceId,
-          },
-          dismissedScope: snapshot.scope,
-          nowMs: snapshot.now,
-          dismissed: snapshot.dismissed,
-          trips: props.trips,
-          reservations,
-        })
+  const select = (
+    reservations = props.reservations,
+    candidates = props.candidates,
+  ) => {
+    if (!snapshot || hidden || invalid) return null
+    if (
+      snapshot.scope.userId !== props.userId ||
+      snapshot.scope.workspaceId !== props.workspaceId
+    )
+      return null
+    if (candidates) {
+      const candidate = selectMascotPrompt({
+        today: snapshot.today,
+        nowMs: snapshot.now,
+        suppressionNowMs: snapshot.suppressionNow,
+        dismissed: snapshot.dismissed,
+        candidates,
+      })
+      if (!candidate) return null
+      return { ...candidate, startDate: candidate.occurrence }
+    }
+    const reservation = selectReservationPrompt({
+      today: snapshot.today,
+      currentScope: { userId: props.userId, workspaceId: props.workspaceId },
+      dismissedScope: snapshot.scope,
+      nowMs: snapshot.now,
+      dismissed: snapshot.dismissed,
+      trips: props.trips,
+      reservations,
+    })
+    return reservation
+      ? { ...reservation, source: 'reservation' as const }
       : null
+  }
+  const selected = select()
   const retained =
     focused &&
     snapshot &&
@@ -138,16 +244,25 @@ export function DashboardMascot(props: Props) {
     focused.workspaceId === props.workspaceId &&
     snapshot.scope.userId === props.userId &&
     snapshot.scope.workspaceId === props.workspaceId &&
-    props.reservations.some(
-      (item) => item.id === focused.id && item.tripId === focused.tripId,
-    ) &&
-    props.trips.some(
-      (trip) => trip.id === focused.tripId && !trip.isArchived,
-    ) &&
-    !props.trips.some((trip) => trip.id === focused.tripId && trip.isArchived)
+    (props.candidates
+      ? props.candidates.some(
+          (item) =>
+            item.id === focused.id &&
+            item.source === focused.source &&
+            (item.source === 'notification' || item.tripId === focused.tripId),
+        )
+      : props.reservations.some(
+          (item) => item.id === focused.id && item.tripId === focused.tripId,
+        ) &&
+        props.trips.some(
+          (trip) => trip.id === focused.tripId && !trip.isArchived,
+        ) &&
+        !props.trips.some(
+          (trip) => trip.id === focused.tripId && trip.isArchived,
+        ))
       ? focused
       : null
-  const prompt = focused ? retained : select(props.reservations)
+  const prompt = focused ? retained : selected
   const promptDetails =
     !focused ||
     Boolean(
@@ -158,13 +273,19 @@ export function DashboardMascot(props: Props) {
             item.tripId === focused.tripId &&
             item.startDate === focused.startDate,
         ),
+        props.candidates?.filter(
+          (item) =>
+            item.id === focused.id &&
+            item.source === focused.source &&
+            item.occurrence === focused.startDate,
+        ),
       ),
     )
   function dismiss() {
     if (!prompt || !snapshot) return
     const entries = dismissOccurrence(
       snapshot.dismissed,
-      'reservation',
+      prompt.source,
       prompt.id,
       prompt.startDate,
       Date.now(),
@@ -185,6 +306,16 @@ export function DashboardMascot(props: Props) {
       today={snapshot?.today ?? props.today}
       prompt={prompt}
       promptDetails={promptDetails}
+      partial={props.partial || invalid}
+      showEmpty={Boolean(
+        props.candidates &&
+        snapshot &&
+        !hidden &&
+        !invalid &&
+        !prompt &&
+        !props.partial,
+      )}
+      onRetry={() => retry.current()}
       onDismiss={dismiss}
       onPromptFocus={() =>
         setFocused(

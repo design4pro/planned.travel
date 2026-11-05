@@ -50,6 +50,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Bạn có một thông báo đang chờ.',
+  'dashboard.mascot.actionNotification':
+    'Có một thông báo đang chờ bạn phản hồi.',
+  'dashboard.mascot.event': 'Một sự kiện đã lên kế hoạch bắt đầu vào {date}.',
+  'dashboard.mascot.openEvent': 'Xem kế hoạch chuyến đi',
+  'dashboard.mascot.empty': 'Hiện chưa có gợi ý nào.',
+  'dashboard.mascot.sourceUnavailable': 'Không thể tải một số gợi ý.',
+  'dashboard.mascot.retry': 'Thử lại',
   'dashboard.mascot.reservation': 'Đặt chỗ đã xác nhận bắt đầu vào {date}.',
   'dashboard.mascot.openReservation': 'Xem đặt chỗ',
   'dashboard.mascot.openChat': 'Mở trò chuyện du lịch',

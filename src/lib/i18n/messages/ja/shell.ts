@@ -17,6 +17,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': '通知が届いています。',
+  'dashboard.mascot.actionNotification': '返信を待っている通知があります。',
+  'dashboard.mascot.event': '予定されたイベントが{date}に始まります。',
+  'dashboard.mascot.openEvent': '旅行プランを見る',
+  'dashboard.mascot.empty': '現在、おすすめはありません。',
+  'dashboard.mascot.sourceUnavailable':
+    '一部のおすすめを読み込めませんでした。',
+  'dashboard.mascot.retry': '再試行',
   'dashboard.mascot.reservation': '確認済みの予約は{date}に始まります。',
   'dashboard.mascot.openReservation': '予約を見る',
   'dashboard.mascot.openChat': '旅行チャットを開く',

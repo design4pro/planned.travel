@@ -21,6 +21,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Μια ειδοποίηση σε περιμένει.',
+  'dashboard.mascot.actionNotification':
+    'Μια ειδοποίηση περιμένει την απάντησή σου.',
+  'dashboard.mascot.event': 'Ένα προγραμματισμένο συμβάν ξεκινά στις {date}.',
+  'dashboard.mascot.openEvent': 'Προβολή πλάνου ταξιδιού',
+  'dashboard.mascot.empty': 'Δεν υπάρχουν προτάσεις αυτή τη στιγμή.',
+  'dashboard.mascot.sourceUnavailable':
+    'Δεν ήταν δυνατή η φόρτωση ορισμένων προτάσεων.',
+  'dashboard.mascot.retry': 'Δοκίμασε ξανά',
   'dashboard.mascot.reservation':
     'Μια επιβεβαιωμένη κράτηση αρχίζει στις {date}.',
   'dashboard.mascot.openReservation': 'Προβολή κρατήσεων',

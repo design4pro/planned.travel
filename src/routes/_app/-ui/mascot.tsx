@@ -24,6 +24,9 @@ export function Mascot({
   reduceMotion = false,
   prompt,
   promptDetails = true,
+  partial = false,
+  showEmpty = false,
+  onRetry,
   onDismiss,
   onPromptFocus,
   onPromptBlur,
@@ -33,7 +36,16 @@ export function Mascot({
   adapter?: Adapter
   available?: boolean
   reduceMotion?: boolean
-  prompt?: { id: string; tripId: string; startDate: string } | null
+  prompt?: {
+    id: string
+    tripId?: string
+    startDate: string
+    source?: 'reservation' | 'event' | 'notification'
+    action?: boolean
+  } | null
+  partial?: boolean
+  showEmpty?: boolean
+  onRetry?: () => Promise<boolean>
   promptDetails?: boolean
   onDismiss?: () => void
   onPromptFocus?: () => void
@@ -49,6 +61,13 @@ export function Mascot({
   const [visible, setVisible] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const promptFocused = useRef(false)
+  const retryFocused = useRef(false)
+  useLayoutEffect(() => {
+    if (!partial && retryFocused.current) {
+      retryFocused.current = false
+      trigger.current?.focus()
+    }
+  }, [partial])
   useEffect(() => {
     if (!prompt && promptFocused.current) {
       promptFocused.current = false
@@ -134,11 +153,40 @@ export function Mascot({
     }
   }
 
+  let promptText = ''
+  let promptLink = ''
+  let promptLabel = ''
+  if (prompt?.source === 'notification') {
+    promptText = t(
+      prompt.action
+        ? 'shell.dashboard.mascot.actionNotification'
+        : 'shell.dashboard.mascot.notification',
+    )
+    promptLink = '/notifications'
+    promptLabel = t('shell.dashboard.mascot.openInbox')
+  } else if (prompt) {
+    const date = formatDate(prompt.startDate, locale) ?? prompt.startDate
+    const event = prompt.source === 'event'
+    promptText = t(
+      event
+        ? 'shell.dashboard.mascot.event'
+        : 'shell.dashboard.mascot.reservation',
+      { date },
+    )
+    promptLink = `/trips/${encodeURIComponent(prompt.tripId ?? '')}/${event ? 'plan' : 'book'}`
+    promptLabel = t(
+      event
+        ? 'shell.dashboard.mascot.openEvent'
+        : 'shell.dashboard.mascot.openReservation',
+    )
+  }
+
   return (
     <div className={cn('relative min-h-48 sm:min-h-36', !state && 'mx-6 mb-6')}>
       <button
         ref={trigger}
         type="button"
+        data-dashboard-mascot-launcher=""
         aria-label={t('shell.dashboard.mascot.openChat')}
         aria-expanded={panel}
         aria-controls={panelId}
@@ -282,6 +330,10 @@ export function Mascot({
         </button>
       ) : null}
       <div className="min-h-48 ps-32 sm:min-h-36">
+        <p role="status" aria-live="polite">
+          {showEmpty ? t('shell.dashboard.mascot.empty') : ''}
+          {partial ? t('shell.dashboard.mascot.sourceUnavailable') : ''}
+        </p>
         {prompt ? (
           <div
             className="basis-full"
@@ -296,20 +348,13 @@ export function Mascot({
               }
             }}
           >
-            {promptDetails ? (
-              <p>
-                {t('shell.dashboard.mascot.reservation', {
-                  date:
-                    formatDate(prompt.startDate, locale) ?? prompt.startDate,
-                })}
-              </p>
-            ) : null}
+            {promptDetails ? <p>{promptText}</p> : null}
             <a
               className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
-              href={`/trips/${encodeURIComponent(prompt.tripId)}/book`}
+              href={promptLink}
             >
-              {t('shell.dashboard.mascot.openReservation')}
+              {promptLabel}
             </a>
             <button
               type="button"
@@ -322,6 +367,23 @@ export function Mascot({
           </div>
         ) : null}
       </div>
+      {partial ? (
+        <div>
+          <button
+            type="button"
+            className="min-h-11 min-w-11 scroll-mb-32 px-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+            onFocus={() => {
+              retryFocused.current = true
+            }}
+            onBlur={() => {
+              retryFocused.current = false
+            }}
+            onClick={() => void onRetry?.()}
+          >
+            {t('shell.dashboard.mascot.retry')}
+          </button>
+        </div>
+      ) : null}
       {panel ? (
         <div
           id={panelId}

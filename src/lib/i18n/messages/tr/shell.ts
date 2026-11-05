@@ -28,6 +28,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Sizi bekleyen bir bildirim var.',
+  'dashboard.mascot.actionNotification':
+    'Yanıtınızı bekleyen bir bildirim var.',
+  'dashboard.mascot.event':
+    'Planlanmış bir etkinlik {date} tarihinde başlıyor.',
+  'dashboard.mascot.openEvent': 'Seyahat planını görüntüle',
+  'dashboard.mascot.empty': 'Şu anda öneri yok.',
+  'dashboard.mascot.sourceUnavailable': 'Bazı öneriler yüklenemedi.',
+  'dashboard.mascot.retry': 'Tekrar dene',
   'dashboard.mascot.reservation':
     'Onaylanmış bir rezervasyon {date} tarihinde başlıyor.',
   'dashboard.mascot.openReservation': 'Rezervasyonları görüntüle',
