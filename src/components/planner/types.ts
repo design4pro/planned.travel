@@ -96,9 +96,8 @@ export interface PlannerDay {
   /**
    * The day's stops only, in sequence order.
    *
-   * Kept beside {@link items} because the map's per-day route line is drawn from stop
-   * coordinates and must never learn about notes — `routeDaysOf` and `mapPlacesOf` read
-   * this and nothing else.
+   * Kept beside {@link items} for stop-only consumers such as map pins. Route lines
+   * read the whole sequence so a journey can separate stretches of stops.
    */
   readonly rows: ReadonlyArray<PlannerRow>
   /**

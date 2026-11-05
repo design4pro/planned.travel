@@ -8,6 +8,7 @@ import {
   MAP_SERVICE_NAME,
   dayHandoff,
   dayHandoffs,
+  dayStopStretches,
   pointLink,
 } from '../handoff'
 
@@ -396,5 +397,65 @@ describe('dayHandoffs — a day split by a journey', () => {
     ])) {
       expect(new URL(link.href).searchParams.has('travelmode')).toBe(false)
     }
+  })
+})
+
+describe('dayStopStretches', () => {
+  it('keeps empty stretches and unplaced stops at their sequence positions', () => {
+    expect(
+      dayStopStretches([
+        journey('flight'),
+        stop(1),
+        NOTE,
+        stop(null),
+        journey('ferry'),
+        journey('train'),
+        stop(2),
+        journey('flight'),
+      ]),
+    ).toEqual([
+      [],
+      [
+        { lat: 1, lng: 10 },
+        { lat: null, lng: null },
+      ],
+      [],
+      [{ lat: 2, lng: 10 }],
+      [],
+    ])
+  })
+
+  it.each(['flight', 'ferry', 'train'])(
+    'splits by %s mode even when cancelled',
+    (mode) => {
+      const cancelled = {
+        kind: 'transport',
+        transport: { mode, status: 'cancelled' },
+      } as const
+      expect(dayStopStretches([stop(1), cancelled, stop(2)])).toEqual([
+        [{ lat: 1, lng: 10 }],
+        [{ lat: 2, lng: 10 }],
+      ])
+    },
+  )
+
+  it.each([
+    'bus',
+    'taxi',
+    'car',
+    'transit',
+    'metro',
+    'tram',
+    'bike',
+    'walk',
+    'other',
+    'hovercraft',
+  ])('does not split at %s or notes', (mode) => {
+    expect(dayStopStretches([stop(1), NOTE, journey(mode), stop(2)])).toEqual([
+      [
+        { lat: 1, lng: 10 },
+        { lat: 2, lng: 10 },
+      ],
+    ])
   })
 })
