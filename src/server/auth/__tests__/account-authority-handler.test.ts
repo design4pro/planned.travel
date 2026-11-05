@@ -335,6 +335,8 @@ describe('factor proof and rollout at the real auth handler', () => {
     )
     expect(prepared.status).toBe(200)
     const { proposalId } = (await prepared.json()) as { proposalId: string }
+    // Pin the TOTP step ahead of SQLite's live clock while checking replay refusal.
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 60000)
     const code = await proposedCode()
     const committed = await post(
       '/account-security/commit-factor',
