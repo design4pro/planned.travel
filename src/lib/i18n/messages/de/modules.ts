@@ -94,7 +94,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Der Transfer steht noch auf seinem vorherigen Stand.',
   'transports.refusal.gone':
-    'Er wurde gelöscht, während dieses Fenster offen war, deshalb lassen sich deine Änderungen nicht speichern. Schließe das Fenster, um die aktuelle Liste zu sehen.',
+    'Dieser Transport wurde gelöscht, während dieses Fenster geöffnet war. Speichere deinen Entwurf als neuen Transport oder schließe das Fenster, um die aktuelle Liste zu sehen.',
+  'transports.action.saveAsNew': 'Als neuen Transport speichern',
   'transports.refusal.goneTitle': 'Dieser Transfer existiert nicht mehr',
   'transports.error.saveFallback': 'Versuche es gleich noch einmal.',
   'transports.toast.removed': 'Transfer entfernt',

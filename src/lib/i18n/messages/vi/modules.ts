@@ -90,7 +90,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Lượt di chuyển vẫn ở trạng thái trước đó.',
   'transports.refusal.gone':
-    'Lượt di chuyển đã bị xoá khi cửa sổ này đang mở nên không thể lưu thay đổi của bạn. Hãy đóng cửa sổ để xem danh sách mới nhất.',
+    'Chặng di chuyển này đã bị xóa khi cửa sổ đang mở. Lưu bản nháp thành chặng di chuyển mới hoặc đóng cửa sổ để xem danh sách cập nhật.',
+  'transports.action.saveAsNew': 'Lưu thành chặng di chuyển mới',
   'transports.refusal.goneTitle': 'Lượt di chuyển này không còn tồn tại',
   'transports.error.saveFallback': 'Hãy thử lại sau giây lát.',
   'transports.toast.removed': 'Đã xoá lượt di chuyển',

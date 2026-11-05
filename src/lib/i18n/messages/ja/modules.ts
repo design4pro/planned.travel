@@ -88,7 +88,8 @@ const messages = {
   'transports.toast.statusFailed.title': '状態を変更できませんでした',
   'transports.toast.statusFailed.body': '移動は元の状態のままです。',
   'transports.refusal.gone':
-    'このウィンドウを開いている間に削除されたため、変更は保存できません。ウィンドウを閉じると最新の一覧が表示されます。',
+    'このウィンドウを開いている間に削除されました。下書きを新しい移動として保存するか、ウィンドウを閉じて最新の一覧を確認してください。',
+  'transports.action.saveAsNew': '新しい移動として保存',
   'transports.refusal.goneTitle': 'この移動はもう存在しません',
   'transports.error.saveFallback': '少ししてからもう一度お試しください。',
   'transports.toast.removed': '移動を削除しました',

@@ -93,7 +93,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'Az állapot nem változott',
   'transports.toast.statusFailed.body': 'Az út a korábbi állapotában maradt.',
   'transports.refusal.gone':
-    'Törölték, amíg ez az ablak nyitva volt, ezért a módosításaid nem menthetők. Zárd be az ablakot, hogy lásd a friss listát.',
+    'Ezt az utazást törölték, amíg az ablak nyitva volt. Mentsd a piszkozatot új utazásként, vagy zárd be az ablakot a frissített lista megtekintéséhez.',
+  'transports.action.saveAsNew': 'Mentés új utazásként',
   'transports.refusal.goneTitle': 'Ez az út már nem létezik',
   'transports.error.saveFallback': 'Próbáld újra egy pillanat múlva.',
   'transports.toast.removed': 'Út eltávolítva',

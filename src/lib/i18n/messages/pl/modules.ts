@@ -101,7 +101,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'Status się nie zmienił',
   'transports.toast.statusFailed.body': 'Przejazd został w poprzednim stanie.',
   'transports.refusal.gone':
-    'Został usunięty, gdy to okno było otwarte, więc zmian nie można zapisać. Zamknij okno, aby zobaczyć aktualną listę.',
+    'Ten transport został usunięty, gdy to okno było otwarte. Zapisz szkic jako nowy transport lub zamknij okno, aby zobaczyć aktualną listę.',
+  'transports.action.saveAsNew': 'Zapisz jako nowy transport',
   'transports.refusal.goneTitle': 'Ten przejazd już nie istnieje',
   'transports.error.saveFallback': 'Spróbuj za chwilę.',
   'transports.toast.removed': 'Przejazd usunięty',

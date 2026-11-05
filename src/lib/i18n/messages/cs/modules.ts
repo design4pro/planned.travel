@@ -101,7 +101,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'Stav se nezměnil',
   'transports.toast.statusFailed.body': 'Přesun zůstal v předchozím stavu.',
   'transports.refusal.gone':
-    'Byl smazán, když bylo toto okno otevřené, takže se změny nedají uložit. Zavři okno a uvidíš aktuální seznam.',
+    'Tento přesun byl smazán, zatímco bylo toto okno otevřené. Uložte koncept jako nový přesun nebo zavřete okno a zobrazte aktuální seznam.',
+  'transports.action.saveAsNew': 'Uložit jako nový přesun',
   'transports.refusal.goneTitle': 'Tento přesun už neexistuje',
   'transports.error.saveFallback': 'Zkus to za chvíli znovu.',
   'transports.toast.removed': 'Přesun odebrán',
