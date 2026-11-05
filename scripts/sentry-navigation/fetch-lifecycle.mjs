@@ -85,18 +85,20 @@ export function classifyTrial(trial) {
     const rejection = trial.events.find(
       (e) => e.kind === 'sdk-rejection' && e.id === id,
     )
+    let delivery = 'unknown'
+    if (receipt) delivery = 'received'
+    else if (digest) delivery = 'no-matching-receipt-in-window'
+    let responseState = 'unknown'
+    if (response) responseState = 'observed'
+    else if (rejection) responseState = 'rejected'
     return {
       id,
       attempt: attempt ?? null,
       receipt: receipt ?? null,
       sdkResponse: response?.status ?? null,
       sdkRejection: rejection?.error ?? null,
-      delivery: receipt
-        ? 'received'
-        : digest
-          ? 'no-matching-receipt-in-window'
-          : 'unknown',
-      response: response ? 'observed' : rejection ? 'rejected' : 'unknown',
+      delivery,
+      response: responseState,
       terminalDiagnostics: 'unknown-after-replacement',
     }
   })

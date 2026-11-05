@@ -93,3 +93,9 @@ loss. A null SDK status can also represent an expected SDK drop; actual transpor
 recorded separately. Receipt snapshots are bounded; all collector records allow later ID joins.
 Unmatched/unobservable outcomes remain unknown. Preserve expected buffer/backoff controls and all
 failed preparation runs. See `results.md`; runtime repair remains unresolved, so use `Refs #1849`.
+
+A transport-only follow-up compares owned same/cross-origin endpoints, actual UTF-8/character
+sizes, keepalive limits and overlapping sends in native Chromium/WebKit. Run each phase separately:
+`timeout 520 pnpm exec tsx scripts/sentry-navigation/fetch-lifecycle.mjs chromium` (then `webkit`).
+See `fetch-lifecycle-results.md` for all 240 trials, identity/digest joins and limitations.
+The same-origin endpoint also fails; no production route change is justified by this experiment.

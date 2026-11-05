@@ -167,3 +167,10 @@ check in Chromium and WebKit rejects the original document's reporting binding, 
 failure in the snapshot, preserves identity across SPA history navigation, and returns unknown
 for the original observer after document replacement. This checks diagnostic accounting, not
 Sentry lifecycle delivery. Typecheck and lint pass (six existing shadow warnings).
+
+The follow-up in [fetch-lifecycle-results.md](./fetch-lifecycle-results.md) completed 240 transport-only
+trials. Root validation reran all three focused tooling suites: 15/15 tests passed. Same-origin
+WebKit provisional sends above the SDK keepalive cutoff still failed, so a same-origin ingestion
+route is not a verified correction. Browser keepalive byte quotas also rejected multibyte and
+cumulative overlapping sends. These synthetic transport results do not certify full SDK/runtime
+repair, privacy/replay wiring, physical Safari or production ingestion.
