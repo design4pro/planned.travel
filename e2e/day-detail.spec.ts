@@ -1235,6 +1235,7 @@ test('a long mixed-direction Day title remains keyboard-readable when minimised'
     })
     await page.setViewportSize({ width: 360, height: 450 })
     await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+    await settle(page, route)
     await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
     await expect(page.locator('[data-plan-loaded]')).toBeVisible()
     await page.getByRole('button', { name: 'الأيام', exact: true }).click()
@@ -1269,12 +1270,28 @@ test('a long mixed-direction Day title remains keyboard-readable when minimised'
         range.setStart(text, Math.max(0, (text.textContent?.length ?? 0) - 5))
         range.setEnd(text, text.textContent?.length ?? 0)
         const headingBounds = node.parentElement!.getBoundingClientRect()
-        return [...range.getClientRects()].every(
-          (box) =>
-            box.left >= headingBounds.left - 1 &&
-            box.right <= headingBounds.right + 1 &&
-            box.top >= headingBounds.top - 1 &&
-            box.bottom <= headingBounds.bottom + 1,
+        const panelBounds = node
+          .closest('[data-day-detail]')!
+          .getBoundingClientRect()
+        const boxes = [...range.getClientRects()]
+        return (
+          boxes.length > 0 &&
+          boxes.every(
+            (box) =>
+              box.left >=
+                Math.max(0, headingBounds.left, panelBounds.left) - 1 &&
+              box.right <=
+                Math.min(innerWidth, headingBounds.right, panelBounds.right) +
+                  1 &&
+              box.top >= Math.max(0, headingBounds.top, panelBounds.top) - 1 &&
+              box.bottom <=
+                Math.min(
+                  innerHeight,
+                  headingBounds.bottom,
+                  panelBounds.bottom,
+                ) +
+                  1,
+          )
         )
       }),
     ).toBe(true)

@@ -90,7 +90,9 @@ it('keeps identity on minimising and removes body controls', async () => {
 it('keeps the full stored title readable in compact Day states', () => {
   const { update, props } = setup({ compact: true })
   expect(screen.getByRole('heading', { name: 'Day 1 · Tokyo' })).toBeTruthy()
-  expect(screen.getByText('Tokyo', { selector: 'p' }).getAttribute('aria-hidden')).toBe('true')
+  expect(
+    screen.getByText('Tokyo', { selector: 'p' }).getAttribute('aria-hidden'),
+  ).toBe('true')
   update({ minimised: true })
   expect(screen.queryByText('Tokyo', { selector: 'p' })).toBeNull()
   const heading = screen.getByRole('heading', { name: 'Day 1 · Tokyo' })
@@ -98,6 +100,7 @@ it('keeps the full stored title readable in compact Day states', () => {
   expect(heading.getAttribute('tabindex')).toBe('0')
   expect(heading.querySelector('bdi')?.getAttribute('dir')).toBe('auto')
   update({
+    minimised: true,
     model: { ...props.model, day: { ...props.model.day, title: null } },
   })
   expect(screen.getByRole('heading', { name: 'Day 1' })).toBeTruthy()
