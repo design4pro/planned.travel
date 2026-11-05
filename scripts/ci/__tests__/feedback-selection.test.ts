@@ -1,5 +1,13 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { join, resolve } from 'node:path'
+import { FIXTURE_SENTRY_DSN } from '../sentry-fixture'
 import * as prettier from 'prettier'
 import { describe, expect, it } from 'vitest'
 
@@ -57,6 +65,13 @@ function assertRequiredJob(config: Record<string, Value>) {
   const base = object(jobs.e2e)
   const feedback = object(jobs['e2e-feedback'])
   const report = object(jobs['e2e-report'])
+  const baseSteps = base.steps
+  if (!Array.isArray(baseSteps)) throw new Error('Missing baseline steps')
+  const baseRun = baseSteps.map(object).find((step) => step.id === 'tests')
+  expect(baseRun?.run).toBe(
+    'pnpm exec playwright test --grep-invert @feedback-sdk --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json',
+  )
+  expect(baseRun?.if).toBeUndefined()
   expect(feedback.if).toBe(base.if)
   expect(feedback.needs).toBe('scope')
   expect(feedback['continue-on-error']).toBeUndefined()
@@ -176,6 +191,72 @@ describe('feedback CI coverage', () => {
     report.needs = savedNeeds as Value
   })
 
+  it('builds with the correct DSN only for the required feedback input', async () => {
+    const config = await workflow(
+      readFileSync('.github/actions/e2e-env/action.yml', 'utf8'),
+    )
+    const runs = object(config.runs)
+    if (!Array.isArray(runs.steps)) throw new Error('Missing action steps')
+    const build = runs.steps
+      .map(object)
+      .find((step) => step.name === 'Build the application')
+    expect(object(build?.env).E2E_BUILD).toBe('1')
+    const script = String(build?.run)
+    const temp = mkdtempSync(resolve('.ai/tmp/feedback-build-'))
+    try {
+      const bin = join(temp, 'bin')
+      const envFile = join(temp, 'env')
+      const output = join(temp, 'build')
+      const fs = await import('node:fs')
+      fs.mkdirSync(bin)
+      writeFileSync(
+        join(bin, 'node'),
+        `#!/bin/sh\n[ "$*" = "scripts/ci/sentry-fixture.ts --dsn" ] || exit 1\nprintf '%s' '${FIXTURE_SENTRY_DSN}'\n`,
+      )
+      writeFileSync(
+        join(bin, 'pnpm'),
+        `#!/bin/sh\nprintf '%s' "$VITE_SENTRY_DSN" > "$BUILD_CAPTURE"\n`,
+      )
+      chmodSync(join(bin, 'node'), 0o755)
+      chmodSync(join(bin, 'pnpm'), 0o755)
+      function run(enabled: boolean, body = script) {
+        writeFileSync(envFile, '')
+        writeFileSync(output, '')
+        const result = spawnSync(
+          'bash',
+          ['-c', body.replace('${{ inputs.feedback }}', String(enabled))],
+          {
+            env: {
+              ...process.env,
+              PATH: `${bin}:${process.env.PATH}`,
+              GITHUB_ENV: envFile,
+              BUILD_CAPTURE: output,
+              VITE_SENTRY_DSN: 'unexpected',
+            },
+            timeout: 5000,
+          },
+        )
+        expect(result.status).toBe(0)
+        return {
+          build: readFileSync(output, 'utf8'),
+          env: readFileSync(envFile, 'utf8'),
+        }
+      }
+      expect(run(false)).toEqual({ build: '', env: '' })
+      expect(run(true)).toEqual({
+        build: FIXTURE_SENTRY_DSN,
+        env: `E2E_SENTRY_DSN=${FIXTURE_SENTRY_DSN}\n`,
+      })
+      const wrongBuild = script.replace(
+        'VITE_SENTRY_DSN="$fixture_dsn"',
+        'VITE_SENTRY_DSN=',
+      )
+      expect(run(true, wrongBuild).build).not.toBe(FIXTURE_SENTRY_DSN)
+    } finally {
+      rmSync(temp, { recursive: true, force: true })
+    }
+  })
+
   it('keeps both viewport iterations inside the selected feedback test', async () => {
     const source = readFileSync('e2e/day-detail.spec.ts', 'utf8')
     const debug = (
@@ -215,28 +296,45 @@ describe('feedback CI coverage', () => {
     )
   })
 
-  it('assigns each browser case once and runs the feedback case with setup', () => {
+  it('assigns each browser case once and runs the feedback case with setup', async () => {
+    const ci = object(
+      (await workflow(readFileSync('.github/workflows/ci.yml', 'utf8'))).jobs,
+    )
+    const nightly = object(
+      (await workflow(readFileSync('.github/workflows/e2e-webkit.yml', 'utf8')))
+        .jobs,
+    )
+    function command(job: Value | undefined, id: string, shard?: number) {
+      const steps = object(job).steps
+      if (!Array.isArray(steps)) throw new Error('Missing test steps')
+      const step = steps
+        .map(object)
+        .find((entry) => entry.id === id || entry.name === id)
+      const raw = String(step?.run)
+      if (!raw.startsWith('pnpm exec playwright test '))
+        throw new Error('Unexpected test command')
+      return raw
+        .replace('pnpm exec playwright test ', '')
+        .replace('${{ matrix.shard }}/${{ strategy.job-total }}', `${shard}/2`)
+        .replace(/--reporter=\S+/, '')
+        .trim()
+        .split(/\s+/)
+    }
     for (const project of ['chromium', 'mobile-safari']) {
       const all = list(['--project', project]).filter(
         (entry) => entry.project === project,
       )
-      const shard1 = list([
-        '--project',
-        project,
-        '--grep-invert',
-        '@feedback-sdk',
-        '--shard=1/2',
-      ])
-      const shard2 = list([
-        '--project',
-        project,
-        '--grep-invert',
-        '@feedback-sdk',
-        '--shard=2/2',
-      ])
+      const baseline = JSON.parse(
+        readFileSync('scripts/ci/__tests__/feedback-baseline.json', 'utf8'),
+      ) as Record<string, Array<string>>
+      const present = new Set(all.map((entry) => entry.id))
+      expect(baseline[project]?.filter((id) => !present.has(id))).toEqual([])
+      const job = project === 'chromium' ? ci.e2e : nightly['e2e-webkit']
+      const shard1 = list([...command(job, 'tests', 1), '--project', project])
+      const shard2 = list([...command(job, 'tests', 2), '--project', project])
       const focused =
         project === 'chromium'
-          ? list(['--project', project, '--grep', '@feedback-sdk'])
+          ? list(command(ci['e2e-feedback'], 'Run the feedback journey'))
           : []
       if (project === 'chromium') {
         expect(

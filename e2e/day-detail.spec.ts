@@ -901,6 +901,7 @@ test('short planner controls and feedback stay usable by pointer @chromium-only 
     ready: 'nav[aria-label="Trip sections"]',
     map: true,
   })
+  const deliveries: Array<{ width: number; height: number; status: number }> = []
   for (const viewport of [
     { width: 720, height: 450 },
     { width: 360, height: 450 },
@@ -1024,11 +1025,15 @@ test('short planner controls and feedback stay usable by pointer @chromium-only 
       )
     })
     await feedback.getByRole('button', { name: 'Send report' }).click()
-    expect((await delivered).status()).toBe(204)
+    deliveries.push({ ...viewport, status: (await delivered).status() })
     await expect(
       page.getByText('Thank you — we have your report.'),
     ).toBeVisible()
   }
+  expect(deliveries).toEqual([
+    { width: 720, height: 450, status: 204 },
+    { width: 360, height: 450, status: 204 },
+  ])
   expect(consoleReport().fatal).toEqual([])
 })
 
