@@ -301,6 +301,12 @@ test.describe('workspace console rooms', () => {
         .getByRole('menuitemradio', { name: 'Wolak Family Trips' })
         .click()
       await expect(page).toHaveURL(/\/dashboard$/)
+      await settle(page, { ...route, path: '/dashboard' })
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await expect(
+        page.getByRole('menuitemradio', { name: 'Wolak Family Trips' }),
+      ).toHaveAttribute('aria-checked', 'true')
+      await page.keyboard.press('Escape')
       await page.goto('/admin/members')
       await settle(page, route)
       await expect(
@@ -308,9 +314,16 @@ test.describe('workspace console rooms', () => {
       ).toBeVisible()
       await expect(page.getByText('mika@planned.travel')).toHaveCount(0)
     } finally {
+      await settle(page, { ...route, path: new URL(page.url()).pathname })
       await page.getByRole('button', { name: 'Account menu' }).click()
       await page.getByRole('menuitemradio', { name: "Rafal's Travel" }).click()
       await expect(page).toHaveURL(/\/dashboard$/)
+      await settle(page, { ...route, path: '/dashboard' })
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await expect(
+        page.getByRole('menuitemradio', { name: "Rafal's Travel" }),
+      ).toHaveAttribute('aria-checked', 'true')
+      await page.keyboard.press('Escape')
       await page.goto('/admin/audit')
       await settle(page, { ...route, path: '/admin/audit' })
       await expect(
