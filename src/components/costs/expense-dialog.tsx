@@ -19,6 +19,7 @@
  * first keystroke in the field ends it for good, and what is submitted is still the amount pair,
  * from which the server derives the stored rate. No rate is sent from here.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useId, useMemo, useRef, useState } from 'react'
 import { Coins, Tag, Wallet } from 'lucide-react'
 
@@ -434,7 +435,7 @@ export function ExpenseDialog({
           to: currencyCode(tripCurrency),
         }))
 
-  const titleOk = form.title.trim().length > 0
+  const titleOk = hasVisibleCharacter(form.title)
   const amountOk = typedMinor !== null && (!foreign || convertedMinor !== null)
   // After a stale-currency refusal the typed digits are still in the old currency, so the amount
   // has to be looked at (edited) before it can be saved again.
@@ -539,7 +540,15 @@ export function ExpenseDialog({
               </Alert>
             )}
 
-            <Field label={t('costs.expense.what')} required>
+            <Field
+              label={t('costs.expense.what')}
+              required
+              error={
+                form.title !== '' && !hasVisibleCharacter(form.title)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={form.title}
                 onChange={(event) =>

@@ -6,6 +6,7 @@
  * which fields the *form* shows. `assertReferences` inside the repository is what
  * guarantees an attached day belongs to the same trip inside the same tenant.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -77,7 +78,12 @@ const optionalUrl = z
 const bookingFields = {
   type: z.enum(RESERVATION_TYPES),
   status: z.enum(RESERVATION_STATUSES),
-  title: z.string().trim().min(1).max(160),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(160)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   provider: optionalText,
   location: optionalText,
   confirmationNumber: optionalText,

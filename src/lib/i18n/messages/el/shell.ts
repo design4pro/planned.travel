@@ -21,6 +21,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'Εισαγάγετε τουλάχιστον έναν ορατό χαρακτήρα.',
   'dashboard.mascot.notification': 'Μια ειδοποίηση σε περιμένει.',
   'dashboard.mascot.actionNotification':
     'Μια ειδοποίηση περιμένει την απάντησή σου.',

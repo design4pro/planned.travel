@@ -7,6 +7,7 @@
  * which glyph it gets, and the description is the one line explaining why it was
  * kept.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useEffect, useId, useState } from 'react'
 
 import {
@@ -83,12 +84,11 @@ export function FileDetailsDialog({
   })
 
   const trimmed = filename.trim()
-  const nameError =
-    trimmed.length === 0
-      ? t('modules.files.error.nameEmpty')
-      : trimmed.length > 160
-        ? t('modules.error.titleLong')
-        : undefined
+  const nameError = !hasVisibleCharacter(trimmed)
+    ? t('modules.files.error.nameEmpty')
+    : trimmed.length > 160
+      ? t('modules.error.titleLong')
+      : undefined
   const canSave = nameError === undefined && !save.pending
 
   async function submit(): Promise<void> {

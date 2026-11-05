@@ -4,6 +4,7 @@
  * client for feedback, validate again on the server for truth, invalidate the
  * router on success, then navigate into the thing that was just created.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
@@ -75,7 +76,7 @@ export function NewJourneyDialog({
   const [endedOn, setEndedOn] = useState('')
 
   const outOfOrder = startedOn !== '' && endedOn !== '' && endedOn < startedOn
-  const canSave = title.trim().length > 0 && !outOfOrder && !saving
+  const canSave = hasVisibleCharacter(title) && !outOfOrder && !saving
 
   /**
    * The trips the picker offers.
@@ -172,7 +173,15 @@ export function NewJourneyDialog({
               </Alert>
             )}
 
-            <Field label={t('modules.collab.note.field.title')} required>
+            <Field
+              label={t('modules.collab.note.field.title')}
+              required
+              error={
+                title !== '' && !hasVisibleCharacter(title)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
@@ -283,7 +292,7 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
   const [description, setDescription] = useState('')
   const [colour, setColour] = useState(REQUIRED_DEFAULT)
 
-  const canSave = name.trim().length > 0 && !saving
+  const canSave = hasVisibleCharacter(name) && !saving
 
   function reset(): void {
     setName('')
@@ -366,7 +375,15 @@ export function NewCollectionDialog({ size = 'sm' }: { size?: 'sm' | 'md' }) {
               </Alert>
             )}
 
-            <Field label={t('modules.field.name')} required>
+            <Field
+              label={t('modules.field.name')}
+              required
+              error={
+                name !== '' && !hasVisibleCharacter(name)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}

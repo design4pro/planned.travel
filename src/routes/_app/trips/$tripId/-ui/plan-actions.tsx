@@ -8,6 +8,7 @@
  * forty.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { PlaceThumb } from '#/components/planner/place-thumb'
 import * as React from 'react'
 import {
@@ -492,7 +493,7 @@ export function PlaceDialog({
   const lngValid =
     lng === null || (Number.isFinite(lng) && Math.abs(lng) <= 180)
   const paired = (lat === null) === (lng === null)
-  const named = draft.name.trim().length > 0
+  const named = hasVisibleCharacter(draft.name)
   const canSave = named && latValid && lngValid && paired
 
   let latitudeError: string | undefined

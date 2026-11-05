@@ -5,6 +5,7 @@
  * invariant — it grows, shrinks and re-dates the run when a trip's date range moves.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { DAY_NOTE_ICONS } from '#/components/planner/types'
@@ -42,14 +43,22 @@ export const createDayInput = z.object({
   tripId: idSchema,
   dayNumber: positiveIntSchema,
   date: dateSchema.nullish(),
-  title: shortTextSchema.nullish(),
+  title: shortTextSchema
+    .refine((value) => value === '' || hasVisibleCharacter(value), {
+      message: 'shell.validation.visibleName',
+    })
+    .nullish(),
   notes: longTextSchema.nullish(),
 })
 export type CreateDayInput = z.infer<typeof createDayInput>
 
 export const updateDayInput = z.object({
   date: dateSchema.nullish(),
-  title: shortTextSchema.nullish(),
+  title: shortTextSchema
+    .refine((value) => value === '' || hasVisibleCharacter(value), {
+      message: 'shell.validation.visibleName',
+    })
+    .nullish(),
   notes: longTextSchema.nullish(),
 })
 export type UpdateDayInput = z.infer<typeof updateDayInput>

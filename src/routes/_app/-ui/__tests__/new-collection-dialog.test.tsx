@@ -76,3 +76,28 @@ describe('NewCollectionDialog', () => {
     expect(call.data).not.toHaveProperty('visibility')
   })
 })
+
+it('names an invisible-only collection error and associates it with the field', async () => {
+  server.create.mockReset()
+  const user = userEvent.setup()
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <NewCollectionDialog />
+    </I18nProvider>,
+  )
+  await user.click(screen.getByRole('button', { name: 'New collection' }))
+  const input = await screen.findByLabelText(/Name/)
+  await user.type(input, '\u200B')
+  expect(input.getAttribute('aria-invalid')).toBe('true')
+  const errorId = input.getAttribute('aria-describedby')
+  expect(errorId).toBeTruthy()
+  expect(document.getElementById(errorId ?? '')?.textContent).toBe(
+    'Enter at least one visible character.',
+  )
+  expect(
+    screen
+      .getByRole('button', { name: 'Create collection' })
+      .getAttribute('disabled'),
+  ).not.toBeNull()
+  expect(server.create).not.toHaveBeenCalled()
+})

@@ -12,6 +12,11 @@ describe('hasVisibleCharacter', () => {
     ['a combining mark with nothing to combine with', '\u0301'],
     ['spaces and a zero-width space', '  \u200B  '],
     ['nothing', ''],
+    ['Hangul filler', '\u3164'],
+    ['halfwidth Hangul filler', '\uFFA0'],
+    ['blank braille', '\u2800'],
+    ['default-ignorable letter', '\u115F'],
+    ['mixed fillers and combining marks', '\u3164\u2800\u200D\u0301'],
   ])('refuses %s', (_label, name) => {
     expect(hasVisibleCharacter(name)).toBe(false)
   })
@@ -22,6 +27,10 @@ describe('hasVisibleCharacter', () => {
     ['a digit', '2'],
     ['an emoji, which is a symbol', '🌍'],
     ['punctuation', '...'],
+    ['joined emoji', '👩‍👩‍👧‍👦'],
+    ['variation selector', '✈️'],
+    ['combining sequence', 'e\u0301'],
+    ['Arabic', 'رحلة'],
     ['a name with an invisible character beside a visible one', '\u200BA'],
   ])('accepts %s', (_label, name) => {
     expect(hasVisibleCharacter(name)).toBe(true)

@@ -16,6 +16,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': '请至少输入一个可见字符。',
   'dashboard.mascot.notification': '有一条通知等待查看。',
   'dashboard.mascot.actionNotification': '有一条通知等待您的回复。',
   'dashboard.mascot.event': '一项计划中的活动将于 {date} 开始。',

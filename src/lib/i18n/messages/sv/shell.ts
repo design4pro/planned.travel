@@ -24,6 +24,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'validation.visibleName': 'Ange minst ett synligt tecken.',
   'dashboard.mascot.notification': 'En avisering väntar på dig.',
   'dashboard.mascot.actionNotification': 'En avisering väntar på ditt svar.',
   'dashboard.mascot.event': 'En planerad händelse börjar {date}.',

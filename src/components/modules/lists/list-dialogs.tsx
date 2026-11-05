@@ -7,6 +7,7 @@
  * on success so the loader becomes the truth again, and keep the failure where the
  * form can show it inline as well as in a toast.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useEffect, useId, useState } from 'react'
 import { Layers, Sparkles } from 'lucide-react'
 
@@ -116,7 +117,7 @@ export function ListDialog({
       ? t('modules.lists.error.weightLimit')
       : undefined
   const canSave =
-    trimmed.length > 0 && limitError === undefined && !action.pending
+    hasVisibleCharacter(trimmed) && limitError === undefined && !action.pending
 
   async function submit(): Promise<void> {
     const payload = {
@@ -168,7 +169,15 @@ export function ListDialog({
               </Alert>
             )}
 
-            <Field label={t('modules.field.name')} required>
+            <Field
+              label={t('modules.field.name')}
+              required
+              error={
+                name !== '' && !hasVisibleCharacter(name)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -333,7 +342,7 @@ export function ItemDialog({
       ? t('modules.lists.item.error.weight')
       : undefined
   const canSave =
-    trimmed.length > 0 &&
+    hasVisibleCharacter(trimmed) &&
     quantityError === undefined &&
     weightError === undefined &&
     !action.pending
@@ -387,7 +396,15 @@ export function ItemDialog({
               </Alert>
             )}
 
-            <Field label={t('modules.lists.item.field.label')} required>
+            <Field
+              label={t('modules.lists.item.field.label')}
+              required
+              error={
+                name !== '' && !hasVisibleCharacter(name)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}

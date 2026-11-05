@@ -27,6 +27,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'Adj meg legalább egy látható karaktert.',
   'dashboard.mascot.notification': 'Egy értesítés vár rád.',
   'dashboard.mascot.actionNotification': 'Egy értesítés a válaszodra vár.',
   'dashboard.mascot.event': 'Egy tervezett esemény ekkor kezdődik: {date}.',

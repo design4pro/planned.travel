@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { toast } from 'sonner'
 import { useTranslate } from '#/lib/i18n'
 import {
@@ -90,9 +91,9 @@ export function CollectionEditDialog({
     event.preventDefault()
     if (lock.current) return
     const trimmed = name.trim()
-    if (!trimmed || trimmed.length > 200) {
+    if (!hasVisibleCharacter(trimmed) || trimmed.length > 200) {
       setNameError(
-        !trimmed
+        !hasVisibleCharacter(trimmed)
           ? t('modules.collections.edit.nameRequired')
           : t('modules.collections.edit.nameTooLong', { count: 200 }),
       )

@@ -1,3 +1,4 @@
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 /**
  * The lists screen's working surface.
  *
@@ -13,7 +14,7 @@
  *   panel foot, every row action is a real menu item, and the drag handle is a
  *   focusable button registered as dnd-kit's activator.
  */
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import {
   DndContext,
   KeyboardSensor,
@@ -1194,7 +1195,9 @@ function InlineItemComposer({
   })
 
   const trimmed = value.trim()
-  const canAdd = trimmed.length > 0 && !add.pending
+  const canAdd = hasVisibleCharacter(trimmed) && !add.pending
+  const nameErrorId = useId()
+  const invalidName = value !== '' && !hasVisibleCharacter(value)
 
   async function submit(): Promise<void> {
     if (!canAdd) {
@@ -1219,7 +1222,7 @@ function InlineItemComposer({
 
   return (
     <form
-      className="flex min-w-0 items-center gap-2"
+      className="flex min-w-0 flex-wrap items-center gap-2"
       onSubmit={(event) => {
         event.preventDefault()
         void submit()
@@ -1231,6 +1234,8 @@ function InlineItemComposer({
         onChange={(event) => setValue(event.target.value)}
         placeholder={t('modules.lists.quickAdd.placeholder')}
         aria-label={t('modules.lists.quickAdd.aria')}
+        aria-invalid={invalidName || undefined}
+        aria-describedby={invalidName ? nameErrorId : undefined}
         maxLength={120}
         autoComplete="off"
         className="min-w-0 flex-1"
@@ -1255,6 +1260,11 @@ function InlineItemComposer({
           onClick={onOpenFullForm}
         />
       </Tooltip>
+      {invalidName ? (
+        <p id={nameErrorId} className="w-full text-caption text-danger">
+          {t('shell.validation.visibleName')}
+        </p>
+      ) : null}
     </form>
   )
 }

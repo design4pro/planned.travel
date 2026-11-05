@@ -18,6 +18,7 @@
  * `1..n` day run — owned solely by `syncTripDays` — safe from a drag.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import type { PlacePhoto } from '#/lib/place-photo'
 
 import { createServerFn } from '@tanstack/react-start'
@@ -714,7 +715,12 @@ export const updateStopFn = createServerFn({ method: 'POST' })
  * ---------------------------------------------------------------------------------------------- */
 
 const placeFields = {
-  name: z.string().trim().min(1).max(160),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(160)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   city: optionalText(160),
   address: optionalText(240),
   categoryId: optionalText(64),

@@ -30,6 +30,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'validation.visibleName': 'Zadejte alespoň jeden viditelný znak.',
   'dashboard.mascot.notification': 'Čeká na vás oznámení.',
   'dashboard.mascot.actionNotification': 'Oznámení čeká na vaši odpověď.',
   'dashboard.mascot.event': 'Naplánovaná událost začíná {date}.',

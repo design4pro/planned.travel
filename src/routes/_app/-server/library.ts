@@ -2,6 +2,7 @@
  * Reads for the four traveller-level surfaces that are not scoped to one trip:
  * the vacation planner, the atlas, the travel journal and saved collections.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { COLLECTION_PLACE_STATUSES } from '#/server/db/schema'
 import { canManageCollection } from '#/server/repos/collections'
@@ -888,7 +889,14 @@ export const createJourneyFn = createServerFn({ method: 'POST' })
   .validator(
     z
       .object({
-        title: z.string().trim().min(1).max(120),
+        title: z
+          .string()
+          .trim()
+          .min(1)
+          .max(120)
+          .refine(hasVisibleCharacter, {
+            message: 'shell.validation.visibleName',
+          }),
         subtitle: z.string().trim().max(160),
         tripId: z.string().trim().max(64),
         startedOn: dateOrEmpty,

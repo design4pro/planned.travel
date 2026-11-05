@@ -12,6 +12,7 @@
  * both would change what the dialog sends. What the two dialects do share — how many legs a chain
  * may hold and how its stations relate to them — is `#/lib/transport-chain`.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { z } from 'zod'
 
 import { TRANSPORT_MODES, TRANSPORT_STATUSES } from '#/server/db/schema'
@@ -63,7 +64,12 @@ const optionalDayId = z.string().trim().max(64)
  * The name a record is filed under. Required: a row nobody can name is a row
  * nobody finds again.
  */
-const titleText = z.string().trim().min(1).max(160)
+const titleText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(160)
+  .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 /** Minor units, never a float. `0` means "not recorded" and is written `null`. */
 const optionalMinorAmount = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
@@ -144,7 +150,12 @@ export type TransportInput = z.infer<typeof transportInputSchema>
 /* ------------------------------------------------------------ chain inputs */
 
 export const stationSchema = z.object({
-  name: z.string().trim().min(1).max(200),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   code: optionalCode,
   lat: z.number().min(-90).max(90).nullable(),
   lng: z.number().min(-180).max(180).nullable(),

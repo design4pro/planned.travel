@@ -266,3 +266,16 @@ describe('the budget currency by mode', () => {
     expect(payload()).toMatchObject({ currency: 'PLN' })
   })
 })
+
+it('associates the invisible-name error with the trip name field', async () => {
+  mount()
+  const user = userEvent.setup()
+  const input = screen.getByLabelText(/Trip name/)
+  await user.clear(input)
+  await user.type(input, '\u200B')
+  expect(input.getAttribute('aria-invalid')).toBe('true')
+  expect(
+    document.getElementById(input.getAttribute('aria-describedby') ?? '')
+      ?.textContent,
+  ).toBe('Enter at least one visible character.')
+})

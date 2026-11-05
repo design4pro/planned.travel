@@ -13,6 +13,7 @@
  * One exception to "shaping only": a new expense notifies the travellers it
  * charged, through `dispatchQuietly`, which cannot fail the save.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -253,7 +254,12 @@ const participantSchema = z.object({
 })
 
 const expenseBodySchema = z.object({
-  title: z.string().trim().min(1).max(160),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(160)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   category: z.enum(EXPENSE_CATEGORIES),
   amountMinor: minorSchema,
   /** Absent means "the trip's own currency", which the handler resolves. */

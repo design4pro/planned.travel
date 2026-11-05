@@ -31,6 +31,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'validation.visibleName': 'Gib mindestens ein sichtbares Zeichen ein.',
   'dashboard.mascot.notification': 'Eine Benachrichtigung wartet auf dich.',
   'dashboard.mascot.actionNotification':
     'Eine Benachrichtigung wartet auf deine Antwort.',

@@ -12,6 +12,7 @@ import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Costs from '#/lib/i18n/messages/en/costs'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Ui from '#/lib/i18n/messages/en/ui'
+import Shell from '#/lib/i18n/messages/en/shell'
 import { ExpenseDialog } from '../expense-dialog'
 import {
   LOCALISED,
@@ -32,6 +33,7 @@ import type { ReactElement } from 'react'
 import type { ExpenseFormValue } from '../expense-dialog'
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('costs', Costs),
   ...namespaceCatalogue('modules', Modules),
   ...namespaceCatalogue('ui', Ui),
@@ -1131,4 +1133,18 @@ describe('the payer of an expense whose payer has left the trip', () => {
     const options = await payerOptions(user)
     expect(options.some((name) => name?.includes('Cy'))).toBe(false)
   })
+})
+
+it('explains an invisible expense title before a write', async () => {
+  const onSubmit = vi.fn(async (_value: ExpenseFormValue) => {})
+  open(undefined, { onSubmit })
+  const user = hand()
+  const field = screen.getByLabelText(/What was it/)
+  await user.type(field, '\u200B')
+  expect(field.getAttribute('aria-invalid')).toBe('true')
+  expect(
+    document.getElementById(field.getAttribute('aria-describedby') ?? '')
+      ?.textContent,
+  ).toBe('Enter at least one visible character.')
+  expect(onSubmit).not.toHaveBeenCalled()
 })

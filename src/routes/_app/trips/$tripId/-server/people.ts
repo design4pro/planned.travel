@@ -22,6 +22,7 @@
  * no export here reaches it.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -136,7 +137,9 @@ export type PeopleWrite<T> =
 const id = z.string().trim().min(1).max(64)
 const role = z.enum(TRIP_MEMBER_ROLES)
 /** A guest's whole identity. No `email()`: a guest has no address. */
-const guestName = shortTextSchema.min(1)
+const guestName = shortTextSchema
+  .min(1)
+  .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 /**
  * The switch has two positions.

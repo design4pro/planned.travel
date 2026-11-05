@@ -8,6 +8,7 @@
  * a serialised value, so the browser can drive it with `XMLHttpRequest` and get
  * real byte-by-byte progress instead of a spinner that lies.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -272,7 +273,7 @@ export const updateTripFileFn = createServerFn({ method: 'POST' })
     z.object({
       tripId: z.string().trim().min(1).max(64),
       fileId: z.string().trim().min(1).max(64),
-      filename: z.string().trim().min(1).max(160),
+      filename: z.string().trim().min(1).max(160).refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
       kind: z.enum(FILE_KIND_VALUES),
       description: z.string().trim().max(2000),
     }),

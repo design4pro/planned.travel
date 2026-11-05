@@ -20,6 +20,7 @@
  * **The cover is not in the payload.** It is a file, chosen here and uploaded by the caller once the
  * trip exists, so the form holds it beside the values and the payload never carries it.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useId, useMemo, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 
@@ -193,7 +194,7 @@ export function useTripForm(
     },
     datesOutOfOrder,
     saving,
-    canSave: values.title.trim().length > 0 && !datesOutOfOrder && !saving,
+    canSave: hasVisibleCharacter(values.title) && !datesOutOfOrder && !saving,
   }
 }
 
@@ -293,7 +294,15 @@ export function TripFormFields({
         />
       ) : null}
 
-      <Field label={t('shell.newTrip.name')} required>
+      <Field
+        label={t('shell.newTrip.name')}
+        required
+        error={
+          values.title !== '' && !hasVisibleCharacter(values.title)
+            ? t('shell.validation.visibleName')
+            : undefined
+        }
+      >
         <Input
           value={values.title}
           onChange={(event) => set('title', event.target.value)}
