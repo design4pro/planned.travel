@@ -100,7 +100,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Le trajet est resté dans son état précédent.',
   'transports.refusal.gone':
-    'Il a été supprimé pendant que cette fenêtre était ouverte, vos modifications ne peuvent donc pas être enregistrées. Fermez la fenêtre pour voir la liste à jour.',
+    'Ce trajet a été supprimé pendant que cette fenêtre était ouverte. Enregistrez votre brouillon comme nouveau trajet ou fermez cette fenêtre pour voir la liste à jour.',
+  'transports.action.saveAsNew': 'Enregistrer comme nouveau trajet',
   'transports.refusal.goneTitle': 'Ce trajet n’existe plus',
   'transports.error.saveFallback': 'Réessayez dans un instant.',
   'transports.toast.removed': 'Trajet supprimé',

@@ -94,7 +94,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Het traject staat nog op de vorige stand.',
   'transports.refusal.gone':
-    'Het is verwijderd terwijl dit venster openstond, dus je wijzigingen kunnen niet worden bewaard. Sluit het venster om de bijgewerkte lijst te zien.',
+    'Dit vervoer is verwijderd terwijl dit venster openstond. Sla je concept op als nieuw vervoer of sluit dit venster om de bijgewerkte lijst te zien.',
+  'transports.action.saveAsNew': 'Opslaan als nieuw vervoer',
   'transports.refusal.goneTitle': 'Dit traject bestaat niet meer',
   'transports.error.saveFallback': 'Probeer het zo nog eens.',
   'transports.toast.removed': 'Traject verwijderd',

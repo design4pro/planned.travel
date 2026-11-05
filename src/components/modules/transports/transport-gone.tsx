@@ -3,9 +3,9 @@
  *
  * Somebody deleted it - another tab, another member - while the dialog was open. The refusal is the
  * product working, so it is a state of the dialog rather than an error toast: it names what
- * happened in the reader's language, the typed draft stays where it is, and the one action left is
- * Close, because a save could only be refused again. The two tabs of the dialog (the form and the
- * connection search) both show it, so the sentence and the check that finds it live here.
+ * happened in the reader's language, the typed draft stays where it is, and the dialog offers Close
+ * or saving the draft as a new transport. The form and connection search both show it, so the
+ * sentence and the check that finds it live here.
  */
 import { useCallback } from 'react'
 

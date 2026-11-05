@@ -101,7 +101,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'Статус не изменился',
   'transports.toast.statusFailed.body': 'Переезд остался в прежнем состоянии.',
   'transports.refusal.gone':
-    'Он был удалён, пока это окно было открыто, поэтому изменения нельзя сохранить. Закройте окно, чтобы увидеть актуальный список.',
+    'Этот переезд удалили, пока окно было открыто. Сохраните черновик как новый переезд или закройте окно, чтобы увидеть актуальный список.',
+  'transports.action.saveAsNew': 'Сохранить как новый переезд',
   'transports.refusal.goneTitle': 'Этого переезда больше нет',
   'transports.error.saveFallback': 'Попробуйте ещё раз через мгновение.',
   'transports.toast.removed': 'Переезд удалён',

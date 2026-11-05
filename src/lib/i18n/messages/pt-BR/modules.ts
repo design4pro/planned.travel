@@ -97,7 +97,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'O deslocamento continua no estado anterior.',
   'transports.refusal.gone':
-    'Ele foi removido enquanto esta janela estava aberta, então suas alterações não podem ser salvas. Feche a janela para ver a lista atualizada.',
+    'Este transporte foi excluído enquanto esta janela estava aberta. Salve o rascunho como um novo transporte ou feche a janela para ver a lista atualizada.',
+  'transports.action.saveAsNew': 'Salvar como novo transporte',
   'transports.refusal.goneTitle': 'Este deslocamento não existe mais',
   'transports.error.saveFallback': 'Tente de novo daqui a pouco.',
   'transports.toast.removed': 'Deslocamento removido',

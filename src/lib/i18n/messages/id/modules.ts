@@ -90,7 +90,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Transportasi masih dalam keadaan sebelumnya.',
   'transports.refusal.gone':
-    'Transportasi ini dihapus saat jendela ini terbuka, sehingga perubahanmu tidak dapat disimpan. Tutup jendela ini untuk melihat daftar terbaru.',
+    'Transportasi ini dihapus saat jendela ini terbuka. Simpan draf sebagai transportasi baru atau tutup jendela untuk melihat daftar terbaru.',
+  'transports.action.saveAsNew': 'Simpan sebagai transportasi baru',
   'transports.refusal.goneTitle': 'Transportasi ini sudah tidak ada',
   'transports.error.saveFallback': 'Coba lagi sebentar lagi.',
   'transports.toast.removed': 'Transportasi dihapus',
