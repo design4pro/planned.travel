@@ -31,6 +31,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'هناك إشعار بانتظارك.',
+  'dashboard.mascot.actionNotification': 'هناك إشعار بانتظار ردك.',
+  'dashboard.mascot.event': 'يبدأ حدث مخطط له في {date}.',
+  'dashboard.mascot.openEvent': 'عرض خطة الرحلة',
+  'dashboard.mascot.empty': 'لا توجد اقتراحات حالياً.',
+  'dashboard.mascot.sourceUnavailable': 'تعذر تحميل بعض الاقتراحات.',
+  'dashboard.mascot.retry': 'حاول مرة أخرى',
   'dashboard.mascot.reservation': 'يبدأ حجز مؤكد في {date}.',
   'dashboard.mascot.openReservation': 'عرض الحجوزات',
   'dashboard.mascot.openChat': 'فتح محادثة السفر',
@@ -403,6 +410,12 @@ const messages = {
   'admin.denied.body':
     'اطلب من مالك مساحة العمل أو أحد مسؤوليها تغيير دورك إن كنت بحاجة إليه.',
   'admin.denied.action': 'العودة إلى اللوحة',
+  'admin.nav.label': 'إدارة مساحة العمل',
+  'admin.nav.overview': 'نظرة عامة',
+  'admin.nav.members': 'الأعضاء',
+  'admin.nav.audit': 'التدقيق',
+  'admin.members.error': 'تعذر تحميل الأعضاء',
+  'admin.audit.error': 'تعذر تحميل النشاط الأخير',
   'admin.eyebrow': 'وحدة تحكم مساحة العمل',
   'admin.description': 'خطة {plan} · أُنشئت في {date}',
   'admin.createdUnknown': 'حديثًا',
@@ -434,8 +447,8 @@ const messages = {
   'admin.stat.storageUnit': 'من {limit}',
   'admin.stat.storageUnlimited': 'بلا حد',
   'admin.stat.storageCaption': 'الملفات والصور وملفات التصدير',
-  'admin.stat.audit': 'قيود التدقيق',
-  'admin.stat.auditCaption': 'أحدث النشاط معروض أدناه',
+  'admin.stat.audit': 'سجلات التدقيق الأخيرة',
+  'admin.stat.auditCaption': 'حتى 25 من أحدث السجلات في التدقيق',
   'admin.stat.plan': 'الخطة',
   'admin.stat.planCaption': 'الحدود تُطبَّق عند حدّ مستودع البيانات',
 

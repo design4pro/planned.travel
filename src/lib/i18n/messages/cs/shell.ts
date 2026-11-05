@@ -30,6 +30,13 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'Čeká na vás oznámení.',
+  'dashboard.mascot.actionNotification': 'Oznámení čeká na vaši odpověď.',
+  'dashboard.mascot.event': 'Naplánovaná událost začíná {date}.',
+  'dashboard.mascot.openEvent': 'Zobrazit plán cesty',
+  'dashboard.mascot.empty': 'Momentálně nejsou žádné návrhy.',
+  'dashboard.mascot.sourceUnavailable': 'Některé návrhy se nepodařilo načíst.',
+  'dashboard.mascot.retry': 'Zkusit znovu',
   'dashboard.mascot.reservation': 'Potvrzená rezervace začíná {date}.',
   'dashboard.mascot.openReservation': 'Zobrazit rezervace',
   'dashboard.mascot.openChat': 'Otevřít cestovní chat',
@@ -379,6 +386,12 @@ const messages = {
   'admin.denied.body':
     'Pokud to potřebujete, požádejte vlastníka nebo správce tohoto prostoru o změnu své funkce.',
   'admin.denied.action': 'Zpět na přehled',
+  'admin.nav.label': 'Správa pracovního prostoru',
+  'admin.nav.overview': 'Přehled',
+  'admin.nav.members': 'Členové',
+  'admin.nav.audit': 'Auditní záznamy',
+  'admin.members.error': 'Členy se nepodařilo načíst',
+  'admin.audit.error': 'Nedávnou aktivitu se nepodařilo načíst',
   'admin.eyebrow': 'Konzole pracovního prostoru',
   'admin.description': 'Tarif {plan} · vytvořeno {date}',
   'admin.createdUnknown': 'nedávno',
@@ -406,8 +419,8 @@ const messages = {
   'admin.stat.storageUnit': 'z {limit}',
   'admin.stat.storageUnlimited': 'bez limitu',
   'admin.stat.storageCaption': 'Soubory, fotky a exporty',
-  'admin.stat.audit': 'Záznamy auditu',
-  'admin.stat.auditCaption': 'Nejnovější aktivita je níže',
+  'admin.stat.audit': 'Nedávné záznamy auditu',
+  'admin.stat.auditCaption': 'Až 25 nejnovějších záznamů v auditu',
   'admin.stat.plan': 'Tarif',
   'admin.stat.planCaption': 'Limity se hlídají na hranici repozitářů',
 

@@ -16,6 +16,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': '有一条通知等待查看。',
+  'dashboard.mascot.actionNotification': '有一条通知等待您的回复。',
+  'dashboard.mascot.event': '一项计划中的活动将于 {date} 开始。',
+  'dashboard.mascot.openEvent': '查看旅行计划',
+  'dashboard.mascot.empty': '目前没有建议。',
+  'dashboard.mascot.sourceUnavailable': '部分建议无法加载。',
+  'dashboard.mascot.retry': '重试',
   'dashboard.mascot.reservation': '已确认的预订将于{date}开始。',
   'dashboard.mascot.openReservation': '查看预订',
   'dashboard.mascot.openChat': '打开旅行聊天',
@@ -263,6 +270,12 @@ const messages = {
   'admin.denied.body':
     '如果确实需要，请这个工作区的所有者或管理员改一下你的角色。',
   'admin.denied.action': '回到我的面板',
+  'admin.nav.label': '工作区管理',
+  'admin.nav.overview': '概览',
+  'admin.nav.members': '成员',
+  'admin.nav.audit': '审计',
+  'admin.members.error': '无法加载成员',
+  'admin.audit.error': '无法加载近期活动',
   'admin.eyebrow': '工作区控制台',
   'admin.description': '{plan}方案 · {date}创建',
   'admin.createdUnknown': '最近',
@@ -278,8 +291,8 @@ const messages = {
   'admin.stat.storageUnit': '共 {limit}',
   'admin.stat.storageUnlimited': '没有上限',
   'admin.stat.storageCaption': '文件、照片和导出的内容',
-  'admin.stat.audit': '审计记录',
-  'admin.stat.auditCaption': '最近的动作列在下面',
+  'admin.stat.audit': '近期审计记录',
+  'admin.stat.auditCaption': '审计中最多显示最新的 25 条记录',
   'admin.stat.plan': '方案',
   'admin.stat.planCaption': '配额在数据访问层强制执行',
   'admin.quotas.label': '配额',

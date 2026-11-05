@@ -21,6 +21,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Μια ειδοποίηση σε περιμένει.',
+  'dashboard.mascot.actionNotification':
+    'Μια ειδοποίηση περιμένει την απάντησή σου.',
+  'dashboard.mascot.event': 'Ένα προγραμματισμένο συμβάν ξεκινά στις {date}.',
+  'dashboard.mascot.openEvent': 'Προβολή πλάνου ταξιδιού',
+  'dashboard.mascot.empty': 'Δεν υπάρχουν προτάσεις αυτή τη στιγμή.',
+  'dashboard.mascot.sourceUnavailable':
+    'Δεν ήταν δυνατή η φόρτωση ορισμένων προτάσεων.',
+  'dashboard.mascot.retry': 'Δοκίμασε ξανά',
   'dashboard.mascot.reservation':
     'Μια επιβεβαιωμένη κράτηση αρχίζει στις {date}.',
   'dashboard.mascot.openReservation': 'Προβολή κρατήσεων',
@@ -339,6 +348,12 @@ const messages = {
   'admin.denied.body':
     'Ζητήστε από ιδιοκτήτη ή διαχειριστή αυτού του χώρου να αλλάξει τον ρόλο σας, αν το χρειάζεστε.',
   'admin.denied.action': 'Πίσω στον πίνακα',
+  'admin.nav.label': 'Διαχείριση χώρου εργασίας',
+  'admin.nav.overview': 'Επισκόπηση',
+  'admin.nav.members': 'Μέλη',
+  'admin.nav.audit': 'Έλεγχος',
+  'admin.members.error': 'Δεν φορτώθηκαν τα μέλη',
+  'admin.audit.error': 'Δεν φορτώθηκε η πρόσφατη δραστηριότητα',
   'admin.eyebrow': 'Κονσόλα χώρου εργασίας',
   'admin.description': 'Πλάνο {plan} · δημιουργήθηκε {date}',
   'admin.createdUnknown': 'πρόσφατα',
@@ -362,8 +377,8 @@ const messages = {
   'admin.stat.storageUnit': 'από {limit}',
   'admin.stat.storageUnlimited': 'χωρίς όριο',
   'admin.stat.storageCaption': 'Αρχεία, φωτογραφίες και εξαγωγές',
-  'admin.stat.audit': 'Καταχωρίσεις ελέγχου',
-  'admin.stat.auditCaption': 'Η πιο πρόσφατη δραστηριότητα φαίνεται παρακάτω',
+  'admin.stat.audit': 'Πρόσφατες εγγραφές ελέγχου',
+  'admin.stat.auditCaption': 'Έως 25 πιο πρόσφατες εγγραφές στον έλεγχο',
   'admin.stat.plan': 'Πλάνο',
   'admin.stat.planCaption':
     'Τα όρια επιβάλλονται στο επίπεδο του αποθετηρίου δεδομένων',

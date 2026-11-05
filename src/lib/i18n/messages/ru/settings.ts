@@ -71,6 +71,8 @@ const messages = {
   'nav.notifications.hint': 'Входящие, почта и телефон',
   'nav.workspace': 'Пространство',
   'nav.workspace.hint': 'Участники и общие настройки',
+  'nav.admin': 'Консоль рабочего пространства',
+  'nav.admin.hint': 'Участники, приглашения и последние действия',
   'nav.billing': 'Оплата',
   'nav.billing.hint': 'Тариф, места и счета',
 

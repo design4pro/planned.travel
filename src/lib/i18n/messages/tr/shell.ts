@@ -28,6 +28,15 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Sizi bekleyen bir bildirim var.',
+  'dashboard.mascot.actionNotification':
+    'Yanıtınızı bekleyen bir bildirim var.',
+  'dashboard.mascot.event':
+    'Planlanmış bir etkinlik {date} tarihinde başlıyor.',
+  'dashboard.mascot.openEvent': 'Seyahat planını görüntüle',
+  'dashboard.mascot.empty': 'Şu anda öneri yok.',
+  'dashboard.mascot.sourceUnavailable': 'Bazı öneriler yüklenemedi.',
+  'dashboard.mascot.retry': 'Tekrar dene',
   'dashboard.mascot.reservation':
     'Onaylanmış bir rezervasyon {date} tarihinde başlıyor.',
   'dashboard.mascot.openReservation': 'Rezervasyonları görüntüle',
@@ -342,6 +351,12 @@ const messages = {
   'admin.denied.body':
     'Gerekiyorsa bu çalışma alanının sahibinden ya da bir yöneticisinden rolünüzü değiştirmesini isteyin.',
   'admin.denied.action': 'Panoya dön',
+  'admin.nav.label': 'Çalışma alanı yönetimi',
+  'admin.nav.overview': 'Genel bakış',
+  'admin.nav.members': 'Üyeler',
+  'admin.nav.audit': 'Denetim',
+  'admin.members.error': 'Üyeler yüklenemedi',
+  'admin.audit.error': 'Son etkinlik yüklenemedi',
   'admin.eyebrow': 'Çalışma alanı konsolu',
   'admin.description': '{plan} paketi · {date} tarihinde oluşturuldu',
   'admin.createdUnknown': 'kısa süre önce',
@@ -365,8 +380,8 @@ const messages = {
   'admin.stat.storageUnit': '{limit} üzerinden',
   'admin.stat.storageUnlimited': 'sınır yok',
   'admin.stat.storageCaption': 'Dosyalar, fotoğraflar ve dışa aktarmalar',
-  'admin.stat.audit': 'Denetim kayıtları',
-  'admin.stat.auditCaption': 'En son etkinlik aşağıda görünüyor',
+  'admin.stat.audit': 'Son denetim kayıtları',
+  'admin.stat.auditCaption': 'Denetimdeki en son 25 kayda kadar',
   'admin.stat.plan': 'Paket',
   'admin.stat.planCaption': 'Sınırlar veri deposu sınırında uygulanır',
 

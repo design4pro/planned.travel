@@ -17,6 +17,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': '通知が届いています。',
+  'dashboard.mascot.actionNotification': '返信を待っている通知があります。',
+  'dashboard.mascot.event': '予定されたイベントが{date}に始まります。',
+  'dashboard.mascot.openEvent': '旅行プランを見る',
+  'dashboard.mascot.empty': '現在、おすすめはありません。',
+  'dashboard.mascot.sourceUnavailable':
+    '一部のおすすめを読み込めませんでした。',
+  'dashboard.mascot.retry': '再試行',
   'dashboard.mascot.reservation': '確認済みの予約は{date}に始まります。',
   'dashboard.mascot.openReservation': '予約を見る',
   'dashboard.mascot.openChat': '旅行チャットを開く',
@@ -287,6 +295,12 @@ const messages = {
   'admin.denied.body':
     '必要なときは、このワークスペースのオーナーか管理者に役割を変えてもらってください。',
   'admin.denied.action': 'ダッシュボードに戻る',
+  'admin.nav.label': 'ワークスペース管理',
+  'admin.nav.overview': '概要',
+  'admin.nav.members': 'メンバー',
+  'admin.nav.audit': '監査',
+  'admin.members.error': 'メンバーを読み込めませんでした',
+  'admin.audit.error': '最近のアクティビティを読み込めませんでした',
   'admin.eyebrow': 'ワークスペースコンソール',
   'admin.description': '{plan}プラン · {date}作成',
   'admin.createdUnknown': '最近',
@@ -302,8 +316,8 @@ const messages = {
   'admin.stat.storageUnit': '上限 {limit}',
   'admin.stat.storageUnlimited': '上限なし',
   'admin.stat.storageCaption': 'ファイル、写真、書き出したデータ',
-  'admin.stat.audit': '監査ログ',
-  'admin.stat.auditCaption': '直近の動きを下に表示しています',
+  'admin.stat.audit': '最近の監査記録',
+  'admin.stat.auditCaption': '監査の最新記録を最大25件',
   'admin.stat.plan': 'プラン',
   'admin.stat.planCaption': '上限はリポジトリの境界で守られます',
   'admin.quotas.label': '上限',

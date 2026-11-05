@@ -65,6 +65,14 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'A notification is waiting.',
+  'dashboard.mascot.actionNotification':
+    'A notification is waiting for your response.',
+  'dashboard.mascot.event': 'A planned event starts on {date}.',
+  'dashboard.mascot.openEvent': 'View trip plan',
+  'dashboard.mascot.empty': 'No suggestions right now.',
+  'dashboard.mascot.sourceUnavailable': 'Some suggestions could not be loaded.',
+  'dashboard.mascot.retry': 'Try again',
   'dashboard.mascot.reservation': 'A confirmed reservation starts on {date}.',
   'dashboard.mascot.openReservation': 'View reservations',
   'dashboard.mascot.openChat': 'Open travel chat',
@@ -425,6 +433,12 @@ const messages = {
   'admin.denied.body':
     'Ask an owner or an admin of this workspace to change your role if you need it.',
   'admin.denied.action': 'Back to the dashboard',
+  'admin.nav.label': 'Workspace administration',
+  'admin.nav.overview': 'Overview',
+  'admin.nav.members': 'Members',
+  'admin.nav.audit': 'Audit',
+  'admin.members.error': 'Members did not load',
+  'admin.audit.error': 'Recent activity did not load',
   'admin.eyebrow': 'Workspace console',
   'admin.description': '{plan} plan · created {date}',
   'admin.createdUnknown': 'recently',
@@ -448,8 +462,8 @@ const messages = {
   'admin.stat.storageUnit': 'of {limit}',
   'admin.stat.storageUnlimited': 'no cap',
   'admin.stat.storageCaption': 'Files, photos and exports',
-  'admin.stat.audit': 'Audit entries',
-  'admin.stat.auditCaption': 'Most recent activity shown below',
+  'admin.stat.audit': 'Recent audit entries',
+  'admin.stat.auditCaption': 'Up to 25 latest entries in Audit',
   'admin.stat.plan': 'Plan',
   'admin.stat.planCaption': 'Quotas are enforced at the repository boundary',
 

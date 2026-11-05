@@ -27,6 +27,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'На вас чекає сповіщення.',
+  'dashboard.mascot.actionNotification': 'Сповіщення очікує на вашу відповідь.',
+  'dashboard.mascot.event': 'Запланована подія починається {date}.',
+  'dashboard.mascot.openEvent': 'Переглянути план подорожі',
+  'dashboard.mascot.empty': 'Зараз пропозицій немає.',
+  'dashboard.mascot.sourceUnavailable':
+    'Не вдалося завантажити деякі пропозиції.',
+  'dashboard.mascot.retry': 'Спробувати ще раз',
   'dashboard.mascot.reservation': 'Підтверджене бронювання починається {date}.',
   'dashboard.mascot.openReservation': 'Переглянути бронювання',
   'dashboard.mascot.openChat': 'Відкрити чат подорожі',
@@ -374,6 +382,12 @@ const messages = {
   'admin.denied.body':
     'Якщо це вам потрібно, попросіть власника або адміністратора простору змінити вашу роль.',
   'admin.denied.action': 'Назад до панелі',
+  'admin.nav.label': 'Керування робочим простором',
+  'admin.nav.overview': 'Огляд',
+  'admin.nav.members': 'Учасники',
+  'admin.nav.audit': 'Аудит',
+  'admin.members.error': 'Не вдалося завантажити учасників',
+  'admin.audit.error': 'Не вдалося завантажити останні дії',
   'admin.eyebrow': 'Консоль простору',
   'admin.description': 'Тариф {plan} · створено {date}',
   'admin.createdUnknown': 'нещодавно',
@@ -401,8 +415,8 @@ const messages = {
   'admin.stat.storageUnit': 'з {limit}',
   'admin.stat.storageUnlimited': 'без обмежень',
   'admin.stat.storageCaption': 'Файли, фото та експорти',
-  'admin.stat.audit': 'Записи аудиту',
-  'admin.stat.auditCaption': 'Найсвіжіша активність — нижче',
+  'admin.stat.audit': 'Останні записи аудиту',
+  'admin.stat.auditCaption': 'До 25 найновіших записів в аудиті',
   'admin.stat.plan': 'Тариф',
   'admin.stat.planCaption': 'Ліміти перевіряються на межі репозиторіїв',
 

@@ -16,6 +16,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': '알림이 도착했습니다.',
+  'dashboard.mascot.actionNotification': '답변을 기다리는 알림이 있습니다.',
+  'dashboard.mascot.event': '예정된 일정이 {date}에 시작됩니다.',
+  'dashboard.mascot.openEvent': '여행 계획 보기',
+  'dashboard.mascot.empty': '지금은 추천 항목이 없습니다.',
+  'dashboard.mascot.sourceUnavailable': '일부 추천 항목을 불러오지 못했습니다.',
+  'dashboard.mascot.retry': '다시 시도',
   'dashboard.mascot.reservation': '확인된 예약이 {date}에 시작됩니다.',
   'dashboard.mascot.openReservation': '예약 보기',
   'dashboard.mascot.openChat': '여행 채팅 열기',
@@ -279,6 +286,12 @@ const messages = {
   'admin.denied.body':
     '필요하다면 이 워크스페이스의 소유자나 관리자에게 역할을 바꿔 달라고 해 주세요.',
   'admin.denied.action': '대시보드로 돌아가기',
+  'admin.nav.label': '워크스페이스 관리',
+  'admin.nav.overview': '개요',
+  'admin.nav.members': '멤버',
+  'admin.nav.audit': '감사',
+  'admin.members.error': '멤버를 불러오지 못했습니다',
+  'admin.audit.error': '최근 활동을 불러오지 못했습니다',
   'admin.eyebrow': '워크스페이스 콘솔',
   'admin.description': '{plan} 플랜 · {date} 생성',
   'admin.createdUnknown': '최근',
@@ -296,8 +309,8 @@ const messages = {
   'admin.stat.storageUnit': '총 {limit} 중',
   'admin.stat.storageUnlimited': '한도 없음',
   'admin.stat.storageCaption': '파일과 사진, 내보낸 자료',
-  'admin.stat.audit': '감사 기록',
-  'admin.stat.auditCaption': '가장 최근 활동을 아래에 보여 드려요',
+  'admin.stat.audit': '최근 감사 기록',
+  'admin.stat.auditCaption': '감사의 최신 기록 최대 25개',
   'admin.stat.plan': '플랜',
   'admin.stat.planCaption': '한도는 저장소 경계에서 지켜져요',
   'admin.quotas.label': '사용 한도',

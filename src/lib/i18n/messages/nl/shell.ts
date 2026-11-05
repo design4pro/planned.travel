@@ -26,6 +26,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'Er staat een melding voor je klaar.',
+  'dashboard.mascot.actionNotification': 'Een melding wacht op je reactie.',
+  'dashboard.mascot.event': 'Een geplande gebeurtenis begint op {date}.',
+  'dashboard.mascot.openEvent': 'Reisplan bekijken',
+  'dashboard.mascot.empty': 'Er zijn momenteel geen suggesties.',
+  'dashboard.mascot.sourceUnavailable':
+    'Sommige suggesties konden niet worden geladen.',
+  'dashboard.mascot.retry': 'Opnieuw proberen',
   'dashboard.mascot.reservation':
     'Een bevestigde reservering begint op {date}.',
   'dashboard.mascot.openReservation': 'Reserveringen bekijken',
@@ -355,6 +363,12 @@ const messages = {
   'admin.denied.body':
     'Vraag een eigenaar of beheerder van deze werkruimte om je rol aan te passen als je dit nodig hebt.',
   'admin.denied.action': 'Terug naar het overzicht',
+  'admin.nav.label': 'Werkruimtebeheer',
+  'admin.nav.overview': 'Overzicht',
+  'admin.nav.members': 'Leden',
+  'admin.nav.audit': 'Controlelogboek',
+  'admin.members.error': 'Leden konden niet worden geladen',
+  'admin.audit.error': 'Recente activiteit kon niet worden geladen',
   'admin.eyebrow': 'Werkruimteconsole',
   'admin.description': 'Abonnement {plan} · aangemaakt {date}',
   'admin.createdUnknown': 'kortgeleden',
@@ -378,8 +392,8 @@ const messages = {
   'admin.stat.storageUnit': 'van {limit}',
   'admin.stat.storageUnlimited': 'geen grens',
   'admin.stat.storageCaption': "Bestanden, foto's en exports",
-  'admin.stat.audit': 'Logboekregels',
-  'admin.stat.auditCaption': 'De meest recente activiteit staat hieronder',
+  'admin.stat.audit': 'Recente auditvermeldingen',
+  'admin.stat.auditCaption': 'Maximaal 25 nieuwste vermeldingen in Audit',
   'admin.stat.plan': 'Abonnement',
   'admin.stat.planCaption':
     'Limieten worden onderin bij de gegevenslaag afgedwongen',

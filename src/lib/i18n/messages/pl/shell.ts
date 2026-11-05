@@ -33,6 +33,15 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'Czeka na Ciebie powiadomienie.',
+  'dashboard.mascot.actionNotification':
+    'Powiadomienie czeka na Twoją odpowiedź.',
+  'dashboard.mascot.event': 'Zaplanowane wydarzenie rozpoczyna się {date}.',
+  'dashboard.mascot.openEvent': 'Zobacz plan podróży',
+  'dashboard.mascot.empty': 'Obecnie brak sugestii.',
+  'dashboard.mascot.sourceUnavailable':
+    'Nie udało się wczytać niektórych sugestii.',
+  'dashboard.mascot.retry': 'Spróbuj ponownie',
   'dashboard.mascot.reservation':
     'Potwierdzona rezerwacja rozpoczyna się {date}.',
   'dashboard.mascot.openReservation': 'Zobacz rezerwacje',
@@ -384,6 +393,12 @@ const messages = {
   'admin.denied.body':
     'Jeśli potrzebujesz tu wejść, poproś właściciela lub administratora tej przestrzeni o zmianę Twojej roli.',
   'admin.denied.action': 'Powrót do pulpitu',
+  'admin.nav.label': 'Administracja przestrzenią roboczą',
+  'admin.nav.overview': 'Przegląd',
+  'admin.nav.members': 'Członkowie',
+  'admin.nav.audit': 'Audyt',
+  'admin.members.error': 'Nie udało się wczytać członków',
+  'admin.audit.error': 'Nie udało się wczytać ostatniej aktywności',
   'admin.eyebrow': 'Konsola przestrzeni',
   'admin.description': 'Abonament {plan} · utworzono {date}',
   'admin.createdUnknown': 'niedawno',
@@ -411,8 +426,8 @@ const messages = {
   'admin.stat.storageUnit': 'z {limit}',
   'admin.stat.storageUnlimited': 'bez limitu',
   'admin.stat.storageCaption': 'Pliki, zdjęcia i eksporty',
-  'admin.stat.audit': 'Wpisy audytu',
-  'admin.stat.auditCaption': 'Najnowsza aktywność jest poniżej',
+  'admin.stat.audit': 'Ostatnie wpisy audytu',
+  'admin.stat.auditCaption': 'Do 25 najnowszych wpisów w audycie',
   'admin.stat.plan': 'Abonament',
   'admin.stat.planCaption': 'Limity pilnowane są na granicy repozytoriów',
 

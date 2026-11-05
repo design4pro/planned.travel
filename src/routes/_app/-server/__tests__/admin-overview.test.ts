@@ -6,12 +6,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   createCollection,
+  createInvitation,
   createPlace,
   createTrip,
   placesMeter,
+  recordAudit,
   upsertSubscription,
 } from '#/server/repos'
-import { createHarness } from '#/server/repos/__tests__/harness'
+import {
+  createHarness,
+  subscribeTenant,
+} from '#/server/repos/__tests__/harness'
 
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
@@ -55,6 +60,10 @@ vi.mock('#/server/repos', async (importOriginal) => {
 })
 
 const { loadAdmin } = await import('../overview')
+
+const load = loadAdmin as unknown as () => Promise<
+  Awaited<ReturnType<typeof loadAdmin>>
+>
 
 const read = async () => {
   const payload = await (
@@ -137,5 +146,64 @@ describe('the admin overview places usage', () => {
       collections: 1,
       journeys: 0,
     })
+  })
+})
+
+describe('the workspace console authorization boundary', () => {
+  let harness: Harness
+  let tenant: SeededTenant
+
+  beforeEach(async () => {
+    harness = await createHarness()
+    tenant = await harness.seedTenant('console-own')
+    stubs.scope = tenant.scope
+    stubs.meter = null
+  })
+  afterEach(() => harness.close())
+
+  it('denies a member and a demoted owner on the next read', async () => {
+    expect(await load()).not.toBeNull()
+    stubs.scope = tenant.scopeFor(tenant.ownerUserId, 'member')
+    expect(await load()).toBeNull()
+  })
+
+  it('denies a platform administrator with only workspace member access', async () => {
+    const operator = await tenant.addUser('Platform operator')
+    harness.sqlite
+      .prepare('UPDATE user SET role = ? WHERE id = ?')
+      .run('admin', operator)
+    stubs.scope = tenant.scopeFor(operator, 'member')
+    expect(await load()).toBeNull()
+  })
+
+  it('returns only the acting workspace roster, invitations and audit', async () => {
+    const other = await harness.seedTenant('console-other')
+    await subscribeTenant(tenant.scope, 'crew', 10)
+    await subscribeTenant(other.scope, 'crew', 10)
+    await tenant.addUser('Own Sentinel')
+    await other.addUser('Foreign Sentinel')
+    const expiresAt = new Date(Date.now() + 86400000)
+    await createInvitation(tenant.scope, {
+      email: 'own@example.com',
+      expiresAt,
+    })
+    await createInvitation(other.scope, {
+      email: 'foreign@example.com',
+      expiresAt,
+    })
+    await recordAudit(tenant.scope, { action: 'own.action' })
+    await recordAudit(other.scope, { action: 'foreign.action' })
+    const payload = await load()
+    expect(payload?.members.map((row) => row.name)).toContain('Own Sentinel')
+    expect(payload?.members.map((row) => row.name)).not.toContain(
+      'Foreign Sentinel',
+    )
+    expect(payload?.invitations.map((row) => row.email)).toEqual([
+      'own@example.com',
+    ])
+    expect(payload?.audit.map((row) => row.action)).toContain('own.action')
+    expect(payload?.audit.map((row) => row.action)).not.toContain(
+      'foreign.action',
+    )
   })
 })

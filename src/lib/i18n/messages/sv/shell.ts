@@ -24,6 +24,14 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'En avisering väntar på dig.',
+  'dashboard.mascot.actionNotification': 'En avisering väntar på ditt svar.',
+  'dashboard.mascot.event': 'En planerad händelse börjar {date}.',
+  'dashboard.mascot.openEvent': 'Visa resplan',
+  'dashboard.mascot.empty': 'Inga förslag just nu.',
+  'dashboard.mascot.sourceUnavailable':
+    'Det gick inte att läsa in vissa förslag.',
+  'dashboard.mascot.retry': 'Försök igen',
   'dashboard.mascot.reservation': 'En bekräftad bokning börjar {date}.',
   'dashboard.mascot.openReservation': 'Visa bokningar',
   'dashboard.mascot.openChat': 'Öppna resechatten',
@@ -342,6 +350,12 @@ const messages = {
   'admin.denied.body':
     'Be en ägare eller administratör i arbetsytan att ändra din roll om du behöver det.',
   'admin.denied.action': 'Tillbaka till översikten',
+  'admin.nav.label': 'Administration av arbetsytan',
+  'admin.nav.overview': 'Översikt',
+  'admin.nav.members': 'Medlemmar',
+  'admin.nav.audit': 'Granskning',
+  'admin.members.error': 'Det gick inte att läsa in medlemmar',
+  'admin.audit.error': 'Det gick inte att läsa in senaste aktivitet',
   'admin.eyebrow': 'Arbetsytans konsol',
   'admin.description': 'Abonnemanget {plan} · skapad {date}',
   'admin.createdUnknown': 'nyligen',
@@ -365,8 +379,8 @@ const messages = {
   'admin.stat.storageUnit': 'av {limit}',
   'admin.stat.storageUnlimited': 'utan tak',
   'admin.stat.storageCaption': 'Filer, foton och exporter',
-  'admin.stat.audit': 'Loggposter',
-  'admin.stat.auditCaption': 'Den senaste aktiviteten står nedanför',
+  'admin.stat.audit': 'Senaste granskningsposter',
+  'admin.stat.auditCaption': 'Upp till 25 senaste posterna i granskningen',
   'admin.stat.plan': 'Abonnemang',
   'admin.stat.planCaption':
     'Kvoterna tillämpas nere vid datalagret, inte i gränssnittet',

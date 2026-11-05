@@ -22,6 +22,15 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'dashboard.mascot.notification': 'Hai una notifica in attesa.',
+  'dashboard.mascot.actionNotification':
+    'Una notifica attende la tua risposta.',
+  'dashboard.mascot.event': 'Un evento pianificato inizia il {date}.',
+  'dashboard.mascot.openEvent': 'Visualizza il programma di viaggio',
+  'dashboard.mascot.empty': 'Nessun suggerimento al momento.',
+  'dashboard.mascot.sourceUnavailable':
+    'Impossibile caricare alcuni suggerimenti.',
+  'dashboard.mascot.retry': 'Riprova',
   'dashboard.mascot.reservation':
     'Una prenotazione confermata inizia il {date}.',
   'dashboard.mascot.openReservation': 'Visualizza prenotazioni',
@@ -365,6 +374,12 @@ const messages = {
   'admin.denied.body':
     'Se ti serve, chiedi a un proprietario o a un amministratore di questo spazio di cambiare il tuo ruolo.',
   'admin.denied.action': 'Torna al pannello',
+  'admin.nav.label': 'Amministrazione dello spazio di lavoro',
+  'admin.nav.overview': 'Panoramica',
+  'admin.nav.members': 'Membri',
+  'admin.nav.audit': 'Registro di controllo',
+  'admin.members.error': 'Impossibile caricare i membri',
+  'admin.audit.error': 'Impossibile caricare le attività recenti',
   'admin.eyebrow': 'Console dello spazio',
   'admin.description': 'Piano {plan} · creazione {date}',
   'admin.createdUnknown': 'da poco',
@@ -390,8 +405,8 @@ const messages = {
   'admin.stat.storageUnit': 'di {limit}',
   'admin.stat.storageUnlimited': 'senza tetto',
   'admin.stat.storageCaption': 'File, foto ed esportazioni',
-  'admin.stat.audit': 'Voci di registro',
-  'admin.stat.auditCaption': 'Qui sotto trovi l’attività più recente',
+  'admin.stat.audit': 'Voci di audit recenti',
+  'admin.stat.auditCaption': 'Fino a 25 voci più recenti in Audit',
   'admin.stat.plan': 'Piano',
   'admin.stat.planCaption': 'Le quote si applicano al livello dei dati',
 

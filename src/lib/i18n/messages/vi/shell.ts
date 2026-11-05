@@ -50,6 +50,14 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'Bạn có một thông báo đang chờ.',
+  'dashboard.mascot.actionNotification':
+    'Có một thông báo đang chờ bạn phản hồi.',
+  'dashboard.mascot.event': 'Một sự kiện đã lên kế hoạch bắt đầu vào {date}.',
+  'dashboard.mascot.openEvent': 'Xem kế hoạch chuyến đi',
+  'dashboard.mascot.empty': 'Hiện chưa có gợi ý nào.',
+  'dashboard.mascot.sourceUnavailable': 'Không thể tải một số gợi ý.',
+  'dashboard.mascot.retry': 'Thử lại',
   'dashboard.mascot.reservation': 'Đặt chỗ đã xác nhận bắt đầu vào {date}.',
   'dashboard.mascot.openReservation': 'Xem đặt chỗ',
   'dashboard.mascot.openChat': 'Mở trò chuyện du lịch',
@@ -327,6 +335,12 @@ const messages = {
   'admin.denied.body':
     'Nhờ chủ sở hữu hoặc quản trị viên đổi vai trò của bạn nếu bạn thật sự cần.',
   'admin.denied.action': 'Về bảng điều khiển',
+  'admin.nav.label': 'Quản trị không gian làm việc',
+  'admin.nav.overview': 'Tổng quan',
+  'admin.nav.members': 'Thành viên',
+  'admin.nav.audit': 'Kiểm toán',
+  'admin.members.error': 'Không tải được thành viên',
+  'admin.audit.error': 'Không tải được hoạt động gần đây',
   'admin.eyebrow': 'Bảng quản trị không gian làm việc',
   'admin.description': 'Gói {plan} · tạo ngày {date}',
   'admin.createdUnknown': 'gần đây',
@@ -344,8 +358,8 @@ const messages = {
   'admin.stat.storageUnit': 'trên {limit}',
   'admin.stat.storageUnlimited': 'không giới hạn',
   'admin.stat.storageCaption': 'Tệp, ảnh và bản xuất',
-  'admin.stat.audit': 'Mục nhật ký',
-  'admin.stat.auditCaption': 'Hoạt động mới nhất hiện ở bên dưới',
+  'admin.stat.audit': 'Bản ghi kiểm toán gần đây',
+  'admin.stat.auditCaption': 'Tối đa 25 bản ghi mới nhất trong Kiểm toán',
   'admin.stat.plan': 'Gói',
   'admin.stat.planCaption': 'Hạn mức được áp ngay tại tầng dữ liệu',
 
