@@ -178,6 +178,22 @@ function splitsDay(item: DayHandoffItem): boolean {
 }
 
 /**
+ * Stops in the displayed sequence, cut at every journey. Empty stretches and missing
+ * coordinates stay here; each consumer applies its own geometry or link rules.
+ */
+export function dayStopStretches(
+  items: ReadonlyArray<DayHandoffItem>,
+): ReadonlyArray<ReadonlyArray<HandoffStop>> {
+  const stretches: Array<Array<HandoffStop>> = [[]]
+  for (const item of items) {
+    if (splitsDay(item)) stretches.push([])
+    else if (item.kind === 'stop')
+      stretches[stretches.length - 1]?.push(item.row)
+  }
+  return stretches
+}
+
+/**
  * The links a day offers: its displayed sequence cut at every {@link JOURNEY_SPLIT_MODES}
  * Transport, each stretch handled by {@link dayHandoff}. A day no journey splits gives the
  * one link it always gave; a stretch with no placed stop gives none, so a journey first or
@@ -187,11 +203,5 @@ function splitsDay(item: DayHandoffItem): boolean {
 export function dayHandoffs(
   items: ReadonlyArray<DayHandoffItem>,
 ): ReadonlyArray<DayHandoff> {
-  const stretches: Array<Array<HandoffStop>> = [[]]
-  for (const item of items) {
-    if (splitsDay(item)) stretches.push([])
-    else if (item.kind === 'stop')
-      stretches[stretches.length - 1]?.push(item.row)
-  }
-  return stretches.flatMap((stops) => dayHandoff(stops) ?? [])
+  return dayStopStretches(items).flatMap((stops) => dayHandoff(stops) ?? [])
 }

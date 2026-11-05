@@ -34,7 +34,9 @@ describe('routeCollection', () => {
       { dayNumber: 3, points: [SENSOJI, SKYTREE] },
       { dayNumber: 1, points: [SHIBUYA, SENSOJI] },
     ])
-    expect(collection.features.map((feature) => feature.id)).toEqual([1, 3])
+    expect(
+      collection.features.map((feature) => feature.properties.day),
+    ).toEqual([1, 3])
   })
 
   it('keeps the stop order it was given — the day is walked in that order', () => {
@@ -127,4 +129,23 @@ describe('distances', () => {
       6,
     )
   })
+})
+
+it('keeps repeated Day identities separate with unique geometry identities', () => {
+  const collection = routeCollection([
+    { dayNumber: 2, points: [SENSOJI, SKYTREE] },
+    { dayNumber: 1, points: [SHIBUYA, SENSOJI] },
+    { dayNumber: 1, points: [SKYTREE, SHIBUYA] },
+  ])
+  expect(collection.features.map((feature) => feature.properties.day)).toEqual([
+    1, 1, 2,
+  ])
+  expect(new Set(collection.features.map((feature) => feature.id)).size).toBe(3)
+  expect(
+    collection.features.map((feature) => feature.geometry.coordinates),
+  ).toEqual([
+    [SHIBUYA, SENSOJI],
+    [SKYTREE, SHIBUYA],
+    [SENSOJI, SKYTREE],
+  ])
 })
