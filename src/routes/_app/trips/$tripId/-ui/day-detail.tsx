@@ -190,6 +190,11 @@ export function DayDetail({
             compact && 'py-1',
           )}
         >
+          {compact && model.day.title ? (
+            <p aria-hidden="true" dir="auto" className="mb-2 text-ink">
+              {model.day.title}
+            </p>
+          ) : null}
           <section aria-labelledby={`${headingId}-stays`} className="min-h-24">
             <h3
               id={`${headingId}-stays`}

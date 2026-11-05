@@ -1099,6 +1099,23 @@ test('a short Arabic Day detail keeps its full date and a readable scrolling bod
         }),
       )
       .toBe(true)
+    const title = body.getByText('Land and climb', { exact: true })
+    await expect(title).toBeVisible()
+    expect(
+      await title.evaluate((node) => {
+        const range = document.createRange()
+        range.selectNodeContents(node)
+        const bounds = node.getBoundingClientRect()
+        const bodyBounds = node.parentElement!.getBoundingClientRect()
+        return [...range.getClientRects()].every(
+          (box) =>
+            box.left >= bounds.left - 1 &&
+            box.right <= bounds.right + 1 &&
+            box.top >= bodyBounds.top - 1 &&
+            box.bottom <= bodyBounds.bottom + 1,
+        )
+      }),
+    ).toBe(true)
     const header = panel.locator('header')
     const date = header.locator('p')
     await expect(date).toContainText('2026')
