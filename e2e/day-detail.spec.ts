@@ -1186,3 +1186,117 @@ test('a short Arabic Day detail keeps its full date and a readable scrolling bod
     expect(await pinDemoLanguage(page)).toBe(true)
   }
 })
+
+test('a long mixed-direction Day title remains keyboard-readable when minimised', async ({
+  page,
+}) => {
+  test.setTimeout(180_000)
+  const longTitle = `رحلة ${'W'.repeat(120)} نهاية`
+  const route = {
+    name: 'trip-plan',
+    path,
+    ready: '[data-plan-loaded]',
+    map: true,
+  } as const
+  const consoleReport = watchConsole(page, route)
+  await page.goto('/settings/language', {
+    waitUntil: 'networkidle',
+    timeout: 60_000,
+  })
+  await expect
+    .poll(
+      async () =>
+        (
+          await readCaptureState(page, {
+            name: 'language',
+            path: '/settings/language',
+            ready: '[data-testid="locale-chip-ar"]',
+          })
+        ).hydrated,
+      { timeout: 60_000 },
+    )
+    .toBe(true)
+  try {
+    const written = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'POST' &&
+        response.url().includes('/_serverFn/'),
+    )
+    await page.getByTestId('locale-chip-ar').click()
+    await written
+    await page.route(`**${path}`, async (intercepted) => {
+      const response = await intercepted.fetch()
+      const body = await response.text()
+      expect(body).toContain('Land and climb')
+      await intercepted.fulfill({
+        response,
+        body: body.replaceAll('Land and climb', longTitle),
+      })
+    })
+    await page.setViewportSize({ width: 360, height: 450 })
+    await page.goto(path, { waitUntil: 'networkidle', timeout: 60_000 })
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+    await expect(page.locator('[data-plan-loaded]')).toBeVisible()
+    await page.getByRole('button', { name: 'الأيام', exact: true }).click()
+    await page.locator('[data-planner-day-header]').first().click()
+    const panel = page.locator('[data-day-detail]')
+    const heading = panel.getByRole('heading', { level: 2 })
+    await expect(heading).toContainText(longTitle)
+    await panel.getByRole('button', { name: 'تصغير تفاصيل اليوم' }).click()
+    await expect(
+      panel.getByRole('button', { name: 'توسيع تفاصيل اليوم' }),
+    ).toBeFocused()
+    await expect
+      .poll(() =>
+        heading.evaluate((node) => node.scrollHeight > node.clientHeight),
+      )
+      .toBe(true)
+    for (let i = 0; i < 6; i++) {
+      if (await heading.evaluate((node) => document.activeElement === node))
+        break
+      await page.keyboard.press('Shift+Tab')
+    }
+    await expect(heading).toBeFocused()
+    await page.keyboard.press('End')
+    await expect
+      .poll(() => heading.evaluate((node) => node.scrollTop))
+      .toBeGreaterThan(0)
+    expect(
+      await heading.locator('bdi').evaluate((node) => {
+        const text = node.firstChild
+        if (!text || text.nodeType !== Node.TEXT_NODE) return false
+        const range = document.createRange()
+        range.setStart(text, Math.max(0, (text.textContent?.length ?? 0) - 5))
+        range.setEnd(text, text.textContent?.length ?? 0)
+        const headingBounds = node.parentElement!.getBoundingClientRect()
+        return [...range.getClientRects()].every(
+          (box) =>
+            box.left >= headingBounds.left - 1 &&
+            box.right <= headingBounds.right + 1 &&
+            box.top >= headingBounds.top - 1 &&
+            box.bottom <= headingBounds.bottom + 1,
+        )
+      }),
+    ).toBe(true)
+    await expect(panel.locator('header p')).toBeInViewport({ ratio: 1 })
+    await expect(
+      panel.getByRole('button', { name: 'الأيام', exact: true }),
+    ).toBeInViewport({ ratio: 1 })
+    await expect(
+      panel.getByRole('button', { name: 'الأماكن', exact: true }),
+    ).toBeInViewport({ ratio: 1 })
+    await expect(
+      panel.getByRole('button', { name: 'إغلاق تفاصيل اليوم' }),
+    ).toBeInViewport({ ratio: 1 })
+    const panelBounds = await panel.boundingBox()
+    const mapBounds = await page.locator('[data-plan-loaded]').boundingBox()
+    expect(
+      panelBounds &&
+        mapBounds &&
+        panelBounds.height <= mapBounds.height / 2 + 1,
+    ).toBe(true)
+    expect(consoleReport().fatal).toEqual([])
+  } finally {
+    expect(await pinDemoLanguage(page)).toBe(true)
+  }
+})

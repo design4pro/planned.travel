@@ -81,21 +81,27 @@ it('focuses the heading, has empty states, allows Tab exit and dismisses only in
 it('keeps identity on minimising and removes body controls', async () => {
   const { update } = setup()
   update({ minimised: true })
-  expect(screen.getByText('Day 1 · Tokyo')).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Day 1 · Tokyo' })).toBeTruthy()
   expect(
     screen.getByRole('button', { name: 'Expand day details' }),
   ).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'Add stay' })).toBeNull()
 })
 it('keeps the full stored title readable in compact Day states', () => {
-  const { update } = setup({ compact: true })
+  const { update, props } = setup({ compact: true })
   expect(screen.getByRole('heading', { name: 'Day 1 · Tokyo' })).toBeTruthy()
-  expect(screen.getByText('Tokyo').getAttribute('aria-hidden')).toBe('true')
+  expect(screen.getByText('Tokyo', { selector: 'p' }).getAttribute('aria-hidden')).toBe('true')
   update({ minimised: true })
-  expect(screen.queryByText('Tokyo')).toBeNull()
+  expect(screen.queryByText('Tokyo', { selector: 'p' })).toBeNull()
   const heading = screen.getByRole('heading', { name: 'Day 1 · Tokyo' })
   expect(heading.classList.contains('truncate')).toBe(false)
   expect(heading.getAttribute('tabindex')).toBe('0')
+  expect(heading.querySelector('bdi')?.getAttribute('dir')).toBe('auto')
+  update({
+    model: { ...props.model, day: { ...props.model.day, title: null } },
+  })
+  expect(screen.getByRole('heading', { name: 'Day 1' })).toBeTruthy()
+  expect(screen.queryByText('Tokyo')).toBeNull()
 })
 
 it('shows read failure instead of empty reservations and offers Retry', async () => {

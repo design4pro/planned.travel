@@ -146,7 +146,12 @@ export function DayDetail({
             )}
           >
             {dayName}
-            {model.day.title ? ` · ${model.day.title}` : ''}
+            {model.day.title ? (
+              <>
+                {' · '}
+                <bdi dir="auto">{model.day.title}</bdi>
+              </>
+            ) : null}
           </h2>
           <p
             className={cn(
