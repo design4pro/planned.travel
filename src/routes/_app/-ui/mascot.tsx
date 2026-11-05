@@ -186,6 +186,7 @@ export function Mascot({
       <button
         ref={trigger}
         type="button"
+        data-dashboard-mascot-launcher=""
         aria-label={t('shell.dashboard.mascot.openChat')}
         aria-expanded={panel}
         aria-controls={panelId}

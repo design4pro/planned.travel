@@ -49,14 +49,21 @@ test('dashboard refresh failure focuses recovery and retry rechecks access', asy
   const error = page.getByRole('group', { name: 'The dashboard did not load' })
   await expect(error).toBeFocused()
   const retry = error.getByRole('button', { name: 'Try again' })
-  await retry.click()
+  const firstError = await error.elementHandle()
+  expect(firstError).not.toBeNull()
+  await retry.focus()
+  await page.keyboard.press('Enter')
   await expect.poll(() => attempts).toBeGreaterThanOrEqual(2)
-  await expect(error).toBeVisible()
+  await expect
+    .poll(() => firstError?.evaluate((node) => node.isConnected))
+    .toBe(false)
+  await expect(error).toBeFocused()
   blocked = false
-  await retry.click()
+  await retry.focus()
+  await page.keyboard.press('Enter')
   await expect(
     page.getByRole('button', { name: 'Open travel chat' }),
-  ).toBeVisible()
+  ).toBeFocused()
 })
 
 test('dashboard chat and layout remain usable on small screens', async ({
