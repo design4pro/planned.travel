@@ -28,62 +28,85 @@ export async function listMascotScheduled(scope: TenantScope, today: string) {
       lte(column, through),
       sql`date(${column}, '+0 days') = ${column}`,
     )
-  const bookings = await scope.db
-    .select({
-      id: reservations.id,
-      tripId: reservations.tripId,
-      occurrence: reservations.startDate,
-    })
-    .from(reservations)
-    .innerJoin(trips, and(eq(trips.id, reservations.tripId), tripFilter))
-    .where(
-      tenantFilter(
-        scope,
-        reservations,
-        eq(reservations.status, 'confirmed'),
-        dateFilter(reservations.startDate),
-      ),
-    )
-    .orderBy(asc(reservations.startDate), asc(reservations.id))
-    .limit(50)
-  const events = await scope.db
-    .select({
-      id: dayAssignments.id,
-      tripId: dayAssignments.tripId,
-      occurrence: days.date,
-    })
-    .from(dayAssignments)
-    .innerJoin(trips, and(eq(trips.id, dayAssignments.tripId), tripFilter))
-    .innerJoin(
-      days,
-      and(
-        eq(days.id, dayAssignments.dayId),
-        eq(days.tripId, dayAssignments.tripId),
-        tenantFilter(scope, days),
-      ),
-    )
-    .innerJoin(
-      places,
-      and(
-        eq(places.id, dayAssignments.placeId),
-        eq(places.tripId, dayAssignments.tripId),
-        tenantFilter(scope, places),
-      ),
-    )
-    .where(
-      tenantFilter(
-        scope,
-        dayAssignments,
-        ne(dayAssignments.reservationStatus, 'cancelled'),
-        ne(dayAssignments.reservationStatus, 'completed'),
-        dateFilter(days.date),
-      ),
-    )
-    .orderBy(asc(days.date), asc(dayAssignments.id))
-    .limit(50)
-  return [
-    ...bookings.map((row) => ({ ...row, source: 'reservation' as const })),
-    ...events.map((row) => ({ ...row, source: 'event' as const })),
+  const bookings = () =>
+    scope.db
+      .select({
+        id: reservations.id,
+        tripId: reservations.tripId,
+        occurrence: reservations.startDate,
+      })
+      .from(reservations)
+      .innerJoin(trips, and(eq(trips.id, reservations.tripId), tripFilter))
+      .where(
+        tenantFilter(
+          scope,
+          reservations,
+          eq(reservations.status, 'confirmed'),
+          dateFilter(reservations.startDate),
+        ),
+      )
+      .orderBy(asc(reservations.startDate), asc(reservations.id))
+      .limit(50)
+  const events = () =>
+    scope.db
+      .select({
+        id: dayAssignments.id,
+        tripId: dayAssignments.tripId,
+        occurrence: days.date,
+      })
+      .from(dayAssignments)
+      .innerJoin(trips, and(eq(trips.id, dayAssignments.tripId), tripFilter))
+      .innerJoin(
+        days,
+        and(
+          eq(days.id, dayAssignments.dayId),
+          eq(days.tripId, dayAssignments.tripId),
+          tenantFilter(scope, days),
+        ),
+      )
+      .innerJoin(
+        places,
+        and(
+          eq(places.id, dayAssignments.placeId),
+          eq(places.tripId, dayAssignments.tripId),
+          tenantFilter(scope, places),
+        ),
+      )
+      .where(
+        tenantFilter(
+          scope,
+          dayAssignments,
+          ne(dayAssignments.reservationStatus, 'cancelled'),
+          ne(dayAssignments.reservationStatus, 'completed'),
+          dateFilter(days.date),
+        ),
+      )
+      .orderBy(asc(days.date), asc(dayAssignments.id))
+      .limit(50)
+  return mergeMascotScheduled(bookings, events)
+}
+
+export async function mergeMascotScheduled(
+  bookings: () => PromiseLike<
+    ReadonlyArray<{ id: string; tripId: string; occurrence: string | null }>
+  >,
+  events: () => PromiseLike<
+    ReadonlyArray<{ id: string; tripId: string; occurrence: string | null }>
+  >,
+) {
+  const [booked, planned] = await Promise.allSettled([
+    Promise.resolve().then(bookings),
+    Promise.resolve().then(events),
+  ])
+  const candidates = [
+    ...(booked.status === 'fulfilled' ? booked.value : []).map((row) => ({
+      ...row,
+      source: 'reservation' as const,
+    })),
+    ...(planned.status === 'fulfilled' ? planned.value : []).map((row) => ({
+      ...row,
+      source: 'event' as const,
+    })),
   ]
     .sort((a, b) => {
       const left = a.occurrence ?? ''
@@ -94,4 +117,8 @@ export async function listMascotScheduled(scope: TenantScope, today: string) {
       return a.id < b.id ? -1 : 1
     })
     .slice(0, 50)
+  return {
+    candidates,
+    partial: booked.status === 'rejected' || planned.status === 'rejected',
+  }
 }

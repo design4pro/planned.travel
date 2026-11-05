@@ -236,7 +236,7 @@ describe('stale Nomi booking destination', () => {
       startDate: '2026-04-10',
     })
     expect(
-      (await listMascotScheduled(viewer, '2026-04-10')).some(
+      (await listMascotScheduled(viewer, '2026-04-10')).candidates.some(
         (item) => item.id === booking.id,
       ),
     ).toBe(true)
@@ -244,7 +244,9 @@ describe('stale Nomi booking destination', () => {
       canWrite: false,
     })
     await removeTripMember(scope, membership.id)
-    expect(await listMascotScheduled(viewer, '2026-04-10')).toEqual([])
+    expect(
+      (await listMascotScheduled(viewer, '2026-04-10')).candidates,
+    ).toEqual([])
     expect(
       await captureError(() => bookingDeskPayload(viewer, trip.id)),
     ).toBeInstanceOf(NotFoundError)

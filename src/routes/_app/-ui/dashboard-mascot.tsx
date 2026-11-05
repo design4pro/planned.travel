@@ -52,6 +52,7 @@ export function DashboardMascot(props: Props) {
   } | null>(null)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
+    let expiryTimer: ReturnType<typeof setTimeout> | undefined
     let active = true
     let inFlight = false
     const refresh = (today: string, now = Date.now()) => {
@@ -88,6 +89,24 @@ export function DashboardMascot(props: Props) {
       if (valid) refresh(new Date().toISOString().slice(0, 10))
       else setSnapshot(null)
     }
+    const scheduleExpiry = () => {
+      if (expiryTimer !== undefined) clearTimeout(expiryTimer)
+      if (document.visibilityState !== 'visible') return
+      const now = Date.now()
+      const expiries = (props.candidates ?? []).flatMap((candidate) => {
+        if (candidate.source !== 'notification') return []
+        const expiry = Date.parse(candidate.occurrence) + 7 * 86_400_000 + 1
+        return Number.isFinite(expiry) && expiry > now ? [expiry] : []
+      })
+      if (expiries.length)
+        expiryTimer = setTimeout(
+          () => {
+            refresh(new Date().toISOString().slice(0, 10))
+            scheduleExpiry()
+          },
+          Math.min(...expiries) - now,
+        )
+    }
     const schedule = () => {
       if (timer !== undefined) clearTimeout(timer)
       if (document.visibilityState !== 'visible') return
@@ -103,14 +122,17 @@ export function DashboardMascot(props: Props) {
     setInvalid(false)
     refresh(props.today, props.nowMs)
     schedule()
+    scheduleExpiry()
     const visible = () => {
       if (document.visibilityState === 'visible') void revalidate()
       schedule()
+      scheduleExpiry()
     }
     document.addEventListener('visibilitychange', visible)
     return () => {
       active = false
       if (timer !== undefined) clearTimeout(timer)
+      if (expiryTimer !== undefined) clearTimeout(expiryTimer)
       document.removeEventListener('visibilitychange', visible)
     }
   }, [
@@ -163,6 +185,8 @@ export function DashboardMascot(props: Props) {
     !invalid &&
     focused.userId === props.userId &&
     focused.workspaceId === props.workspaceId &&
+    (focused.source !== 'notification' ||
+      Date.parse(focused.startDate) + 7 * 86_400_000 >= snapshot.now) &&
     snapshot.scope.userId === props.userId &&
     snapshot.scope.workspaceId === props.workspaceId &&
     (props.candidates

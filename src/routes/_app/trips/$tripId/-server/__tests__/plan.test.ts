@@ -279,7 +279,7 @@ describe('readPlanBoard', () => {
 
   it('reauthorizes a stale Nomi plan destination after a viewer loses access', async () => {
     expect(
-      (await listMascotScheduled(viewer, '2026-10-05')).some(
+      (await listMascotScheduled(viewer, '2026-10-05')).candidates.some(
         (item) => item.id === fixture.stopId,
       ),
     ).toBe(true)
@@ -291,7 +291,9 @@ describe('readPlanBoard', () => {
     )
     if (!member) throw new Error('Viewer membership missing')
     await removeTripMember(owner, member.id)
-    expect(await listMascotScheduled(viewer, '2026-10-05')).toEqual([])
+    expect(
+      (await listMascotScheduled(viewer, '2026-10-05')).candidates,
+    ).toEqual([])
     const error = await captureError(() =>
       readPlanBoard(viewer, fixture.tripId),
     )

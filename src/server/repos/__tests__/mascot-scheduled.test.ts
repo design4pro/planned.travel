@@ -106,7 +106,8 @@ describe('mascot scheduled candidates', () => {
       dayId: 'day',
       placeId: 'foreign-place',
     })
-    const result = await listMascotScheduled(tenant.scope, '2026-01-08')
+    const result = (await listMascotScheduled(tenant.scope, '2026-01-08'))
+      .candidates
     expect(result).toHaveLength(50)
     expect(result[0]).toEqual({
       source: 'event',
@@ -170,7 +171,7 @@ describe('mascot scheduled candidates', () => {
         })
     }
     expect(
-      (await listMascotScheduled(tenant.scope, '2024-02-28')).map(
+      (await listMascotScheduled(tenant.scope, '2024-02-28')).candidates.map(
         (row) => row.id,
       ),
     ).toEqual(['first', 'last'])

@@ -17,14 +17,20 @@ export const loadDashboardMascot = createServerFn({ method: 'GET' }).handler(
           occurrence: row.createdAt.toISOString(),
           action: row.type === 'action',
         })),
-      scheduled: async () =>
-        (
-          await listMascotScheduled(scope, now.toISOString().slice(0, 10))
-        ).flatMap((row) =>
-          row.occurrence === null
-            ? []
-            : [{ ...row, occurrence: row.occurrence }],
-        ),
+      scheduled: async () => {
+        const scheduled = await listMascotScheduled(
+          scope,
+          now.toISOString().slice(0, 10),
+        )
+        return {
+          ...scheduled,
+          candidates: scheduled.candidates.flatMap((row) =>
+            row.occurrence === null
+              ? []
+              : [{ ...row, occurrence: row.occurrence }],
+          ),
+        }
+      },
     })
     return { ...result, nowMs: now.getTime() }
   },

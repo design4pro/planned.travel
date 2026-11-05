@@ -498,3 +498,45 @@ it('removes a focused authorized candidate and restores focus after access is re
     screen.getByRole('button', { name: 'Open travel chat' }),
   )
 })
+
+it('expires a notification while the dashboard stays visible', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-01T12:00:01Z',
+            action: false,
+          },
+        ]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  screen.getByRole('link', { name: 'Open notifications' }).focus()
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2001)
+  })
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
+  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+})
