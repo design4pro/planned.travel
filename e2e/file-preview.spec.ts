@@ -49,7 +49,17 @@ test('Files preview and adjacent download', async ({
     await opener.hover()
     await expect(control).toHaveCSS('opacity', '1')
   }
+  const failures: unknown[] = []
   try {
+    // Let the upload toast clear before testing the row's native pointer target.
+    await expect(
+      page.locator('[data-sonner-toast][data-type="success"]'),
+    ).toHaveCount(0, {
+      timeout: 15_000,
+    })
+    await opener.evaluate((button) =>
+      button.scrollIntoView({ block: 'center', behavior: 'instant' }),
+    )
     await opener.click()
     const dialog = page.getByRole('dialog', { name })
     const image = dialog.getByRole('img', { name })
@@ -61,9 +71,11 @@ test('Files preview and adjacent download', async ({
     // Native “Open image in new tab” navigates directly to the exposed image source.
     const source = await image.getAttribute('src')
     if (source === null) throw new Error('Missing image source')
-    const nativeTab = await context.newPage()
+    const opened = page.waitForEvent('popup')
+    await page.evaluate((url) => window.open(url, '_blank'), source)
+    const nativeTab = await opened
     try {
-      await nativeTab.goto(source)
+      await nativeTab.waitForLoadState('load')
       expect(await nativeTab.evaluate(() => document.contentType)).toBe(
         'image/png',
       )
@@ -81,20 +93,30 @@ test('Files preview and adjacent download', async ({
     const downloaded = page.waitForEvent('download')
     await control.click()
     expect((await downloaded).suggestedFilename()).toBe(name)
+  } catch (error) {
+    failures.push(error)
   } finally {
-    await page
-      .getByRole('button', { name: `Actions for ${name}`, exact: true })
-      .filter({ visible: true })
-      .click()
-    await page
-      .getByRole('menuitem', { name: 'Remove file', exact: true })
-      .click()
-    await page
-      .getByRole('dialog')
-      .getByRole('button', { name: 'Remove file', exact: true })
-      .click()
-    await expect(opener).toHaveCount(0)
+    try {
+      const dialog = page.getByRole('dialog', { name })
+      if (await dialog.isVisible()) await page.keyboard.press('Escape')
+      await page
+        .getByRole('button', { name: `Actions for ${name}`, exact: true })
+        .filter({ visible: true })
+        .click()
+      await page
+        .getByRole('menuitem', { name: 'Remove file', exact: true })
+        .click()
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: 'Remove file', exact: true })
+        .click()
+      await expect(opener).toHaveCount(0)
+    } catch (error) {
+      failures.push(error)
+    }
   }
+  if (failures.length > 0)
+    throw new AggregateError(failures, 'Preview or cleanup failed')
   expect(console().fatal).toEqual([])
 })
 

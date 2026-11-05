@@ -17,10 +17,12 @@ function Workspace({
   tripId = 'one',
   ready = false,
   direction = 'ltr',
+  detail = false,
 }: {
   tripId?: string
   ready?: boolean
   direction?: 'ltr' | 'rtl'
+  detail?: boolean
 }) {
   const layout = usePlanWorkspace(tripId, direction)
   return (
@@ -28,6 +30,9 @@ function Workspace({
       <PlanReadinessBoundary entryKey={tripId} loaderReady title="Japan">
         <PlanWorkspace
           layout={layout}
+          detail={
+            detail ? (controls) => <section>{controls}</section> : undefined
+          }
           tripTitle="Japan"
           itinerary={<div>days</div>}
           ideas={<div>ideas</div>}
@@ -195,4 +200,60 @@ describe('readiness splash', () => {
     })
     expect(view.container.querySelector('[data-workspace-splash]')).toBeNull()
   })
+})
+
+describe('mobile action relocation', () => {
+  it.each(['Days', 'Places'])(
+    'keeps %s focus across both compact-height boundaries',
+    (name) => {
+      let short = false
+      let wide = false
+      const changes: (() => void)[] = []
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn((query: string) => ({
+          get matches() {
+            return query.includes('height')
+              ? short
+              : query.includes('width') && wide
+          },
+          addEventListener: (_: string, callback: () => void) =>
+            changes.push(callback),
+          removeEventListener: vi.fn(),
+        })),
+      )
+      const view = render(<Workspace ready detail />)
+      const resize = (next: boolean) =>
+        act(() => {
+          short = next
+          changes.forEach((change) => change())
+        })
+      screen.getByRole('button', { name }).focus()
+      for (const next of [true, false]) {
+        resize(next)
+        expect(document.activeElement).toBe(
+          screen.getByRole('button', { name }),
+        )
+        expect(screen.queryByRole('dialog')).toBeNull()
+      }
+      const outside = screen.getByRole('heading', { name: 'Japan' })
+      outside.focus()
+      for (const next of [true, false]) {
+        resize(next)
+        expect(document.activeElement).toBe(outside)
+      }
+      screen.getByRole('button', { name }).focus()
+      act(() => {
+        wide = true
+        changes.forEach((change) => change())
+      })
+      outside.focus()
+      act(() => {
+        wide = false
+        changes.forEach((change) => change())
+      })
+      expect(document.activeElement).toBe(outside)
+      view.unmount()
+    },
+  )
 })

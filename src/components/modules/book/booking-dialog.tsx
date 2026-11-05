@@ -225,6 +225,7 @@ export function BookingDialog({
   initialStayDayId,
   open,
   onOpenChange,
+  onCloseAutoFocus,
 }: {
   tripId: string
   /** Absent for a new booking. */
@@ -237,6 +238,7 @@ export function BookingDialog({
    * editing: an existing booking's days are its own.
    */
   initialStayDayId?: string
+  onCloseAutoFocus?: (event: Event) => void
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -616,7 +618,13 @@ export function BookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="lg" onCloseAutoFocus={flushWarnings}>
+      <DialogContent
+        size="lg"
+        onCloseAutoFocus={(event) => {
+          flushWarnings()
+          onCloseAutoFocus?.(event)
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {editing

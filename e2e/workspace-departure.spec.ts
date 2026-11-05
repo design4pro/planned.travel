@@ -225,6 +225,12 @@ for (const mode of ['remaining', 'personal', 'unknown'] as const)
           .click()
       }
       await expect(page).toHaveURL(/\/dashboard$/, { timeout: 20_000 })
+      await settle(page, {
+        name: 'dashboard',
+        path: '/dashboard',
+        ready: 'main',
+      })
+      await page.waitForLoadState('networkidle')
       const active = await (
         await leaver.request.get('/api/auth/get-session')
       ).json()

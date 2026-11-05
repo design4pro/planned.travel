@@ -336,14 +336,17 @@ describe('PlaceMarkers', () => {
   it('reports the place that was clicked', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
+    const onBackground = vi.fn()
     render(
-      <MapCanvas label="Trip map">
-        <PlaceMarkers
-          places={[KYOTO]}
-          categories={CATEGORIES}
-          onSelect={onSelect}
-        />
-      </MapCanvas>,
+      <div onClick={onBackground}>
+        <MapCanvas label="Trip map">
+          <PlaceMarkers
+            places={[KYOTO]}
+            categories={CATEGORIES}
+            onSelect={onSelect}
+          />
+        </MapCanvas>
+      </div>,
     )
     await mapMounted()
 
@@ -351,6 +354,21 @@ describe('PlaceMarkers', () => {
       await screen.findByRole('button', { name: /Fushimi Inari/ }),
     )
     expect(onSelect).toHaveBeenCalledWith(KYOTO)
+    expect(onBackground).not.toHaveBeenCalled()
+  })
+
+  it('only emphasizes pins when its owner renders Place reading elsewhere', async () => {
+    const user = userEvent.setup()
+    render(
+      <MapCanvas label="Trip map">
+        <PlaceMarkers places={[KYOTO]} showPopover={false} />
+      </MapCanvas>,
+    )
+    await mapMounted()
+    const pin = await screen.findByRole('button', { name: /Fushimi Inari/ })
+    await user.hover(pin)
+    pin.focus()
+    expect(screen.queryByText(KYOTO.address ?? '')).toBeNull()
   })
 
   it('opens the hover card on focus, so it is reachable by keyboard', async () => {

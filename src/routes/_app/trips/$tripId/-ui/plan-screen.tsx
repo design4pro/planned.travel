@@ -93,6 +93,11 @@ import {
   routeDaysOf,
 } from './plan-model'
 import { planBoard } from './plan-board'
+import { DayDetail } from './day-detail'
+import { PlaceDetail } from './place-detail'
+import { dayDetailModel } from './day-detail-model'
+import { plannerDetailReducer } from './planner-detail-state'
+import { useDayDetailBookings } from './use-day-detail-bookings'
 import { scheduleRun } from './plan-transport-model'
 import { planMoveOutcome, refusalCopy, reorderPayload } from './plan-move'
 import {
@@ -293,6 +298,7 @@ type DialogState =
   | null
 
 export interface PlanScreenProps {
+  readonly readerScope?: string
   readonly payload: PlanBoardPayload
   /** The trip's notes and whether this reader may write them. Loaded beside the board. */
   readonly notes: PlanNotesPayload
@@ -303,6 +309,7 @@ export interface PlanScreenProps {
 }
 
 export function PlanScreen({
+  readerScope,
   payload: incomingPayload,
   notes,
   transports,
@@ -349,6 +356,18 @@ export function PlanScreen({
     selectionReducer,
     initialSelection,
   )
+  const [detail, detailDispatch] = React.useReducer(plannerDetailReducer, {
+    kind: 'closed',
+  })
+  const [detailFocus, focusDetail] = React.useReducer((n) => n + 1, 0)
+  const stayFromDetail = React.useRef(false)
+  const detailFocused = React.useRef(false)
+  const detailOrigin = React.useRef<HTMLElement | null>(null)
+  const detailPanel = React.useRef<HTMLDivElement | null>(null)
+  const addStayRef = React.useRef<HTMLButtonElement | null>(null)
+  const detailDayId = detail.kind === 'day' ? detail.dayId : null
+  const mapSideLane = !wide && (workspace.short || detail.kind === 'day')
+  const bookings = useDayDetailBookings(payload, detailDayId, readerScope)
   const [query, setQuery] = React.useState('')
   const [categoryIds, setCategoryIds] = React.useState<ReadonlyArray<string>>(
     [],
@@ -859,13 +878,15 @@ export function PlanScreen({
 
   const selectRow = React.useCallback(
     (row: PlannerRow): void => {
+      detailDispatch({ type: 'place', placeId: row.placeId })
+      setSheet(null)
       dispatch({
         type: 'row-click',
         placeId: row.placeId,
         dayId: dayIdByPlace.get(row.placeId) ?? null,
       })
     },
-    [dayIdByPlace],
+    [dayIdByPlace, setSheet],
   )
 
   const hoverRow = React.useCallback(
@@ -897,6 +918,7 @@ export function PlanScreen({
 
   const selectPin = React.useCallback(
     (place: MapPlace): void => {
+      detailDispatch({ type: 'place', placeId: place.id })
       dispatch({
         type: 'pin-click',
         placeId: place.id,
@@ -998,6 +1020,14 @@ export function PlanScreen({
     setFormErrorAction(null)
   }, [releaseDialog])
 
+  React.useEffect(() => {
+    if (
+      dialog?.kind === 'stay' &&
+      !payload.days.some((day) => day.dayId === dialog.dayId)
+    )
+      closeDialog()
+  }, [dialog, payload.days, closeDialog])
+
   // A refused write re-reads the board, and the re-read can take `editable` away from a screen the
   // reader is working in: the form that outlived the permission is closed, its refusal moves to a
   // toast, and focus goes to the itinerary (or the title when the panels are shut), since the
@@ -1010,6 +1040,57 @@ export function PlanScreen({
     null,
   )
   const titleRef = React.useRef<HTMLHeadingElement | null>(null)
+  const closeDetail = React.useCallback(() => {
+    const dayId = detail.kind === 'day' ? detail.dayId : null
+    detailDispatch({ type: 'close' })
+    if (detail.kind === 'place') {
+      titleRef.current?.focus()
+      return
+    }
+    const currentHeader =
+      dayId === null
+        ? null
+        : railRef.current?.querySelector<HTMLElement>(
+            `[data-planner-day=${JSON.stringify(dayId)}] [data-planner-day-header]`,
+          )
+    const target = detailOrigin.current?.isConnected
+      ? detailOrigin.current
+      : (currentHeader ?? titleRef.current)
+    target?.focus()
+  }, [detail])
+  React.useEffect(() => {
+    const track = () => {
+      detailFocused.current =
+        detailPanel.current?.contains(document.activeElement) ?? false
+    }
+    const leave = () => {
+      detailFocused.current = false
+    }
+    document.addEventListener('focusin', track)
+    document.addEventListener('focusout', leave)
+    return () => {
+      document.removeEventListener('focusin', track)
+      document.removeEventListener('focusout', leave)
+    }
+  }, [])
+  const detailPlace =
+    detail.kind === 'place' ? model.rowsByPlace.get(detail.placeId) : undefined
+  React.useEffect(() => {
+    if (detail.kind !== 'place' || detailPlace !== undefined) return
+    const inside = detailFocused.current
+    detailDispatch({ type: 'close' })
+    if (inside) titleRef.current?.focus()
+  }, [detail, detailPlace])
+  const detailDay = payload.days.find((day) => day.dayId === detailDayId)
+  const detailPlannerDay = model.days.find((day) => day.dayId === detailDayId)
+  React.useEffect(() => {
+    if (detailDayId === null || detailDay !== undefined) return
+    const inside = detailFocused.current
+    detailDispatch({ type: 'close' })
+    toast.message(t('trips.plan.dayDetail.gone'))
+    if (inside) titleRef.current?.focus()
+  }, [detailDayId, detailDay, t])
+
   const sheetTitleRef = React.useRef<HTMLHeadingElement | null>(null)
   React.useEffect(() => {
     if (wasEditable.current && !editable) {
@@ -1427,12 +1508,17 @@ export function PlanScreen({
             hoveredPlaceId={selection.hoverId}
             pendingItemIds={pending}
             draggable={editable}
-            onFocusDay={() =>
-              dispatch({
-                type: 'focus-day',
-                dayId: selection.dayId === day.dayId ? null : day.dayId,
-              })
-            }
+            onFocusDay={() => {
+              detailOrigin.current =
+                railRef.current?.querySelector<HTMLElement>(
+                  `[data-planner-day=${JSON.stringify(day.dayId)}] [data-planner-day-header]`,
+                ) ?? null
+              dispatch({ type: 'clear' })
+              dispatch({ type: 'focus-day', dayId: day.dayId })
+              detailDispatch({ type: 'day', dayId: day.dayId })
+              focusDetail()
+              setSheet(null)
+            }}
             onSelectRow={selectRow}
             onHoverRow={hoverRow}
             rowActions={rowActions}
@@ -1533,6 +1619,64 @@ export function PlanScreen({
     </div>
   )
 
+  let detailContent: React.ComponentProps<typeof PlanWorkspace>['detail']
+  if (
+    detail.kind === 'day' &&
+    detailDay !== undefined &&
+    detailPlannerDay !== undefined
+  ) {
+    detailContent = (controls) => (
+      <DayDetail
+        compact={workspace.short}
+        controls={controls}
+        model={dayDetailModel(
+          detailDay,
+          detailPlannerDay,
+          payload.days,
+          bookings.rows,
+        )}
+        tripId={payload.tripId}
+        minimised={detail.minimised}
+        editable={editable && !payload.archived}
+        loading={bookings.loading}
+        error={bookings.error}
+        focusToken={detailFocus}
+        blockedEscape={dialog !== null || dnd.draggingId !== null}
+        panelRef={detailPanel}
+        addStayRef={addStayRef}
+        onMinimise={() => detailDispatch({ type: 'minimise' })}
+        onExpand={() => {
+          detailDispatch({ type: 'expand' })
+          focusDetail()
+        }}
+        onClose={closeDetail}
+        onRetry={bookings.retry}
+        onAddStay={() => {
+          if (
+            editable &&
+            !payload.archived &&
+            payload.days.some((day) => day.dayId === detailDayId)
+          ) {
+            stayFromDetail.current = true
+            setDialog({ kind: 'stay', dayId: detail.dayId })
+          }
+        }}
+      />
+    )
+  } else if (detailPlace !== undefined) {
+    detailContent = (controls) => (
+      <PlaceDetail
+        place={detailPlace}
+        category={categoryFor(detailPlace.categoryId)}
+        compact={workspace.short}
+        controls={controls}
+        panelRef={detailPanel}
+        blockedEscape={dialog !== null || dnd.draggingId !== null}
+        onClose={closeDetail}
+      />
+    )
+  }
+
   /* ------------------------------------------------------------------ render */
 
   return (
@@ -1569,8 +1713,18 @@ export function PlanScreen({
         ideas={ideas}
         addButton={addButton}
         railFooter={railFooter}
+        detail={detailContent}
         titleRef={titleRef}
         sheetTitleRef={sheetTitleRef}
+        onSheetCloseAutoFocus={(event) => {
+          const panel = detailPanel.current
+          if (detail.kind !== 'closed' && panel) {
+            event.preventDefault()
+            if (!panel.contains(document.activeElement)) {
+              panel.querySelector<HTMLElement>('h2')?.focus()
+            }
+          }
+        }}
         scheduledCount={String(model.scheduledCount)}
         placesCount={String(
           placeScope === 'all' ? scopeCounts.all : scopeCounts.unplanned,
@@ -1592,6 +1746,11 @@ export function PlanScreen({
             onChange={setCategoryIds}
             counts={model.stopCountByCategory}
             total={scheduledRows.length + model.ideas.length}
+            className={
+              mapSideLane
+                ? 'top-2 start-3 end-(--plan-controls-clearance) max-w-none translate-x-0 rtl:translate-x-0'
+                : undefined
+            }
           />
 
           <DayRoutes days={routeDays} activeDay={activeDayNumber} />
@@ -1600,6 +1759,7 @@ export function PlanScreen({
             places={mapPlaces}
             categories={categories}
             selectedId={selection.placeId ?? selection.hoverId}
+            showPopover={false}
             onSelect={selectPin}
             onHoverChange={hoverPin}
             metaFor={metaFor}
@@ -1611,7 +1771,10 @@ export function PlanScreen({
             places={mapPlaces}
             picking={picking !== null}
             onPick={savePosition}
-            onBackgroundClick={() => dispatch({ type: 'clear' })}
+            onBackgroundClick={() => {
+              dispatch({ type: 'clear' })
+              if (detail.kind === 'place') detailDispatch({ type: 'close' })
+            }}
           />
 
           {/* A vertical toolbar is ~150px tall, which on a phone would sit straight
@@ -1619,12 +1782,15 @@ export function PlanScreen({
               to the top-right, under the filter bar; on a wide one it returns to the
               bottom-right and steps aside for the places rail.
 
-              Both offsets come from `--plan-controls`, which is set from the very
+              Short mobile viewports reserve a separate side lane for the whole column.
+              The control surface stays above the offline basemap notice.
+              Both inline offsets come from `--plan-controls`, which is set from the very
               same `CONTROLS` numbers the camera padding reserves. */}
           <MapControls
             position="bottom-right"
             className={cn(
-              'top-20 end-(--plan-controls) bottom-auto',
+              'z-map-surface end-(--plan-controls) bottom-auto',
+              mapSideLane ? 'top-2' : 'top-20',
               'lg:top-auto lg:end-(--plan-controls) lg:bottom-10',
             )}
           />
@@ -1640,7 +1806,14 @@ export function PlanScreen({
           {/* ODbL: OpenStreetMap and Protomaps are credited on the map itself, in
               the product's own type, at a size that can actually be read — and
               lifted clear of the mobile action bar rather than hidden under it. */}
-          <MapAttribution className="end-auto bottom-(--plan-bar) left-1/2 -translate-x-1/2 lg:bottom-2" />
+          <MapAttribution
+            className={cn(
+              'end-auto start-1/2 -translate-x-1/2 rtl:translate-x-1/2',
+              detail.kind === 'day'
+                ? 'top-16 bottom-auto'
+                : 'bottom-(--plan-bar) lg:bottom-2',
+            )}
+          />
 
           <PlannerMapLayer drop={mapDrop} empty={allPoints.length === 0} />
         </MapCanvas>
@@ -1779,7 +1952,23 @@ export function PlanScreen({
         days={payload.bookingDays}
         currency={payload.currency}
         initialStayDayId={dialog?.kind === 'stay' ? dialog.dayId : undefined}
-        open={dialog?.kind === 'stay'}
+        open={
+          dialog?.kind === 'stay' &&
+          editable &&
+          !payload.archived &&
+          payload.days.some((day) => day.dayId === dialog.dayId)
+        }
+        onCloseAutoFocus={(event) => {
+          if (stayFromDetail.current) {
+            stayFromDetail.current = false
+            event.preventDefault()
+            const target =
+              addStayRef.current ??
+              detailPanel.current?.querySelector<HTMLElement>('h2') ??
+              titleRef.current
+            target?.focus()
+          }
+        }}
         onOpenChange={(open) => {
           if (!open) closeDialog()
         }}

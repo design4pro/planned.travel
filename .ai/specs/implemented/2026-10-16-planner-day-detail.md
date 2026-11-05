@@ -2,14 +2,14 @@
 
 | Field              | Value |
 | ------------------ | ----- |
-| **Status**         | ready |
+| **Status**         | implemented |
 | **Issue**          | #124  |
 | **Spec PR**        | #1333 |
-| **Implementation** | none  |
+| **Implementation** | #1821 |
 
 ## TLDR
 
-Proposed: a traveller opens a Day's details over the planner map without leaving the board. The panel reuses existing Day, Stay, Note and Reservation readers and the existing add-Stay flow. This document is design-only; the independent undo capability is specified in [Planner undo](2026-10-16-planner-undo.md).
+Proposed: a traveller opens a Day's details over the planner map without leaving the board. The panel reuses existing Day, Stay, Note and Reservation readers and the existing add-Stay flow. This document is design-only; the independent undo capability is specified in [Planner undo](../2026-10-16-planner-undo.md).
 
 ## Problem and evidence
 
@@ -28,6 +28,8 @@ Reservations are included as read-only details using the existing reader. The we
 The screen owns composition and fetch lifetimes. New route-local `-ui/day-detail.tsx` owns the nonmodal view, while `-ui/day-detail-model.ts` owns the pure join of existing payloads. Reuse `plan-board.ts` for ordering and existing locale formatters; do not create a second timeline merger. A route-local `-ui/planner-detail-state.ts` owns a discriminated detail state: closed, Day expanded, Day minimised, or Place. Map emphasis remains `selectionReducer`'s responsibility. Hover never opens a panel.
 
 All panel-opening actions use the one detail state: Day header opens Day expanded, Place row or pin replaces Day, and opening Day replaces Place. Minimise retains the Day identifier; expand does not change selection or refetch solely because of the toggle. Repeated Day activation expands its minimised panel. Closing clears detail state without manufacturing a Place selection. Any consumer added to shared selection actions lands with those consumers in one slice (SPEC §8).
+
+Place reading reuses the existing marker presentation in the screen's shared detail slot, from the unfiltered Trip rows. Coordinates and map filters affect markers, never whether a selected Place can be read. Planner hover changes emphasis only; other map consumers retain their hover cards.
 
 The screen calls existing `loadBookingDeskFn({ data: { tripId } })` on first detail open, caches only for the current mounted Trip and invalidates alongside the board after a relevant write. Loading and rejection are guarded by request generation and Trip identity; late responses never populate another Trip or a closed/replaced detail. No fetch in `components/ui`, no direct repository call from the client, and no server function calling another server function. Existing route-local planner server functions remain untouched.
 
@@ -112,3 +114,11 @@ One complete SLC slice: readable Day detail with its full states and existing ad
 3. Add browser journeys through the real workspace: open from keyboard, use map with panel open, minimise/reopen/close, dated and undated, add Stay then see its real confirmation, viewer/archive without writes, disappearing Day and switching to Place. Assert silent console and panel-attributed layout stability. Run the configured gate and required visual evidence before review.
 
 Each test starts red against the missing feature and runs through public interfaces, not snapshots of implementation wiring. No runtime regression tests are added by this design-only change; the existing spec registry validates this document's lifecycle metadata.
+
+## Amendment - implementation #1821
+
+Issue #1718 delivers this specification as one complete slice. The original design and authoring-time observations above remain historical. The implementation uses an access-scoped, mount-local Reservation cache and keeps the existing weather Popover; title editing and undo remain outside this capability.
+
+Short mobile viewports reuse the workspace Days/Places actions within the detail dock and reserve a logical side lane for map controls. The native feedback actor becomes icon-only there through its public SDK API, retaining its translated accessible label and full-href privacy guard. These supporting workspace, breakpoint, map-control and feedback changes are required to keep the map usable at the specified short/zoomed sizes. Closing the native feedback form does not restore trigger focus in either the original or compact actor; that pre-existing defect is tracked separately in #1820.
+
+The implementation retains the established Day/Stay modal focus contract, exact Reservation identifier joins and all 23 locales. Source issue #124 and spec PR #1333 remain the design provenance; #1718 is the implementation ticket.

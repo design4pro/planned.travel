@@ -623,6 +623,23 @@ const messages = {
     'Κάποιος άλλαξε τον σύνδεσμο. Εμφανίζεται ο τρέχων.',
   'invite.announce.recovered':
     'Εμφανίζονται οι τρέχουσες ρυθμίσεις του συνδέσμου. Ελέγξτε τις πριν από άλλη αλλαγή.',
+  'plan.dayDetail.label': 'Λεπτομέρειες για {day}',
+  'plan.dayDetail.minimise': 'Ελαχιστοποίηση λεπτομερειών ημέρας',
+  'plan.dayDetail.expand': 'Ανάπτυξη λεπτομερειών ημέρας',
+  'plan.dayDetail.close': 'Κλείσιμο λεπτομερειών ημέρας',
+  'plan.dayDetail.undated': 'Δεν έχουν οριστεί ημερομηνίες',
+  'plan.dayDetail.stays': 'Διαμονές',
+  'plan.dayDetail.addStay': 'Προσθήκη διαμονής',
+  'plan.dayDetail.noStay': 'Καμία διαμονή για αυτή την ημέρα',
+  'plan.dayDetail.noConfirmation': 'Χωρίς αριθμό επιβεβαίωσης',
+  'plan.dayDetail.notes': 'Σημειώσεις',
+  'plan.dayDetail.noNotes': 'Καμία σημείωση για αυτή την ημέρα',
+  'plan.dayDetail.reservations': 'Κρατήσεις',
+  'plan.dayDetail.noReservations': 'Καμία κράτηση για αυτή την ημέρα',
+  'plan.dayDetail.readError':
+    'Δεν ήταν δυνατή η φόρτωση των λεπτομερειών κρατήσεων.',
+  'plan.dayDetail.retry': 'Δοκιμή ξανά',
+  'plan.dayDetail.gone': 'Αυτή η ημέρα δεν είναι πλέον διαθέσιμη.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

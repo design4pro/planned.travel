@@ -537,6 +537,22 @@ const messages = {
   'invite.refusal.notOwner': '只有旅行擁有者才能更改邀請連結。',
   'invite.refusal.changed': '其他人已更改連結。正在顯示目前連結。',
   'invite.announce.recovered': '正在顯示目前的連結設定。再次變更前請先檢查。',
+  'plan.dayDetail.label': '{day}詳情',
+  'plan.dayDetail.minimise': '最小化當日詳情',
+  'plan.dayDetail.expand': '展開當日詳情',
+  'plan.dayDetail.close': '關閉當日詳情',
+  'plan.dayDetail.undated': '尚未設定日期',
+  'plan.dayDetail.stays': '住宿',
+  'plan.dayDetail.addStay': '新增住宿',
+  'plan.dayDetail.noStay': '當日無住宿',
+  'plan.dayDetail.noConfirmation': '無確認號碼',
+  'plan.dayDetail.notes': '備註',
+  'plan.dayDetail.noNotes': '當日無備註',
+  'plan.dayDetail.reservations': '預訂',
+  'plan.dayDetail.noReservations': '當日無預訂',
+  'plan.dayDetail.readError': '無法載入預訂詳情。',
+  'plan.dayDetail.retry': '重試',
+  'plan.dayDetail.gone': '此日已無法使用。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

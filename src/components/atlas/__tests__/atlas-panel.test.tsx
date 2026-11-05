@@ -254,6 +254,45 @@ describe('sections', () => {
     expect(onExpandedChange).toHaveBeenCalledWith(true)
   })
 
+  it.each([
+    ['country', 'Country'],
+    ['stats', 'Stats'],
+    ['bucket', 'Bucket list'],
+  ] as const)(
+    'opens the collapsed selected %s tab by pointer and keyboard',
+    async (tab, name) => {
+      const user = userEvent.setup()
+      const onExpandedChange = vi.fn()
+      const onTabChange = vi.fn()
+      const view = panel({
+        tab,
+        expanded: false,
+        onExpandedChange,
+        onTabChange,
+      })
+      const trigger = screen.getByRole('tab', { name })
+
+      await user.click(trigger)
+      expect(onExpandedChange.mock.calls).toEqual([[true]])
+      onExpandedChange.mockClear()
+      await user.keyboard('{Enter}')
+      expect(onExpandedChange.mock.calls).toEqual([[true]])
+      onExpandedChange.mockClear()
+      await user.keyboard(' ')
+      expect(onExpandedChange.mock.calls).toEqual([[true]])
+      expect(onTabChange).not.toHaveBeenCalled()
+
+      view.rerender(
+        <AtlasPanel
+          {...props({ tab, expanded: true, onExpandedChange, onTabChange })}
+        />,
+      )
+      onExpandedChange.mockClear()
+      await user.click(trigger)
+      expect(onExpandedChange).not.toHaveBeenCalled()
+    },
+  )
+
   it('offers the drawer toggle with its state on it', async () => {
     const user = userEvent.setup()
     const onExpandedChange = vi.fn()

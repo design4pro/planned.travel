@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
 import {
   useSession,
   hasSession,
@@ -123,27 +124,44 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
     await unblockCrossOriginFonts(page)
     await useSession(context, page, baseURL)
     expect(await hasSession(page)).toBe(true)
-    const report = watchConsole(page, {
-      name: 'invite-panel',
-      path: '/trips',
-      ready: 'main',
-    })
+    const consoleRoute = { name: 'invite-panel', path: '/trips', ready: 'main' }
+    const plainReport = watchConsole(page, consoleRoute)
+    const mapReport = watchConsole(page, { ...consoleRoute, map: true })
     await visit(page, { name: 'trips', path: '/trips', ready: 'main' }, 'light')
-    const title = `Invite link proof ${Date.now()}`
+    const title = `Invite link proof ${randomUUID()}`
     await page
       .getByRole('button', { name: 'New trip', exact: true })
       .first()
       .click()
     const creation = page.getByRole('dialog')
     await creation.getByLabel('Trip name').fill(title)
-    await creation
-      .getByRole('button', { name: 'Create trip', exact: true })
-      .click()
-    await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
-    const peoplePath = new URL(page.url()).pathname.replace(
-      /\/plan$/,
-      '/people',
-    )
+    // Only creation through the completed People navigation owns a live map.
+    const plainStart = {
+      fatal: plainReport().fatal.length,
+      tolerated: plainReport().tolerated.length,
+    }
+    const mapStart = {
+      fatal: mapReport().fatal.length,
+      tolerated: mapReport().tolerated.length,
+    }
+    let plainEnd = plainStart
+    let mapEnd = mapStart
+    const report = () => {
+      const plain = plainReport()
+      const map = mapReport()
+      return {
+        fatal: [
+          ...plain.fatal.slice(0, plainStart.fatal),
+          ...map.fatal.slice(mapStart.fatal, mapEnd.fatal),
+          ...plain.fatal.slice(plainEnd.fatal),
+        ],
+        tolerated: [
+          ...plain.tolerated.slice(0, plainStart.tolerated),
+          ...map.tolerated.slice(mapStart.tolerated, mapEnd.tolerated),
+          ...plain.tolerated.slice(plainEnd.tolerated),
+        ],
+      }
+    }
     const anonymous = await browser.newContext({
       storageState: { cookies: [], origins: [] },
     })
@@ -173,12 +191,38 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         }
       }).observe({ type: 'layout-shift' })
     })
+    const failures: unknown[] = []
+    let created = false
     try {
+      await creation
+        .getByRole('button', { name: 'Create trip', exact: true })
+        .click()
+      await expect(page).toHaveURL(/\/trips\/[^/]+\/plan$/)
+      created = true
+      await settle(page, {
+        name: 'new-trip-plan',
+        path: new URL(page.url()).pathname,
+        ready: '[data-plan-loaded]',
+        map: true,
+      })
+      await page.waitForLoadState('networkidle')
+      const peoplePath = new URL(page.url()).pathname.replace(
+        /\/plan$/,
+        '/people',
+      )
       await visit(
         page,
         { name: 'people', path: peoplePath, ready: 'main' },
         'light',
       )
+      plainEnd = {
+        fatal: plainReport().fatal.length,
+        tolerated: plainReport().tolerated.length,
+      }
+      mapEnd = {
+        fatal: mapReport().fatal.length,
+        tolerated: mapReport().tolerated.length,
+      }
       const panel = page.getByRole('region', {
         name: 'Invite link',
         exact: true,
@@ -326,21 +370,49 @@ test.describe('07-S10 - The owner controls the trip invite link', () => {
         ),
       ).toBe(0)
       expect(report().fatal).toEqual([])
+    } catch (error) {
+      failures.push(error)
     } finally {
-      await anonymous.close()
-      // This journey owns the new empty trip, including its link. Remove only its own fixture.
-      await page.goto(`${baseURL}/trips`)
-      await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
-      await page
-        .getByRole('button', { name: `Actions for ${title}`, exact: true })
-        .click()
-      await page.getByRole('menuitem', { name: 'Delete', exact: true }).click()
-      const deletion = page.getByRole('dialog')
-      await deletion
-        .getByRole('button', { name: 'Delete permanently', exact: true })
-        .click()
-      await expect(deletion).toBeHidden()
+      try {
+        await anonymous.close()
+      } catch (error) {
+        failures.push(error)
+      }
+      try {
+        // Delete only this journey's uniquely named trip, if creation succeeded.
+        await page.goto(`${baseURL}/trips`)
+        await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
+        await expect(
+          page.getByRole('button', { name: 'New trip', exact: true }).first(),
+        ).toBeVisible()
+        const actions = page.getByRole('button', {
+          name: `Actions for ${title}`,
+          exact: true,
+        })
+        if (created) await expect(actions).toHaveCount(1)
+        if ((await actions.count()) > 0) {
+          await actions.click()
+          await page
+            .getByRole('menuitem', { name: 'Delete', exact: true })
+            .click()
+          const deletion = page.getByRole('dialog')
+          await deletion
+            .getByRole('button', { name: 'Delete permanently', exact: true })
+            .click()
+          await expect(deletion).toBeHidden()
+        }
+      } catch (error) {
+        failures.push(error)
+      }
     }
+    if (failures.length > 0)
+      throw new AggregateError(failures, 'Invite journey or cleanup failed')
+    const verdict = report()
+    await test.info().attach('console-report', {
+      body: JSON.stringify(verdict),
+      contentType: 'application/json',
+    })
+    expect(verdict.fatal, verdict.fatal.join('\n')).toEqual([])
   })
   test('keeps recovery headings visible below sticky navigation', async ({
     context,

@@ -339,7 +339,7 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
+        run: pnpm exec playwright test --grep-invert @feedback-sdk --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
 
       # The shard's totals, a few bytes, for the pull request comment `e2e-report` writes.
       - name: Keep the shard totals
@@ -382,12 +382,32 @@ jobs:
             dev-server.log
             preview-server.log
 
+  # The baseline shards use the same no-DSN build as develop. This separate,
+  # required job exercises the real feedback SDK against a disposable collector.
+  e2e-feedback:
+    name: e2e · feedback SDK
+    needs: scope
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || (!github.event.pull_request.draft && !contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref))) && needs.scope.outputs.e2e != 'false' }}
+    runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
+    timeout-minutes: 35
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Prepare the SDK-enabled e2e environment
+        uses: ./.github/actions/e2e-env
+        with:
+          feedback: 'true'
+      - name: Run the feedback journey
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+        run: pnpm exec playwright test --project=chromium --grep @feedback-sdk --reporter=list,github
+
   # Keep the required check name; reports are diagnostics, never the verdict.
   # `!cancelled()`, not `always()`: a failed or skipped shard still gets a red verdict, but a
   # cancelled run (superseded push, closed pull request) no longer takes a `ci` slot to report it.
   e2e-report:
     name: e2e · merged report
-    needs: [scope, e2e, verify, test]
+    needs: [scope, e2e, e2e-feedback, verify, test]
     # Not on a draft: its gates did not run, so there is nothing to report.
     if: ${{ !cancelled() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     # Uses RUNNER_CI like the shards; reporting may queue after them, but no longer requires
@@ -402,14 +422,15 @@ jobs:
       - name: Require every expected shard to pass
         env:
           SHARDS_RESULT: ${{ needs.e2e.result }}
+          FEEDBACK_RESULT: ${{ needs.e2e-feedback.result }}
           SKIP_ALLOWED: ${{ github.event_name == 'pull_request' && (contains(fromJSON('["develop","main"]'), github.event.pull_request.head.ref) || (needs.scope.result == 'success' && needs.scope.outputs.e2e == 'false')) }}
         run: |
-          if [ "$SHARDS_RESULT" = success ]; then exit 0; fi
-          if [ "$SHARDS_RESULT" = skipped ] && [ "$SKIP_ALLOWED" = true ]; then
+          if [ "$SHARDS_RESULT" = success ] && [ "$FEEDBACK_RESULT" = success ]; then exit 0; fi
+          if [ "$SHARDS_RESULT" = skipped ] && [ "$FEEDBACK_RESULT" = skipped ] && [ "$SKIP_ALLOWED" = true ]; then
             echo '::notice::E2E intentionally skipped for documentation or promotion.'
             exit 0
           fi
-          echo "::error::Required E2E shards did not pass: $SHARDS_RESULT"
+          echo "::error::Required E2E checks did not pass: shards=$SHARDS_RESULT feedback=$FEEDBACK_RESULT"
           exit 1
 
       # The pool is unprivileged: install signed distro packages into this job only.

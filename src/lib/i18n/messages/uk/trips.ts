@@ -626,6 +626,22 @@ const messages = {
   'invite.refusal.changed': 'Хтось змінив посилання. Показано поточне.',
   'invite.announce.recovered':
     'Показано поточні налаштування посилання. Перевірте їх перед наступною зміною.',
+  'plan.dayDetail.label': 'Деталі: {day}',
+  'plan.dayDetail.minimise': 'Згорнути деталі дня',
+  'plan.dayDetail.expand': 'Розгорнути деталі дня',
+  'plan.dayDetail.close': 'Закрити деталі дня',
+  'plan.dayDetail.undated': 'Дати не задано',
+  'plan.dayDetail.stays': 'Проживання',
+  'plan.dayDetail.addStay': 'Додати проживання',
+  'plan.dayDetail.noStay': 'На цей день немає проживання',
+  'plan.dayDetail.noConfirmation': 'Немає номера підтвердження',
+  'plan.dayDetail.notes': 'Нотатки',
+  'plan.dayDetail.noNotes': 'На цей день немає нотаток',
+  'plan.dayDetail.reservations': 'Бронювання',
+  'plan.dayDetail.noReservations': 'На цей день немає бронювань',
+  'plan.dayDetail.readError': 'Не вдалося завантажити деталі бронювань.',
+  'plan.dayDetail.retry': 'Спробувати ще раз',
+  'plan.dayDetail.gone': 'Цей день більше недоступний.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

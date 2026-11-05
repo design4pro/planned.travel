@@ -19,6 +19,8 @@ const CARD_CLEARANCE = 260
 export interface PlaceMarkerProps {
   readonly place: MapPlace
   readonly category?: MapCategory | null
+  /** False when the owner presents Place reading outside the map. */
+  readonly showPopover?: boolean
   readonly selected?: boolean
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -38,14 +40,16 @@ export interface PlaceMarkerProps {
  * pin when there is no room above, which is measured against the real projected
  * position rather than guessed.
  *
- * Hover and focus open it, so the card is reachable by keyboard; the pin's own
- * accessible name repeats everything the card shows, so the card itself is marked
+ * When enabled, hover and focus open the card. A planner with its own detail surface disables it.
+ * For hover cards, the pin's own
+ * accessible name repeats everything shown, so that card is marked
  * decorative and nothing is announced twice.
  */
 export function PlaceMarker({
   place,
   category,
   selected = false,
+  showPopover = true,
   size = 'md',
   interactive = true,
   meta,
@@ -103,10 +107,18 @@ export function PlaceMarker({
           onPointerLeave={hide}
           onFocus={show}
           onBlur={hide}
-          onClick={onSelect === undefined ? undefined : () => onSelect(place)}
+          onClick={
+            onSelect === undefined
+              ? undefined
+              : (event) => {
+                  // A pin activation must not also dismiss selection through the map's background click.
+                  event.stopPropagation()
+                  onSelect(place)
+                }
+          }
         />
 
-        {open ? (
+        {showPopover && open ? (
           <div
             className={cn(
               'pointer-events-none absolute left-1/2 z-20 -translate-x-1/2',
@@ -198,6 +210,8 @@ export interface PlaceMarkersProps {
   readonly places: ReadonlyArray<MapPlace>
   /** The tenant's taxonomy, for pin colours and glyphs. */
   readonly categories?: ReadonlyArray<MapCategory>
+  /** False when the owner presents Place reading outside the map. */
+  readonly showPopover?: boolean
   readonly selectedId?: string | null
   readonly size?: PinSize
   readonly interactive?: boolean
@@ -223,6 +237,7 @@ export function PlaceMarkers({
   places,
   categories,
   selectedId = null,
+  showPopover = true,
   size = 'md',
   interactive = true,
   clustering = true,
@@ -281,6 +296,7 @@ export function PlaceMarkers({
             place={group.items[0]}
             category={categoryById.get(group.items[0].categoryId ?? '') ?? null}
             selected={group.items[0].id === selectedId}
+            showPopover={showPopover}
             size={size}
             interactive={interactive}
             meta={metaFor?.(group.items[0])}

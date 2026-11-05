@@ -608,6 +608,22 @@ const messages = {
     'Iemand heeft de link gewijzigd. De huidige wordt getoond.',
   'invite.announce.recovered':
     'De huidige linkinstellingen worden getoond. Controleer ze voordat je nog iets wijzigt.',
+  'plan.dayDetail.label': 'Details voor {day}',
+  'plan.dayDetail.minimise': 'Dagdetails verkleinen',
+  'plan.dayDetail.expand': 'Dagdetails uitvouwen',
+  'plan.dayDetail.close': 'Dagdetails sluiten',
+  'plan.dayDetail.undated': 'Datums niet ingesteld',
+  'plan.dayDetail.stays': 'Verblijven',
+  'plan.dayDetail.addStay': 'Verblijf toevoegen',
+  'plan.dayDetail.noStay': 'Geen verblijf voor deze dag',
+  'plan.dayDetail.noConfirmation': 'Geen bevestigingsnummer',
+  'plan.dayDetail.notes': 'Notities',
+  'plan.dayDetail.noNotes': 'Geen notities voor deze dag',
+  'plan.dayDetail.reservations': 'Reserveringen',
+  'plan.dayDetail.noReservations': 'Geen reserveringen voor deze dag',
+  'plan.dayDetail.readError': 'Reserveringsdetails konden niet worden geladen.',
+  'plan.dayDetail.retry': 'Opnieuw proberen',
+  'plan.dayDetail.gone': 'Deze dag is niet meer beschikbaar.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

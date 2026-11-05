@@ -624,6 +624,23 @@ const messages = {
     'Qualcuno ha modificato il link. Viene mostrato quello attuale.',
   'invite.announce.recovered':
     'Sono mostrate le impostazioni attuali del link. Controllale prima di un’altra modifica.',
+  'plan.dayDetail.label': 'Dettagli di {day}',
+  'plan.dayDetail.minimise': 'Riduci dettagli del giorno',
+  'plan.dayDetail.expand': 'Espandi dettagli del giorno',
+  'plan.dayDetail.close': 'Chiudi dettagli del giorno',
+  'plan.dayDetail.undated': 'Date non impostate',
+  'plan.dayDetail.stays': 'Soggiorni',
+  'plan.dayDetail.addStay': 'Aggiungi soggiorno',
+  'plan.dayDetail.noStay': 'Nessun soggiorno per questo giorno',
+  'plan.dayDetail.noConfirmation': 'Nessun numero di conferma',
+  'plan.dayDetail.notes': 'Note',
+  'plan.dayDetail.noNotes': 'Nessuna nota per questo giorno',
+  'plan.dayDetail.reservations': 'Prenotazioni',
+  'plan.dayDetail.noReservations': 'Nessuna prenotazione per questo giorno',
+  'plan.dayDetail.readError':
+    'Impossibile caricare i dettagli delle prenotazioni.',
+  'plan.dayDetail.retry': 'Riprova',
+  'plan.dayDetail.gone': 'Questo giorno non è più disponibile.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

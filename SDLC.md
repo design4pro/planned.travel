@@ -262,6 +262,14 @@ Two amendment rules are specific to this document's shape:
   PR in two shards (ADR 0016); WebKit runs nightly, not per PR (ADR 0022, #552). A PR whose diff
   stops at documentation skips them, on the `scope` job's word — there is no label that turns them
   on or off.
+- **Reporting in browser tests.** Baseline CI and nightly WebKit use the no-DSN build. A separate
+  required CI job runs the complete feedback journey with the real SDK and a throwaway loopback
+  DSN. Playwright owns a bounded, discard-only collector, including with an external local app
+  server; it refuses port collisions and stops with the test run. No fixture envelopes reach a
+  remote project. This focused job does not cover SDK interactions across every route or WebKit
+  navigation; issue #1849 tracks the observed WebKit delivery risk. Ordinary builds, local QA
+  and deploys retain their own reporting configuration.
+  The fixture verifies local UI and delivery, not real Sentry ingestion, reliability or quotas.
 - **Who starts a run.** No label does (ADR 0032). The Reconciler triages an issue a maintainer
   opens, implements a ready one and slices a merged spec (§ The Reconciler); a PR is driven by
   its own automations. PR repair and second opinions require an explicit request; review findings

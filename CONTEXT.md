@@ -109,6 +109,8 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **File preview** - an authenticated, read-only view over Files: an image gallery or a PDF/plain-text reading dialog. Unsupported types download directly.
 
+- **Day detail** - the nonmodal reading of one Day over the planner map: its date, stored title, Stays, Notes and exactly linked Reservations. Expanded and minimised views retain the same Day; opening a Place replaces it. Hover changes map emphasis without opening details.
+
 - **Release** - a numbered set of application changes promoted from develop to main. Its user-facing version is distinct from the commit SHA and deployment identifier; promotion alone does not prove it has reached production.
 - **Release history** - the Settings record of reviewed improvements and fixes proven shipped to production, newest first. It remains a historical record after an application rollback.
 

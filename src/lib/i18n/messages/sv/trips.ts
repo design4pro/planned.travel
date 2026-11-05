@@ -594,6 +594,22 @@ const messages = {
   'invite.refusal.changed': 'Någon ändrade länken. Den aktuella visas.',
   'invite.announce.recovered':
     'De aktuella länkinställningarna visas. Kontrollera dem innan du ändrar igen.',
+  'plan.dayDetail.label': 'Detaljer för {day}',
+  'plan.dayDetail.minimise': 'Minimera dagdetaljer',
+  'plan.dayDetail.expand': 'Visa dagdetaljer',
+  'plan.dayDetail.close': 'Stäng dagdetaljer',
+  'plan.dayDetail.undated': 'Datum inte angivna',
+  'plan.dayDetail.stays': 'Boenden',
+  'plan.dayDetail.addStay': 'Lägg till boende',
+  'plan.dayDetail.noStay': 'Inget boende denna dag',
+  'plan.dayDetail.noConfirmation': 'Inget bekräftelsenummer',
+  'plan.dayDetail.notes': 'Anteckningar',
+  'plan.dayDetail.noNotes': 'Inga anteckningar denna dag',
+  'plan.dayDetail.reservations': 'Bokningar',
+  'plan.dayDetail.noReservations': 'Inga bokningar denna dag',
+  'plan.dayDetail.readError': 'Bokningsdetaljer kunde inte läsas in.',
+  'plan.dayDetail.retry': 'Försök igen',
+  'plan.dayDetail.gone': 'Den här dagen är inte längre tillgänglig.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

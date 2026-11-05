@@ -61,6 +61,14 @@ It is the single biggest latency lever for the authenticated app, and it costs n
    the assets store and are never billed and never invoke the Worker.
 2. **Worker entry.** `main` is `@tanstack/react-start/server-entry`. TanStack Start matches the
    file route from `src/routeTree.gen.ts` and runs the route chain.
+   Route components and their error/not-found fallbacks share a lazy chunk. Start preloads every
+   matched route chunk, so grouping them avoids unused fallback-only preloads on healthy routes;
+   loaders, pending states and the root boundary retain their existing behavior.
+   Vite's dynamic-import helper leaves JS dependency fetching to native imports, avoiding
+   duplicate speculative modulepreloads that WebKit reports as unused. HTML/SSR preloads,
+   dynamic CSS loading and import-failure recovery remain enabled. Subsequent navigation may
+   discover JS dependencies later; cold/warm navigation measurements gate this trade-off.
+
 3. **Session.** The auth layer reads the session cookie and resolves it against the `SESSIONS`
    KV namespace (`src/server/auth/secondary-storage.ts`). A KV hot read at the edge is
    sub-millisecond. KV is only a hint: the request first captures the primary account entry fence,

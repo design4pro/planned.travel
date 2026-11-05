@@ -619,6 +619,22 @@ const messages = {
   'invite.refusal.changed': 'Někdo odkaz změnil. Zobrazuje se aktuální.',
   'invite.announce.recovered':
     'Zobrazují se aktuální nastavení odkazu. Před další změnou je zkontrolujte.',
+  'plan.dayDetail.label': 'Podrobnosti: {day}',
+  'plan.dayDetail.minimise': 'Sbalit podrobnosti dne',
+  'plan.dayDetail.expand': 'Rozbalit podrobnosti dne',
+  'plan.dayDetail.close': 'Zavřít podrobnosti dne',
+  'plan.dayDetail.undated': 'Data nejsou nastavena',
+  'plan.dayDetail.stays': 'Pobyty',
+  'plan.dayDetail.addStay': 'Přidat pobyt',
+  'plan.dayDetail.noStay': 'Pro tento den není pobyt',
+  'plan.dayDetail.noConfirmation': 'Bez čísla potvrzení',
+  'plan.dayDetail.notes': 'Poznámky',
+  'plan.dayDetail.noNotes': 'Pro tento den nejsou poznámky',
+  'plan.dayDetail.reservations': 'Rezervace',
+  'plan.dayDetail.noReservations': 'Pro tento den nejsou rezervace',
+  'plan.dayDetail.readError': 'Podrobnosti rezervací se nepodařilo načíst.',
+  'plan.dayDetail.retry': 'Zkusit znovu',
+  'plan.dayDetail.gone': 'Tento den již není dostupný.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

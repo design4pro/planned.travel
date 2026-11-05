@@ -813,6 +813,22 @@ const messages = {
     'Someone else changed the link. Showing the current one.',
   'invite.announce.recovered':
     'Showing the current link settings. Check them before making another change.',
+  'plan.dayDetail.label': 'Details for {day}',
+  'plan.dayDetail.minimise': 'Minimise day details',
+  'plan.dayDetail.expand': 'Expand day details',
+  'plan.dayDetail.close': 'Close day details',
+  'plan.dayDetail.undated': 'Dates not set',
+  'plan.dayDetail.stays': 'Stays',
+  'plan.dayDetail.addStay': 'Add stay',
+  'plan.dayDetail.noStay': 'No stay for this day',
+  'plan.dayDetail.noConfirmation': 'No confirmation number',
+  'plan.dayDetail.notes': 'Notes',
+  'plan.dayDetail.noNotes': 'No notes for this day',
+  'plan.dayDetail.reservations': 'Reservations',
+  'plan.dayDetail.noReservations': 'No reservations for this day',
+  'plan.dayDetail.readError': 'Reservation details could not be loaded.',
+  'plan.dayDetail.retry': 'Retry',
+  'plan.dayDetail.gone': 'This day is no longer available.',
 } as const satisfies NamespaceMessages
 
 export default messages

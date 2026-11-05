@@ -629,6 +629,22 @@ const messages = {
   'invite.refusal.changed': 'غيّر شخص آخر الرابط. يُعرض الرابط الحالي.',
   'invite.announce.recovered':
     'تُعرض إعدادات الرابط الحالية. تحقق منها قبل إجراء تغيير آخر.',
+  'plan.dayDetail.label': 'تفاصيل {day}',
+  'plan.dayDetail.minimise': 'تصغير تفاصيل اليوم',
+  'plan.dayDetail.expand': 'توسيع تفاصيل اليوم',
+  'plan.dayDetail.close': 'إغلاق تفاصيل اليوم',
+  'plan.dayDetail.undated': 'لم تُحدَّد التواريخ',
+  'plan.dayDetail.stays': 'الإقامات',
+  'plan.dayDetail.addStay': 'إضافة إقامة',
+  'plan.dayDetail.noStay': 'لا توجد إقامة لهذا اليوم',
+  'plan.dayDetail.noConfirmation': 'لا يوجد رقم تأكيد',
+  'plan.dayDetail.notes': 'ملاحظات',
+  'plan.dayDetail.noNotes': 'لا توجد ملاحظات لهذا اليوم',
+  'plan.dayDetail.reservations': 'الحجوزات',
+  'plan.dayDetail.noReservations': 'لا توجد حجوزات لهذا اليوم',
+  'plan.dayDetail.readError': 'تعذّر تحميل تفاصيل الحجوزات.',
+  'plan.dayDetail.retry': 'إعادة المحاولة',
+  'plan.dayDetail.gone': 'لم يعد هذا اليوم متاحًا.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

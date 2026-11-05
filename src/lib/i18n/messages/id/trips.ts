@@ -595,6 +595,22 @@ const messages = {
     'Orang lain mengubah tautan. Tautan terbaru ditampilkan.',
   'invite.announce.recovered':
     'Pengaturan tautan saat ini ditampilkan. Periksa sebelum mengubah lagi.',
+  'plan.dayDetail.label': 'Detail {day}',
+  'plan.dayDetail.minimise': 'Perkecil detail hari',
+  'plan.dayDetail.expand': 'Perluas detail hari',
+  'plan.dayDetail.close': 'Tutup detail hari',
+  'plan.dayDetail.undated': 'Tanggal belum diatur',
+  'plan.dayDetail.stays': 'Penginapan',
+  'plan.dayDetail.addStay': 'Tambah penginapan',
+  'plan.dayDetail.noStay': 'Tidak ada penginapan untuk hari ini',
+  'plan.dayDetail.noConfirmation': 'Tidak ada nomor konfirmasi',
+  'plan.dayDetail.notes': 'Catatan',
+  'plan.dayDetail.noNotes': 'Tidak ada catatan untuk hari ini',
+  'plan.dayDetail.reservations': 'Reservasi',
+  'plan.dayDetail.noReservations': 'Tidak ada reservasi untuk hari ini',
+  'plan.dayDetail.readError': 'Detail reservasi tidak dapat dimuat.',
+  'plan.dayDetail.retry': 'Coba lagi',
+  'plan.dayDetail.gone': 'Hari ini tidak lagi tersedia.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

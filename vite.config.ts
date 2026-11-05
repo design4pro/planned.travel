@@ -139,7 +139,14 @@ export function stopWhenRootIsRemoved({
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  build: { sourcemap: uploadsSourceMaps ? 'hidden' : false },
+  build: {
+    sourcemap: uploadsSourceMaps ? 'hidden' : false,
+    modulePreload: {
+      // Native imports reuse loaded JS; Vite still loads CSS and handles import failures.
+      resolveDependencies: (_filename, deps, { hostType }) =>
+        hostType === 'js' ? [] : deps,
+    },
+  },
   define: { __E2E_SERVER_TODAY__: e2eServerToday },
   /**
    * `.claude/` sits inside the repo root, and `.claude/worktrees/` holds full git worktrees —
@@ -182,11 +189,19 @@ const config = defineConfig({
      */
     cloudflare({ viteEnvironment: { name: 'ssr' }, remoteBindings: false }),
     tailwindcss(),
-    tanstackStart(
-      isE2EBuild
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          // Start preloads every route chunk; co-load fallbacks so healthy routes consume them.
+          defaultBehavior: [
+            ['component', 'errorComponent', 'notFoundComponent'],
+          ],
+        },
+      },
+      ...(isE2EBuild
         ? { serverFns: { generateFunctionId: readableServerFnId } }
-        : undefined,
-    ),
+        : {}),
+    }),
     viteReact(),
     // Last on purpose: it reads the bundle other plugins produced, so it has to run after them.
     // Inert without a token - `disable` short-circuits it before it looks for anything to upload.

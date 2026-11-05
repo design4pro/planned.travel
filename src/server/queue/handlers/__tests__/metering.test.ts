@@ -95,6 +95,27 @@ function harness(
 }
 
 describe('email', () => {
+  it.each([undefined, ''])(
+    'rejects a missing provider key before any outbound call (%s)',
+    async (key) => {
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockRejectedValue(new Error('Unexpected outbound request'))
+      const { context, recorded } = harness({ env: { EMAIL_API_KEY: key } })
+      try {
+        await expect(
+          handleEmail(
+            { to: ['test@example.com'], subject: 'Test', html: '<p>Test</p>' },
+            context,
+          ),
+        ).rejects.toThrow('EMAIL_API_KEY is not set')
+        expect(fetchSpy).not.toHaveBeenCalled()
+        expect(recorded).toEqual([])
+      } finally {
+        fetchSpy.mockRestore()
+      }
+    },
+  )
   it('sends through the meter, labelled as the provider it is', async () => {
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')

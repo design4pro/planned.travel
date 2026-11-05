@@ -32,6 +32,9 @@ vi.mock('@tanstack/react-router', async (original) => ({
   ...(await original<typeof RouterModule>()),
   useRouter: () => ({ invalidate: mocks.invalidate }),
 }))
+vi.mock('#/server/fns/reservations', () => ({
+  loadBookingDeskFn: vi.fn().mockResolvedValue({ found: true, bookings: [] }),
+}))
 vi.mock('#/components/modules/book', () => ({ BookingDialog: () => null }))
 vi.mock('../../-server/plan', () => ({
   createPlanPlaceFn: mocks.write,

@@ -412,7 +412,7 @@ export const loadTripWeather: ServerFn<
   is omitted, never filled with interpolated values.
 
   **Day-detail integration is a separate slice.** The design for #124 in
-  [Day detail](2026-10-16-planner-day-detail.md) keeps the existing weather Popover when the Day
+  [Day detail](implemented/2026-10-16-planner-day-detail.md) keeps the existing weather Popover when the Day
   panel first ships: its brief excludes weather implementation. A later integration slice moves
   `DayWeatherPanel` into the declared region, removes the badge's Popover, and makes badge activation
   open Day detail with focus on that region. The badge, current data and reading states stay; the

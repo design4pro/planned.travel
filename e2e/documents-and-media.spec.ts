@@ -649,6 +649,7 @@ test.describe('06-S1 — Every way a file gets in', () => {
     context,
     page,
   }, testInfo) => {
+    test.setTimeout(120_000)
     const report = await openEmptyLibrary(context, page)
     const bodies = await interceptUploads(page)
     const zone = page.locator(DROP)

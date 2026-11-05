@@ -537,6 +537,22 @@ const messages = {
   'invite.refusal.notOwner': '只有旅行所有者才能更改邀请链接。',
   'invite.refusal.changed': '其他人已更改链接。正在显示当前链接。',
   'invite.announce.recovered': '正在显示当前链接设置。再次更改前请先检查。',
+  'plan.dayDetail.label': '{day}详情',
+  'plan.dayDetail.minimise': '最小化当日详情',
+  'plan.dayDetail.expand': '展开当日详情',
+  'plan.dayDetail.close': '关闭当日详情',
+  'plan.dayDetail.undated': '尚未设置日期',
+  'plan.dayDetail.stays': '住宿',
+  'plan.dayDetail.addStay': '添加住宿',
+  'plan.dayDetail.noStay': '当日无住宿',
+  'plan.dayDetail.noConfirmation': '无确认号码',
+  'plan.dayDetail.notes': '备注',
+  'plan.dayDetail.noNotes': '当日无备注',
+  'plan.dayDetail.reservations': '预订',
+  'plan.dayDetail.noReservations': '当日无预订',
+  'plan.dayDetail.readError': '无法加载预订详情。',
+  'plan.dayDetail.retry': '重试',
+  'plan.dayDetail.gone': '此日已不可用。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

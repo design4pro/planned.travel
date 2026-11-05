@@ -60,10 +60,21 @@ function PlanError({ error }: { error: Error }) {
 function PlanPage() {
   const { board, notes, transports } = Route.useLoaderData()
   const { trip } = useTripHeader()
+  const { shell } = Route.useRouteContext()
 
   return (
     <AppFrame bleed>
       <PlanScreen
+        key={JSON.stringify([
+          board.tripId,
+          shell.session.user.id,
+          shell.session.organization?.id,
+        ])}
+        readerScope={JSON.stringify([
+          shell.role,
+          board.editable,
+          board.archived,
+        ])}
         payload={board}
         notes={notes}
         transports={transports}

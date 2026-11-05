@@ -9,7 +9,7 @@
 
 ## TLDR
 
-Proposed: a memory-only, bounded undo ring for adding a Place, scheduling a Place, reordering and removing a Stop. This design preserves all four promised operations, but **live undo must not ship under the current no-server-change constraint**: existing interfaces cannot guarantee complete restoration or protect a racing traveller's changes. The specification is ready for review and slicing; it is not authorization to enable unsafe inverses. [Day detail](2026-10-16-planner-day-detail.md) is independently implementable now. Its first slice preserves the current weather Popover; migration of the existing weather renderer and badge focus is a separate integration slice, as explicitly amended in the weather specification.
+Proposed: a memory-only, bounded undo ring for adding a Place, scheduling a Place, reordering and removing a Stop. This design preserves all four promised operations, but **live undo must not ship under the current no-server-change constraint**: existing interfaces cannot guarantee complete restoration or protect a racing traveller's changes. The specification is ready for review and slicing; it is not authorization to enable unsafe inverses. [Day detail](implemented/2026-10-16-planner-day-detail.md) is independently implementable now. Its first slice preserves the current weather Popover; migration of the existing weather renderer and badge focus is a separate integration slice, as explicitly amended in the weather specification.
 
 ## Problem and reviewed scope decision
 

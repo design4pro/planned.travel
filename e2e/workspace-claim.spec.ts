@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { DEMO_EMAIL, signIn } from './helpers/session.ts'
+import { settle } from './helpers/settle.ts'
 
 /**
  * 805 - a second browser tab never silently serves the workspace another tab switched to.
@@ -271,6 +272,8 @@ for (const trigger of ['commit', 'catch-up', 'room-close'] as const) {
       })
     })
     await page.goto('/trips', { waitUntil: 'domcontentloaded' })
+    await settle(page, { name: 'trips', path: '/trips', ready: 'main' })
+    await page.waitForLoadState('networkidle')
     const trip = page
       .locator('a[href^="/trips/"][href$="/plan"]:visible')
       .first()

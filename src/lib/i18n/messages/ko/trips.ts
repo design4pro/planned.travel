@@ -582,6 +582,22 @@ const messages = {
     '다른 사람이 링크를 변경했습니다. 현재 링크를 표시합니다.',
   'invite.announce.recovered':
     '현재 링크 설정을 표시합니다. 다음 변경 전에 확인하세요.',
+  'plan.dayDetail.label': '{day} 상세 정보',
+  'plan.dayDetail.minimise': '일자 상세 정보 최소화',
+  'plan.dayDetail.expand': '일자 상세 정보 펼치기',
+  'plan.dayDetail.close': '일자 상세 정보 닫기',
+  'plan.dayDetail.undated': '날짜 미설정',
+  'plan.dayDetail.stays': '숙박',
+  'plan.dayDetail.addStay': '숙박 추가',
+  'plan.dayDetail.noStay': '이 날의 숙박이 없습니다',
+  'plan.dayDetail.noConfirmation': '확인 번호 없음',
+  'plan.dayDetail.notes': '메모',
+  'plan.dayDetail.noNotes': '이 날의 메모가 없습니다',
+  'plan.dayDetail.reservations': '예약',
+  'plan.dayDetail.noReservations': '이 날의 예약이 없습니다',
+  'plan.dayDetail.readError': '예약 상세 정보를 불러오지 못했습니다.',
+  'plan.dayDetail.retry': '다시 시도',
+  'plan.dayDetail.gone': '이 날짜는 더 이상 사용할 수 없습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

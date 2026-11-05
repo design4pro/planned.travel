@@ -623,6 +623,23 @@ const messages = {
   'invite.refusal.changed': 'Alguien cambió el enlace. Se muestra el actual.',
   'invite.announce.recovered':
     'Se muestran los ajustes actuales del enlace. Revísalos antes de hacer otro cambio.',
+  'plan.dayDetail.label': 'Detalles de {day}',
+  'plan.dayDetail.minimise': 'Minimizar detalles del día',
+  'plan.dayDetail.expand': 'Ampliar detalles del día',
+  'plan.dayDetail.close': 'Cerrar detalles del día',
+  'plan.dayDetail.undated': 'Fechas sin definir',
+  'plan.dayDetail.stays': 'Estancias',
+  'plan.dayDetail.addStay': 'Añadir estancia',
+  'plan.dayDetail.noStay': 'No hay estancia para este día',
+  'plan.dayDetail.noConfirmation': 'Sin número de confirmación',
+  'plan.dayDetail.notes': 'Notas',
+  'plan.dayDetail.noNotes': 'No hay notas para este día',
+  'plan.dayDetail.reservations': 'Reservas',
+  'plan.dayDetail.noReservations': 'No hay reservas para este día',
+  'plan.dayDetail.readError':
+    'No se pudieron cargar los detalles de las reservas.',
+  'plan.dayDetail.retry': 'Reintentar',
+  'plan.dayDetail.gone': 'Este día ya no está disponible.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
