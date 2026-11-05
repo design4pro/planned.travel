@@ -43,6 +43,7 @@ export function DashboardMascot(props: Props) {
   const request = useRef<{ scope: string; promise: Promise<boolean> } | null>(
     null,
   )
+  const pendingBoundary = useRef<string | null>(null)
   const hydratedScope = useRef<string | null>(null)
   const completedBoundary = useRef<string | null>(null)
   const boundaryDeadline = useRef<{ key: string; deadline: number } | null>(
@@ -62,7 +63,6 @@ export function DashboardMascot(props: Props) {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
-    let pendingBoundary = false
     const scopeKey = JSON.stringify([props.userId, props.workspaceId])
     const refresh = (today: string, now = Date.now()) => {
       const suppressionNow = Date.now()
@@ -104,7 +104,7 @@ export function DashboardMascot(props: Props) {
       setInvalid(!valid)
       if (!valid) {
         setSnapshot(null)
-        pendingBoundary = false
+        if (pendingBoundary.current === scopeKey) pendingBoundary.current = null
         if (timer !== undefined) clearTimeout(timer)
         if (props.nowMs !== undefined)
           completedBoundary.current = JSON.stringify([
@@ -115,8 +115,8 @@ export function DashboardMascot(props: Props) {
       } else {
         if (props.nowMs === undefined)
           refresh(new Date().toISOString().slice(0, 10))
-        if (pendingBoundary) {
-          pendingBoundary = false
+        if (pendingBoundary.current === scopeKey) {
+          pendingBoundary.current = null
           if (props.nowMs !== undefined)
             completedBoundary.current = JSON.stringify([
               props.userId,
@@ -156,7 +156,7 @@ export function DashboardMascot(props: Props) {
             )
       timer = setTimeout(() => {
         if (request.current?.scope === scopeKey) {
-          pendingBoundary = true
+          pendingBoundary.current = scopeKey
           void revalidate()
         } else {
           if (boundaryKey !== null) completedBoundary.current = boundaryKey

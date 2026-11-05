@@ -1013,3 +1013,44 @@ it('runs one deferred boundary refresh after a same-scope rerender and a success
   })
   expect(onRefresh).toHaveBeenCalledTimes(2)
 })
+
+it('preserves a pending live-clock boundary across a rerender after midnight', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  act(() => document.dispatchEvent(new Event('visibilitychange')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  page.rerender(view())
+  await act(async () => {
+    finish(true)
+    await pending
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
