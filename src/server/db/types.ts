@@ -60,6 +60,7 @@ export const PLAN_QUOTAS: Record<
     exports: 3,
     collections: 2,
     journeys: 1,
+    taxonomy: 256,
   },
   starter: {
     places: 1_500,
@@ -67,6 +68,7 @@ export const PLAN_QUOTAS: Record<
     exports: 25,
     collections: 10,
     journeys: 10,
+    taxonomy: 256,
   },
   pro: {
     places: 20_000,
@@ -74,6 +76,7 @@ export const PLAN_QUOTAS: Record<
     exports: 250,
     collections: 100,
     journeys: 100,
+    taxonomy: 256,
   },
   business: {
     places: UNLIMITED,
@@ -81,6 +84,7 @@ export const PLAN_QUOTAS: Record<
     exports: UNLIMITED,
     collections: UNLIMITED,
     journeys: UNLIMITED,
+    taxonomy: 256,
   },
 }
 

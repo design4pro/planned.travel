@@ -183,6 +183,13 @@
       "when": 1793773820587,
       "tag": "0025_harsh_molecule_man",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1793874928003,
+      "tag": "0026_chief_phalanx",
+      "breakpoints": true
     }
   ]
 }

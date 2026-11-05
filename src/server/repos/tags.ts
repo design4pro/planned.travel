@@ -5,10 +5,16 @@
  * user typed into a stable id list, creating only the ones that do not exist yet.
  */
 
-import { and, asc, count, eq, inArray, ne } from 'drizzle-orm'
+import { and, asc, count, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { placeTags, tags } from '#/server/db/schema'
-import { createTenantRepository, tenantFilter } from './base'
+import { placeTags, tags, newId } from '#/server/db/schema'
+import { createTenantRepository, prepareTenantInsert, tenantFilter } from './base'
+import {
+  taxonomyCapacity,
+  taxonomyLimit,
+  refuseTaxonomyQuota,
+} from './taxonomy-quota'
+import { isUniqueConstraintViolation, RepositoryError } from './context'
 import { colourSchema, definedOnly, slugSchema, slugify, titleSchema } from './validation'
 import type { Tag } from '#/server/db/types'
 import type { TenantScope } from './base'
@@ -90,10 +96,28 @@ async function reserveSlug(
   return `${base.slice(0, 68)}-${Date.now().toString(36)}`
 }
 
-export async function createTag(scope: TenantScope, input: CreateTagInput): Promise<Tag> {
+export async function createTag(
+  scope: TenantScope,
+  input: CreateTagInput,
+): Promise<Tag> {
   const values = createTagInput.parse(input)
-  const slug = await reserveSlug(scope, values.slug ?? values.name)
-  return tagsRepository.insert(scope, { ...values, slug })
+  const limit = await taxonomyLimit(scope)
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const slug = await reserveSlug(scope, values.slug ?? values.name)
+    try {
+      const [row] = await prepareTenantInsert(
+        scope,
+        tags,
+        { ...values, slug },
+        taxonomyCapacity(scope, limit),
+      ).returning()
+      if (!row) return refuseTaxonomyQuota(scope, limit)
+      return row
+    } catch (error) {
+      if (!isUniqueConstraintViolation(error)) throw error
+    }
+  }
+  throw new RepositoryError('Tag slug conflicts exhausted retries.', 'CONFLICT')
 }
 
 export async function updateTag(
@@ -128,22 +152,38 @@ export async function resolveTags(
     return []
   }
 
-  const existing = await tagsRepository.findMany(scope, {
+  let rows = await tagsRepository.findMany(scope, {
     where: inArray(tags.slug, [...bySlug.keys()]),
   })
-  const known = new Map(existing.map((row) => [row.slug, row]))
-  const missing = [...bySlug.entries()].filter(([slug]) => !known.has(slug))
-
-  if (missing.length > 0) {
-    const created = await tagsRepository.insertMany(
-      scope,
-      missing.map(([slug, name]) => ({ name, slug })),
+  if (rows.length !== bySlug.size) {
+    const limit = await taxonomyLimit(scope)
+    const candidates = JSON.stringify(
+      [...bySlug].map(([slug, name]) => ({
+        id: newId(),
+        slug,
+        name,
+        createdAt: Number(tags.createdAt.defaultFn?.()),
+        updatedAt: Number(tags.updatedAt.defaultFn?.()),
+      })),
     )
-    for (const row of created) {
-      known.set(row.slug, row)
-    }
+    await scope.db.insert(tags).select(sql`
+    with missing as materialized (
+      select json_extract(value, '$.id') as id, json_extract(value, '$.name') as name,
+        json_extract(value, '$.slug') as slug,
+        json_extract(value, '$.createdAt') as created_at, json_extract(value, '$.updatedAt') as updated_at
+      from json_each(${candidates})
+      where not exists (select 1 from ${tags} where ${tenantFilter(scope, tags)}
+        and ${tags.slug} = json_extract(value, '$.slug'))
+    )
+    select id, ${scope.ctx.organizationId}, name, slug, '#B26B08', created_at, updated_at
+    from missing where ${taxonomyCapacity(scope, limit, sql`(select count(*) from missing)`)}
+  `)
+    rows = await tagsRepository.findMany(scope, {
+      where: inArray(tags.slug, [...bySlug.keys()]),
+    })
+    if (rows.length !== bySlug.size) return refuseTaxonomyQuota(scope, limit)
   }
-
+  const known = new Map(rows.map((row) => [row.slug, row]))
   return [...bySlug.keys()].flatMap((slug) => {
     const row = known.get(slug)
     return row ? [row] : []
