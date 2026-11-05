@@ -365,7 +365,7 @@ continues through existing scoped repositories/catalogue; changed repo methods m
 tests. No caller chooses attribution, no public/share endpoint is added and no platform secret is
 needed. Logs may include provider/operation/status but never input amounts or cached tenant data.
 
-## Amendment - compact unavailable state (#1854)
+## Amendment - compact unavailable state (#1854, PR #1859)
 
 Settled unavailable responses and rejected reads without an eligible snapshot retain only the
 labelled error and existing recovery action. This intentionally overrides reserved result,
