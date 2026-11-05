@@ -711,3 +711,73 @@ it('revalidates once on hydration when the snapshot may have crossed midnight', 
   })
   expect(onRefresh).toHaveBeenCalledOnce()
 })
+
+it.each([true, false])(
+  'does not repeatedly poll a fixed near-midnight snapshot after refresh returns %s',
+  async (valid) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+    const onRefresh = vi.fn(async () => valid)
+    render(
+      <I18nProvider
+        locale="en"
+        messages={{
+          ...namespaceCatalogue('shell', Shell),
+          ...namespaceCatalogue('ui', Ui),
+        }}
+      >
+        <DashboardMascot
+          trip={null}
+          trips={[]}
+          reservations={[]}
+          candidates={[]}
+          nowMs={Date.parse('2026-01-08T23:59:59Z')}
+          today="2026-01-08"
+          userId="user"
+          workspaceId="workspace"
+          onRefresh={onRefresh}
+        />
+      </I18nProvider>,
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(onRefresh.mock.calls.length).toBeLessThanOrEqual(2)
+  },
+)
+
+it('keeps the same rollover deadline when the same snapshot is rendered again', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:58Z'))
+  const onRefresh = vi.fn(async () => true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:58Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})

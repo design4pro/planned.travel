@@ -41,6 +41,10 @@ export function DashboardMascot(props: Props) {
     suppressionNow: number
   } | null>(null)
   const hydratedScope = useRef<string | null>(null)
+  const completedBoundary = useRef<string | null>(null)
+  const boundaryDeadline = useRef<{ key: string; deadline: number } | null>(
+    null,
+  )
   const [hidden, setHidden] = useState(false)
   const [invalid, setInvalid] = useState(false)
   const [focused, setFocused] = useState<{
@@ -97,13 +101,34 @@ export function DashboardMascot(props: Props) {
       if (timer !== undefined) clearTimeout(timer)
       if (document.visibilityState !== 'visible') return
       const now = props.nowMs ?? Date.now()
-      timer = setTimeout(
-        () => {
-          void revalidate()
-          schedule()
-        },
-        86_400_000 - (now % 86_400_000),
-      )
+      const boundaryKey =
+        props.nowMs === undefined
+          ? null
+          : JSON.stringify([props.userId, props.workspaceId, props.nowMs])
+      if (boundaryKey !== null && completedBoundary.current === boundaryKey)
+        return
+      if (
+        boundaryKey !== null &&
+        boundaryDeadline.current?.key !== boundaryKey
+      ) {
+        boundaryDeadline.current = {
+          key: boundaryKey,
+          deadline: performance.now() + 86_400_000 - (now % 86_400_000),
+        }
+      }
+      const delay =
+        boundaryKey === null
+          ? 86_400_000 - (now % 86_400_000)
+          : Math.max(
+              0,
+              (boundaryDeadline.current?.deadline ?? performance.now()) -
+                performance.now(),
+            )
+      timer = setTimeout(() => {
+        if (boundaryKey !== null) completedBoundary.current = boundaryKey
+        void revalidate()
+        if (boundaryKey === null) schedule()
+      }, delay)
     }
     setInvalid(false)
     const snapshotToday =
