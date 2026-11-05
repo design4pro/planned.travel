@@ -929,3 +929,87 @@ it('does not retry a pending boundary when its in-flight refresh fails', async (
   })
   expect(onRefresh).toHaveBeenCalledOnce()
 })
+
+it('does not start a parallel boundary refresh when props change during a failed request', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+  await act(async () => {
+    finish(false)
+    await pending
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it('runs one deferred boundary refresh after a same-scope rerender and a successful request', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+    finish(true)
+    await pending
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})

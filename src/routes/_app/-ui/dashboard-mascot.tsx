@@ -40,6 +40,9 @@ export function DashboardMascot(props: Props) {
     dismissed: ReturnType<typeof readSuppression>
     suppressionNow: number
   } | null>(null)
+  const request = useRef<{ scope: string; promise: Promise<boolean> } | null>(
+    null,
+  )
   const hydratedScope = useRef<string | null>(null)
   const completedBoundary = useRef<string | null>(null)
   const boundaryDeadline = useRef<{ key: string; deadline: number } | null>(
@@ -59,8 +62,8 @@ export function DashboardMascot(props: Props) {
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
-    let inFlight = false
     let pendingBoundary = false
+    const scopeKey = JSON.stringify([props.userId, props.workspaceId])
     const refresh = (today: string, now = Date.now()) => {
       const suppressionNow = Date.now()
       let dismissed: ReturnType<typeof readSuppression> = []
@@ -83,16 +86,21 @@ export function DashboardMascot(props: Props) {
       })
     }
     const revalidate = async () => {
-      if (inFlight || document.visibilityState !== 'visible') return
-      inFlight = true
-      let valid = false
-      try {
-        valid = await props.onRefresh()
-      } catch {
-        /* Failed refresh removes stale context. */
+      if (document.visibilityState !== 'visible') return
+      let pending = request.current
+      if (pending?.scope !== scopeKey) {
+        let promise: Promise<boolean>
+        try {
+          promise = props.onRefresh().catch(() => false)
+        } catch {
+          promise = Promise.resolve(false)
+        }
+        pending = { scope: scopeKey, promise }
+        request.current = pending
       }
+      const valid = await pending.promise
+      if (request.current === pending) request.current = null
       if (!active) return
-      inFlight = false
       setInvalid(!valid)
       if (!valid) {
         setSnapshot(null)
@@ -147,8 +155,9 @@ export function DashboardMascot(props: Props) {
                 performance.now(),
             )
       timer = setTimeout(() => {
-        if (inFlight) {
+        if (request.current?.scope === scopeKey) {
           pendingBoundary = true
+          void revalidate()
         } else {
           if (boundaryKey !== null) completedBoundary.current = boundaryKey
           void revalidate()
@@ -163,7 +172,7 @@ export function DashboardMascot(props: Props) {
         : new Date(props.nowMs).toISOString().slice(0, 10)
     refresh(snapshotToday, props.nowMs)
     schedule()
-    const scopeKey = JSON.stringify([props.userId, props.workspaceId])
+    if (request.current?.scope === scopeKey) void revalidate()
     if (props.nowMs !== undefined && hydratedScope.current !== scopeKey) {
       hydratedScope.current = scopeKey
       void revalidate()
