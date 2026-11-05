@@ -240,10 +240,18 @@ it('removes an expired observation at UTC midnight without a refresh', async () 
   render(<Harness />)
   await act(async () => {})
   expect(screen.getByLabelText('Converted amount').textContent).toContain('125')
+  screen
+    .getByRole('link', {
+      name: 'ECB reference rates are freely available from the ECB.',
+    })
+    .focus()
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000)
   })
   expect(screen.queryByLabelText('Converted amount')).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Refresh rates' }),
+  )
   expect(read).toHaveBeenCalledTimes(1)
 })
 it('revalidates a visible widget once after an hour, with no per-keystroke request', async () => {
@@ -314,9 +322,12 @@ it.each(['fresh', 'blocked', 'failed'] as const)(
       childList: true,
       characterData: true,
     })
-    fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
-      target: { value: '2' },
-    })
+    if (state === 'failed')
+      expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+    else
+      fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
+        target: { value: '2' },
+      })
     await act(async () => {})
     observer.disconnect()
     expect(status?.textContent).toBe(announcement)
@@ -464,3 +475,166 @@ it.each([true, false])(
     await waitFor(() => expect(read).toHaveBeenCalledTimes(2))
   },
 )
+
+it.each(['unavailable', 'rejected', 'expired'] as const)(
+  'replaces %s rates with compact recovery and restores the saved input',
+  async (failure) => {
+    let settle: () => void = () => {}
+    read.mockImplementationOnce(
+      () =>
+        new Promise((resolve, reject) => {
+          settle = () => {
+            if (failure === 'rejected') return reject(new Error('offline'))
+            const result = available()
+            if (failure === 'expired' && result.status === 'available') {
+              result.snapshot.effectiveOn = '2026-10-26'
+              resolve(result)
+            } else resolve({ status: 'unavailable', reason: 'provider-failed' })
+          }
+        }),
+    )
+    const { container } = render(
+      <Harness initial={{ amount: '42', from: 'USD', to: 'EUR' }} />,
+    )
+    const amount = screen.getByRole('textbox', { name: 'Amount' })
+    expect(screen.getByRole('status').textContent).toContain('Loading')
+    amount.focus()
+    await act(async () => settle())
+    expect(screen.getByRole('status').textContent).toContain(
+      'Rates could not be refreshed.',
+    )
+    expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'From currency' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'To currency' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Swap currencies' })).toBeNull()
+    expect(screen.queryByText('Converted amount')).toBeNull()
+    expect(
+      container.querySelector('.invisible, .min-h-28, .min-h-10'),
+    ).toBeNull()
+    const refresh = screen.getByRole('button', { name: 'Refresh rates' })
+    expect(document.activeElement).toBe(refresh)
+    let recover: (value: PublicRatesResult) => void = () => {}
+    read.mockReturnValueOnce(
+      new Promise<PublicRatesResult>((resolve) => {
+        recover = resolve
+      }),
+    )
+    fireEvent.click(refresh)
+    expect(screen.getByRole('status').textContent).toContain('Loading')
+    expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+    fireEvent.click(refresh)
+    expect(read).toHaveBeenCalledTimes(2)
+    await act(async () => recover(available()))
+    expect(
+      (screen.getByRole('textbox', { name: 'Amount' }) as HTMLInputElement)
+        .value,
+    ).toBe('42')
+    expect(
+      screen.getByRole('button', { name: 'From currency' }).textContent,
+    ).toContain('USD')
+    expect(
+      screen.getByRole('button', { name: 'To currency' }).textContent,
+    ).toContain('EUR')
+    expect(screen.getByLabelText('Converted amount').textContent).toContain(
+      '33.60',
+    )
+    expect(document.activeElement).toBe(refresh)
+  },
+)
+
+it('keeps compact recovery focused through cooldown and enables it at the deadline', async () => {
+  vi.restoreAllMocks()
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(at))
+  read.mockResolvedValueOnce({
+    status: 'unavailable',
+    reason: 'provider-blocked',
+    retryAt: at + 300000,
+  })
+  render(<Harness />)
+  await act(async () => {})
+  expect(screen.queryByRole('textbox', { name: 'Amount' })).toBeNull()
+  expect(screen.getByRole('status').textContent).toContain(
+    'The rate service limit has been reached.',
+  )
+  const refresh = screen.getByRole('button', { name: 'Refresh rates' })
+  refresh.focus()
+  fireEvent.click(refresh)
+  expect(read).toHaveBeenCalledTimes(1)
+  expect(refresh.getAttribute('aria-disabled')).toBe('true')
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(300000)
+  })
+  expect(refresh.getAttribute('aria-disabled')).not.toBe('true')
+  expect(document.activeElement).toBe(refresh)
+  await act(async () => fireEvent.click(refresh))
+  expect(screen.getByLabelText('Converted amount')).toBeTruthy()
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(document.activeElement).toBe(refresh)
+})
+
+it.each(['outside', 'selector'] as const)(
+  'handles focus in %s when the form disappears',
+  async (target) => {
+    const user = userEvent.setup()
+    let settle: (value: PublicRatesResult) => void = () => {}
+    read.mockReturnValue(
+      new Promise<PublicRatesResult>((resolve) => {
+        settle = resolve
+      }),
+    )
+    render(
+      <>
+        <button>Outside</button>
+        <Harness />
+      </>,
+    )
+    if (target === 'selector') {
+      await user.click(screen.getByRole('button', { name: 'From currency' }))
+      expect(document.activeElement?.getAttribute('role')).toBe('combobox')
+    } else screen.getByRole('button', { name: 'Outside' }).focus()
+    await act(async () =>
+      settle({ status: 'unavailable', reason: 'provider-failed' }),
+    )
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', {
+          name: target === 'selector' ? 'Refresh rates' : 'Outside',
+        }),
+      ),
+    )
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', {
+        name: target === 'selector' ? 'Refresh rates' : 'Outside',
+      }),
+    )
+  },
+)
+
+it('can recover rates after input becomes invalid while the initial read is pending', async () => {
+  let settle: (value: PublicRatesResult) => void = () => {}
+  read.mockReturnValueOnce(
+    new Promise<PublicRatesResult>((resolve) => {
+      settle = resolve
+    }),
+  )
+  render(<Harness />)
+  fireEvent.change(screen.getByRole('textbox', { name: 'Amount' }), {
+    target: { value: '' },
+  })
+  await act(async () =>
+    settle({ status: 'unavailable', reason: 'provider-failed' }),
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh rates' }))
+  await screen.findByRole('textbox', { name: 'Amount' })
+  expect(read).toHaveBeenCalledTimes(2)
+  expect(
+    screen
+      .getByRole('textbox', { name: 'Amount' })
+      .getAttribute('aria-invalid'),
+  ).toBe('true')
+  expect(screen.queryByLabelText('Converted amount')).toBeNull()
+})
