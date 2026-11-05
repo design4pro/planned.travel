@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { observeTransport } from '../observe.mjs'
+import {
+  createMetadataReporter,
+  diagnosticSnapshot,
+  observeTransport,
+} from '../observe.mjs'
 
 function fixture(promise, report) {
   const hooks = new Map()
@@ -15,7 +19,7 @@ function fixture(promise, report) {
     on: (name, callback) => hooks.set(name, callback),
     getTransport: () => transport,
   }
-  const failures = observeTransport({ getClient: () => client }, report)
+  const { failures } = observeTransport({ getClient: () => client }, report)
   return { hooks, calls, transport, failures }
 }
 
@@ -67,5 +71,32 @@ describe('passive SDK transport observation', () => {
       outcomes: { 'network_error:transaction': 1 },
     })
     expect(JSON.stringify(metadata)).not.toContain('NOT-RETAINED')
+  })
+})
+
+describe('document-scoped diagnostic failures', () => {
+  it('does not treat a replacement document as a clean original observer', async () => {
+    const old = createMetadataReporter(() =>
+      Promise.reject(new Error('binding gone')),
+    )
+    const replacement = createMetadataReporter(() => {})
+    old.record({ kind: 'synthetic' })
+    await Promise.resolve()
+    const before = { documentId: old.documentId, failures: [...old.failures] }
+    expect(before.failures).toEqual(['binding_rejected'])
+    expect(diagnosticSnapshot(before.documentId, replacement)).toBeNull()
+    expect(before.failures).toEqual(['binding_rejected'])
+    expect(diagnosticSnapshot(before.documentId, old)).toEqual(before)
+  })
+
+  it('preserves document identity in metadata and snapshots failures by value', () => {
+    const events = []
+    const reporter = createMetadataReporter((event) => events.push(event))
+    reporter.record({ kind: 'synthetic' })
+    expect(events[0].documentId).toBe(reporter.documentId)
+    const snapshot = diagnosticSnapshot(reporter.documentId, reporter)
+    reporter.failures.push('binding_threw')
+    expect(snapshot.failures).toEqual([])
+    expect(diagnosticSnapshot(reporter.documentId, null)).toBeNull()
   })
 })

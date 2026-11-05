@@ -52,6 +52,11 @@ observer calls the original send once and returns its exact original promise; pr
 are client-wide counters, not per-envelope loss proof. Calculated transaction size is an approximate
 serialized-character count, not a byte count. Observation and extra serialization can change
 race timing slightly; keep these cohorts separate from minimally instrumented runs.
+Each reporter has a document identity. `diagnosticFailures.beforeNavigation` is a snapshot,
+not a terminal attestation. `terminal: null` means the original observer is unavailable after
+document replacement; a clean successor array cannot establish absence of original binding failures.
+The reduced provisional probe snapshots before scheduling the old-document timer, so failures
+after that snapshot remain unknown. SPA navigation retains the original observer.
 
 The reduced fixture replaces hydration/route content but retains revision-owned initialization,
 replay setup, scrubbers and router integration. It generates256 or65000 padding characters.

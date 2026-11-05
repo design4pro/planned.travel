@@ -8,6 +8,7 @@ import { chromium, webkit } from '@playwright/test'
 import { build } from 'vite'
 import { watchConsole } from '../../e2e/helpers/console.ts'
 import { startCollector } from './collector.mjs'
+import { diagnosticSnapshot } from './observe.mjs'
 
 const root = process.cwd()
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' })
@@ -276,6 +277,16 @@ try {
                     }),
                   )
                 })
+              const originalDocumentId = await page.evaluate(
+                () => window.__diagnosticReport.documentId,
+              )
+              currentTrial.diagnosticFailures = {
+                beforeNavigation: await page.evaluate(
+                  diagnosticSnapshot,
+                  originalDocumentId,
+                ),
+                terminal: null,
+              }
               let provisional
               let span
               if (timing === 'provisional-document') {
@@ -369,6 +380,10 @@ try {
                 navigation = 'failed'
               }
               await new Promise((done) => setTimeout(done, 500))
+              currentTrial.diagnosticFailures.terminal = await page.evaluate(
+                diagnosticSnapshot,
+                originalDocumentId,
+              )
               const id = envelope?.id
               Object.assign(currentTrial, {
                 phase: 'complete',

@@ -5,7 +5,9 @@ import { createRoot } from 'react-dom/client'
 import { getRouter } from '#/router'
 import { createMetadataReporter } from './observe.mjs'
 
-const { record: report } = createMetadataReporter(window.reportProbe)
+const reporter = createMetadataReporter(window.reportProbe)
+window.__diagnosticReport = reporter
+const { record: report } = reporter
 const client = Sentry.getClient()
 client.on('beforeEnvelope', ([header, items]) => {
   report({

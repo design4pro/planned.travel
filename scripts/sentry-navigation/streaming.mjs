@@ -6,6 +6,7 @@ import { chromium, webkit } from '@playwright/test'
 import { build } from 'vite'
 import { watchConsole } from '../../e2e/helpers/console.ts'
 import { startCollector } from './collector.mjs'
+import { diagnosticSnapshot } from './observe.mjs'
 
 const root = process.cwd()
 const sdk = JSON.parse(
@@ -22,7 +23,9 @@ const code = `import * as Sentry from '@sentry/react';
 import {scrubTelemetry} from '${root}/src/lib/sentry-scrub.ts';
 import {serializeEnvelope} from '${root}/node_modules/.pnpm/@sentry+core@10.72.0/node_modules/@sentry/core/build/esm/utils/envelope.js';
 import {createMetadataReporter} from ${JSON.stringify(root + '/scripts/sentry-navigation/observe.mjs')};
-const {record:emit,failures:diagnosticFailures} = createMetadataReporter(window.reportMetadata);
+const reporter = createMetadataReporter(window.reportMetadata);
+window.__diagnosticReport = reporter;
+const {record:emit,failures:diagnosticFailures} = reporter;
 const members = envelope => envelope[1].filter(([header])=>header.type==='span').flatMap(([,value])=>value.items.map(span=>({trace:span.trace_id,span:span.span_id})));
 Sentry.init({dsn:window.probeConfig.dsn,environment:'stream-candidate-diagnostic',sendDefaultPii:false,tracesSampleRate:1,
   traceLifecycle:'stream',integrations:[Sentry.spanStreamingIntegration()],beforeSendSpan:Sentry.withStreamedSpan(scrubTelemetry),
@@ -200,6 +203,16 @@ try {
           })
           await page.goto(origin)
           await page.waitForFunction(() => window.probe !== undefined)
+          const originalDocumentId = await page.evaluate(
+            () => window.__diagnosticReport.documentId,
+          )
+          current.diagnosticFailures = {
+            beforeNavigation: await page.evaluate(
+              diagnosticSnapshot,
+              originalDocumentId,
+            ),
+            terminal: null,
+          }
           current.phase = 'sending'
           let created
           if (timing === 'settled') {
@@ -237,6 +250,10 @@ try {
             )
           }
           await new Promise((done) => setTimeout(done, 750))
+          current.diagnosticFailures.terminal = await page.evaluate(
+            diagnosticSnapshot,
+            originalDocumentId,
+          )
           current.phase = 'complete'
           current.created = created
           current.navigation =

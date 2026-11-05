@@ -16,6 +16,7 @@ import { chromium, webkit } from '@playwright/test'
 import { createBuilder, preview } from 'vite'
 import { watchConsole } from '../../e2e/helpers/console.ts'
 import { startCollector } from './collector.mjs'
+import { diagnosticSnapshot } from './observe.mjs'
 
 const [revision, phase, descriptorPath] = process.argv.slice(2)
 assert.ok(
@@ -200,7 +201,7 @@ try {
               '\nhydrateRoot(',
               `
 import { observeTransport } from ${JSON.stringify(observer)};
-Object.assign(window, { __diagnosticSdk: Sentry, __diagnosticReportFailures: observeTransport(Sentry, window.reportProbe) });
+Object.assign(window, { __diagnosticSdk: Sentry, __diagnosticReport: observeTransport(Sentry, window.reportProbe) });
 hydrateRoot(`,
             )
           }
@@ -409,6 +410,14 @@ hydrateRoot(`,
                   event.kind === 'sdk-response' && event.id === envelope.id,
               ),
             )
+          const originalDocumentId = envelope.documentId
+          active.diagnosticFailures = {
+            beforeNavigation: await page.evaluate(
+              diagnosticSnapshot,
+              originalDocumentId,
+            ),
+            terminal: null,
+          }
           active.phase = 'navigating'
           if (timing.endsWith('spa'))
             await page.evaluate(() =>
@@ -444,8 +453,9 @@ hydrateRoot(`,
               fatal: active.console.fatal.length,
             }) + '\n',
           )
-          active.diagnosticFailures = await page.evaluate(
-            () => window.__diagnosticReportFailures,
+          active.diagnosticFailures.terminal = await page.evaluate(
+            diagnosticSnapshot,
+            originalDocumentId,
           )
           await context.close()
         }

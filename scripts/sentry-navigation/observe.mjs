@@ -1,20 +1,22 @@
 export function createMetadataReporter(report) {
+  const documentId = crypto.randomUUID()
   const failures = []
   const record = (metadata) => {
     try {
-      Promise.resolve(report(metadata)).catch(() =>
+      Promise.resolve(report({ ...metadata, documentId })).catch(() =>
         failures.push('binding_rejected'),
       )
     } catch {
       failures.push('binding_threw')
     }
   }
-  return { failures, record }
+  return { documentId, failures, record }
 }
 
 /** Metadata-only observation; the SDK still receives its original transport promise. */
 export function observeTransport(sdk, report) {
-  const { failures, record } = createMetadataReporter(report)
+  const reporter = createMetadataReporter(report)
+  const { failures, record } = reporter
   const client = sdk.getClient()
   const outcomes = () => {
     try {
@@ -86,5 +88,14 @@ export function observeTransport(sdk, report) {
     )
     return request
   }
-  return failures
+  return reporter
+}
+
+/** A successor document cannot attest the destroyed observer's terminal state. */
+export function diagnosticSnapshot(
+  documentId,
+  reporter = globalThis.__diagnosticReport,
+) {
+  if (!reporter || reporter.documentId !== documentId) return null
+  return { documentId, failures: [...reporter.failures] }
 }

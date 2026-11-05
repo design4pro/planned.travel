@@ -68,7 +68,7 @@ race timing differ.
 - Affected WebKit settled-document 1: diagnostic `c5e08d258ee14155a4744cbfb3c32f75` arrived 204.
   Pageload `e9d3e18097d449b78fcb7460c76175f5`, approximately 205402 serialized characters,
   rejected with TypeError; network_error was recorded and no matching collector receipt exists.
-- Affected early-document 2: pageload `a 84840d8aa62430b84fb49a0d0436f7b` rejected, but its
+- Affected early-document 2: pageload (exact ID unavailable: the recorded identifier contains a transcription error) rejected, but its
   204944-byte body arrived and the server completed 204. This is response failure, not proven loss.
 - Current settled-document 1/2: pageloads `0df8aa335016446ead38e1d7500050ec` (234249 characters)
   and `3204897f1c9940819c7f01d78b9bc4c1` (234269) rejected; neither has a receipt. Both selected
@@ -150,3 +150,20 @@ covered 14615 tests as detailed above. Generated-file check passed with no drift
 production build passed. Source-map uploads were disabled. Final targeted tests pass 9/9, explicit
 Node/browser no-undef check passes, and staged diff whitespace checks pass. No runtime regression
 is fixed: the diagnostic WebKit failures above are expected evidence, not a passing repair test.
+
+## Recovery review limitations
+
+Independent review found that the original full-app probe read reporting failures from the
+successor document. Historical claims of zero original-document reporting failures are therefore
+unverified; collector guard counts remain separate evidence. Reporters now include document
+identity, pre-navigation failure snapshots and a nullable terminal snapshot. Document replacement
+makes the old observer terminal state unknown; a successor's empty array never proves it clean.
+The invalid early-document identifier above is not reconstructed by guessing: original scratch
+metadata is unavailable in recovery. Its receipt/response observation remains inherited evidence,
+not a newly verified identity join. Runtime acceptance remains unmet.
+
+Recovery validation: document-scoped collector/observer tests pass 11/11. A synthetic real-browser
+check in Chromium and WebKit rejects the original document's reporting binding, retains that
+failure in the snapshot, preserves identity across SPA history navigation, and returns unknown
+for the original observer after document replacement. This checks diagnostic accounting, not
+Sentry lifecycle delivery. Typecheck and lint pass (six existing shadow warnings).
