@@ -148,6 +148,7 @@ export interface DashboardPayload {
     readonly candidates: ReadonlyArray<MascotCandidate>
     readonly partial: boolean
     readonly nowMs: number
+    readonly elapsedMs?: number
   }
   readonly today: string
   readonly upNext: TripCard | null

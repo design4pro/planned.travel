@@ -564,6 +564,7 @@ it('rejects a notification that expires before a delayed response arrives', () =
         reservations={[]}
         candidates={[candidate]}
         nowMs={nowMs}
+        elapsedMs={2000}
         today="2026-01-08"
         userId="user"
         workspaceId="workspace"
@@ -580,7 +581,7 @@ it('rejects a notification that expires before a delayed response arrives', () =
 it('removes a focused notification when a delayed refresh arrives after expiry', () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
-  const view = () => (
+  const view = (elapsedMs = 0) => (
     <I18nProvider
       locale="en"
       messages={{
@@ -601,6 +602,7 @@ it('removes a focused notification when a delayed refresh arrives after expiry',
           },
         ]}
         nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        elapsedMs={elapsedMs}
         today="2026-01-08"
         userId="user"
         workspaceId="workspace"
@@ -611,9 +613,50 @@ it('removes a focused notification when a delayed refresh arrives after expiry',
   const page = render(view())
   screen.getByRole('link', { name: 'Open notifications' }).focus()
   vi.setSystemTime(new Date('2026-01-08T12:00:02Z'))
-  page.rerender(view())
+  page.rerender(view(2000))
   expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
   expect(document.activeElement).toBe(
     screen.getByRole('button', { name: 'Open travel chat' }),
   )
 })
+
+it.each(['2026-01-07T12:00:00Z', '2026-01-09T12:00:00Z'])(
+  'uses elapsed time from the server snapshot when the device clock is %s',
+  async (clientTime) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(clientTime))
+    render(
+      <I18nProvider
+        locale="en"
+        messages={{
+          ...namespaceCatalogue('shell', Shell),
+          ...namespaceCatalogue('ui', Ui),
+        }}
+      >
+        <DashboardMascot
+          trip={null}
+          trips={[]}
+          reservations={[]}
+          candidates={[
+            {
+              source: 'notification',
+              id: 'n',
+              occurrence: '2026-01-01T12:00:01Z',
+              action: false,
+            },
+          ]}
+          nowMs={Date.parse('2026-01-08T12:00:00Z')}
+          today="2026-01-08"
+          userId="user"
+          workspaceId="workspace"
+          onRefresh={refresh}
+        />
+      </I18nProvider>,
+    )
+    expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2001)
+    })
+    expect(screen.queryByText('A notification is waiting.')).toBeNull()
+  },
+)

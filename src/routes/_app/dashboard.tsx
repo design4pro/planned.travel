@@ -120,6 +120,7 @@ export const Route = createFileRoute('/_app/dashboard')({
       fetch: workspaceSwitchFetch(context.workspaceTransition),
       signal: abortController.signal,
     }
+    const started = performance.now()
     const [dashboard, mascot] = await Promise.all([
       loadDashboard(options),
       loadDashboardMascot(options).catch(() => ({
@@ -128,7 +129,13 @@ export const Route = createFileRoute('/_app/dashboard')({
         nowMs: Date.now(),
       })),
     ])
-    return { ...dashboard, mascot }
+    return {
+      ...dashboard,
+      mascot: {
+        ...mascot,
+        elapsedMs: Math.max(0, performance.now() - started),
+      },
+    }
   },
   pendingComponent: DashboardPending,
   errorComponent: DashboardError,
@@ -278,6 +285,7 @@ function UpNext({
         reservations={mascotReservations}
         candidates={data.mascot?.candidates}
         nowMs={data.mascot?.nowMs}
+        elapsedMs={data.mascot?.elapsedMs}
         partial={data.mascot?.partial}
         onRefresh={onRefresh}
         reduceMotion={reduceMotion}
