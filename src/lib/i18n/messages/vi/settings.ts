@@ -80,6 +80,8 @@ const messages = {
   'nav.notifications.hint': 'Hộp thư, email và thiết bị',
   'nav.workspace': 'Không gian làm việc',
   'nav.workspace.hint': 'Thành viên và thiết lập chung',
+  'nav.admin': 'Bảng điều khiển không gian làm việc',
+  'nav.admin.hint': 'Thành viên, lời mời và hoạt động gần đây',
   'nav.billing': 'Thanh toán',
   'nav.billing.hint': 'Gói, chỗ ngồi và hóa đơn',
 

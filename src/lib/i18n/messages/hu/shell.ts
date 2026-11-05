@@ -355,6 +355,12 @@ const messages = {
   'admin.denied.body':
     'Ha szükséges, kérje meg a munkaterület tulajdonosát vagy egy adminját, hogy módosítsa a szerepkörét.',
   'admin.denied.action': 'Vissza az irányítópultra',
+  'admin.nav.label': 'Munkaterület kezelése',
+  'admin.nav.overview': 'Áttekintés',
+  'admin.nav.members': 'Tagok',
+  'admin.nav.audit': 'Napló',
+  'admin.members.error': 'A tagok betöltése nem sikerült',
+  'admin.audit.error': 'A legutóbbi tevékenység betöltése nem sikerült',
   'admin.eyebrow': 'Munkaterület-konzol',
   'admin.description': '{plan} csomag · létrehozva {date}',
   'admin.createdUnknown': 'nemrég',
@@ -378,8 +384,8 @@ const messages = {
   'admin.stat.storageUnit': '{limit} keretből',
   'admin.stat.storageUnlimited': 'nincs korlát',
   'admin.stat.storageCaption': 'Fájlok, fotók és exportok',
-  'admin.stat.audit': 'Naplóbejegyzések',
-  'admin.stat.auditCaption': 'A legutóbbi tevékenység lentebb látszik',
+  'admin.stat.audit': 'Legutóbbi naplóbejegyzések',
+  'admin.stat.auditCaption': 'Legfeljebb 25 legutóbbi bejegyzés a naplóban',
   'admin.stat.plan': 'Csomag',
   'admin.stat.planCaption': 'A korlátok az adattár határán érvényesülnek',
 

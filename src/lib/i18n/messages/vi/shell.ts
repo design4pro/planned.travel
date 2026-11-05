@@ -327,6 +327,12 @@ const messages = {
   'admin.denied.body':
     'Nhờ chủ sở hữu hoặc quản trị viên đổi vai trò của bạn nếu bạn thật sự cần.',
   'admin.denied.action': 'Về bảng điều khiển',
+  'admin.nav.label': 'Quản trị không gian làm việc',
+  'admin.nav.overview': 'Tổng quan',
+  'admin.nav.members': 'Thành viên',
+  'admin.nav.audit': 'Kiểm toán',
+  'admin.members.error': 'Không tải được thành viên',
+  'admin.audit.error': 'Không tải được hoạt động gần đây',
   'admin.eyebrow': 'Bảng quản trị không gian làm việc',
   'admin.description': 'Gói {plan} · tạo ngày {date}',
   'admin.createdUnknown': 'gần đây',
@@ -344,8 +350,8 @@ const messages = {
   'admin.stat.storageUnit': 'trên {limit}',
   'admin.stat.storageUnlimited': 'không giới hạn',
   'admin.stat.storageCaption': 'Tệp, ảnh và bản xuất',
-  'admin.stat.audit': 'Mục nhật ký',
-  'admin.stat.auditCaption': 'Hoạt động mới nhất hiện ở bên dưới',
+  'admin.stat.audit': 'Bản ghi kiểm toán gần đây',
+  'admin.stat.auditCaption': 'Tối đa 25 bản ghi mới nhất trong Kiểm toán',
   'admin.stat.plan': 'Gói',
   'admin.stat.planCaption': 'Hạn mức được áp ngay tại tầng dữ liệu',
 

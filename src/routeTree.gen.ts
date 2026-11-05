@@ -18,7 +18,7 @@ import { Route as authRegisterRouteImport } from './routes/(auth)/register'
 import { Route as authResetPasswordRouteImport } from './routes/(auth)/reset-password'
 import { Route as authTwoFactorRouteImport } from './routes/(auth)/two-factor'
 import { Route as authVerifyEmailRouteImport } from './routes/(auth)/verify-email'
-import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppAdminRouteRouteImport } from './routes/_app/admin/route'
 import { Route as AppAtlasRouteImport } from './routes/_app/atlas'
 import { Route as AppConsoleRouteRouteImport } from './routes/_app/console/route'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -31,6 +31,9 @@ import { Route as JoinTokenRouteImport } from './routes/join/$token'
 import { Route as LegalPrivacyRouteImport } from './routes/legal/privacy'
 import { Route as LegalTermsRouteImport } from './routes/legal/terms'
 import { Route as authAcceptInvitationInvitationIdRouteImport } from './routes/(auth)/accept-invitation.$invitationId'
+import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as AppAdminAuditRouteImport } from './routes/_app/admin/audit'
+import { Route as AppAdminMembersRouteImport } from './routes/_app/admin/members'
 import { Route as AppCollectionsIndexRouteImport } from './routes/_app/collections/index'
 import { Route as AppCollectionsCollectionIdRouteImport } from './routes/_app/collections/$collectionId'
 import { Route as AppConsoleIndexRouteImport } from './routes/_app/console/index'
@@ -113,7 +116,7 @@ const authVerifyEmailRoute = authVerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
+const AppAdminRouteRoute = AppAdminRouteRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => AppRouteRoute,
@@ -180,6 +183,21 @@ const authAcceptInvitationInvitationIdRoute =
     path: '/accept-invitation/$invitationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAdminRouteRoute,
+} as any)
+const AppAdminAuditRoute = AppAdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppAdminRouteRoute,
+} as any)
+const AppAdminMembersRoute = AppAdminMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => AppAdminRouteRoute,
+} as any)
 const AppCollectionsIndexRoute = AppCollectionsIndexRouteImport.update({
   id: '/collections/',
   path: '/collections/',
@@ -372,6 +390,7 @@ const ApiTripsTripIdCoverRoute = ApiTripsTripIdCoverRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/pricing': typeof PricingRoute
+  '/admin': typeof AppAdminRouteRouteWithChildren
   '/console': typeof AppConsoleRouteRouteWithChildren
   '/settings': typeof AppSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
@@ -380,7 +399,6 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof authResetPasswordRoute
   '/two-factor': typeof authTwoFactorRoute
   '/verify-email': typeof authVerifyEmailRoute
-  '/admin': typeof AppAdminRoute
   '/atlas': typeof AppAtlasRoute
   '/dashboard': typeof AppDashboardRoute
   '/notifications': typeof AppNotificationsRoute
@@ -392,6 +410,8 @@ export interface FileRoutesByFullPath {
   '/legal/terms': typeof LegalTermsRoute
   '/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/members': typeof AppAdminMembersRoute
   '/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
   '/console/providers': typeof AppConsoleProvidersRoute
   '/console/sandcastle': typeof AppConsoleSandcastleRoute
@@ -411,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
+  '/admin/': typeof AppAdminIndexRoute
   '/collections/': typeof AppCollectionsIndexRoute
   '/console/': typeof AppConsoleIndexRoute
   '/journey/': typeof AppJourneyIndexRoute
@@ -438,7 +459,6 @@ export interface FileRoutesByTo {
   '/reset-password': typeof authResetPasswordRoute
   '/two-factor': typeof authTwoFactorRoute
   '/verify-email': typeof authVerifyEmailRoute
-  '/admin': typeof AppAdminRoute
   '/atlas': typeof AppAtlasRoute
   '/dashboard': typeof AppDashboardRoute
   '/notifications': typeof AppNotificationsRoute
@@ -449,6 +469,8 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
+  '/admin/audit': typeof AppAdminAuditRoute
+  '/admin/members': typeof AppAdminMembersRoute
   '/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
   '/console/providers': typeof AppConsoleProvidersRoute
   '/console/sandcastle': typeof AppConsoleSandcastleRoute
@@ -467,6 +489,7 @@ export interface FileRoutesByTo {
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
+  '/admin': typeof AppAdminIndexRoute
   '/collections': typeof AppCollectionsIndexRoute
   '/console': typeof AppConsoleIndexRoute
   '/journey': typeof AppJourneyIndexRoute
@@ -490,6 +513,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteRouteWithChildren
   '/pricing': typeof PricingRoute
+  '/_app/admin': typeof AppAdminRouteRouteWithChildren
   '/_app/console': typeof AppConsoleRouteRouteWithChildren
   '/_app/settings': typeof AppSettingsRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -498,7 +522,6 @@ export interface FileRoutesById {
   '/(auth)/reset-password': typeof authResetPasswordRoute
   '/(auth)/two-factor': typeof authTwoFactorRoute
   '/(auth)/verify-email': typeof authVerifyEmailRoute
-  '/_app/admin': typeof AppAdminRoute
   '/_app/atlas': typeof AppAtlasRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/notifications': typeof AppNotificationsRoute
@@ -510,6 +533,8 @@ export interface FileRoutesById {
   '/legal/terms': typeof LegalTermsRoute
   '/_app/trips/$tripId': typeof AppTripsTripIdRouteRouteWithChildren
   '/(auth)/accept-invitation/$invitationId': typeof authAcceptInvitationInvitationIdRoute
+  '/_app/admin/audit': typeof AppAdminAuditRoute
+  '/_app/admin/members': typeof AppAdminMembersRoute
   '/_app/collections/$collectionId': typeof AppCollectionsCollectionIdRoute
   '/_app/console/providers': typeof AppConsoleProvidersRoute
   '/_app/console/sandcastle': typeof AppConsoleSandcastleRoute
@@ -529,6 +554,7 @@ export interface FileRoutesById {
   '/api/sandcastle/$': typeof ApiSandcastleSplatRoute
   '/api/tiles/$': typeof ApiTilesSplatRoute
   '/api/trip-room/$tripId': typeof ApiTripRoomTripIdRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/collections/': typeof AppCollectionsIndexRoute
   '/_app/console/': typeof AppConsoleIndexRoute
   '/_app/journey/': typeof AppJourneyIndexRoute
@@ -552,6 +578,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/pricing'
+    | '/admin'
     | '/console'
     | '/settings'
     | '/forgot-password'
@@ -560,7 +587,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/two-factor'
     | '/verify-email'
-    | '/admin'
     | '/atlas'
     | '/dashboard'
     | '/notifications'
@@ -572,6 +598,8 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/trips/$tripId'
     | '/accept-invitation/$invitationId'
+    | '/admin/audit'
+    | '/admin/members'
     | '/collections/$collectionId'
     | '/console/providers'
     | '/console/sandcastle'
@@ -591,6 +619,7 @@ export interface FileRouteTypes {
     | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
+    | '/admin/'
     | '/collections/'
     | '/console/'
     | '/journey/'
@@ -618,7 +647,6 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/two-factor'
     | '/verify-email'
-    | '/admin'
     | '/atlas'
     | '/dashboard'
     | '/notifications'
@@ -629,6 +657,8 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/accept-invitation/$invitationId'
+    | '/admin/audit'
+    | '/admin/members'
     | '/collections/$collectionId'
     | '/console/providers'
     | '/console/sandcastle'
@@ -647,6 +677,7 @@ export interface FileRouteTypes {
     | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
+    | '/admin'
     | '/collections'
     | '/console'
     | '/journey'
@@ -669,6 +700,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/pricing'
+    | '/_app/admin'
     | '/_app/console'
     | '/_app/settings'
     | '/(auth)/forgot-password'
@@ -677,7 +709,6 @@ export interface FileRouteTypes {
     | '/(auth)/reset-password'
     | '/(auth)/two-factor'
     | '/(auth)/verify-email'
-    | '/_app/admin'
     | '/_app/atlas'
     | '/_app/dashboard'
     | '/_app/notifications'
@@ -689,6 +720,8 @@ export interface FileRouteTypes {
     | '/legal/terms'
     | '/_app/trips/$tripId'
     | '/(auth)/accept-invitation/$invitationId'
+    | '/_app/admin/audit'
+    | '/_app/admin/members'
     | '/_app/collections/$collectionId'
     | '/_app/console/providers'
     | '/_app/console/sandcastle'
@@ -708,6 +741,7 @@ export interface FileRouteTypes {
     | '/api/sandcastle/$'
     | '/api/tiles/$'
     | '/api/trip-room/$tripId'
+    | '/_app/admin/'
     | '/_app/collections/'
     | '/_app/console/'
     | '/_app/journey/'
@@ -821,7 +855,7 @@ declare module '@tanstack/react-router' {
       id: '/_app/admin'
       path: '/admin'
       fullPath: '/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
+      preLoaderRoute: typeof AppAdminRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/atlas': {
@@ -907,6 +941,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/accept-invitation/$invitationId'
       preLoaderRoute: typeof authAcceptInvitationInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppAdminRouteRoute
+    }
+    '/_app/admin/audit': {
+      id: '/_app/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AppAdminAuditRouteImport
+      parentRoute: typeof AppAdminRouteRoute
+    }
+    '/_app/admin/members': {
+      id: '/_app/admin/members'
+      path: '/members'
+      fullPath: '/admin/members'
+      preLoaderRoute: typeof AppAdminMembersRouteImport
+      parentRoute: typeof AppAdminRouteRoute
     }
     '/_app/collections/': {
       id: '/_app/collections/'
@@ -1170,6 +1225,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppAdminRouteRouteChildren {
+  AppAdminAuditRoute: typeof AppAdminAuditRoute
+  AppAdminMembersRoute: typeof AppAdminMembersRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
+}
+
+const AppAdminRouteRouteChildren: AppAdminRouteRouteChildren = {
+  AppAdminAuditRoute: AppAdminAuditRoute,
+  AppAdminMembersRoute: AppAdminMembersRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
+}
+
+const AppAdminRouteRouteWithChildren = AppAdminRouteRoute._addFileChildren(
+  AppAdminRouteRouteChildren,
+)
+
 interface AppConsoleUsersRouteChildren {
   AppConsoleUsersUserIdRoute: typeof AppConsoleUsersUserIdRoute
   AppConsoleUsersIndexRoute: typeof AppConsoleUsersIndexRoute
@@ -1255,9 +1326,9 @@ const AppTripsTripIdRouteRouteWithChildren =
   AppTripsTripIdRouteRoute._addFileChildren(AppTripsTripIdRouteRouteChildren)
 
 interface AppRouteRouteChildren {
+  AppAdminRouteRoute: typeof AppAdminRouteRouteWithChildren
   AppConsoleRouteRoute: typeof AppConsoleRouteRouteWithChildren
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
-  AppAdminRoute: typeof AppAdminRoute
   AppAtlasRoute: typeof AppAtlasRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppNotificationsRoute: typeof AppNotificationsRoute
@@ -1272,9 +1343,9 @@ interface AppRouteRouteChildren {
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppAdminRouteRoute: AppAdminRouteRouteWithChildren,
   AppConsoleRouteRoute: AppConsoleRouteRouteWithChildren,
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
-  AppAdminRoute: AppAdminRoute,
   AppAtlasRoute: AppAtlasRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppNotificationsRoute: AppNotificationsRoute,
