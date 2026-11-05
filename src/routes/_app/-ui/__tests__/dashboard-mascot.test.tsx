@@ -1054,3 +1054,40 @@ it('preserves a pending live-clock boundary across a rerender after midnight', a
   })
   expect(onRefresh).toHaveBeenCalledTimes(2)
 })
+
+it('restores keyboard focus after a successful retry and announces changed status', async () => {
+  const onRefresh = vi.fn(async () => true)
+  const view = (partial: boolean) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+        partial={partial}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(true))
+  const status = screen.getByRole('status')
+  expect(status.textContent).toContain('Some suggestions could not be loaded.')
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  retry.focus()
+  fireEvent.click(retry)
+  expect(onRefresh).toHaveBeenCalledOnce()
+  page.rerender(view(false))
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+  expect(status.textContent).toContain('No suggestions right now.')
+})

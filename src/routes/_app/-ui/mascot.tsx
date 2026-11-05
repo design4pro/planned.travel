@@ -61,6 +61,13 @@ export function Mascot({
   const [visible, setVisible] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const promptFocused = useRef(false)
+  const retryFocused = useRef(false)
+  useLayoutEffect(() => {
+    if (!partial && retryFocused.current) {
+      retryFocused.current = false
+      trigger.current?.focus()
+    }
+  }, [partial])
   useEffect(() => {
     if (!prompt && promptFocused.current) {
       promptFocused.current = false
@@ -322,6 +329,14 @@ export function Mascot({
         </button>
       ) : null}
       <div className="min-h-48 ps-32 sm:min-h-36">
+        <p role="status" aria-live="polite">
+          {prompt && promptDetails ? <span>{promptText}</span> : null}
+          {showEmpty ? <span>{t('shell.dashboard.mascot.empty')}</span> : null}
+          {partial && prompt && promptDetails ? ' ' : null}
+          {partial ? (
+            <span>{t('shell.dashboard.mascot.sourceUnavailable')}</span>
+          ) : null}
+        </p>
         {prompt ? (
           <div
             className="basis-full"
@@ -336,7 +351,6 @@ export function Mascot({
               }
             }}
           >
-            {promptDetails ? <p>{promptText}</p> : null}
             <a
               className="inline-flex min-h-11 min-w-11 scroll-mb-32 items-center underline focus-visible:outline-2 focus-visible:outline-offset-2"
               onFocus={(event) => revealFocusedControl(event.currentTarget)}
@@ -355,11 +369,18 @@ export function Mascot({
           </div>
         ) : null}
       </div>
-      {showEmpty ? <p>{t('shell.dashboard.mascot.empty')}</p> : null}
       {partial ? (
         <div>
-          <p>{t('shell.dashboard.mascot.sourceUnavailable')}</p>
-          <button type="button" onClick={() => void onRetry?.()}>
+          <button
+            type="button"
+            onFocus={() => {
+              retryFocused.current = true
+            }}
+            onBlur={() => {
+              retryFocused.current = false
+            }}
+            onClick={() => void onRetry?.()}
+          >
             {t('shell.dashboard.mascot.retry')}
           </button>
         </div>
