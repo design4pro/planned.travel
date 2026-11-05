@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
 import { DashboardMascot } from './-ui/dashboard-mascot'
-import { DashboardRefreshError } from './-ui/dashboard-refresh-error'
+import {
+  DashboardRefreshError,
+  DashboardRefreshErrorPanel,
+} from './-ui/dashboard-refresh-error'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ArrowUpRight,
@@ -162,6 +165,7 @@ function DashboardPage() {
       })
       if (!next) return false
       setRefreshed({ initial, data: next })
+      setRefreshFailure(null)
       return true
     } catch (error) {
       setRefreshFailure({ initial, error })
@@ -175,7 +179,15 @@ function DashboardPage() {
   })
   const widgets = useDashboardWidgets()
   const inSheet = useWidgetsInSheet()
-  if (refreshFailure?.initial === initial) throw refreshFailure.error
+  if (refreshFailure?.initial === initial)
+    return (
+      <AppFrame>
+        <DashboardRefreshErrorPanel
+          error={refreshFailure.error}
+          onRetry={refreshMascot}
+        />
+      </AppFrame>
+    )
 
   /**
    * What each widget draws. Built as a table rather than as a chain of

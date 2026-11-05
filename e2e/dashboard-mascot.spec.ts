@@ -49,14 +49,9 @@ test('dashboard refresh failure focuses recovery and retry rechecks access', asy
   const error = page.getByRole('group', { name: 'The dashboard did not load' })
   await expect(error).toBeFocused()
   const retry = error.getByRole('button', { name: 'Try again' })
-  const firstError = await error.elementHandle()
-  expect(firstError).not.toBeNull()
   await retry.focus()
   await page.keyboard.press('Enter')
   await expect.poll(() => attempts).toBeGreaterThanOrEqual(2)
-  await expect
-    .poll(() => firstError?.evaluate((node) => node.isConnected))
-    .toBe(false)
   await expect(error).toBeFocused()
   blocked = false
   await retry.focus()
@@ -64,6 +59,98 @@ test('dashboard refresh failure focuses recovery and retry rechecks access', asy
   await expect(
     page.getByRole('button', { name: 'Open travel chat' }),
   ).toBeFocused()
+})
+
+test('a delayed failed retry does not take focus back from the shell', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useSession(context, page, baseURL)
+  await page.goto('/dashboard')
+  await expect(
+    page.getByRole('button', { name: 'Open travel chat' }),
+  ).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  let attempts = 0
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (
+      callsServerFn(url, 'loadDashboard') &&
+      !callsServerFn(url, 'loadDashboardMascot')
+    ) {
+      attempts += 1
+      if (attempts > 1) await held
+      await route.abort('failed')
+      return
+    }
+    await route.continue()
+  })
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  )
+  const error = page.getByRole('group', { name: 'The dashboard did not load' })
+  await expect(error).toBeFocused()
+  await error.getByRole('button', { name: 'Try again' }).focus()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => attempts).toBeGreaterThanOrEqual(2)
+  const theme = page.getByRole('button', { name: /^Theme:/ })
+  await theme.focus()
+  release()
+  await page.waitForLoadState('networkidle')
+  await expect(error).toBeVisible()
+  await expect(theme).toBeFocused()
+})
+
+test('a delayed successful retry respects a click outside recovery', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useSession(context, page, baseURL)
+  await page.goto('/dashboard')
+  await expect(
+    page.getByRole('button', { name: 'Open travel chat' }),
+  ).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  let attempts = 0
+  let release = () => {}
+  const held = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (
+      callsServerFn(url, 'loadDashboard') &&
+      !callsServerFn(url, 'loadDashboardMascot')
+    ) {
+      attempts += 1
+      if (attempts === 1) {
+        await route.abort('failed')
+        return
+      }
+      await held
+    }
+    await route.continue()
+  })
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  )
+  const error = page.getByRole('group', { name: 'The dashboard did not load' })
+  await expect(error).toBeFocused()
+  await error.getByRole('button', { name: 'Try again' }).focus()
+  await page.keyboard.press('Enter')
+  await expect.poll(() => attempts).toBeGreaterThanOrEqual(2)
+  await page.getByRole('banner').click({ position: { x: 4, y: 4 } })
+  release()
+  const chat = page.getByRole('button', { name: 'Open travel chat' })
+  await expect(chat).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  await expect(chat).not.toBeFocused()
 })
 
 test('dashboard chat and layout remain usable on small screens', async ({
