@@ -363,6 +363,12 @@ const messages = {
   'admin.denied.body':
     'Se precisar, peça a um proprietário ou a um administrador deste espaço para mudar seu papel.',
   'admin.denied.action': 'Voltar ao painel',
+  'admin.nav.label': 'Administração do espaço de trabalho',
+  'admin.nav.overview': 'Visão geral',
+  'admin.nav.members': 'Membros',
+  'admin.nav.audit': 'Auditoria',
+  'admin.members.error': 'Não foi possível carregar os membros',
+  'admin.audit.error': 'Não foi possível carregar a atividade recente',
   'admin.eyebrow': 'Console do espaço',
   'admin.description': 'Plano {plan} · criado em {date}',
   'admin.createdUnknown': 'há pouco',
@@ -388,8 +394,8 @@ const messages = {
   'admin.stat.storageUnit': 'de {limit}',
   'admin.stat.storageUnlimited': 'sem teto',
   'admin.stat.storageCaption': 'Arquivos, fotos e exportações',
-  'admin.stat.audit': 'Registros de auditoria',
-  'admin.stat.auditCaption': 'A atividade mais recente está logo abaixo',
+  'admin.stat.audit': 'Entradas recentes de auditoria',
+  'admin.stat.auditCaption': 'Até 25 entradas mais recentes em Auditoria',
   'admin.stat.plan': 'Plano',
   'admin.stat.planCaption': 'As cotas são aplicadas na camada de dados',
 

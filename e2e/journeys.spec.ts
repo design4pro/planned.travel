@@ -243,6 +243,87 @@ test('the reset-link actions stack inside the panel', async ({
  * database is a missing fixture, not a design regression, and turning it into a red gate would block
  * the sandcastle loop on something no change to the product can fix.
  */
+test.describe('workspace console rooms', () => {
+  test('deep links, room navigation and history retain the workspace console', async ({
+    context,
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000)
+    await useSession(context, page, baseURL)
+    expect(await hasSession(page)).toBe(true)
+    const route: RouteCase = {
+      name: 'workspace-console',
+      path: '/admin/members',
+      ready: 'main',
+    }
+    const watched = watchConsole(page, route)
+    await visit(page, route, 'light')
+    const nav = page.getByRole('navigation', {
+      name: 'Workspace administration',
+    })
+    await expect(nav.getByRole('link', { name: 'Members' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(page.locator('#workspace-console-room > h2')).toBeVisible()
+    await page.reload()
+    await settle(page, route)
+    await expect(page.locator('#workspace-console-room > h2')).toBeVisible()
+    const role = page.getByRole('combobox', { name: 'Role of Mika Tanaka' })
+    await expect(role).toContainText('Admin')
+    try {
+      await role.click()
+      await page.getByRole('option', { name: 'Member', exact: true }).click()
+      await expect(role).toContainText('Member')
+      await expect(role).toBeFocused()
+    } finally {
+      if ((await role.textContent())?.includes('Member')) {
+        await role.click()
+        await page.getByRole('option', { name: 'Admin', exact: true }).click()
+        await expect(role).toContainText('Admin')
+      }
+    }
+    await nav.getByRole('link', { name: 'Audit', exact: true }).click()
+    await expect(page).toHaveURL(/\/admin\/audit$/)
+    await expect(page.locator('#workspace-console-room')).toBeFocused()
+    await expect(
+      page.getByRole('heading', { name: 'Audit', exact: true }),
+    ).toBeVisible()
+    await page.goBack()
+    await expect(page).toHaveURL(/\/admin\/members$/)
+    await expect(page.locator('#workspace-console-room')).toBeFocused()
+    await page.goForward()
+    await expect(page).toHaveURL(/\/admin\/audit$/)
+    try {
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await page
+        .getByRole('menuitemradio', { name: 'Wolak Family Trips' })
+        .click()
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await page.goto('/admin/members')
+      await settle(page, route)
+      await expect(
+        page.getByRole('heading', { name: 'Wolak Family Trips' }),
+      ).toBeVisible()
+      await expect(page.getByText('mika@planned.travel')).toHaveCount(0)
+    } finally {
+      await page.getByRole('button', { name: 'Account menu' }).click()
+      await page.getByRole('menuitemradio', { name: "Rafal's Travel" }).click()
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await page.goto('/admin/audit')
+      await settle(page, { ...route, path: '/admin/audit' })
+      await expect(
+        page.getByRole('heading', { name: "Rafal's Travel" }),
+      ).toBeVisible()
+    }
+    await nav.getByRole('link', { name: 'Overview' }).click()
+    await expect(page).toHaveURL(/\/admin$/)
+    await expect(page.getByText('Recent audit entries')).toBeVisible()
+    expect(watched().fatal).toEqual([])
+  })
+})
+
 test.describe('authenticated routes', () => {
   test.beforeEach(async ({ context, page, baseURL }) => {
     await useSession(context, page, baseURL)

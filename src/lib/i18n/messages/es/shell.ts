@@ -367,6 +367,12 @@ const messages = {
   'admin.denied.body':
     'Si lo necesitas, pide a un propietario o a un administrador de este espacio que cambie tu rol.',
   'admin.denied.action': 'Volver al panel',
+  'admin.nav.label': 'Administración del espacio de trabajo',
+  'admin.nav.overview': 'Resumen',
+  'admin.nav.members': 'Miembros',
+  'admin.nav.audit': 'Auditoría',
+  'admin.members.error': 'No se cargaron los miembros',
+  'admin.audit.error': 'No se cargó la actividad reciente',
   'admin.eyebrow': 'Consola del espacio',
   'admin.description': 'Plan {plan} · creado el {date}',
   'admin.createdUnknown': 'hace poco',
@@ -392,8 +398,8 @@ const messages = {
   'admin.stat.storageUnit': 'de {limit}',
   'admin.stat.storageUnlimited': 'sin tope',
   'admin.stat.storageCaption': 'Archivos, fotos y exportaciones',
-  'admin.stat.audit': 'Registros de auditoría',
-  'admin.stat.auditCaption': 'Debajo tienes la actividad más reciente',
+  'admin.stat.audit': 'Entradas recientes de auditoría',
+  'admin.stat.auditCaption': 'Hasta 25 entradas más recientes en Auditoría',
   'admin.stat.plan': 'Plan contratado',
   'admin.stat.planCaption': 'Las cuotas se aplican en la capa de datos',
 

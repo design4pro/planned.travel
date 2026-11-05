@@ -147,7 +147,13 @@ export function SettingsNav() {
         ))}
         {shell.session.user.isAdmin ? (
           <li className="shrink-0 border-s border-edge-faint ps-2 lg:mt-2 lg:border-s-0 lg:border-t lg:ps-0 lg:pt-2">
-            <Link to="/admin" className={ITEM_CLASS}><ShieldCheck aria-hidden className={ICON_CLASS} /><ItemBody label={t('settings.nav.admin')} description={t('settings.nav.admin.hint')} /></Link>
+            <Link to="/admin" className={ITEM_CLASS}>
+              <ShieldCheck aria-hidden className={ICON_CLASS} />
+              <ItemBody
+                label={t('settings.nav.admin')}
+                description={t('settings.nav.admin.hint')}
+              />
+            </Link>
           </li>
         ) : null}
       </ul>

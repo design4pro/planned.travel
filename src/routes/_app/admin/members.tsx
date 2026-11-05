@@ -13,7 +13,19 @@ function Room() {
   const data = AdminRoute.useLoaderData()
   const t = useTranslate()
   if (data === null) return null
-  return <section id="workspace-console-room" tabIndex={-1} aria-label={t('shell.admin.nav.members')}><h2 className="mb-4 font-display text-subtitle font-bold">{t('shell.admin.nav.members')}</h2><ConsolePanels data={data} room="members" /></section>
+  return (
+    <section
+      id="workspace-console-room"
+      tabIndex={-1}
+      className="flex min-w-0 flex-col gap-6"
+      aria-label={t('shell.admin.nav.members')}
+    >
+      <h2 className="font-display text-subtitle font-bold">
+        {t('shell.admin.nav.members')}
+      </h2>
+      <ConsolePanels data={data} room="members" />
+    </section>
+  )
 }
 
 function RoomError({ error }: { error: unknown }) {

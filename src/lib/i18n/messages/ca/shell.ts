@@ -368,6 +368,12 @@ const messages = {
   'admin.denied.body':
     'Si ho necessites, demana a un propietari o a un administrador d’aquest espai que et canviï el rol.',
   'admin.denied.action': 'Torna al tauler',
+  'admin.nav.label': 'Administració de l’espai de treball',
+  'admin.nav.overview': 'Visió general',
+  'admin.nav.members': 'Membres',
+  'admin.nav.audit': 'Auditoria',
+  'admin.members.error': 'No s’han carregat els membres',
+  'admin.audit.error': 'No s’ha carregat l’activitat recent',
   'admin.eyebrow': 'Consola de l’espai',
   'admin.description': 'Pla {plan} · creat {date}',
   'admin.createdUnknown': 'fa poc',
@@ -393,8 +399,8 @@ const messages = {
   'admin.stat.storageUnit': 'de {limit}',
   'admin.stat.storageUnlimited': 'sense sostre',
   'admin.stat.storageCaption': 'Fitxers, fotos i exportacions',
-  'admin.stat.audit': 'Entrades d’auditoria',
-  'admin.stat.auditCaption': 'Aquí sota tens l’activitat més recent',
+  'admin.stat.audit': 'Entrades recents d’auditoria',
+  'admin.stat.auditCaption': 'Fins a 25 entrades més recents a Auditoria',
   'admin.stat.plan': 'Pla',
   'admin.stat.planCaption': 'Les quotes s’apliquen a la capa de dades',
 

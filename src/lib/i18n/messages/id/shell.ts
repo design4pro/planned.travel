@@ -322,6 +322,12 @@ const messages = {
   'admin.denied.body':
     'Minta pemilik atau admin ruang kerja ini mengubah peran Anda kalau memang perlu.',
   'admin.denied.action': 'Kembali ke dasbor',
+  'admin.nav.label': 'Administrasi ruang kerja',
+  'admin.nav.overview': 'Ikhtisar',
+  'admin.nav.members': 'Anggota',
+  'admin.nav.audit': 'Catatan audit',
+  'admin.members.error': 'Anggota gagal dimuat',
+  'admin.audit.error': 'Aktivitas terbaru gagal dimuat',
   'admin.eyebrow': 'Konsol ruang kerja',
   'admin.description': 'Paket {plan} · dibuat {date}',
   'admin.createdUnknown': 'baru-baru ini',
@@ -341,8 +347,8 @@ const messages = {
   'admin.stat.storageUnit': 'dari {limit}',
   'admin.stat.storageUnlimited': 'tanpa batas',
   'admin.stat.storageCaption': 'Berkas, foto dan ekspor',
-  'admin.stat.audit': 'Catatan audit',
-  'admin.stat.auditCaption': 'Aktivitas terbaru ditampilkan di bawah',
+  'admin.stat.audit': 'Entri audit terbaru',
+  'admin.stat.auditCaption': 'Hingga 25 entri terbaru di Audit',
   'admin.stat.plan': 'Paket',
   'admin.stat.planCaption': 'Kuota ditegakkan di batas repositori',
 

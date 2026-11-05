@@ -68,6 +68,8 @@ const messages = {
   'nav.notifications.hint': 'Safata, correu i mòbil',
   'nav.workspace': 'Espai de treball',
   'nav.workspace.hint': 'Membres i valors comuns',
+  'nav.admin': 'Consola de l’espai de treball',
+  'nav.admin.hint': 'Membres, invitacions i activitat recent',
   'nav.billing': 'Facturació',
   'nav.billing.hint': 'Pla, places i factures',
 

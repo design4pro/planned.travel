@@ -62,6 +62,8 @@ const messages = {
   'nav.notifications.hint': 'Gelen kutusu, e-posta ve telefon',
   'nav.workspace': 'Çalışma alanı',
   'nav.workspace.hint': 'Üyeler ve ortak varsayılanlar',
+  'nav.admin': 'Çalışma alanı konsolu',
+  'nav.admin.hint': 'Üyeler, davetler ve son etkinlik',
   'nav.billing': 'Ödeme',
   'nav.billing.hint': 'Paket, koltuklar ve faturalar',
 

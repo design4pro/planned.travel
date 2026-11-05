@@ -63,6 +63,8 @@ const messages = {
   'nav.notifications.hint': 'صندوق الوارد والبريد والهاتف',
   'nav.workspace': 'مساحة العمل',
   'nav.workspace.hint': 'الأعضاء والإعدادات المشتركة',
+  'nav.admin': 'لوحة مساحة العمل',
+  'nav.admin.hint': 'الأعضاء والدعوات والنشاط الأخير',
   'nav.billing': 'الفواتير',
   'nav.billing.hint': 'الخطة والمقاعد والإيصالات',
 

@@ -68,6 +68,8 @@ const messages = {
   'nav.notifications.hint': 'Postvak, mail en telefoon',
   'nav.workspace': 'Werkruimte',
   'nav.workspace.hint': 'Leden en gedeelde standaarden',
+  'nav.admin': 'Werkruimteconsole',
+  'nav.admin.hint': 'Leden, uitnodigingen en recente activiteit',
   'nav.billing': 'Facturering',
   'nav.billing.hint': 'Abonnement, plaatsen en facturen',
 

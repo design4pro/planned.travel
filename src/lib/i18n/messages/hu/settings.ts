@@ -61,6 +61,8 @@ const messages = {
   'nav.notifications.hint': 'Postafiók, e-mail és telefon',
   'nav.workspace': 'Munkaterület',
   'nav.workspace.hint': 'Tagok és közös alapértékek',
+  'nav.admin': 'Munkaterület konzol',
+  'nav.admin.hint': 'Tagok, meghívók és legutóbbi tevékenység',
   'nav.billing': 'Számlázás',
   'nav.billing.hint': 'Csomag, helyek és számlák',
 
