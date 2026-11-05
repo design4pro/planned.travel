@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Locator } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { useSession } from './helpers/session'
 import { callsServerFn } from './helpers/server-fn'
 
@@ -17,7 +17,7 @@ async function expectUnobscured(control: Locator) {
   ).toBe(true)
 }
 
-async function openReadyDashboard(page: import('@playwright/test').Page) {
+async function openReadyDashboard(page: Page) {
   const refreshed = page.waitForResponse((response) => {
     const url = new URL(response.url())
     return (
