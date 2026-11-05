@@ -60,6 +60,7 @@ export function DashboardMascot(props: Props) {
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
     let inFlight = false
+    let pendingBoundary = false
     const refresh = (today: string, now = Date.now()) => {
       const suppressionNow = Date.now()
       let dismissed: ReturnType<typeof readSuppression> = []
@@ -93,9 +94,30 @@ export function DashboardMascot(props: Props) {
       if (!active) return
       inFlight = false
       setInvalid(!valid)
-      if (!valid) setSnapshot(null)
-      else if (props.nowMs === undefined)
-        refresh(new Date().toISOString().slice(0, 10))
+      if (!valid) {
+        setSnapshot(null)
+        pendingBoundary = false
+        if (timer !== undefined) clearTimeout(timer)
+        if (props.nowMs !== undefined)
+          completedBoundary.current = JSON.stringify([
+            props.userId,
+            props.workspaceId,
+            props.nowMs,
+          ])
+      } else {
+        if (props.nowMs === undefined)
+          refresh(new Date().toISOString().slice(0, 10))
+        if (pendingBoundary) {
+          pendingBoundary = false
+          if (props.nowMs !== undefined)
+            completedBoundary.current = JSON.stringify([
+              props.userId,
+              props.workspaceId,
+              props.nowMs,
+            ])
+          void revalidate()
+        }
+      }
     }
     const schedule = () => {
       if (timer !== undefined) clearTimeout(timer)
@@ -125,8 +147,12 @@ export function DashboardMascot(props: Props) {
                 performance.now(),
             )
       timer = setTimeout(() => {
-        if (boundaryKey !== null) completedBoundary.current = boundaryKey
-        void revalidate()
+        if (inFlight) {
+          pendingBoundary = true
+        } else {
+          if (boundaryKey !== null) completedBoundary.current = boundaryKey
+          void revalidate()
+        }
         if (boundaryKey === null) schedule()
       }, delay)
     }

@@ -781,3 +781,151 @@ it('keeps the same rollover deadline when the same snapshot is rendered again', 
   })
   expect(onRefresh).toHaveBeenCalledTimes(2)
 })
+
+it('revalidates the boundary after an in-flight hydration refresh completes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    finish(true)
+    await pending
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
+
+it('cancels the boundary timer when hydration refresh fails', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  const onRefresh = vi.fn(async () => false)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it('schedules the next boundary when an authoritative snapshot changes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  const onRefresh = vi.fn(async () => true)
+  const view = (nowMs: number) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={nowMs}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(Date.parse('2026-01-08T23:59:59Z')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+  page.rerender(view(Date.parse('2026-01-09T23:59:59Z')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(3)
+})
+
+it('does not retry a pending boundary when its in-flight refresh fails', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValue(pending)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+    finish(false)
+    await pending
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
