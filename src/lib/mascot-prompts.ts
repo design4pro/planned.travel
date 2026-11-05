@@ -37,6 +37,7 @@ function localDay(time: number, zone: string): number | null {
 export function selectMascotPrompt(input: {
   today: string
   nowMs: number
+  suppressionNowMs?: number
   candidates: ReadonlyArray<MascotCandidate>
   dismissed: Parameters<typeof isDismissed>[0]
 }): MascotCandidate | null {
@@ -54,7 +55,7 @@ export function selectMascotPrompt(input: {
         candidate.source,
         candidate.id,
         candidate.occurrence,
-        input.nowMs,
+        input.suppressionNowMs ?? input.nowMs,
       )
     )
       return []

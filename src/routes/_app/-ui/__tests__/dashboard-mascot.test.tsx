@@ -499,7 +499,48 @@ it('removes a focused authorized candidate and restores focus after access is re
   )
 })
 
-it('expires a notification while the dashboard stays visible', async () => {
+it('retains the authoritative server snapshot after visibility refresh on a skewed device', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-10T12:00:00Z'))
+  const refreshSnapshot = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-01T12:00:01Z',
+            action: false,
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refreshSnapshot}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  await act(async () => {
+    document.dispatchEvent(new Event('visibilitychange'))
+    await Promise.resolve()
+  })
+  expect(refreshSnapshot).toHaveBeenCalled()
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+})
+
+it('uses a fixed server snapshot until revalidation, even if local time advances', async () => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
   render(
@@ -522,6 +563,7 @@ it('expires a notification while the dashboard stays visible', async () => {
             action: false,
           },
         ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
         today="2026-01-08"
         userId="user"
         workspaceId="workspace"
@@ -529,59 +571,16 @@ it('expires a notification while the dashboard stays visible', async () => {
       />
     </I18nProvider>,
   )
-  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
-  screen.getByRole('link', { name: 'Open notifications' }).focus()
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2001)
   })
-  expect(screen.queryByText('A notification is waiting.')).toBeNull()
-  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
-  expect(document.activeElement).toBe(
-    screen.getByRole('button', { name: 'Open travel chat' }),
-  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
 })
 
-it('rejects a notification that expires before a delayed response arrives', () => {
+it('retains dismissal across dashboard entries when the device clock is behind the server', () => {
   vi.useFakeTimers()
-  vi.setSystemTime(new Date('2026-01-08T12:00:02Z'))
-  const candidate = {
-    source: 'notification' as const,
-    id: 'n',
-    occurrence: '2026-01-01T12:00:01Z',
-    action: false,
-  }
-  const view = (nowMs: number) => (
-    <I18nProvider
-      locale="en"
-      messages={{
-        ...namespaceCatalogue('shell', Shell),
-        ...namespaceCatalogue('ui', Ui),
-      }}
-    >
-      <DashboardMascot
-        trip={null}
-        trips={[]}
-        reservations={[]}
-        candidates={[candidate]}
-        nowMs={nowMs}
-        elapsedMs={2000}
-        today="2026-01-08"
-        userId="user"
-        workspaceId="workspace"
-        onRefresh={refresh}
-      />
-    </I18nProvider>
-  )
-  const page = render(view(Date.parse('2026-01-08T12:00:00Z')))
-  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
-  page.rerender(view(Date.parse('2026-01-08T12:00:00Z')))
-  expect(screen.queryByText('A notification is waiting.')).toBeNull()
-})
-
-it('removes a focused notification when a delayed refresh arrives after expiry', () => {
-  vi.useFakeTimers()
-  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
-  const view = (elapsedMs = 0) => (
+  vi.setSystemTime(new Date('2026-01-05T12:00:00Z'))
+  const view = () => (
     <I18nProvider
       locale="en"
       messages={{
@@ -597,12 +596,11 @@ it('removes a focused notification when a delayed refresh arrives after expiry',
           {
             source: 'notification',
             id: 'n',
-            occurrence: '2026-01-01T12:00:01Z',
+            occurrence: '2026-01-08T11:00:00Z',
             action: false,
           },
         ]}
         nowMs={Date.parse('2026-01-08T12:00:00Z')}
-        elapsedMs={elapsedMs}
         today="2026-01-08"
         userId="user"
         workspaceId="workspace"
@@ -610,19 +608,16 @@ it('removes a focused notification when a delayed refresh arrives after expiry',
       />
     </I18nProvider>
   )
-  const page = render(view())
-  screen.getByRole('link', { name: 'Open notifications' }).focus()
-  vi.setSystemTime(new Date('2026-01-08T12:00:02Z'))
-  page.rerender(view(2000))
-  expect(screen.queryByRole('link', { name: 'Open notifications' })).toBeNull()
-  expect(document.activeElement).toBe(
-    screen.getByRole('button', { name: 'Open travel chat' }),
-  )
+  const first = render(view())
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+  first.unmount()
+  render(view())
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
 })
 
-it.each(['2026-01-07T12:00:00Z', '2026-01-09T12:00:00Z'])(
-  'uses elapsed time from the server snapshot when the device clock is %s',
-  async (clientTime) => {
+it.each(['2026-01-05T12:00:00Z', '2026-01-10T12:00:00Z'])(
+  'uses the same server snapshot when the device clock is %s',
+  (clientTime) => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(clientTime))
     render(
@@ -654,9 +649,5 @@ it.each(['2026-01-07T12:00:00Z', '2026-01-09T12:00:00Z'])(
       </I18nProvider>,
     )
     expect(screen.getByText('A notification is waiting.')).not.toBeNull()
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(2001)
-    })
-    expect(screen.queryByText('A notification is waiting.')).toBeNull()
   },
 )

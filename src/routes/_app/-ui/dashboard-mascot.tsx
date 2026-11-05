@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { selectReservationPrompt } from '../-lib/mascot-state'
 import { selectMascotPrompt } from '#/lib/mascot-prompts'
 import type { MascotCandidate } from '#/lib/mascot-prompts'
@@ -27,7 +27,6 @@ type Props = {
   onRefresh: () => Promise<boolean>
   candidates?: ReadonlyArray<MascotCandidate>
   nowMs?: number
-  elapsedMs?: number
   partial?: boolean
   reduceMotion?: boolean
   adapter?: Parameters<typeof createChatLauncher>[0]
@@ -39,13 +38,8 @@ export function DashboardMascot(props: Props) {
     scope: { userId: string; workspaceId: string }
     today: string
     dismissed: ReturnType<typeof readSuppression>
+    suppressionNow: number
   } | null>(null)
-  const clock = useRef<{ server: number; monotonic: number } | null>(null)
-  const clockNow = () =>
-    clock.current === null
-      ? Date.now()
-      : clock.current.server +
-        Math.max(0, performance.now() - clock.current.monotonic)
   const [hidden, setHidden] = useState(false)
   const [invalid, setInvalid] = useState(false)
   const [focused, setFocused] = useState<{
@@ -59,17 +53,17 @@ export function DashboardMascot(props: Props) {
   } | null>(null)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
-    let expiryTimer: ReturnType<typeof setTimeout> | undefined
     let active = true
     let inFlight = false
-    const refresh = (today: string, now = clockNow()) => {
+    const refresh = (today: string, now = Date.now()) => {
+      const suppressionNow = Date.now()
       let dismissed: ReturnType<typeof readSuppression> = []
       try {
         dismissed = readSuppression(
           sessionStorage,
           props.userId,
           props.workspaceId,
-          now,
+          suppressionNow,
         )
       } catch {
         // Browser storage can be blocked.
@@ -78,6 +72,7 @@ export function DashboardMascot(props: Props) {
         now,
         today,
         dismissed,
+        suppressionNow,
         scope: { userId: props.userId, workspaceId: props.workspaceId },
       })
     }
@@ -93,31 +88,14 @@ export function DashboardMascot(props: Props) {
       if (!active) return
       inFlight = false
       setInvalid(!valid)
-      if (valid) refresh(new Date(clockNow()).toISOString().slice(0, 10))
-      else setSnapshot(null)
-    }
-    const scheduleExpiry = () => {
-      if (expiryTimer !== undefined) clearTimeout(expiryTimer)
-      if (document.visibilityState !== 'visible') return
-      const now = clockNow()
-      const expiries = (props.candidates ?? []).flatMap((candidate) => {
-        if (candidate.source !== 'notification') return []
-        const expiry = Date.parse(candidate.occurrence) + 7 * 86_400_000 + 1
-        return Number.isFinite(expiry) && expiry > now ? [expiry] : []
-      })
-      if (expiries.length)
-        expiryTimer = setTimeout(
-          () => {
-            refresh(new Date(clockNow()).toISOString().slice(0, 10))
-            scheduleExpiry()
-          },
-          Math.min(...expiries) - now,
-        )
+      if (!valid) setSnapshot(null)
+      else if (props.nowMs === undefined)
+        refresh(new Date().toISOString().slice(0, 10))
     }
     const schedule = () => {
       if (timer !== undefined) clearTimeout(timer)
       if (document.visibilityState !== 'visible') return
-      const now = clockNow()
+      const now = props.nowMs ?? Date.now()
       timer = setTimeout(
         () => {
           void revalidate()
@@ -127,28 +105,16 @@ export function DashboardMascot(props: Props) {
       )
     }
     setInvalid(false)
-    clock.current = {
-      server: (props.nowMs ?? Date.now()) + (props.elapsedMs ?? 0),
-      monotonic: performance.now(),
-    }
-    const initialNow = clockNow()
-    const initialToday =
-      props.nowMs === undefined
-        ? props.today
-        : new Date(initialNow).toISOString().slice(0, 10)
-    refresh(initialToday, initialNow)
+    refresh(props.today, props.nowMs)
     schedule()
-    scheduleExpiry()
     const visible = () => {
       if (document.visibilityState === 'visible') void revalidate()
       schedule()
-      scheduleExpiry()
     }
     document.addEventListener('visibilitychange', visible)
     return () => {
       active = false
       if (timer !== undefined) clearTimeout(timer)
-      if (expiryTimer !== undefined) clearTimeout(expiryTimer)
       document.removeEventListener('visibilitychange', visible)
     }
   }, [
@@ -158,7 +124,6 @@ export function DashboardMascot(props: Props) {
     props.reservations,
     props.candidates,
     props.nowMs,
-    props.elapsedMs,
     props.onRefresh,
   ])
   const select = (
@@ -175,6 +140,7 @@ export function DashboardMascot(props: Props) {
       const candidate = selectMascotPrompt({
         today: snapshot.today,
         nowMs: snapshot.now,
+        suppressionNowMs: snapshot.suppressionNow,
         dismissed: snapshot.dismissed,
         candidates,
       })
@@ -202,8 +168,6 @@ export function DashboardMascot(props: Props) {
     !invalid &&
     focused.userId === props.userId &&
     focused.workspaceId === props.workspaceId &&
-    (focused.source !== 'notification' ||
-      Date.parse(focused.startDate) + 7 * 86_400_000 >= snapshot.now) &&
     snapshot.scope.userId === props.userId &&
     snapshot.scope.workspaceId === props.workspaceId &&
     (props.candidates
@@ -250,7 +214,7 @@ export function DashboardMascot(props: Props) {
       prompt.source,
       prompt.id,
       prompt.startDate,
-      clockNow(),
+      Date.now(),
     )
     try {
       writeSuppression(sessionStorage, props.userId, props.workspaceId, entries)
