@@ -1,9 +1,8 @@
 /**
  * Whether a set of poll options can be put to a vote.
  *
- * A separate module from the dialog that renders it, and deliberately free of any
- * runtime import: this is the rule worth testing, and a test for it should not need
- * a Worker runtime behind it to resolve a binding.
+ * A separate module from the dialog that renders it, without Worker bindings, so
+ * its rule can be tested in isolation.
  */
 
 /**
@@ -13,6 +12,7 @@
  * traveller has not filled in yet, not a mistake — but two options that say the
  * same thing are refused, because a tie between them is not a result.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import type { MessageKey } from '#/lib/i18n'
 
 export function pollOptionsError(
@@ -21,6 +21,9 @@ export function pollOptionsError(
   const filled = options
     .map((value) => value.trim())
     .filter((value) => value.length > 0)
+
+  if (filled.some((value) => !hasVisibleCharacter(value)))
+    return 'shell.validation.visibleName'
 
   if (filled.length < 2) {
     return 'modules.collab.poll.error.tooFew'

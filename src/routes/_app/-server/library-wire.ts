@@ -3,6 +3,7 @@
  * and the database client, so a plain Node test could only bind to its validator by a type
  * assertion. This module imports no binding.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { z } from 'zod'
 
 /**
@@ -14,7 +15,12 @@ import { z } from 'zod'
  * belongs to the sharing-roles stage of the saved-places plan (`docs/plans/08-product-modules.md`).
  */
 export const createCollectionSchema = z.object({
-  name: z.string().trim().min(1).max(120),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   description: z.string().trim().max(2000),
   colour: z
     .string()

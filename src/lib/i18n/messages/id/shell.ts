@@ -43,6 +43,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'Masukkan setidaknya satu karakter yang terlihat.',
   'dashboard.mascot.notification': 'Ada notifikasi yang menunggu.',
   'dashboard.mascot.actionNotification':
     'Ada notifikasi yang menunggu tanggapan Anda.',

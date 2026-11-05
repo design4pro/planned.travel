@@ -88,6 +88,44 @@ function RefusedSave({
 }
 
 describe('translated planner forms', () => {
+  it('explains an invisible place name before the disabled submit is used', () => {
+    const onSubmit = vi.fn()
+    render(
+      local(
+        <PlaceDialog
+          open
+          onOpenChange={() => {}}
+          mode="create"
+          initial={emptyDraft}
+          categories={[]}
+          days={[]}
+          saving={false}
+          error={null}
+          onSubmit={onSubmit}
+        />,
+      ),
+    )
+    const name = screen.getByLabelText(/Nazwa/)
+    fireEvent.change(name, { target: { value: '\u200B' } })
+    expect(name.getAttribute('aria-invalid')).toBe('true')
+    const error = document.getElementById(
+      name.getAttribute('aria-describedby') ?? '',
+    )
+    expect(error?.textContent).toBe(messages['trips.plan.editor.nameRequired'])
+    expect(error?.getAttribute('role')).toBe('status')
+    expect(
+      document.querySelector<HTMLButtonElement>('button[type="submit"]')
+        ?.disabled,
+    ).toBe(true)
+    expect(onSubmit).not.toHaveBeenCalled()
+    fireEvent.change(name, { target: { value: '京都' } })
+    expect(name.getAttribute('aria-invalid')).not.toBe('true')
+    expect(
+      document.querySelector<HTMLButtonElement>('button[type="submit"]')
+        ?.disabled,
+    ).toBe(false)
+  })
+
   it.each(['create', 'edit'] as const)(
     'localises place %s and its options',
     async (mode) => {

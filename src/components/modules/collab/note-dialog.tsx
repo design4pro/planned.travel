@@ -1,4 +1,5 @@
 /** The dialog behind the notes board: create or edit a shared note. */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useEffect, useId, useRef, useState } from 'react'
 import {
   Alert,
@@ -99,7 +100,7 @@ export function NoteDialog({
   const action = editing ? update : create
 
   const trimmed = title.trim()
-  const canSave = canWrite && trimmed.length > 0 && !action.pending
+  const canSave = canWrite && hasVisibleCharacter(trimmed) && !action.pending
 
   async function submit(): Promise<void> {
     if (!canWrite) return
@@ -155,7 +156,15 @@ export function NoteDialog({
               </Alert>
             )}
 
-            <Field label={t('modules.collab.note.field.title')} required>
+            <Field
+              label={t('modules.collab.note.field.title')}
+              required
+              error={
+                title !== '' && !hasVisibleCharacter(title)
+                  ? t('shell.validation.visibleName')
+                  : undefined
+              }
+            >
               <Input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}

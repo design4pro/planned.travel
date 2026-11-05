@@ -37,6 +37,7 @@
  * the layer below it is ordinary code.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -253,7 +254,14 @@ export const loadConsoleAccount = createServerFn({ method: 'GET' })
 export const createConsoleAccount = createServerFn({ method: 'POST' })
   .validator(
     z.object({
-      name: z.string().trim().min(1).max(120),
+      name: z
+        .string()
+        .trim()
+        .min(1)
+        .max(120)
+        .refine(hasVisibleCharacter, {
+          message: 'shell.validation.visibleName',
+        }),
       email: z.string().trim().min(3).max(320),
       /**
        * Length is deliberately not restated. The product's policy is two constants in

@@ -26,6 +26,7 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/shell'
 
 const messages = {
+  'validation.visibleName': 'Voer minstens één zichtbaar teken in.',
   'dashboard.mascot.notification': 'Er staat een melding voor je klaar.',
   'dashboard.mascot.actionNotification': 'Een melding wacht op je reactie.',
   'dashboard.mascot.event': 'Een geplande gebeurtenis begint op {date}.',

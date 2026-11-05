@@ -65,6 +65,7 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'Enter at least one visible character.',
   'dashboard.mascot.notification': 'A notification is waiting.',
   'dashboard.mascot.actionNotification':
     'A notification is waiting for your response.',

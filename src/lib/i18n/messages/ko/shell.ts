@@ -16,6 +16,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': '눈에 보이는 문자를 하나 이상 입력하세요.',
   'dashboard.mascot.notification': '알림이 도착했습니다.',
   'dashboard.mascot.actionNotification': '답변을 기다리는 알림이 있습니다.',
   'dashboard.mascot.event': '예정된 일정이 {date}에 시작됩니다.',

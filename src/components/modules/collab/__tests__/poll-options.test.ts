@@ -38,3 +38,9 @@ describe('pollOptionsError', () => {
     expect(pollOptionsError(['One', 'Two', 'Three', 'Four'])).toBeNull()
   })
 })
+
+it('refuses a filled but invisible option instead of silently dropping it', () => {
+  expect(pollOptionsError(['One', 'Two', '\u200B'])).toBe(
+    'shell.validation.visibleName',
+  )
+})

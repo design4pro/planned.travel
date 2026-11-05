@@ -74,6 +74,7 @@
  * item rather than half-built here.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { z } from 'zod'
 
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from '#/server/auth'
@@ -168,14 +169,24 @@ export const getPlatformUserInputSchema = z.object({ userId })
 
 export const createPlatformUserInputSchema = z.object({
   email: z.email().trim().max(320),
-  name: z.string().trim().min(1).max(120),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   password,
   role: platformRole.default('user'),
 })
 
 export const updatePlatformUserInputSchema = z.object({
   userId,
-  name: z.string().trim().min(1).max(120),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(120)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
 })
 
 export const setPlatformUserEmailInputSchema = z.object({

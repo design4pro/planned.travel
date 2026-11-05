@@ -181,10 +181,13 @@ describe('validateBookingDraft', () => {
     expect(hasBookingErrors(errors)).toBe(false)
   })
 
-  it('insists on a title', () => {
-    const errors = validateBookingDraft(draft({ title: '   ' }))
-    expect(errors.title).toBeDefined()
-  })
+  it.each(['   ', '\u200B', '\u3164', '\u2800'])(
+    'insists on a visible title: %j',
+    (title) => {
+      const errors = validateBookingDraft(draft({ title }))
+      expect(errors.title).toBeDefined()
+    },
+  )
 
   it('insists on the date a stay starts', () => {
     const errors = validateBookingDraft(draft({ type: 'accommodation' }))

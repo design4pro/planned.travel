@@ -10,6 +10,7 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Trips from '#/lib/i18n/messages/en/trips'
 import Ui from '#/lib/i18n/messages/en/ui'
+import Shell from '#/lib/i18n/messages/en/shell'
 import { GuestNameDialog, GuestRow, MergeGuestDialog } from '../people-screen'
 
 import type { ReactNode } from 'react'
@@ -25,6 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
 }))
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('trips', Trips),
   ...namespaceCatalogue('ui', Ui),
 }
@@ -208,4 +210,29 @@ describe('the merge dialog, once somebody is chosen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Merge' }))
     expect(onConfirm).toHaveBeenCalledWith('member-marek')
   })
+})
+
+it('explains an invisible guest rename without submitting it', async () => {
+  const confirm = vi.fn()
+  inEnglish(
+    <GuestNameDialog
+      guest={ANNA}
+      onOpenChange={() => {}}
+      busy={false}
+      refusal={undefined}
+      failure={null}
+      onEdit={() => {}}
+      onConfirm={confirm}
+    />,
+  )
+  const user = userEvent.setup()
+  const input = screen.getByRole('textbox')
+  await user.clear(input)
+  await user.type(input, '\u200B')
+  expect(input.getAttribute('aria-invalid')).toBe('true')
+  expect(
+    document.getElementById(input.getAttribute('aria-describedby') ?? '')
+      ?.textContent,
+  ).toBe('Enter at least one visible character.')
+  expect(confirm).not.toHaveBeenCalled()
 })

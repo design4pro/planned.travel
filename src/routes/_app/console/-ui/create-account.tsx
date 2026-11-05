@@ -14,6 +14,7 @@
  * weak one is `createPlatformUserInputSchema`, and its message is what the dialog shows.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useCallback, useState } from 'react'
 import { UserRoundPlus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -82,13 +83,21 @@ export function CreateAccountButton({ onCreated }: CreateAccountButtonProps) {
         description={t('console.create.body')}
         confirmLabel={t('console.create.confirm')}
         confirmDisabled={
-          name.trim().length === 0 ||
+          !hasVisibleCharacter(name) ||
           email.trim().length === 0 ||
           password.length === 0
         }
         onConfirm={create}
       >
-        <Field label={t('console.users.field.name')} required>
+        <Field
+          label={t('console.users.field.name')}
+          required
+          error={
+            name !== '' && !hasVisibleCharacter(name)
+              ? t('shell.validation.visibleName')
+              : undefined
+          }
+        >
           <Input
             value={name}
             maxLength={120}

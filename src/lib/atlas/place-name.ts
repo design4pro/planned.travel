@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 
 /** Reject hidden characters before normalization can trim them away. Joiners are meaningful in Persian and Indic names. */
 export function hasHiddenPlaceCharacters(value: string): boolean {
@@ -23,6 +24,7 @@ export function placeNameSchema(maximum: number) {
     })
     .transform((value) => value.normalize('NFKC').trim().replace(/\s+/gu, ' '))
     .pipe(z.string().min(1).max(maximum))
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
     .refine((value) => foldedName(value).length > 0, {
       message: 'A place name must have a non-empty identity.',
     })

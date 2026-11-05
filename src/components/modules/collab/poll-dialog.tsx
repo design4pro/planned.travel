@@ -6,6 +6,7 @@
  * than any group needs. Duplicate wording is refused: a tie between two options
  * that say the same thing is not a result.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 
@@ -20,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
+  FieldError,
   IconButton,
   Input,
   SwitchField,
@@ -77,10 +79,15 @@ export function PollDialog({
     failure: t('modules.collab.poll.toast.openFailed'),
   })
 
+  const optionsErrorId = useId()
+  const invisibleOption = options.some(
+    (value) => value.trim() !== '' && !hasVisibleCharacter(value),
+  )
   const optionsProblem = pollOptionsError(options)
   const optionsError = optionsProblem === null ? undefined : t(optionsProblem)
-  const questionError =
-    question.trim().length === 0 ? 'Ask the group something.' : undefined
+  const questionError = !hasVisibleCharacter(question)
+    ? t('shell.validation.visibleName')
+    : undefined
   const canSave =
     canWrite &&
     optionsError === undefined &&
@@ -148,7 +155,7 @@ export function PollDialog({
             <Field
               label={t('modules.collab.poll.field.question')}
               required
-              error={touched ? questionError : undefined}
+              error={touched || question !== '' ? questionError : undefined}
             >
               <Input
                 value={question}
@@ -182,6 +189,14 @@ export function PollDialog({
                       }
                       maxLength={120}
                       autoComplete="off"
+                      aria-invalid={
+                        (option.trim() !== '' &&
+                          !hasVisibleCharacter(option)) ||
+                        undefined
+                      }
+                      aria-describedby={
+                        invisibleOption ? optionsErrorId : undefined
+                      }
                       aria-label={t('modules.collab.poll.field.option', {
                         n: index + 1,
                       })}
@@ -205,8 +220,10 @@ export function PollDialog({
                   </li>
                 ))}
               </ul>
-              {touched && optionsError !== undefined ? (
-                <p className="mt-2 text-caption text-danger">{optionsError}</p>
+              {(touched || invisibleOption) && optionsError !== undefined ? (
+                <FieldError id={optionsErrorId} className="mt-2">
+                  {optionsError}
+                </FieldError>
               ) : null}
               <Button
                 type="button"

@@ -25,6 +25,7 @@
  * defect, not the omission of one, which is why `__tests__/trip-lifecycle-side-effects.test.ts`
  * asserts the absence structurally.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { cleanupStorage } from '#/server/storage/admission'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
@@ -116,6 +117,7 @@ const titleSchema = z
   .trim()
   .min(1, { error: 'A trip needs a name.' })
   .max(120, { error: 'That name is too long — 120 characters at most.' })
+  .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 /**
  * Normalises `''` from a form control into the `null` a nullable column wants.

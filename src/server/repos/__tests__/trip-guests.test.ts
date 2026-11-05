@@ -74,6 +74,16 @@ describe('a trip’s guests', () => {
       .some((statement) => /^insert into "trip_guests"/i.test(statement))
   }
 
+  it('refuses invisible guest names on create and rename without changing the stored row', async () => {
+    await expect(createTripGuest(alpha.scope, { tripId, displayName: '\u200B' })).rejects.toThrow()
+    const guestId = await addGuest('Ada')
+    await expect(renameTripGuest(alpha.scope, guestId, '\u200B')).rejects.toThrow()
+    expect(await names()).toEqual(['Ada'])
+    const beta = await harness.seedTenant('beta')
+    await expect(renameTripGuest(beta.scope, guestId, 'Other')).rejects.toThrow()
+    expect(await names()).toEqual(['Ada'])
+  })
+
   describe('listTripGuests', () => {
     it('answers the guests in name order', async () => {
       await addGuest('Zofia')

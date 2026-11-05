@@ -6,6 +6,7 @@
  * keep those exact, and to refuse the two things that make a transport nonsense: no name,
  * and an arrival before its departure.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { formatWeekday } from '#/lib/format'
 import { isKnownTimeZone } from '#/lib/timezones'
 import { CHAIN_MAX_LEGS, CHAIN_MIN_STATIONS } from '#/lib/transport-chain'
@@ -307,7 +308,7 @@ export function validateTransportDraft(
 ): TransportErrors {
   const errors: TransportErrors = {}
 
-  if (draft.title.trim().length === 0) {
+  if (!hasVisibleCharacter(draft.title)) {
     errors.title = 'modules.transports.error.titleEmpty'
   } else if (draft.title.trim().length > 160) {
     errors.title = 'modules.error.titleLong'
@@ -862,7 +863,7 @@ export function hasChainErrors(errors: ChainErrors): boolean {
 
 function stationErrors(station: StationDraft): StationErrors {
   const errors: Building<StationErrors> = {}
-  if (station.name.trim() === '') {
+  if (!hasVisibleCharacter(station.name)) {
     errors.name = 'modules.transports.chain.error.stopName'
   } else if (station.name.trim().length > 200) {
     errors.name = 'modules.transports.chain.error.stopNameLong'
