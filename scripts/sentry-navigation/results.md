@@ -174,3 +174,12 @@ WebKit provisional sends above the SDK keepalive cutoff still failed, so a same-
 route is not a verified correction. Browser keepalive byte quotas also rejected multibyte and
 cumulative overlapping sends. These synthetic transport results do not certify full SDK/runtime
 repair, privacy/replay wiring, physical Safari or production ingestion.
+
+Final independent feasibility review inspected the installed offline APIs as well as streaming.
+`makeBrowserOfflineTransport` queues Replay before sending but queues ordinary envelopes only
+after rejection; default record bounds do not supply TTL/byte/account cleanup, and storage refusal,
+delete-before-ack, duplicate/backoff and Replay/location retention semantics require a concrete
+reviewed design. A byte-aware keepalive executor would address quota selection alone; oversized
+non-keepalive provisional sends still fail. No such production adoption is approved. The final
+native-fetch rerun certifies each provisional condition by its own request token; see the linked
+recovery section. Runtime acceptance remains technically blocked, with no human-only prerequisite.

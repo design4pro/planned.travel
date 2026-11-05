@@ -82,7 +82,7 @@ replacement. Fatal console messages are retained below without suppression. Each
 context and transport. A 150ms endpoint response delay makes overlap meaningful. Early replacement
 starts after native attempts; settled replacement waits for each selected envelope's own SDK success
 or rejection. Provisional replacement holds its response for 600ms while an old-document timer sends
-after 100ms. All 80 provisional trials established creation at/after replacement-request start.
+after 100ms. The original 80 provisional timestamp comparisons could read a previous trial request; their timing certification is superseded by the token-correlated recovery below. Historical receipt/response counts remain observations, not independently certified lifecycle conditions.
 Snapshots were taken before navigation; provisional snapshots precede the timer. **All 240 old-document
 terminal diagnostic states are unknown** after replacement. A successor's state is never consulted.
 
@@ -482,3 +482,36 @@ Messages below are verbatim from the unchanged watcher; repetition is retained.
 ```
 
 All SDK drops were `network_error` / `transaction`, one for each SDK-rejected envelope; their IDs and rejections are in the ledger. No backoff or queue-overflow drop occurred in the browser matrix.
+
+## Token-correlated recovery
+
+Review found a stale-request timing counterexample. The runner now assigns each replacement its own
+trial token, resets request observation and waits for that exact request before certifying the send.
+Unestablished timing is reported separately and excluded from completed counts and delivery
+classification. A delayed/current-request regression fails on the old code; all focused tests now
+pass 16/16. The observer still calls native fetch once and returns its original promise.
+
+Root reran both browser phases with this correction: **240/240 trials complete**, all **80**
+provisional request identities/timing conditions certified, zero unestablished conditions or runner
+failures. The measured driver is committed as `9bae211f`; Chromium started just before that commit
+and records base `1cf8b587` in its source field, while WebKit records `9bae211f`. The code did not
+change during either phase. These are new trials with new synthetic identities, separate from the
+historical ledger above.
+
+| Browser  | Attempts | Matched receipts | SDK 204 | SDK rejections | Response unknown | Fatal trials |
+| -------- | -------: | ---------------: | ------: | -------------: | ---------------: | -----------: |
+| Chromium |      132 |              108 |      72 |             24 |               36 |            0 |
+| WebKit   |      132 |               91 |      56 |             56 |               20 |           40 |
+
+For WebKit, both same-origin and cross-origin provisional ASCII bodies above60000 characters
+again had **0/8 receipts** each. Chromium had8/8 each. These remain bounded-window observations,
+not production incidence or a delivery design approval. Old-document terminal diagnostic state
+remains unknown after replacement. No runtime correction is established.
+
+Metadata-only JSON artifacts in the recovery run's private TMPDIR:
+
+- `1849-fetch-chromium.json`, SHA-256 `6fa0ad865ca7b0ff21964ecc3ba10c0f617e2f5b125df09b7fb925c8c2e0ac70`.
+- `1849-fetch-webkit.json`, SHA-256 `16d346fde5893ae8a12e6a7179e7d288e31826256fd8e0ab18ef944e0680114e`.
+
+The whole current-head application gate is reported separately in the PR. This diagnostic
+experiment is not a passing runtime regression.
