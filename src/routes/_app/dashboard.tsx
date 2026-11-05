@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
 import { DashboardMascot } from './-ui/dashboard-mascot'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -145,13 +145,33 @@ function DashboardError({ error }: { error: unknown }) {
 }
 
 function DashboardPage() {
-  const data = Route.useLoaderData()
+  const initial = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
-  const router = useRouter()
-  const refreshMascot = useCallback(
-    () => refreshMascotDashboard(router),
-    [router],
-  )
+  const [refreshed, setRefreshed] = useState<{
+    initial: typeof initial
+    data: DashboardPayload
+  } | null>(null)
+  const data = refreshed?.initial === initial ? refreshed.data : initial
+  const refreshMascot = useCallback(async () => {
+    try {
+      const next = await refreshMascotDashboard(async () => {
+        const [dashboard, mascot] = await Promise.all([
+          loadDashboard(),
+          loadDashboardMascot().catch(() => ({
+            candidates: [],
+            partial: true,
+            nowMs: Date.now(),
+          })),
+        ])
+        return { ...dashboard, mascot }
+      })
+      if (!next) return false
+      setRefreshed({ initial, data: next })
+      return true
+    } catch {
+      return false
+    }
+  }, [initial])
   const [converter, setConverter] = useState({
     amount: '1',
     from: 'EUR',

@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest'
 import {
   beginWorkspaceSwitch,
   endWorkspaceSwitch,
+  markWorkspaceStale,
   resetWorkspaceClaim,
   setWorkspaceClaim,
 } from '#/lib/workspace-claim-store'
@@ -9,32 +10,58 @@ import { refreshMascotDashboard } from '../../-lib/mascot-refresh'
 
 afterEach(resetWorkspaceClaim)
 
-it('waits for a workspace transition before refreshing the dashboard', async () => {
-  const transition = beginWorkspaceSwitch()
-  const router = {
-    state: { matches: [{ routeId: '/_app/dashboard', status: 'success' }] },
-    invalidate: vi.fn().mockResolvedValue(undefined),
-  }
-
-  const refresh = refreshMascotDashboard(router)
-  await Promise.resolve()
-  expect(router.invalidate).not.toHaveBeenCalled()
-  endWorkspaceSwitch(transition)
-  expect(await refresh).toBe(true)
-  expect(router.invalidate).toHaveBeenCalledOnce()
-})
-
-it('drops a delayed refresh when its workspace changes', async () => {
+it('waits for a workspace transition before reading', async () => {
   setWorkspaceClaim('first')
   const transition = beginWorkspaceSwitch()
-  const router = {
-    state: { matches: [{ routeId: '/_app/dashboard', status: 'success' }] },
-    invalidate: vi.fn().mockResolvedValue(undefined),
-  }
-
-  const refresh = refreshMascotDashboard(router)
-  setWorkspaceClaim('second')
+  const read = vi.fn().mockResolvedValue('fresh')
+  const refresh = refreshMascotDashboard(read)
+  await Promise.resolve()
+  expect(read).not.toHaveBeenCalled()
   endWorkspaceSwitch(transition)
-  expect(await refresh).toBe(false)
-  expect(router.invalidate).not.toHaveBeenCalled()
+  expect(await refresh).toBe('fresh')
+})
+
+it('drops a delayed read when the workspace or generation changes', async () => {
+  setWorkspaceClaim('first')
+  let complete: (value: string) => void = () => {}
+  const read = () =>
+    new Promise<string>((resolve) => {
+      complete = resolve
+    })
+  const refresh = refreshMascotDashboard(read)
+  setWorkspaceClaim('first')
+  complete('old')
+  expect(await refresh).toBeNull()
+})
+
+it('never reads from a stale tab and drops a refusal during a read', async () => {
+  setWorkspaceClaim('first')
+  let complete: (value: string) => void = () => {}
+  const read = vi.fn(
+    () =>
+      new Promise<string>((resolve) => {
+        complete = resolve
+      }),
+  )
+  const refresh = refreshMascotDashboard(read)
+  markWorkspaceStale('first')
+  complete('old')
+  expect(await refresh).toBeNull()
+  expect(await refreshMascotDashboard(read)).toBeNull()
+  expect(read).toHaveBeenCalledOnce()
+})
+
+it('drops a read started before a workspace switch', async () => {
+  setWorkspaceClaim('first')
+  let complete: (value: string) => void = () => {}
+  const refresh = refreshMascotDashboard(
+    () =>
+      new Promise<string>((resolve) => {
+        complete = resolve
+      }),
+  )
+  const transition = beginWorkspaceSwitch()
+  complete('old')
+  expect(await refresh).toBeNull()
+  endWorkspaceSwitch(transition)
 })

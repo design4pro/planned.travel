@@ -1,16 +1,12 @@
 import {
   subscribeWorkspaceClaim,
+  workspaceClaimGeneration,
   workspaceClaimState,
 } from '#/lib/workspace-claim-store'
 
-type DashboardRouter = {
-  invalidate: (options: { sync: true }) => Promise<void>
-  state: { matches: ReadonlyArray<{ routeId: string; status: string }> }
-}
-
-export async function refreshMascotDashboard(
-  router: DashboardRouter,
-): Promise<boolean> {
+export async function refreshMascotDashboard<T>(
+  read: () => Promise<T>,
+): Promise<T | null> {
   const organizationId = workspaceClaimState().organizationId
   while (workspaceClaimState().switching) {
     await new Promise<void>((resolve) => {
@@ -22,12 +18,17 @@ export async function refreshMascotDashboard(
       })
     })
   }
-  if (workspaceClaimState().organizationId !== organizationId) return false
-  await router.invalidate({ sync: true })
-  return (
-    router.state.matches.some(
-      (match) =>
-        match.routeId === '/_app/dashboard' && match.status === 'success',
-    ) && router.state.matches.every((match) => match.status === 'success')
+  const current = workspaceClaimState()
+  if (current.stale || current.organizationId !== organizationId) return null
+  const generation = workspaceClaimGeneration()
+  const result = await read()
+  const next = workspaceClaimState()
+  if (
+    next.stale ||
+    next.switching ||
+    next.organizationId !== organizationId ||
+    workspaceClaimGeneration() !== generation
   )
+    return null
+  return result
 }
