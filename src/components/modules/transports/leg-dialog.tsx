@@ -36,8 +36,9 @@
  *
  * **Another refusal that stays in the dialog** is "this transport no longer exists" (deleted in
  * another tab or by another member). It is a state, not an error: the alert says so on either tab,
- * the draft stays editable, Save is off because it could only be refused again, and Close ends the
- * dialog. The loaders are re-run so the list behind it drops the transport.
+ * the draft stays editable, Save is off because it could only be refused again, and the draft can
+ * be saved as a new transport or discarded with Close. The loaders are re-run so the list behind
+ * it drops the transport.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -187,15 +188,14 @@ export function TransportDialog({
   onOpenChange: (open: boolean) => void
   onWriteError?: (cause: unknown) => void
   /**
-   * Where focus goes when the dialog closes from its gone state. The row the dialog was opened from
-   * is deleted by then and the loaders have removed it, so the default hand-back to the opener
+   * Where focus goes after the edited transport was deleted, including after recovery. The row
+   * is gone by then and the loaders have removed it, so the default hand-back to the opener
    * would leave focus on the document body.
    */
   closeFocusTarget?: () => HTMLElement | null
 }) {
   const t = useTranslate()
   const locale = useLocale()
-  const editing = transport !== undefined
   const formId = useId()
 
   const [draft, setDraft] = useState<TransportDraft>(() =>
@@ -214,7 +214,11 @@ export function TransportDialog({
    * transport the first press wrote instead of creating another.
    */
   const [draftId, setDraftId] = useState(mintId)
-  const transportId = transport?.id ?? draftId
+  const [recoveredIn, setRecoveredIn] = useState<string | null>(null)
+  const editing = transport !== undefined && recoveredIn !== draftId
+  const transportId = editing ? transport.id : draftId
+  const savingIn = useRef<string | null>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
   /**
    * The open a save was refused in, when it was refused because the transport is gone. It is keyed
    * by `draftId`, which is minted afresh on every open, so a refusal that settles after the reader
@@ -261,6 +265,7 @@ export function TransportDialog({
     setTouched(false)
     setFillMode('form')
     setGoneIn(null)
+    setRecoveredIn(null)
     setDraftId(mintId())
   }, [open, identity, transport, currency])
 
@@ -292,7 +297,11 @@ export function TransportDialog({
       return
     }
     if (transportRefusalOf(cause) === null) {
-      onWriteError?.(cause)
+      if (draftId !== currentOpen.current) {
+        save.reset()
+      } else {
+        onWriteError?.(cause)
+      }
       return
     }
     // `onError` is the one this render handed to `useAction`, so `draftId` is the open the press
@@ -308,7 +317,7 @@ export function TransportDialog({
   }
 
   // The control the reader pressed (Save, or a result row's button) has just become disabled, and
-  // a disabled button cannot keep focus: hand it to Close, the one action left, rather than to body.
+  // a disabled button cannot keep focus: hand it to Close, a surviving action, rather than to body.
   useEffect(() => {
     if (gone) {
       closeRef.current?.focus()
@@ -439,7 +448,13 @@ export function TransportDialog({
     setTouched(true)
     // Enter in a field submits the form without the button, which is only `loading`: a second
     // call while one is in flight would race the first on the same id.
-    if (invalid || save.pending || gone || priceBlocked) {
+    if (
+      invalid ||
+      save.pending ||
+      savingIn.current === draftId ||
+      gone ||
+      priceBlocked
+    ) {
       return
     }
     /*
@@ -447,6 +462,7 @@ export function TransportDialog({
      * no legs", which removes the rows a journey used to have when the traveller puts it back
      * together.
      */
+    savingIn.current = draftId
     const saved = await save.run({
       data: {
         ...transportPayload(draft, chain, tripId),
@@ -456,18 +472,29 @@ export function TransportDialog({
         ...chainPayload(chain),
       },
     })
-    if (saved === null) {
+    if (savingIn.current === draftId) savingIn.current = null
+    if (saved === null || currentOpen.current !== draftId) {
       return
     }
     onOpenChange(false)
   }
+
+  // Submit after the mode switch so the save, failure handling and toast all use create mode.
+  useEffect(() => {
+    if (recoveredIn !== draftId) return
+    nameRef.current?.focus()
+    void submit()
+  }, [recoveredIn])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         size="lg"
         onCloseAutoFocus={(event) => {
-          const target = gone ? (closeFocusTarget?.() ?? null) : null
+          const target =
+            gone || recoveredIn === draftId
+              ? (closeFocusTarget?.() ?? null)
+              : null
           if (target === null) return
           event.preventDefault()
           target.focus({ preventScroll: true })
@@ -510,6 +537,7 @@ export function TransportDialog({
                   type="button"
                   data-part={`transport-mode-${option.value}`}
                   aria-pressed={fillMode === option.value}
+                  disabled={save.pending}
                   onClick={() => setFillMode(option.value)}
                   className={cn(
                     'rounded-full px-3.5 py-1.5 text-caption font-semibold focus-ring',
@@ -608,6 +636,7 @@ export function TransportDialog({
                 }
               >
                 <Input
+                  ref={nameRef}
                   value={draft.title}
                   onChange={(event) => set('title', event.target.value)}
                   placeholder={t('modules.transports.field.namePlaceholder')}
@@ -1001,6 +1030,22 @@ export function TransportDialog({
               ? t('ui.action.close')
               : t('modules.action.cancel')}
           </Button>
+          {gone ? (
+            <Button
+              type="button"
+              shape="pill"
+              disabled={save.pending}
+              onClick={() => {
+                if (save.pending || recoveredIn === draftId) return
+                save.reset()
+                setGoneIn(null)
+                setFillMode('form')
+                setRecoveredIn(draftId)
+              }}
+            >
+              {t('modules.transports.action.saveAsNew')}
+            </Button>
+          ) : null}
           {/*
             The search mode has no footer save, and that is the honest shape: what is saved there
             is one chosen connection, so the button belongs on the row that names it rather than

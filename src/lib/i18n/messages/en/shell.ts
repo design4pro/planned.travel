@@ -65,6 +65,14 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'A notification is waiting.',
+  'dashboard.mascot.actionNotification':
+    'A notification is waiting for your response.',
+  'dashboard.mascot.event': 'A planned event starts on {date}.',
+  'dashboard.mascot.openEvent': 'View trip plan',
+  'dashboard.mascot.empty': 'No suggestions right now.',
+  'dashboard.mascot.sourceUnavailable': 'Some suggestions could not be loaded.',
+  'dashboard.mascot.retry': 'Try again',
   'dashboard.mascot.reservation': 'A confirmed reservation starts on {date}.',
   'dashboard.mascot.openReservation': 'View reservations',
   'dashboard.mascot.openChat': 'Open travel chat',

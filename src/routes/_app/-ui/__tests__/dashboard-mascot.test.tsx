@@ -376,3 +376,878 @@ describe('dashboard mascot', () => {
     visibility.mockRestore()
   })
 })
+
+it('opens the inbox for an action notification ahead of a later reservation', async () => {
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  const trip = tripCard()
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+        'shell.dashboard.mascot.actionNotification':
+          'A notification is waiting for your response.',
+      }}
+    >
+      <DashboardMascot
+        trip={trip}
+        trips={[trip]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+        candidates={[
+          {
+            source: 'reservation',
+            id: 'r',
+            tripId: trip.id,
+            occurrence: '2026-01-09',
+          },
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: true,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(
+    (
+      await screen.findByRole('link', { name: 'Open notifications' })
+    ).getAttribute('href'),
+  ).toBe('/notifications')
+})
+
+it('keeps a working notification visible and retries a failed source', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  const retry = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={retry}
+        partial
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: false,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  expect(retry).toHaveBeenCalledOnce()
+})
+
+it('removes a suggestion when retry loses access', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={async () => false}
+        partial
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: false,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  })
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
+})
+
+it('offers retry when a previously healthy refresh fails', async () => {
+  const visibility = vi
+    .spyOn(document, 'visibilityState', 'get')
+    .mockReturnValue('visible')
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={async () => false}
+        candidates={[]}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
+  expect(screen.getByRole('button', { name: 'Try again' })).not.toBeNull()
+  visibility.mockRestore()
+})
+
+it('shares a pending refresh between retry and visibility changes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  let complete: (value: boolean) => void = () => {}
+  const onRefresh = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        complete = resolve
+      }),
+  )
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+        partial
+        candidates={[]}
+      />
+    </I18nProvider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  act(() => document.dispatchEvent(new Event('visibilitychange')))
+  expect(onRefresh).toHaveBeenCalledOnce()
+  await act(async () => {
+    complete(true)
+  })
+})
+
+it('removes a focused authorized candidate and restores focus after access is revoked', () => {
+  const trip = tripCard()
+  const candidate = {
+    source: 'event' as const,
+    id: 'event',
+    tripId: trip.id,
+    occurrence: '2026-04-02',
+  }
+  const view = (candidates: (typeof candidate)[]) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={trip}
+        trips={[trip]}
+        reservations={[]}
+        candidates={candidates}
+        nowMs={Date.parse('2026-04-01T12:00:00Z')}
+        today="2026-04-01"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view([candidate]))
+  const link = screen.getByRole('link', { name: 'View trip plan' })
+  link.focus()
+  expect(document.activeElement).toBe(link)
+  page.rerender(view([]))
+  expect(screen.queryByRole('link', { name: 'View trip plan' })).toBeNull()
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+})
+
+it('retains the authoritative server snapshot after visibility refresh on a skewed device', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-10T12:00:00Z'))
+  const refreshSnapshot = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-01T12:00:01Z',
+            action: false,
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refreshSnapshot}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  await act(async () => {
+    document.dispatchEvent(new Event('visibilitychange'))
+    await Promise.resolve()
+  })
+  expect(refreshSnapshot).toHaveBeenCalled()
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+})
+
+it('uses a fixed server snapshot until revalidation, even if local time advances', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-01T12:00:01Z',
+            action: false,
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(2001)
+  })
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+})
+
+it('retains dismissal across dashboard entries when the device clock is behind the server', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-05T12:00:00Z'))
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: false,
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const first = render(view())
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+  first.unmount()
+  render(view())
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
+})
+
+it.each(['2026-01-05T12:00:00Z', '2026-01-10T12:00:00Z'])(
+  'uses the same server snapshot when the device clock is %s',
+  (clientTime) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(clientTime))
+    render(
+      <I18nProvider
+        locale="en"
+        messages={{
+          ...namespaceCatalogue('shell', Shell),
+          ...namespaceCatalogue('ui', Ui),
+        }}
+      >
+        <DashboardMascot
+          trip={null}
+          trips={[]}
+          reservations={[]}
+          candidates={[
+            {
+              source: 'notification',
+              id: 'n',
+              occurrence: '2026-01-01T12:00:01Z',
+              action: false,
+            },
+          ]}
+          nowMs={Date.parse('2026-01-08T12:00:00Z')}
+          today="2026-01-08"
+          userId="user"
+          workspaceId="workspace"
+          onRefresh={refresh}
+        />
+      </I18nProvider>,
+    )
+    expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  },
+)
+
+it('uses the mascot snapshot date when independent requests cross midnight', () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-09T00:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          { source: 'event', id: 'e', tripId: 't', occurrence: '2026-01-16' },
+        ]}
+        nowMs={Date.parse('2026-01-09T00:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>,
+  )
+  expect(
+    screen.getByText('A planned event starts on 16 Jan 2026.'),
+  ).not.toBeNull()
+})
+
+it('revalidates once on hydration when the snapshot may have crossed midnight', async () => {
+  const onRefresh = vi.fn(async () => true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it.each([true, false])(
+  'does not repeatedly poll a fixed near-midnight snapshot after refresh returns %s',
+  async (valid) => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+    const onRefresh = vi.fn(async () => valid)
+    render(
+      <I18nProvider
+        locale="en"
+        messages={{
+          ...namespaceCatalogue('shell', Shell),
+          ...namespaceCatalogue('ui', Ui),
+        }}
+      >
+        <DashboardMascot
+          trip={null}
+          trips={[]}
+          reservations={[]}
+          candidates={[]}
+          nowMs={Date.parse('2026-01-08T23:59:59Z')}
+          today="2026-01-08"
+          userId="user"
+          workspaceId="workspace"
+          onRefresh={onRefresh}
+        />
+      </I18nProvider>,
+    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(onRefresh.mock.calls.length).toBeLessThanOrEqual(2)
+  },
+)
+
+it('keeps the same rollover deadline when the same snapshot is rendered again', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:58Z'))
+  const onRefresh = vi.fn(async () => true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:58Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
+
+it('revalidates the boundary after an in-flight hydration refresh completes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(1)
+  await act(async () => {
+    finish(true)
+    await pending
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
+
+it('cancels the boundary timer when hydration refresh fails', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  const onRefresh = vi.fn(async () => false)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it('schedules the next boundary when an authoritative snapshot changes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  const onRefresh = vi.fn(async () => true)
+  const view = (nowMs: number) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={nowMs}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(Date.parse('2026-01-08T23:59:59Z')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+  page.rerender(view(Date.parse('2026-01-09T23:59:59Z')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(3)
+})
+
+it('does not retry a pending boundary when its in-flight refresh fails', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValue(pending)
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>,
+  )
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+    finish(false)
+    await pending
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it('does not start a parallel boundary refresh when props change during a failed request', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+  await act(async () => {
+    finish(false)
+    await pending
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledOnce()
+})
+
+it('runs one deferred boundary refresh after a same-scope rerender and a successful request', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        nowMs={Date.parse('2026-01-08T23:59:59Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  page.rerender(view())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+    finish(true)
+    await pending
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(5000)
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
+
+it('preserves a pending live-clock boundary across a rerender after midnight', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T23:59:59Z'))
+  let finish: (value: boolean) => void = () => {}
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve
+  })
+  const onRefresh = vi.fn().mockReturnValueOnce(pending).mockResolvedValue(true)
+  const view = () => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view())
+  act(() => document.dispatchEvent(new Event('visibilitychange')))
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000)
+  })
+  page.rerender(view())
+  await act(async () => {
+    finish(true)
+    await pending
+    await Promise.resolve()
+  })
+  expect(onRefresh).toHaveBeenCalledTimes(2)
+})
+
+it('restores keyboard focus after a successful retry and announces changed status', async () => {
+  const onRefresh = vi.fn(async () => true)
+  const view = (partial: boolean) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+        partial={partial}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(true))
+  const status = screen.getByRole('status')
+  expect(status.textContent).toContain('Some suggestions could not be loaded.')
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  retry.focus()
+  fireEvent.click(retry)
+  expect(onRefresh).toHaveBeenCalledOnce()
+  page.rerender(view(false))
+  expect(document.activeElement).toBe(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  )
+  expect(status.textContent).toContain('No suggestions right now.')
+})
+
+it('keeps an unchanged failure status separate from changing prompt content', async () => {
+  const view = (id: string) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        candidates={[
+          {
+            source: 'event',
+            id,
+            tripId: 'trip',
+            occurrence: id === 'a' ? '2026-01-08' : '2026-01-09',
+          },
+        ]}
+        nowMs={Date.parse('2026-01-08T12:00:00Z')}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+        partial
+      />
+    </I18nProvider>
+  )
+  const page = render(view('a'))
+  const status = screen.getByRole('status')
+  expect(status.textContent).toBe('Some suggestions could not be loaded.')
+  const changes: MutationRecord[] = []
+  const observer = new MutationObserver((records) => changes.push(...records))
+  observer.observe(status, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  })
+  page.rerender(view('b'))
+  await act(async () => {
+    await Promise.resolve()
+  })
+  observer.disconnect()
+  expect(changes).toHaveLength(0)
+  const retry = screen.getByRole('button', { name: 'Try again' })
+  expect(retry.className).toContain('min-h-11')
+  expect(retry.className).toContain('min-w-11')
+  expect(retry.className).toContain('focus-visible:outline')
+})

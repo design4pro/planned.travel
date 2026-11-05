@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
 import { DashboardMascot } from './-ui/dashboard-mascot'
-import { Link, createFileRoute, useRouter } from '@tanstack/react-router'
+import {
+  DashboardRefreshError,
+  DashboardRefreshErrorPanel,
+} from './-ui/dashboard-refresh-error'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ArrowUpRight,
   CalendarDays,
@@ -15,7 +19,6 @@ import {
 } from 'lucide-react'
 
 import { AppFrame, AppSections } from '#/components/layout/app-frame'
-import { ErrorPanel } from '#/components/layout/error-state'
 import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Badge,
@@ -31,6 +34,7 @@ import { workspaceSwitchFetch } from '#/lib/workspace-claim-store'
 import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
+import { loadDashboardMascot } from '#/server/fns/dashboard-mascot'
 import {
   countryFlag,
   formatNumber,
@@ -114,33 +118,60 @@ function labelFor(
 }
 
 export const Route = createFileRoute('/_app/dashboard')({
-  loader: ({ context, abortController }) =>
-    loadDashboard({
+  loader: async ({ context, abortController }) => {
+    const options = {
       fetch: workspaceSwitchFetch(context.workspaceTransition),
       signal: abortController.signal,
-    }),
+    }
+    const [dashboard, mascot] = await Promise.all([
+      loadDashboard(options),
+      loadDashboardMascot(options).catch(() => ({
+        candidates: [],
+        partial: true,
+        nowMs: Date.now(),
+      })),
+    ])
+    return { ...dashboard, mascot }
+  },
   pendingComponent: DashboardPending,
-  errorComponent: DashboardError,
+  errorComponent: DashboardRefreshError,
   component: DashboardPage,
 })
 
-function DashboardError({ error }: { error: unknown }) {
-  const t = useTranslate()
-  return (
-    <AppFrame>
-      <ErrorPanel error={error} title={t('shell.dashboard.error')} />
-    </AppFrame>
-  )
-}
-
 function DashboardPage() {
-  const data = Route.useLoaderData()
+  const initial = Route.useLoaderData()
   const { shell } = Route.useRouteContext()
-  const router = useRouter()
-  const refreshMascot = useCallback(
-    () => refreshMascotDashboard(router),
-    [router],
-  )
+  const [refreshed, setRefreshed] = useState<{
+    initial: typeof initial
+    data: DashboardPayload
+  } | null>(null)
+  const [refreshFailure, setRefreshFailure] = useState<{
+    initial: typeof initial
+    error: unknown
+  } | null>(null)
+  const data = refreshed?.initial === initial ? refreshed.data : initial
+  const refreshMascot = useCallback(async () => {
+    try {
+      const next = await refreshMascotDashboard(async () => {
+        const [dashboard, mascot] = await Promise.all([
+          loadDashboard(),
+          loadDashboardMascot().catch(() => ({
+            candidates: [],
+            partial: true,
+            nowMs: Date.now(),
+          })),
+        ])
+        return { ...dashboard, mascot }
+      })
+      if (!next) return false
+      setRefreshed({ initial, data: next })
+      setRefreshFailure(null)
+      return true
+    } catch (error) {
+      setRefreshFailure({ initial, error })
+      return false
+    }
+  }, [initial])
   const [converter, setConverter] = useState({
     amount: '1',
     from: 'EUR',
@@ -148,6 +179,15 @@ function DashboardPage() {
   })
   const widgets = useDashboardWidgets()
   const inSheet = useWidgetsInSheet()
+  if (refreshFailure?.initial === initial)
+    return (
+      <AppFrame>
+        <DashboardRefreshErrorPanel
+          error={refreshFailure.error}
+          onRetry={refreshMascot}
+        />
+      </AppFrame>
+    )
 
   /**
    * What each widget draws. Built as a table rather than as a chain of
@@ -265,6 +305,9 @@ function UpNext({
         }
         trips={mascotTrips}
         reservations={mascotReservations}
+        candidates={data.mascot?.candidates}
+        nowMs={data.mascot?.nowMs}
+        partial={data.mascot?.partial}
         onRefresh={onRefresh}
         reduceMotion={reduceMotion}
         today={data.today}

@@ -94,7 +94,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Färden står kvar i sitt tidigare läge.',
   'transports.refusal.gone':
-    'Den togs bort medan det här fönstret var öppet, så dina ändringar kan inte sparas. Stäng fönstret för att se den uppdaterade listan.',
+    'Transporten togs bort medan det här fönstret var öppet. Spara utkastet som en ny transport eller stäng fönstret för att se den aktuella listan.',
+  'transports.action.saveAsNew': 'Spara som ny transport',
   'transports.refusal.goneTitle': 'Den här färden finns inte längre',
   'transports.error.saveFallback': 'Försök igen om en stund.',
   'transports.toast.removed': 'Färden borttagen',

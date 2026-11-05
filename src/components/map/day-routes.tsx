@@ -25,7 +25,7 @@ const CASING_OPACITY = 0.5
 const LINE_OPACITY = 0.9
 
 export interface DayRoutesProps {
-  /** One entry per day, stops already in visiting order. */
+  /** One entry per journey-bounded stretch, stops already in visiting order. */
   readonly days: ReadonlyArray<RouteDay>
   /**
    * Day to draw at full strength. Every other day drops back, so selecting a day

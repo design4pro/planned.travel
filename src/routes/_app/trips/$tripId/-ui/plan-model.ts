@@ -21,6 +21,7 @@ import {
   formatTimeRange,
   formatWeekday,
 } from '../../../-lib/format'
+import { dayStopStretches } from '#/lib/geo/handoff'
 import { DEFAULT_LOCALE } from '#/lib/i18n/locales'
 
 import type { Locale } from '#/lib/i18n/locales'
@@ -212,7 +213,7 @@ export function planModel(
         continue
       }
       // A journey is not a place: it is a row of the day and never of `rows`, which
-      // is what the map's route line is drawn from.
+      // is the stop-only projection used by the map pins.
       if (isLegItemId(itemId)) {
         const transport = journeys.get(itemId)
         if (transport !== undefined)
@@ -360,18 +361,19 @@ export function filterRows(
   })
 }
 
-/** One entry per day for the map's route lines, in visiting order. */
+/** One entry per journey-bounded stretch, retaining its Day for map emphasis. */
 export function routeDaysOf(days: ReadonlyArray<PlannerDay>): Array<{
   readonly dayNumber: number
   readonly points: Array<[number, number]>
 }> {
-  return days.map((day) => ({
-    dayNumber: day.dayNumber,
-    points: day.rows
-      .filter(
-        (row): row is PlannerRow & { lng: number; lat: number } =>
-          row.lng !== null && row.lat !== null,
-      )
-      .map((row) => [row.lng, row.lat] as [number, number]),
-  }))
+  return days.flatMap((day) =>
+    dayStopStretches(day.items).map((stops) => ({
+      dayNumber: day.dayNumber,
+      points: stops.flatMap((stop) =>
+        stop.lng !== null && stop.lat !== null
+          ? [[stop.lng, stop.lat] as [number, number]]
+          : [],
+      ),
+    })),
+  )
 }

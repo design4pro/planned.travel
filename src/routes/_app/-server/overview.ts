@@ -38,6 +38,7 @@ import { elapsedFraction } from '../-lib/view-mode'
 import { appScope } from './context'
 import { isoOfRequired } from '#/server/serialise'
 
+import type { MascotCandidate } from '#/lib/mascot-prompts'
 import type {
   OrganizationRole,
   TenantScope,
@@ -143,6 +144,11 @@ export interface StatusCount {
 }
 
 export interface DashboardPayload {
+  readonly mascot?: {
+    readonly candidates: ReadonlyArray<MascotCandidate>
+    readonly partial: boolean
+    readonly nowMs: number
+  }
   readonly today: string
   readonly upNext: TripCard | null
   /**

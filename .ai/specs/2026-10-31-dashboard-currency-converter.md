@@ -261,7 +261,8 @@ Render one product component in the existing desktop column and mobile sheet, us
 select/combobox, button, card and status primitives. Keep the amount and pair in their shared
 route owner so changing responsive presentation does not reset an in-progress conversion.
 Mount only one active requester; opening the mobile sheet triggers its first cross-rate read.
-The skeleton reserves the final result/status footprint; no collapse when a request settles.
+The initial loading skeleton reserves the ready result/status footprint. A settled failure with
+no eligible snapshot instead collapses to the compact recovery state below, including during retries.
 
 Order: title, amount, source selector, swap, target selector, read-only result, unit line,
 effective date/source, informational/free-source notice and refresh. Maintain visible labels for
@@ -270,22 +271,25 @@ localised accessible names. Use tabular numerals, ISO-code isolation and logical
 At narrow widths controls wrap without horizontal scrolling; long translations and large figures
 wrap within the card. No drag or hover-only affordance.
 
-| State                      | Visible behaviour and next action                                                                                                        |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Loading with no snapshot   | Reserved result skeleton and polite loading status; amount/selectors remain editable.                                                    |
-| Ready                      | Converted amount, unit line, effective date and source/free-source notice. Editing amount uses the held snapshot only.                   |
-| Same currency              | Identity result and unit line; no misleading ECB date/source.                                                                            |
-| Invalid amount             | Localised inline error connected by `aria-describedby`, `aria-invalid`; no numeric result, no server read caused by typing.              |
-| Unsupported pair           | Keep selected codes visible; show unavailable result and explain the pair. Offer supported selections.                                   |
-| Provider failure / offline | No invented number. Keep eligible old result only with stale/error wording; refresh becomes available after retry time.                  |
-| Stale                      | Keep eligible value, effective date and explicit stale reason; refresh subject to cooldown. More than seven days old removes the number. |
-| Exhausted block ceiling    | Explain rate service limit; eligible cache stays visible with its date. No paid-upgrade suggestion.                                      |
-| Refresh cooling down       | Keep result and explain when another request is allowed; no upstream attempt.                                                            |
+| State                      | Visible behaviour and next action                                                                                                                                                                                          |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial loading            | Reserved result skeleton and polite loading status; amount/selectors remain editable.                                                                                                                                      |
+| Ready                      | Converted amount, unit line, effective date and source/free-source notice. Editing amount uses the held snapshot only.                                                                                                     |
+| Same currency              | Identity result and unit line; no misleading ECB date/source.                                                                                                                                                              |
+| Invalid amount             | Localised inline error connected by `aria-describedby`, `aria-invalid`; no numeric result, no server read caused by typing.                                                                                                |
+| Unsupported pair           | Keep selected codes visible; show unavailable result and explain the pair. Offer supported selections.                                                                                                                     |
+| Provider failure / offline | Keep an eligible old result with stale/error wording. Without an eligible snapshot show only title, failure explanation, refresh and applicable retry deadline; remove fields, empty result and reserved disclosure space. |
+| Stale                      | Keep eligible value, effective date and explicit stale reason; refresh subject to cooldown. More than seven days old uses compact recovery.                                                                                |
+| Exhausted block ceiling    | Explain rate service limit; eligible cache stays visible with its date. Without eligible cache use compact recovery. No paid-upgrade suggestion.                                                                           |
+| Refresh cooling down       | Keep the eligible result or compact error and explain when another request is allowed; no upstream attempt.                                                                                                                |
 
 Use a polite live region for settled results/status, without announcing every keystroke. Avoid
 moving focus when a result arrives. Refresh exposes busy state with `aria-disabled` and guards
-re-entry while retaining focus; on failure it remains the named recovery target. If hiding the
-widget removes focused content, return focus to the widget-menu trigger; sheet close uses the
+re-entry while retaining focus through failure, cooldown and recovery. When compact recovery removes
+a focused field, open selector or source link, move focus to refresh; preserve focus elsewhere. Retrying
+from compact recovery announces loading without restoring unusable fields. Successful recovery
+restores the previous amount and selected currencies. Snapshots older than seven days do not
+qualify for the full form after failure. If hiding the widget removes focused content, return focus to the widget-menu trigger; sheet close uses the
 existing focus-return contract. Out-of-order reads are rejected by request generation and current
 session/workspace, including a workspace switch while a request is pending.
 
@@ -360,6 +364,14 @@ Review security on the eventual runtime diff even though triage approved design 
 continues through existing scoped repositories/catalogue; changed repo methods must ship isolation
 tests. No caller chooses attribution, no public/share endpoint is added and no platform secret is
 needed. Logs may include provider/operation/status but never input amounts or cached tenant data.
+
+## Amendment - compact unavailable state (#1854, PR #1859)
+
+Settled unavailable responses and rejected reads without an eligible snapshot retain only the
+labelled error and existing recovery action. This intentionally overrides reserved result,
+disclosure and cooldown placeholders in that state. Initial loading, eligible stale results,
+unsupported pairs and rate-independent same-currency conversion retain their separate behavior.
+Component and desktop/mobile browser tests cover failure, retries, cooldown, focus and recovery.
 
 ## Risks, compatibility and rollback
 

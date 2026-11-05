@@ -106,7 +106,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'لم تتغيّر الحالة',
   'transports.toast.statusFailed.body': 'بقي التنقل على حالته السابقة.',
   'transports.refusal.gone':
-    'حُذف أثناء فتح هذه النافذة، لذا لا يمكن حفظ تغييراتك. أغلق النافذة لترى القائمة المحدّثة.',
+    'تم حذف هذا التنقل بينما كانت هذه النافذة مفتوحة. احفظ المسودة كتنقل جديد أو أغلق النافذة لرؤية القائمة المحدثة.',
+  'transports.action.saveAsNew': 'حفظ كتنقل جديد',
   'transports.refusal.goneTitle': 'لم يعد هذا التنقل موجودًا',
   'transports.error.saveFallback': 'أعد المحاولة بعد لحظة.',
   'transports.toast.removed': 'أُزيل التنقل',

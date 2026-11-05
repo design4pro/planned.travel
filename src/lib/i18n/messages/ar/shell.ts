@@ -31,6 +31,13 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'dashboard.mascot.notification': 'هناك إشعار بانتظارك.',
+  'dashboard.mascot.actionNotification': 'هناك إشعار بانتظار ردك.',
+  'dashboard.mascot.event': 'يبدأ حدث مخطط له في {date}.',
+  'dashboard.mascot.openEvent': 'عرض خطة الرحلة',
+  'dashboard.mascot.empty': 'لا توجد اقتراحات حالياً.',
+  'dashboard.mascot.sourceUnavailable': 'تعذر تحميل بعض الاقتراحات.',
+  'dashboard.mascot.retry': 'حاول مرة أخرى',
   'dashboard.mascot.reservation': 'يبدأ حجز مؤكد في {date}.',
   'dashboard.mascot.openReservation': 'عرض الحجوزات',
   'dashboard.mascot.openChat': 'فتح محادثة السفر',

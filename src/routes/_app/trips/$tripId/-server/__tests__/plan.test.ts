@@ -27,10 +27,13 @@ import {
   createTrip,
   listDayAssignments,
   listTripDays,
+  listTripMembers,
+  removeTripMember,
   listTripPlaces,
   listTravelStats,
 } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
+import { listMascotScheduled } from '#/server/repos/mascot-scheduled'
 
 import type { TaskBindings, TaskEnvelopeOf } from '#/server/queue/types'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
@@ -272,6 +275,29 @@ describe('readPlanBoard', () => {
     ])
     expect(payload.unscheduledIds).toEqual([fixture.cafeId])
     expect(payload.places).toHaveLength(2)
+  })
+
+  it('reauthorizes a stale Nomi plan destination after a viewer loses access', async () => {
+    expect(
+      (await listMascotScheduled(viewer, '2026-10-05')).candidates.some(
+        (item) => item.id === fixture.stopId,
+      ),
+    ).toBe(true)
+    expect(await readPlanBoard(viewer, fixture.tripId)).toMatchObject({
+      editable: false,
+    })
+    const member = (await listTripMembers(owner, fixture.tripId)).find(
+      (row) => row.userId === viewer.ctx.userId,
+    )
+    if (!member) throw new Error('Viewer membership missing')
+    await removeTripMember(owner, member.id)
+    expect(
+      (await listMascotScheduled(viewer, '2026-10-05')).candidates,
+    ).toEqual([])
+    const error = await captureError(() =>
+      readPlanBoard(viewer, fixture.tripId),
+    )
+    expect(error).toMatchObject({ code: 'NOT_FOUND' })
   })
 
   it('refuses a non-member with not-found, and tells them nothing else', async () => {
