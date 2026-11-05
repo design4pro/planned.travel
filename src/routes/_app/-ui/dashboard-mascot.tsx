@@ -43,6 +43,7 @@ export function DashboardMascot(props: Props) {
   const request = useRef<{ scope: string; promise: Promise<boolean> } | null>(
     null,
   )
+  const retry = useRef<() => Promise<boolean>>(async () => false)
   const pendingBoundary = useRef<string | null>(null)
   const hydratedScope = useRef<string | null>(null)
   const completedBoundary = useRef<string | null>(null)
@@ -86,7 +87,7 @@ export function DashboardMascot(props: Props) {
       })
     }
     const revalidate = async () => {
-      if (document.visibilityState !== 'visible') return
+      if (document.visibilityState !== 'visible') return false
       let pending = request.current
       if (pending?.scope !== scopeKey) {
         let promise: Promise<boolean>
@@ -100,7 +101,7 @@ export function DashboardMascot(props: Props) {
       }
       const valid = await pending.promise
       if (request.current === pending) request.current = null
-      if (!active) return
+      if (!active) return false
       setInvalid(!valid)
       if (!valid) {
         setSnapshot(null)
@@ -126,7 +127,9 @@ export function DashboardMascot(props: Props) {
           void revalidate()
         }
       }
+      return valid
     }
+    retry.current = revalidate
     const schedule = () => {
       if (timer !== undefined) clearTimeout(timer)
       if (document.visibilityState !== 'visible') return
@@ -184,6 +187,7 @@ export function DashboardMascot(props: Props) {
     document.addEventListener('visibilitychange', visible)
     return () => {
       active = false
+      if (retry.current === revalidate) retry.current = async () => false
       if (timer !== undefined) clearTimeout(timer)
       document.removeEventListener('visibilitychange', visible)
     }
@@ -311,7 +315,7 @@ export function DashboardMascot(props: Props) {
         !prompt &&
         !props.partial,
       )}
-      onRetry={props.onRefresh}
+      onRetry={() => retry.current()}
       onDismiss={dismiss}
       onPromptFocus={() =>
         setFocused(

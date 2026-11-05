@@ -459,6 +459,83 @@ it('keeps a working notification visible and retries a failed source', async () 
   expect(retry).toHaveBeenCalledOnce()
 })
 
+it('removes a suggestion when retry loses access', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={async () => false}
+        partial
+        candidates={[
+          {
+            source: 'notification',
+            id: 'n',
+            occurrence: '2026-01-08T11:00:00Z',
+            action: false,
+          },
+        ]}
+      />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('A notification is waiting.')).not.toBeNull()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  })
+  expect(screen.queryByText('A notification is waiting.')).toBeNull()
+})
+
+it('shares a pending refresh between retry and visibility changes', async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-01-08T12:00:00Z'))
+  let complete: (value: boolean) => void = () => {}
+  const onRefresh = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        complete = resolve
+      }),
+  )
+  render(
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={null}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={onRefresh}
+        partial
+        candidates={[]}
+      />
+    </I18nProvider>,
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  act(() => document.dispatchEvent(new Event('visibilitychange')))
+  expect(onRefresh).toHaveBeenCalledOnce()
+  await act(async () => {
+    complete(true)
+  })
+})
+
 it('removes a focused authorized candidate and restores focus after access is revoked', () => {
   const trip = tripCard()
   const candidate = {
