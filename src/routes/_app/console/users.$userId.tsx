@@ -69,7 +69,7 @@ import type { ConsoleSession } from '#/server/fns/console/projections'
 /**
  * One account, and everything the console can currently say about it.
  *
- * Composed from the same primitives `src/routes/_app/admin.tsx` uses — `PageHeader` upstairs in the
+ * Composed from the same primitives `src/routes/_app/admin/route.tsx` uses — `PageHeader` upstairs in the
  * console shell, then `Panel`, `MetaGrid`, `Table`, `Badge` and `EmptyState` — rather than from a
  * second arrangement invented for this screen. The reference has no per-account page at all: it
  * edits a row inline behind a pencil, so a suspension has no reason beside it, a session has nowhere

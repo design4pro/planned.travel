@@ -381,6 +381,12 @@ const messages = {
   'admin.denied.body':
     'Если это вам нужно, попросите владельца или администратора пространства сменить вашу роль.',
   'admin.denied.action': 'Назад к панели',
+  'admin.nav.label': 'Управление рабочим пространством',
+  'admin.nav.overview': 'Обзор',
+  'admin.nav.members': 'Участники',
+  'admin.nav.audit': 'Аудит',
+  'admin.members.error': 'Не удалось загрузить участников',
+  'admin.audit.error': 'Не удалось загрузить последние действия',
   'admin.eyebrow': 'Консоль пространства',
   'admin.description': 'Тариф {plan} · создано {date}',
   'admin.createdUnknown': 'недавно',
@@ -408,8 +414,8 @@ const messages = {
   'admin.stat.storageUnit': 'из {limit}',
   'admin.stat.storageUnlimited': 'без ограничений',
   'admin.stat.storageCaption': 'Файлы, фото и выгрузки',
-  'admin.stat.audit': 'Записи аудита',
-  'admin.stat.auditCaption': 'Свежая активность — ниже',
+  'admin.stat.audit': 'Последние записи аудита',
+  'admin.stat.auditCaption': 'До 25 последних записей в аудите',
   'admin.stat.plan': 'Тариф',
   'admin.stat.planCaption': 'Лимиты проверяются на границе репозиториев',
 

@@ -10,7 +10,7 @@
  * `MessageKey` is what makes a typo here a compile error instead of a nav item
  * that renders its own key.
  */
-import { Link } from '@tanstack/react-router'
+import { Link, useRouteContext } from '@tanstack/react-router'
 import {
   Bell,
   Building2,
@@ -125,6 +125,7 @@ function ItemBody({
 
 export function SettingsNav() {
   const t = useTranslate()
+  const { shell } = useRouteContext({ from: '/_app' })
 
   return (
     <nav aria-label={t('settings.nav.label')} className="min-w-0">
@@ -144,6 +145,17 @@ export function SettingsNav() {
             </Link>
           </li>
         ))}
+        {shell.session.user.isAdmin ? (
+          <li className="shrink-0 border-s border-edge-faint ps-2 lg:mt-2 lg:border-s-0 lg:border-t lg:ps-0 lg:pt-2">
+            <Link to="/admin" className={ITEM_CLASS}>
+              <ShieldCheck aria-hidden className={ICON_CLASS} />
+              <ItemBody
+                label={t('settings.nav.admin')}
+                description={t('settings.nav.admin.hint')}
+              />
+            </Link>
+          </li>
+        ) : null}
       </ul>
     </nav>
   )

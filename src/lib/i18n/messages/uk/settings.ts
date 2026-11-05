@@ -70,6 +70,8 @@ const messages = {
   'nav.notifications.hint': 'Вхідні, пошта й телефон',
   'nav.workspace': 'Простір',
   'nav.workspace.hint': 'Учасники та типові значення',
+  'nav.admin': 'Консоль робочого простору',
+  'nav.admin.hint': 'Учасники, запрошення та останні дії',
   'nav.billing': 'Оплата',
   'nav.billing.hint': 'Тариф, місця та рахунки',
 

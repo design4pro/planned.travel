@@ -59,6 +59,8 @@ const messages = {
   'nav.notifications.hint': 'Εισερχόμενα, email και κινητό',
   'nav.workspace': 'Χώρος εργασίας',
   'nav.workspace.hint': 'Μέλη και κοινές προεπιλογές',
+  'nav.admin': 'Κονσόλα χώρου εργασίας',
+  'nav.admin.hint': 'Μέλη, προσκλήσεις και πρόσφατη δραστηριότητα',
   'nav.billing': 'Χρεώσεις',
   'nav.billing.hint': 'Πλάνο, θέσεις και αποδείξεις',
 

@@ -48,6 +48,8 @@ const messages = {
   'nav.notifications.hint': '收件匣、電子郵件和推播',
   'nav.workspace': '工作區',
   'nav.workspace.hint': '成員與共用的預設值',
+  'nav.admin': '工作區主控台',
+  'nav.admin.hint': '成員、邀請和近期活動',
   'nav.billing': '帳務',
   'nav.billing.hint': '方案、席次和帳單',
   'action.save': '儲存變更',

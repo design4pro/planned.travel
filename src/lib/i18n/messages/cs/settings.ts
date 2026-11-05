@@ -70,6 +70,8 @@ const messages = {
   'nav.notifications.hint': 'Doručené, e-mail a telefon',
   'nav.workspace': 'Prostor',
   'nav.workspace.hint': 'Členové a společná nastavení',
+  'nav.admin': 'Konzole pracovního prostoru',
+  'nav.admin.hint': 'Členové, pozvánky a nedávná aktivita',
   'nav.billing': 'Platby',
   'nav.billing.hint': 'Tarif, místa a faktury',
 

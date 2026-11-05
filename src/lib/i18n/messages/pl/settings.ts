@@ -72,6 +72,8 @@ const messages = {
   'nav.notifications.hint': 'Skrzynka, e-mail i telefon',
   'nav.workspace': 'Przestrzeń',
   'nav.workspace.hint': 'Członkowie i wspólne ustawienia',
+  'nav.admin': 'Konsola przestrzeni roboczej',
+  'nav.admin.hint': 'Członkowie, zaproszenia i ostatnia aktywność',
   'nav.billing': 'Płatności',
   'nav.billing.hint': 'Plan, miejsca i faktury',
 

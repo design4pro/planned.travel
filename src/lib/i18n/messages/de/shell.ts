@@ -363,6 +363,12 @@ const messages = {
   'admin.denied.body':
     'Bitte einen Inhaber oder einen Administrator dieses Arbeitsbereichs, deine Rolle zu ändern, wenn du das brauchst.',
   'admin.denied.action': 'Zurück zur Übersicht',
+  'admin.nav.label': 'Arbeitsbereichsverwaltung',
+  'admin.nav.overview': 'Übersicht',
+  'admin.nav.members': 'Mitglieder',
+  'admin.nav.audit': 'Prüfprotokoll',
+  'admin.members.error': 'Mitglieder konnten nicht geladen werden',
+  'admin.audit.error': 'Letzte Aktivitäten konnten nicht geladen werden',
   'admin.eyebrow': 'Workspace-Konsole',
   'admin.description': 'Tarif {plan} · angelegt {date}',
   'admin.createdUnknown': 'kürzlich',
@@ -386,8 +392,8 @@ const messages = {
   'admin.stat.storageUnit': 'von {limit}',
   'admin.stat.storageUnlimited': 'ohne Grenze',
   'admin.stat.storageCaption': 'Dateien, Fotos und Exporte',
-  'admin.stat.audit': 'Protokolleinträge',
-  'admin.stat.auditCaption': 'Die jüngsten Vorgänge stehen weiter unten',
+  'admin.stat.audit': 'Letzte Prüfprotokolleinträge',
+  'admin.stat.auditCaption': 'Bis zu 25 neueste Einträge im Prüfprotokoll',
   'admin.stat.plan': 'Tarif',
   'admin.stat.planCaption':
     'Kontingente greifen unten an der Datenschicht, nicht im Bildschirm',
