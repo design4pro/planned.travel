@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Locator } from '@playwright/test'
 import { useSession } from './helpers/session'
+import { callsServerFn } from './helpers/server-fn'
 
 async function expectUnobscured(control: Locator) {
   await expect(control).toBeFocused()
@@ -15,6 +16,48 @@ async function expectUnobscured(control: Locator) {
     }),
   ).toBe(true)
 }
+
+test('dashboard refresh failure focuses recovery and retry rechecks access', async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useSession(context, page, baseURL)
+  await page.goto('/dashboard')
+  await expect(
+    page.getByRole('button', { name: 'Open travel chat' }),
+  ).toBeVisible()
+  await page.waitForLoadState('networkidle')
+  let blocked = true
+  let attempts = 0
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (
+      blocked &&
+      callsServerFn(url, 'loadDashboard') &&
+      !callsServerFn(url, 'loadDashboardMascot')
+    ) {
+      attempts += 1
+      await route.abort('failed')
+      return
+    }
+    await route.continue()
+  })
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('visibilitychange')),
+  )
+  const error = page.getByRole('group', { name: 'The dashboard did not load' })
+  await expect(error).toBeFocused()
+  const retry = error.getByRole('button', { name: 'Try again' })
+  await retry.click()
+  await expect.poll(() => attempts).toBeGreaterThanOrEqual(2)
+  await expect(error).toBeVisible()
+  blocked = false
+  await retry.click()
+  await expect(
+    page.getByRole('button', { name: 'Open travel chat' }),
+  ).toBeVisible()
+})
 
 test('dashboard chat and layout remain usable on small screens', async ({
   page,
