@@ -10,7 +10,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 
@@ -49,6 +49,8 @@ export const procFields = (stat) =>
     .trim()
     .split(/\s+/)
 const procStat = (pid) => procFields(read(`/proc/${pid}/stat`))
+export const procArgs = (cmdline) =>
+  cmdline ? cmdline.split('\0').slice(0, -1) : []
 export const live = (pid) => {
   if (!Number.isInteger(pid) || pid <= 1) return false
   try {
@@ -68,10 +70,17 @@ export function processInfo(pid) {
       cwd = readlinkSync(`/proc/${pid}/cwd`)
     } catch {}
     const started = procStat(pid)[19]
+    const argv = procArgs(read(`/proc/${pid}/cmdline`))
+    let executable = ''
+    try {
+      executable = readlinkSync(`/proc/${pid}/exe`)
+    } catch {}
     return {
       pid,
       cwd: canonical(cwd),
-      command: read(`/proc/${pid}/cmdline`).replace(/\0/g, ' ').trim(),
+      command: argv.join(' '),
+      argv,
+      executable,
       started: started
         ? `${read('/proc/sys/kernel/random/boot_id').trim()}:${started}`
         : '',
@@ -91,15 +100,20 @@ export function processInfo(pid) {
 const isVite = (info, root) =>
   info.cwd === root &&
   info.started &&
-  /(?:^|\/)vite(?:\.js)?\s+(?:dev|--port)\b/.test(info.command)
-const isWrapper = (info, root) =>
-  info.cwd === root &&
-  info.started &&
-  /pnpm\b.*\bexec vite dev\b/.test(info.command)
+  (info.argv
+    ? basename(info.executable) === 'node' &&
+      /^vite(?:\.js)?$/.test(basename(info.argv[1] || '')) &&
+      /^(?:dev|--port)$/.test(info.argv[2] || '')
+    : /^(?:\S*\/)?node(?:\.exe)?\s+(?:\S*\/)?vite(?:\.js)?\s+(?:dev|--port)\b/.test(
+        info.command,
+      ))
 const matches = (saved, current) =>
   ['pid', 'cwd', 'command', 'started'].every(
     (key) => saved[key] === current[key],
-  )
+  ) &&
+  (!saved.argv ||
+    (saved.executable === current.executable &&
+      JSON.stringify(saved.argv) === JSON.stringify(current.argv)))
 const paths = (root) => ({
   identity: join(root, '.ai/qa/dev-server-process.json'),
   pid: join(root, '.ai/qa/dev-server.pid'),
@@ -109,7 +123,6 @@ function recorded(root) {
   const files = paths(root)
   if (existsSync(files.identity))
     return [JSON.parse(readFileSync(files.identity, 'utf8'))]
-  // Migrate the old PID-only format conservatively, including pnpm's actual Vite child.
   let pid = existsSync(files.pid)
     ? Number(readFileSync(files.pid, 'utf8').trim())
     : null
@@ -118,20 +131,6 @@ function recorded(root) {
     pid = JSON.parse(readFileSync(descriptor, 'utf8')).app?.pid
   if (!pid || !live(pid)) return []
   const info = processInfo(pid)
-  if (isVite(info, root)) return [info]
-  if (isWrapper(info, root)) {
-    const processPairs =
-      process.platform === 'linux'
-        ? linuxPids().map((child) => [child, Number(procStat(child)[1])])
-        : output('ps', ['-axo', 'pid=,ppid='])
-            .split('\n')
-            .map((line) => line.trim().split(/\s+/).map(Number))
-    const children = processPairs
-      .filter(([, parent]) => parent === pid)
-      .map(([child]) => processInfo(child))
-      .filter((child) => isVite(child, root))
-    if (children.length === 1) return [...children, info]
-  }
   throw new Error(
     `Refusing to signal unverified pid ${pid} (cwd: ${info.cwd || 'unavailable'})`,
   )
@@ -144,18 +143,36 @@ export function ownsServer(root, port) {
     records.length > 0 &&
     records.every(
       (saved) =>
-        (isVite(saved, root) || isWrapper(saved, root)) &&
         live(saved.pid) &&
-        matches(saved, processInfo(saved.pid)),
+        ((current) => isVite(current, root) && matches(saved, current))(
+          processInfo(saved.pid),
+        ),
     ) &&
     records[0].port === Number(port)
   )
 }
 
-export function rememberServer(root, pid, port) {
+export async function rememberServer(root, pid, port) {
   root = canonical(root)
-  const info = processInfo(Number(pid))
-  if (!isVite(info, root))
+  pid = Number(pid)
+  const deadline = Date.now() + 2000
+  let started = ''
+  let info
+  do {
+    if (!live(pid)) break
+    info = processInfo(pid)
+    if (started && info.started && info.started !== started)
+      throw new Error(`Cannot identify started Vite pid ${pid}`)
+    started ||= info.started
+    if (isVite(info, root)) break
+    await sleep(25)
+  } while (Date.now() < deadline)
+  if (
+    !info ||
+    !live(pid) ||
+    !isVite(info, root) ||
+    !matches(info, processInfo(pid))
+  )
     throw new Error(`Cannot identify started Vite pid ${pid}`)
   writeFileSync(
     paths(root).identity,
@@ -167,10 +184,8 @@ export async function stopServer(root) {
   root = canonical(root)
   for (const saved of recorded(root)) {
     if (!live(saved.pid)) continue
-    if (
-      !(isVite(saved, root) || isWrapper(saved, root)) ||
-      !matches(saved, processInfo(saved.pid))
-    ) {
+    const current = processInfo(saved.pid)
+    if (!isVite(current, root) || !matches(saved, current)) {
       throw new Error(
         `Refusing to signal reused or unverified pid ${saved.pid}`,
       )
@@ -245,7 +260,7 @@ if (
 ) {
   try {
     const [action, first, second] = process.argv.slice(2)
-    if (action === 'record') rememberServer(process.cwd(), first, second)
+    if (action === 'record') await rememberServer(process.cwd(), first, second)
     else if (action === 'stop') await stopServer(process.cwd())
     else if (action === 'holders')
       process.stderr.write(describePortHolders(first))
