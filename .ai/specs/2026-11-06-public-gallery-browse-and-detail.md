@@ -14,7 +14,7 @@ Plan stage 13-S3 in `docs/plans/13-community-gallery.md` will let a visitor brow
 
 ## Current evidence and scope
 
-No Gallery routes, community repositories, read-model or release handlers exist under `src/` at this revision. The approved [13-S1 publication-pipeline specification](2026-11-04-the-publication-pipeline.md), Spec PR #1846, is a dependency, not implemented code. Stage 13-S2 has neither an implementation nor a covering spec in this checkout. The plan's assumed schema, release writer and KV contracts cannot be treated as existing primitives.
+No Gallery routes, community repositories, read-model or release handlers exist under `src/` at this revision. The approved [13-S1 publication-pipeline specification](2026-11-04-the-publication-pipeline.md), Spec PR #1846, is a dependency, not implemented code. Stage 13-S2 now has a ready [curation specification](2026-11-06-curation-review-and-release.md), Spec PR #1865, but no implementation. The S3 consumer contract below remains an explicit integration prerequisite for S2. The plan's assumed schema, release writer and KV contracts cannot be treated as existing primitives.
 
 The marketing chrome, all 23 `marketing.ts` catalogues, map primitives and `src/server/public/rate-limit.ts` already exist. Reuse them. No new dependency, binding, D1 table, column, queue kind, quota metric, realtime event or photo pipeline belongs to S3.
 
