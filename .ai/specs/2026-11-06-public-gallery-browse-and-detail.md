@@ -95,57 +95,57 @@ Each cover is original decorative inline SVG: warm brand wash, day-count numeral
 
 Detail shows title, attribution, publication date, counts and country chips, then complete ordered day sections and place names/category labels. With `showDates` false, no trip calendar date is present in DOM, hydration, art labels or response; use numbered days. The public publication instant/date `publishedAt` remains visible and is independent of this choice. Preserve days without places. Each coordinate-bearing place has a map marker; absent/partial coordinates never produce a pin or NaN. On desktop (`lg`), itinerary and sticky map share two columns; at 360px the fixed-ratio map band precedes the itinerary. RTL mirrors logical layout and directional affordances without reversing itinerary order.
 
-Reuse `MapCanvas`, `FitBounds`, `MapAttribution`, `BasemapNotice` and `PlaceMarker`'s safe display contract, adapting only approved public fields. Repeated places across days have distinct local day/place keys. No private popover fields, edit controls, remote photo URLs or tenant module imports. Selecting a row moves to its pin; selecting a pin scrolls its corresponding row into view. The row remains a keyboard target with a visible selected indication and name; do not unexpectedly move keyboard focus on pointer hover. Support every located place, coincident pins and large snapshots without inaccessible overlapping-only controls: the itinerary remains the complete keyboard alternative. Use existing clustering/roving-focus behavior where applicable. Handle antimeridian bounds and a single point with existing map helpers.
+Reuse `MapCanvas`, `FitBounds`, `MapAttribution`, `BasemapNotice` and `PlaceMarker`'s safe display contract, adapting only approved public fields. Repeated places across days have distinct local day/place keys. No private popover fields, edit controls, remote photo URLs or tenant module imports. Selecting a row moves to its pin; selecting a pin scrolls its corresponding row into view. Located rows use native buttons named with place and day number; non-located rows remain plain readable text. Selected row and pin expose `aria-current="location"`, with one current local day/place identity. Keyboard activation of a pin scrolls and focuses the corresponding row; row activation retains row focus. Pointer activation scrolls/selects without moving focus away from its control, and hover never changes keyboard focus. Names distinguish the same place on different days. Support every located place, coincident pins and large snapshots without inaccessible overlapping-only controls: the itinerary remains the complete keyboard alternative. Use existing clustering/roving-focus behavior where applicable. Handle antimeridian bounds and a single point with existing map helpers.
 
 Map failure or unavailable WebGL renders a localized fallback without breaking itinerary reading. No coordinates replaces the map with the designed explanatory card; absent basemap uses existing `BasemapNotice`, not the no-coordinates face. Theme updates retain selection. Reduced motion uses existing camera-motion helpers to jump, and disables art drawing, card rise and stagger. Ordinary card enter/hover motion is transform/opacity, 220ms easing with at most eight 24ms stagger steps.
 
 Without JavaScript, all approved text and navigation remain readable. Search and map selection are progressive enhancements, disabled/absent until hydration, with a `noscript` explanation; never display a dead working-looking control. Do not promise an interactive SSR map. Skeletons use reserved dimensions and no repeated announcements; initial successful SSR does not conceal content behind them.
 
-Named states: browse empty, populated, search results, no results, loading, rate-limited and unavailable; detail populated, gone, loading, unavailable, rate-limited, no coordinates and map unavailable. Unavailable has retry; gone has a Gallery link. Search announces result-count changes politely and debounces announcements, not input. Use one main landmark, a logical heading hierarchy, labelled search/map controls, WCAG 2.2 AA focus/contrast and usable touch targets. Keep active rows clear of sticky chrome; clear-search restores focus to the input. An isolated map error boundary must retain the itinerary and its current focus.
+Named states: browse empty, populated, search results, no results, loading, rate-limited and unavailable; detail populated, gone, loading, unavailable, rate-limited, no coordinates and map unavailable. Unavailable has retry; gone has a Gallery link. Search announces result-count changes politely and debounces announcements, not input. Use one main landmark, a logical heading hierarchy, labelled search/map controls, WCAG 2.2 AA focus/contrast and usable touch targets. Keep active rows clear of sticky chrome; clear-search restores focus to the input. An isolated map error boundary retains the itinerary. Preserve focus outside the map. If the focused map control is removed by failure, focus the selected itinerary row when it exists, otherwise the named map fallback region with `tabIndex=-1`; test both paths so focus never silently falls to the document body.
 
 ## Visual change expected
 
-New public `/gallery` and `/gallery/$slug` faces and a Gallery header/footer destination. Verify populated and all named non-resting states at 360px and 2560px in light/dark; include 1280px for the map/itinerary transition, Arabic RTL at 1440px, keyboard focus, hover, reduced motion and no-JS text. Existing public chrome must remain usable at 360px and with zoom. Use current design tokens, reserved art/map ratios and readable max-width. The design-only PR changes no rendered product route; mockups and a blind visual comparison were not produced by this specification step. Implementation owes real browser evidence under the current verification protocol.
+New public `/gallery` and `/gallery/$slug` faces and a Gallery header/footer destination. Verify populated and all named non-resting states at 360px and 2560px in light/dark; include 1280px for the map/itinerary transition, Arabic RTL at 1440px, keyboard focus, hover, reduced motion and no-JS text. Existing public chrome must remain usable at 360px and with zoom. Also verify reflow at 320 CSS px / 400% zoom and text enlargement to 200%: no horizontal scrolling for itinerary/chrome, reachable navigation and unobscured focus. Only the two-dimensional map may use its spatial-layout exception. Use current design tokens, reserved art/map ratios and readable max-width. The design-only PR changes no rendered product route; mockups and a blind visual comparison were not produced by this specification step. Implementation owes real browser evidence under the current verification protocol.
 
 ## Copy
 
 Add these full English keys to the existing `marketing` namespace; implementation translates every key to all 23 locales in the same slice using `i18n-messages`. Reuse existing common retry, sign-in and map attribution/basemap copy when the meaning matches. ICU placeholders/plurals must be identical across locales; translator plural branches follow each locale's rules. No publication text is hardcoded into product copy.
 
-| English key                               | English text                                                                  |
-| ----------------------------------------- | ----------------------------------------------------------------------------- |
-| `marketing.gallery.nav`                   | Gallery                                                                       |
-| `marketing.gallery.eyebrow`               | Trips worth exploring                                                         |
-| `marketing.gallery.heading`               | Find your next idea                                                           |
-| `marketing.gallery.intro`                 | Explore itineraries shared by fellow travellers.                              |
-| `marketing.gallery.read`                  | Read the itinerary                                                            |
-| `marketing.gallery.by`                    | Shared by {name}                                                              |
-| `marketing.gallery.days`                  | {count, plural, one {# day} other {# days}}                                   |
-| `marketing.gallery.places`                | {count, plural, one {# place} other {# places}}                               |
-| `marketing.gallery.published`             | Published {date}                                                              |
-| `marketing.gallery.searchLabel`           | Search the Gallery                                                            |
-| `marketing.gallery.searchPlaceholder`     | Title, traveller or country                                                   |
-| `marketing.gallery.clearSearch`           | Clear search                                                                  |
-| `marketing.gallery.results`               | {count, plural, =0 {No trips found} one {# trip found} other {# trips found}} |
-| `marketing.gallery.emptyTitle`            | The Gallery is waiting for its first trip                                     |
-| `marketing.gallery.emptyBody`             | Publish one of yours from a trip's Collab tab.                                |
-| `marketing.gallery.noResults`             | No trips match “{query}”. Try another search.                                 |
-| `marketing.gallery.goneTitle`             | This trip left the Gallery                                                    |
-| `marketing.gallery.goneBody`              | This itinerary is not available here.                                         |
-| `marketing.gallery.back`                  | Back to the Gallery                                                           |
-| `marketing.gallery.errorTitle`            | The Gallery could not load                                                    |
-| `marketing.gallery.errorBody`             | Try again in a moment.                                                        |
-| `marketing.gallery.rateLimited`           | Too many requests. Try again in {seconds} seconds.                            |
-| `marketing.gallery.loading`               | Loading the Gallery                                                           |
-| `marketing.gallery.day`                   | Day {number}                                                                  |
-| `marketing.gallery.itinerary`             | Itinerary                                                                     |
-| `marketing.gallery.emptyDay`              | No places on this day.                                                        |
-| `marketing.gallery.mapLabel`              | Itinerary map                                                                 |
-| `marketing.gallery.showOnMap`             | Show {name} on the map                                                        |
-| `marketing.gallery.showInItinerary`       | Show {name} in the itinerary                                                  |
-| `marketing.gallery.noCoordinatesTitle`    | This itinerary has no mapped places yet                                       |
-| `marketing.gallery.noCoordinatesBody`     | You can still explore every day in the itinerary.                             |
-| `marketing.gallery.mapUnavailable`        | The map could not load. Every place is listed in the itinerary.               |
-| `marketing.gallery.interactiveRequiresJs` | Enable JavaScript to search and explore the interactive map.                  |
+| English key                               | English text                                                                          |
+| ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| `marketing.gallery.nav`                   | Gallery                                                                               |
+| `marketing.gallery.eyebrow`               | Trips worth exploring                                                                 |
+| `marketing.gallery.heading`               | Find your next idea                                                                   |
+| `marketing.gallery.intro`                 | Explore itineraries shared by fellow travellers.                                      |
+| `marketing.gallery.read`                  | Read the itinerary                                                                    |
+| `marketing.gallery.by`                    | Shared by {name}                                                                      |
+| `marketing.gallery.days`                  | {count, plural, one {# day} other {# days}}                                           |
+| `marketing.gallery.places`                | {count, plural, one {# place} other {# places}}                                       |
+| `marketing.gallery.published`             | Published {date}                                                                      |
+| `marketing.gallery.searchLabel`           | Search the Gallery                                                                    |
+| `marketing.gallery.searchPlaceholder`     | Title, traveller or country                                                           |
+| `marketing.gallery.clearSearch`           | Clear search                                                                          |
+| `marketing.gallery.results`               | {count, plural, =0 {No trips found} one {# trip found} other {# trips found}}         |
+| `marketing.gallery.emptyTitle`            | The Gallery is waiting for its first trip                                             |
+| `marketing.gallery.emptyBody`             | A workspace admin with access to a trip can submit it for review from its Collab tab. |
+| `marketing.gallery.noResults`             | No trips match “{query}”. Try another search.                                         |
+| `marketing.gallery.goneTitle`             | This itinerary is unavailable                                                         |
+| `marketing.gallery.goneBody`              | This itinerary is not available here.                                                 |
+| `marketing.gallery.back`                  | Back to the Gallery                                                                   |
+| `marketing.gallery.errorTitle`            | The Gallery could not load                                                            |
+| `marketing.gallery.errorBody`             | Try again in a moment.                                                                |
+| `marketing.gallery.rateLimited`           | Too many requests. Try again in {seconds, plural, one {# second} other {# seconds}}.  |
+| `marketing.gallery.loading`               | Loading the Gallery                                                                   |
+| `marketing.gallery.day`                   | Day {number}                                                                          |
+| `marketing.gallery.itinerary`             | Itinerary                                                                             |
+| `marketing.gallery.emptyDay`              | No places on this day.                                                                |
+| `marketing.gallery.mapLabel`              | Itinerary map                                                                         |
+| `marketing.gallery.showOnMap`             | Show {name} from Day {number} on the map                                              |
+| `marketing.gallery.showInItinerary`       | Show {name} in Day {number}                                                           |
+| `marketing.gallery.noCoordinatesTitle`    | This itinerary has no mapped places yet                                               |
+| `marketing.gallery.noCoordinatesBody`     | You can still explore every day in the itinerary.                                     |
+| `marketing.gallery.mapUnavailable`        | The map could not load. Every place is listed in the itinerary.                       |
+| `marketing.gallery.interactiveRequiresJs` | Enable JavaScript to search and explore the interactive map.                          |
 
 The empty-state publication guidance appears only after S2's Collab integration is live. Do not show suggestions or save-action copy ahead of S4. Inspect existing shared map controls before minting extra labels; every additional necessary accessibility/error variant must also land in all 23 catalogues.
 
@@ -157,7 +157,7 @@ Add resolver cases to `src/server/repos/__tests__/tenant-isolation.test.ts` and 
 
 Binding-free `src/server/public/__tests__/gallery.test.ts` exercises both loaders via the real guard logic: missing/malformed/oversize KV, stale index/detail, digest/slug/version/tenant substitution, pending update retaining old approved metadata, withdrawal committed before the final gate, D1 outage, and no authority-cache reuse. Assert withdrawn titles never appear in body, head or hydration. Test maximum 1,000-entry index in 25 bounded queries, no N+1, and refusal of the next entry/byte. Separate limiter failure from payload/authority failure; 429 includes retry headers, trusted IP behavior and distinct budget. Pin importer graph to one resolver caller; public modules never call SQL or session helpers. Mock binding adapters in Node tests rather than importing `cloudflare:workers` transitively.
 
-Art tests cover deterministic reduction, numeric bounds, many days, day breaks, no points, coincident/single/dateline points and decorative semantics. Screen tests cover query including hero/country, duplicate-free results, clear/focus, state announcements, full ordered days, date omission, row/pin linkage and error fallback. UI tests must mock any public chrome chain reaching Worker bindings and use native DOM assertions; there are no jest-dom matchers. Catalogue parity runs with the full gate.
+Art tests cover deterministic reduction, numeric bounds, many days, day breaks, no points, coincident/single/dateline points and decorative semantics. Screen tests cover query including hero/country, duplicate-free results, clear/focus, state announcements, full ordered days, date omission, row/pin linkage, programmatic current state, day-distinguished names, keyboard pin-to-row focus and error focus recovery. Include 320 CSS px reflow/400% zoom and 200% text enlargement in browser verification. UI tests must mock any public chrome chain reaching Worker bindings and use native DOM assertions; there are no jest-dom matchers. Catalogue parity runs with the full gate.
 
 Add behavioral anonymous journeys in `e2e/community-gallery.spec.ts`, reusing repository test setup without production seed endpoints. Real S1/S2 setup must release two publications (with dates/coordinates and without either), a pending replacement and an unapproved victim. Use isolated fresh browser contexts without cached authentication for reads. Verify browse→detail, search, accessible keyboard row/pin selection, native links, all days without JS, empty/gone/error/rate states, basemap absence and failure. Commit withdrawal while stale KV remains and verify a fresh document, RPC, navigation/back and head/hydration do not reveal it. Also test service-worker interception cannot cache the route/RPC. Retain the currently displayed-copy limitation explicitly.
 
@@ -188,3 +188,6 @@ At most five tracer-bullet tickets; each includes its own tests, locale addition
 
 | 8 | May browse activate before detail? | Register and activate both public routes together in ticket 3; ticket 2 prepares route-independent components only. | Product and architecture panel round 1 required working destinations for every hero/card link. |
 | 9 | Does one first-primary session guarantee every chunk is current? | No; use non-session primary D1 per statement, with real adapter routing assertions and a between-chunk withdrawal test. | Security panel round 1 required this correction because subsequent session queries may use replicas. |
+
+| 10 | How are selection and map failure accessible? | Native day-distinguished row buttons, programmatic current location, keyboard pin-to-row focus, and explicit recovery when a focused map control disappears; test reflow and text enlargement. | Accessibility panel round 1 required these explicit behaviors before slicing. |
+| 11 | Does public copy imply self-publication or a formerly existing slug? | Describe admin submission for review, use a neutral unavailable heading, and pluralize retry seconds. | UX panel round 1 required accurate role/review guidance, non-enumerating gone copy and correct singular retry text. |
