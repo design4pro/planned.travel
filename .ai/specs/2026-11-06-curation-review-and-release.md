@@ -74,6 +74,22 @@ No global catalog module imports the tenant repository. Do not mint a fake tenan
 
 Reuse 13-S1's community_trips, immutable versions and durable outbox. Extend additively where its implemented schema lacks: approved version/digest, per-publication release revision and phase/error, permanent policy-takedown fence, review-token records, and durable notification delivery identity. At most one pending and one live snapshot remains, including release and cleanup races, as required by the predecessor. Do not duplicate its quota metric; verdicts consume no publication slot.
 
+The following entities are planned, not implemented. The predecessor owns publication/version rows; this stage adds review-token and index-control state. The index-control pointer refers to one immutable KV generation and contains no tenant-content foreign key.
+
+```mermaid
+flowchart LR
+    classDef predecessor fill:#e5e7eb,color:#111,stroke:#9ca3af
+    classDef newEntity fill:#2f6feb,color:#fff,stroke:#1b4fb0
+    entity_1["Publication: tenant, pending and live identities"]:::predecessor
+    entity_2["Immutable version: frozen snapshot and canonical index entry"]:::predecessor
+    entity_3["Review token: operator, exact version, expiry"]:::newEntity
+    entity_4["Index control: revision and active generation"]:::newEntity
+    entity_5["Immutable KV index generation"]:::newEntity
+    entity_1 -->|"1 to at most 2 retained"| entity_2
+    entity_3 -->|"many to 1"| entity_2
+    entity_4 -->|"1 active pointer"| entity_5
+```
+
 A first approval mints a stable slug using an ASCII-folded public title prefix up to 48 characters (fallback `trip`) and the full opaque publication id, not its first six characters. Validate URL-safe IDs, keep the existing unique constraint, and settle any constraint conflict with a fresh bounded retry; never assert a six-character prefix is collision-free. Updates keep the slug. Public metadata always comes from the approved immutable version.
 
 - **Approve:** compare-and-set the exact ready pending version. Atomically record verdict/actor/time, audit, approved identity, durable publish work and notification intent. Preserve live version until release installation succeeds. Duplicate identical approval returns current progress without a second side effect; a different stale verdict conflicts.
@@ -220,6 +236,8 @@ At most seven tracer-bullet tickets after the predecessor's implementation, each
 | 5 | How are slug collisions handled? | Full opaque publication-id suffix, fixed non-Latin fallback and unique-index bounded collision retry. | Architect specialist, high confidence, identifies the plan's six-character collision claim as false; the full-id variant preserves identity without a new ID facility. |
 | 6 | What limits apply? | 1,000 live entries, 1 MiB index, 50 queue rows, 15-minute bounded review tokens; fail visibly at capacity. | Applied conservative design defaults within the architect's bounded-generation condition; public availability may pause during rebuild. |
 | 7 | Why no mockup or implementation proof? | Text-only design; gate and PR publication belong to the next two workflow steps. | The current assignment is step 1 of 3, and this worktree has no shared browser environment descriptor. |
-| 8 | Is the named stage coherent and complete? | Product review conditions applied: no public availability claim before 13-S3, bounded publisher-visible reason, explicit capacity recovery. | Product owner specialist, high confidence, first panel: approve with conditions; conditions incorporated; final re-review follows. |
+| 8 | Is the named stage coherent and complete? | Approve after conditions: no public availability claim before 13-S3, bounded publisher-visible reason, explicit capacity recovery. | Product owner specialist, high confidence, round 2: all three conditions accepted; no remaining conditions. |
 | 9 | Does the cross-tenant design satisfy the security boundary? | Approve. | Security and tenancy specialist, high confidence, first panel: exact-version review, explicit exceptions and D1 fences accepted; implementation tests remain required. |
 | 10 | Is the accessibility design implementable? | Approve. | Accessibility specialist, high confidence: keyboard/focus, error association, async announcements and responsive/RTL requirements accepted; rendered checks remain implementation work. |
+| 11 | Are the architecture and delivery seams ready? | Approve. | Software architect specialist, high confidence, round 2: canonical SQL byte accounting, zero-row receipt guards, safety-before-activation and deletion owners accepted. |
+| 12 | Are traveller-facing states and copy coherent? | Approve. | UX specialist, high confidence, round 2: prepared/public gating, reason retention and capacity guidance accepted. |
