@@ -6,6 +6,7 @@
  * and every input is parsed by Zod here *and* again inside the repository, so a
  * hand-rolled request cannot smuggle a field past the form.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
@@ -30,7 +31,12 @@ import { appScope, mirrorToRoom, orNull, patch, tombstone } from './context'
 
 const tripId = z.string().trim().min(1).max(64)
 const rowId = z.string().trim().min(1).max(64)
-const name = z.string().trim().min(1).max(120)
+const name = z
+  .string()
+  .trim()
+  .min(1)
+  .max(120)
+  .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 const listKind = z.enum(LIST_KINDS)
 const priority = z.enum(ITEM_PRIORITIES)

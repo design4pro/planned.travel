@@ -783,3 +783,12 @@ describe('naming a day of the trip', () => {
     ).toBe('Day 2 · not-a-date')
   })
 })
+
+it.each(['\u200B', '\u3164', '\u2800'])(
+  'refuses an invisible transport title: %j',
+  (title) => {
+    expect(validateTransportDraft(draft({ title })).title).toBe(
+      'modules.transports.error.titleEmpty',
+    )
+  },
+)

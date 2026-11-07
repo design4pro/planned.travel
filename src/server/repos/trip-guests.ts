@@ -16,6 +16,7 @@
  * module imports the trip guards, and `trips.ts` never imports this one.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { TRIP_MEMBER_ROLES, tripGuests, tripMembers } from '#/server/db/schema'
@@ -85,7 +86,9 @@ export class TripGuestMergeTargetError extends RepositoryError {
  * Inputs
  * ---------------------------------------------------------------------------------------------- */
 
-const guestNameSchema = shortTextSchema.min(1)
+const guestNameSchema = shortTextSchema
+  .min(1)
+  .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 const createTripGuestInput = z.strictObject({
   tripId: idSchema,

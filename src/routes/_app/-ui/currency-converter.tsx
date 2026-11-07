@@ -41,6 +41,8 @@ export function CurrencyConverter({
   )
   const [now, setNow] = useState(Date.now)
   const [confirmedAmount, setConfirmedAmount] = useState(state.amount)
+  const refreshButton = useRef<HTMLButtonElement>(null)
+  const focusedControl = useRef<HTMLElement | null>(null)
   const serial = useRef(0)
   const active = useRef(false)
   const checked = useRef(0)
@@ -57,7 +59,7 @@ export function CurrencyConverter({
         claim.stale ||
         claim.switching ||
         active.current ||
-        currentAmount.current.minor === null ||
+        (currentAmount.current.minor === null && !refresh) ||
         !dashboardWidgetPreference.read().shown.includes('currency') ||
         (!inSheet && window.matchMedia(WIDGETS_IN_SHEET_QUERY).matches)
       )
@@ -162,6 +164,18 @@ export function CurrencyConverter({
     ? Math.floor(now / 86_400_000) -
       Math.floor(Date.parse(snapshot.effectiveOn) / 86_400_000)
     : Infinity
+  const compact = !identity && result !== null && (!snapshot || age > 7)
+  const recoverOnRemoval = useCallback((node: HTMLDivElement | null) => {
+    if (!node) return
+    return () => {
+      // Hand off before the sheet's focus trap sees the focused node disappear.
+      if (
+        focusedControl.current &&
+        focusedControl.current === document.activeElement
+      )
+        refreshButton.current?.focus()
+    }
+  }, [])
   const rates = snapshot && age <= 7 ? snapshot.rates : {}
   const conversion =
     amount === null
@@ -221,89 +235,117 @@ export function CurrencyConverter({
     )
       status = t('shell.dashboard.currency.stale')
   }
+  if (compact)
+    status = t(
+      result?.reason === 'provider-blocked'
+        ? 'shell.dashboard.currency.blocked'
+        : 'shell.dashboard.currency.failed',
+    )
   return (
     <Panel label={t('shell.dashboard.currency.label')}>
       <div className="flex min-w-0 flex-col gap-3">
-        <Field
-          label={t('shell.dashboard.currency.amount')}
-          error={
-            amount === null || invalidConversion
-              ? t('shell.dashboard.currency.invalid')
-              : undefined
-          }
-        >
-          <Input
-            value={state.amount}
-            inputMode="decimal"
-            maxLength={64}
-            onChange={(e) => onChange({ ...state, amount: e.target.value })}
-            onBlur={() => {
-              setConfirmedAmount(state.amount)
-              if (amount !== null) {
-                onChange({
-                  ...state,
-                  amount: toAmountInput(amount, state.from),
-                })
-                if (!result || Date.now() - checked.current >= 3_600_000)
-                  void read()
+        {!compact ? (
+          <div
+            ref={recoverOnRemoval}
+            className="contents"
+            onFocusCapture={(event) => {
+              focusedControl.current = event.target
+            }}
+            onBlurCapture={() => {
+              focusedControl.current = null
+            }}
+          >
+            <Field
+              label={t('shell.dashboard.currency.amount')}
+              error={
+                amount === null || invalidConversion
+                  ? t('shell.dashboard.currency.invalid')
+                  : undefined
               }
-            }}
-          />
-        </Field>
-        <Field label={t('shell.dashboard.currency.from')}>
-          <Combobox
-            options={options}
-            value={state.from}
-            onChange={(value) => {
-              if (value) onChange({ ...state, from: value })
-            }}
-          />
-        </Field>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onChange({ ...state, from: state.to, to: state.from })}
-        >
-          {t('shell.dashboard.currency.swap')}
-        </Button>
-        <Field label={t('shell.dashboard.currency.to')}>
-          <Combobox
-            options={options}
-            value={state.to}
-            onChange={(value) => {
-              if (value) onChange({ ...state, to: value })
-            }}
-          />
-        </Field>
-        <div className="min-h-28 min-w-0 break-words" aria-busy={loading}>
-          <p id={id} className="text-caption text-ink-3">
-            {t('shell.dashboard.currency.result')}
-          </p>
-          {loading && !conversion ? <Skeleton className="h-8 w-full" /> : null}
-          {conversion ? (
-            <output
-              aria-labelledby={id}
-              aria-live="off"
-              className="block text-subtitle font-semibold tabular-nums"
             >
-              <bdi>
-                {formatMoney(conversion.minor, state.to, locale)} {state.to}
-              </bdi>
-            </output>
-          ) : null}
-          {conversion ? (
-            <p className="text-caption tabular-nums">
-              <bdi>
-                {formatRateLine(conversion.rate, state.from, state.to, locale)}
-              </bdi>
-            </p>
-          ) : null}
-        </div>
+              <Input
+                value={state.amount}
+                inputMode="decimal"
+                maxLength={64}
+                onChange={(e) => onChange({ ...state, amount: e.target.value })}
+                onBlur={() => {
+                  setConfirmedAmount(state.amount)
+                  if (amount !== null) {
+                    onChange({
+                      ...state,
+                      amount: toAmountInput(amount, state.from),
+                    })
+                    if (!result || Date.now() - checked.current >= 3_600_000)
+                      void read()
+                  }
+                }}
+              />
+            </Field>
+            <Field label={t('shell.dashboard.currency.from')}>
+              <Combobox
+                options={options}
+                value={state.from}
+                onChange={(value) => {
+                  if (value) onChange({ ...state, from: value })
+                }}
+              />
+            </Field>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                onChange({ ...state, from: state.to, to: state.from })
+              }
+            >
+              {t('shell.dashboard.currency.swap')}
+            </Button>
+            <Field label={t('shell.dashboard.currency.to')}>
+              <Combobox
+                options={options}
+                value={state.to}
+                onChange={(value) => {
+                  if (value) onChange({ ...state, to: value })
+                }}
+              />
+            </Field>
+            <div className="min-h-28 min-w-0 break-words" aria-busy={loading}>
+              <p id={id} className="text-caption text-ink-3">
+                {t('shell.dashboard.currency.result')}
+              </p>
+              {loading && !conversion ? (
+                <Skeleton className="h-8 w-full" />
+              ) : null}
+              {conversion ? (
+                <output
+                  aria-labelledby={id}
+                  aria-live="off"
+                  className="block text-subtitle font-semibold tabular-nums"
+                >
+                  <bdi>
+                    {formatMoney(conversion.minor, state.to, locale)} {state.to}
+                  </bdi>
+                </output>
+              ) : null}
+              {conversion ? (
+                <p className="text-caption tabular-nums">
+                  <bdi>
+                    {formatRateLine(
+                      conversion.rate,
+                      state.from,
+                      state.to,
+                      locale,
+                    )}
+                  </bdi>
+                </p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         <p
           role="status"
           aria-live="polite"
           aria-atomic="true"
-          className="min-h-10 text-caption text-ink-3"
+          className={cn('text-caption text-ink-3', !compact && 'min-h-10')}
         >
           {!loading && conversion && spokenResult ? (
             <span className="sr-only">
@@ -317,8 +359,15 @@ export function CurrencyConverter({
             <span className="sr-only"> {cooldownText}</span>
           ) : null}
         </p>
-        {!identity ? (
+        {!identity && !compact ? (
           <div
+            ref={recoverOnRemoval}
+            onFocusCapture={(event) => {
+              focusedControl.current = event.target
+            }}
+            onBlurCapture={() => {
+              focusedControl.current = null
+            }}
             className={cn('flex flex-col gap-3', !snapshot && 'invisible')}
             aria-hidden={!snapshot}
             inert={!snapshot}
@@ -341,7 +390,7 @@ export function CurrencyConverter({
             <FreeRateDisclosure />
           </div>
         ) : null}
-        {!identity ? (
+        {!identity && !compact ? (
           <p
             className={cn(
               'min-h-10 text-caption text-ink-3',
@@ -355,6 +404,7 @@ export function CurrencyConverter({
         {!identity ? (
           <>
             <Button
+              ref={refreshButton}
               size="sm"
               variant="secondary"
               aria-disabled={busy || cooldown}
@@ -366,16 +416,19 @@ export function CurrencyConverter({
             >
               {t('shell.dashboard.currency.refresh')}
             </Button>
-            <p
-              id={`${id}-cooldown`}
-              className={cn(
-                'min-h-10 text-caption text-ink-3',
-                !cooldown && 'invisible',
-              )}
-              aria-hidden={!cooldown}
-            >
-              {cooldownText}
-            </p>
+            {!compact || cooldown ? (
+              <p
+                id={`${id}-cooldown`}
+                className={cn(
+                  'text-caption text-ink-3',
+                  !compact && 'min-h-10',
+                  !cooldown && 'invisible',
+                )}
+                aria-hidden={!cooldown}
+              >
+                {cooldownText}
+              </p>
+            ) : null}
           </>
         ) : null}
       </div>

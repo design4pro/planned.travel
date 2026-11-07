@@ -16,6 +16,7 @@
  * whose consequence — the extra days' places land in ideas and their notes are dropped — is worth
  * stating; painting it in a warning colour would train the reader to ignore warnings.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
@@ -99,7 +100,7 @@ export function TripCopyDialog({
    * to take — set the other end, or clear both and copy the trip as a template.
    */
   const halfOpen = range !== null && range.to === undefined
-  const named = title.trim().length > 0
+  const named = hasVisibleCharacter(title)
 
   const sourceRun = daysBetween(trip.startDate, trip.endDate)
   const chosenRun =

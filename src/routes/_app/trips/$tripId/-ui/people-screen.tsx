@@ -25,6 +25,7 @@
  * rename, merge and remove. Nobody is notified of any of it; a guest has no account.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { InviteLinkPanel } from './invite-link-panel'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useRouter } from '@tanstack/react-router'
@@ -488,7 +489,7 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
     label: t(ROLE_COPY[value]),
   }))
 
-  const guestNameFilled = guestName.trim() !== ''
+  const guestNameFilled = hasVisibleCharacter(guestName)
   const addGuestForm = isOwner ? (
     <form
       className="flex w-full flex-col gap-3"
@@ -500,7 +501,11 @@ export function PeopleScreen({ data }: PeopleScreenProps) {
     >
       <Field
         label={t('trips.people.guest.add.label')}
-        error={refusalOn('guest-add')}
+        error={
+          guestName !== '' && !guestNameFilled
+            ? t('shell.validation.visibleName')
+            : refusalOn('guest-add')
+        }
       >
         <Input
           ref={guestField}
@@ -1216,7 +1221,7 @@ export function GuestNameDialog({
   const t = useTranslate()
   const [value, setValue] = useState(guest?.displayName ?? '')
   const name = guest?.displayName ?? ''
-  const filled = value.trim() !== ''
+  const filled = hasVisibleCharacter(value)
 
   return (
     <Dialog open={guest !== null} onOpenChange={onOpenChange}>
@@ -1235,7 +1240,14 @@ export function GuestNameDialog({
           </DialogHeader>
 
           <DialogBody className="flex flex-col gap-3">
-            <Field label={t('trips.people.guest.add.label')} error={refusal}>
+            <Field
+              label={t('trips.people.guest.add.label')}
+              error={
+                value !== '' && !filled
+                  ? t('shell.validation.visibleName')
+                  : refusal
+              }
+            >
               <Input
                 value={value}
                 maxLength={200}

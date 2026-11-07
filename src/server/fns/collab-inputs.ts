@@ -4,6 +4,7 @@
  * Plain schemas and nothing else, so the thread, notes and polls modules each import what they
  * need and none keeps its own copy of the id or body limits.
  */
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { z } from 'zod'
 
 export const tripId = z.string().trim().min(1).max(64)
@@ -11,7 +12,12 @@ export const rowId = z.string().trim().min(1).max(64)
 export const body = z.string().trim().min(1).max(4000)
 
 const noteFields = {
-  title: z.string().trim().min(1).max(160),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .max(160)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   body: z.string().trim().max(8000),
   category: z.string().trim().max(60),
   colour: z
@@ -40,9 +46,23 @@ export const noteUpdateSchema = z.object({
  */
 export const pollInputSchema = z.object({
   tripId,
-  question: z.string().trim().min(1).max(200),
+  question: z
+    .string()
+    .trim()
+    .min(1)
+    .max(200)
+    .refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' }),
   options: z
-    .array(z.string().trim().min(1).max(120))
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(120)
+        .refine(hasVisibleCharacter, {
+          message: 'shell.validation.visibleName',
+        }),
+    )
     .min(2)
     .max(12)
     .refine((values) => {

@@ -877,6 +877,7 @@ Rules:
   `server/queue/handlers/email.ts` delivers. A template that imports a binding, or an `auth/`
   module that renders JSX, has crossed a seam.
 - Validate every server-function input with Zod. Never trust the client.
+- User-authored names and titles share `hasVisibleCharacter` (`src/lib/workspace-name.ts`) at write boundaries and in their forms: at least one letter, number, symbol or punctuation character, excluding default-ignorable characters and blank Braille. Existing optional, nullable and empty-string fallback contracts remain; validation does not rewrite stored names.
 - Named exports, no default exports (except route modules, which TanStack requires).
 - `cn()` from `src/lib/cn.ts` for class merging.
 - TypeScript strict. No `any`, no non-null `!` on values that can genuinely be null.

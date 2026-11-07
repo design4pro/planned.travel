@@ -100,7 +100,8 @@ const messages = {
   'transports.toast.statusFailed.body':
     'Lo spostamento è rimasto nello stato precedente.',
   'transports.refusal.gone':
-    'È stato eliminato mentre questa finestra era aperta, quindi le tue modifiche non possono essere salvate. Chiudi la finestra per vedere l’elenco aggiornato.',
+    'Questo trasporto è stato eliminato mentre la finestra era aperta. Salva la bozza come nuovo trasporto o chiudi la finestra per vedere l’elenco aggiornato.',
+  'transports.action.saveAsNew': 'Salva come nuovo trasporto',
   'transports.refusal.goneTitle': 'Questo spostamento non esiste più',
   'transports.error.saveFallback': 'Riprova fra un momento.',
   'transports.toast.removed': 'Spostamento rimosso',

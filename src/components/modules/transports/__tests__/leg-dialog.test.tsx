@@ -118,7 +118,8 @@ function submitTheForm(): void {
 }
 
 beforeEach(() => {
-  save.mockResolvedValue({ transport: TRANSPORT, legs: [] })
+  save.mockReset().mockResolvedValue({ transport: TRANSPORT, legs: [] })
+  router.invalidate.mockReset().mockResolvedValue(undefined)
 })
 
 afterEach(() => {
@@ -235,12 +236,13 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     onOpenChange: (next: boolean) => void,
     onWriteError?: (cause: unknown) => void,
     closeFocusTarget?: () => HTMLElement | null,
+    transport = TRANSPORT,
   ) {
     return (
       <I18nProvider locale="en" messages={EN}>
         <TransportDialog
           tripId="trip-1"
-          transport={TRANSPORT}
+          transport={transport}
           days={[DAY_1]}
           canSearchConnections
           currency="EUR"
@@ -256,9 +258,12 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
   async function refusedSave(
     onOpenChange = vi.fn(),
     onWriteError = vi.fn(),
+    transport = TRANSPORT,
   ): Promise<ReturnType<typeof render>> {
     save.mockRejectedValueOnce(goneRefusal())
-    const view = render(dialog(true, onOpenChange, onWriteError))
+    const view = render(
+      dialog(true, onOpenChange, onWriteError, undefined, transport),
+    )
     fireEvent.change(screen.getByLabelText(/^Name/u), {
       target: { value: 'Typed after it was deleted' },
     })
@@ -429,22 +434,223 @@ describe('TransportDialog after the transport was deleted elsewhere', () => {
     )
   })
 
-  it('leaves any other refusal to the desk recovery owner and shows no gone state', async () => {
-    const onWriteError = vi.fn()
-    const other = new Error(
-      encodePublicFailure({
-        kind: 'refusal',
-        message: 'This trip is archived.',
+  it.each(['form', 'search'])(
+    'recovers the retained draft from the %s tab as a new transport',
+    async (tab) => {
+      const close = vi.fn()
+      const legs = ['Lisboa', 'Coimbra'].map((fromName, position) => ({
+        id: `leg-${position}`,
+        position,
+        fromName,
+        fromCode: null,
+        fromLat: null,
+        fromLng: null,
+        fromTimezone: null,
+        toName: position === 0 ? 'Coimbra' : 'Porto',
+        toCode: null,
+        toLat: null,
+        toLng: null,
+        toTimezone: null,
+        serviceNumber: `IC ${position}`,
+        platform: null,
+        seat: null,
+        departureDayId: null,
+        arrivalDayId: null,
+        departureDate: null,
+        departureTime: null,
+        arrivalDate: null,
+        arrivalTime: null,
+      }))
+      await refusedSave(close, vi.fn(), { ...TRANSPORT, legs })
+      fireEvent.change(screen.getByLabelText(/^Notes/u), {
+        target: { value: 'Keep this booking' },
+      })
+      if (tab === 'search')
+        fireEvent.click(screen.getByRole('button', { name: 'Search again' }))
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Save as a new transport' }),
+      )
+      await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+      const recovered = save.mock.calls[1]?.[0].data
+      expect(recovered).toMatchObject({
+        intent: 'create',
+        title: 'Typed after it was deleted',
+        notes: 'Keep this booking',
+      })
+      expect(recovered.transportId).not.toBe(TRANSPORT.id)
+      expect(recovered.stations).toEqual(save.mock.calls[0]?.[0].data.stations)
+      expect(recovered.legs).toEqual(save.mock.calls[0]?.[0].data.legs)
+      expect(recovered.stations).toHaveLength(3)
+      expect(recovered.legs).toHaveLength(2)
+      expect(
+        screen.getByRole('heading', { name: 'Add a transport' }),
+      ).toBeTruthy()
+      expect(
+        screen.getByRole('button', { name: 'Search connections' }),
+      ).toBeTruthy()
+      await vi.waitFor(() => expect(close).toHaveBeenCalledWith(false))
+    },
+  )
+
+  it('blocks duplicate recovery and form saves while pending, then retries creation under the same id', async () => {
+    await refusedSave()
+    let reject: (cause: unknown) => void = () => {}
+    save.mockReturnValueOnce(
+      new Promise((_resolve, refuse) => {
+        reject = refuse
       }),
     )
-    save.mockRejectedValueOnce(other)
-    render(dialog(true, vi.fn(), onWriteError))
+    const recover = screen.getByRole('button', {
+      name: 'Save as a new transport',
+    })
+    act(() => {
+      fireEvent.click(recover)
+      fireEvent.click(recover)
+    })
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+    expect(
+      screen.getByRole('button', { name: /Saving/u }).getAttribute('aria-busy'),
+    ).toBe('true')
     submitTheForm()
-
-    await vi.waitFor(() => expect(onWriteError).toHaveBeenCalledWith(other))
+    expect(save).toHaveBeenCalledTimes(2)
+    const id = save.mock.calls[1]?.[0].data.transportId
+    await act(async () =>
+      reject(
+        new Error(
+          encodePublicFailure({
+            kind: 'unexpected',
+            reference: 'test-reference',
+          }),
+        ),
+      ),
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Save as a new transport' }),
+    ).toBeNull()
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Try again in a moment.',
+    )
     expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
-    expect(saveButton().getAttribute('disabled')).toBeNull()
+    expect(document.activeElement).toBe(screen.getByLabelText(/^Name/u))
+    submitTheForm()
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(3))
+    expect(save.mock.calls[2]?.[0].data).toMatchObject({
+      intent: 'create',
+      transportId: id,
+      title: 'Typed after it was deleted',
+    })
   })
+
+  it('keeps an invalid recovered draft editable and writes only after correction', async () => {
+    await refusedSave()
+    fireEvent.change(screen.getByLabelText(/^Name/u), { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search again' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save as a new transport' }),
+    )
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByRole('heading', { name: 'Add a transport' }),
+    ).toBeTruthy()
+    expect(screen.getByLabelText(/^Name/u).getAttribute('aria-invalid')).toBe(
+      'true',
+    )
+    fireEvent.change(screen.getByLabelText(/^Name/u), {
+      target: { value: 'Corrected train' },
+    })
+    submitTheForm()
+    await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+    expect(save.mock.calls[1]?.[0].data).toMatchObject({
+      intent: 'create',
+      title: 'Corrected train',
+    })
+  })
+
+  it('validates the retained chain before writing a recovered draft', async () => {
+    await refusedSave()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Break this into legs' }),
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Save as a new transport' }),
+    )
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByRole('heading', { name: 'Add a transport' }),
+    ).toBeTruthy()
+    expect(
+      document.querySelectorAll('input[aria-invalid="true"]').length,
+    ).toBeGreaterThan(0)
+  })
+
+  it.each(['success', 'failure'])(
+    'does not alter a later opening when recovery settles with %s',
+    async (outcome) => {
+      const close = vi.fn()
+      const view = await refusedSave(close)
+      let resolve: (value: unknown) => void = () => {}
+      let reject: (cause: unknown) => void = () => {}
+      save.mockReturnValueOnce(
+        new Promise((done, fail) => {
+          resolve = done
+          reject = fail
+        }),
+      )
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Save as a new transport' }),
+      )
+      await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(2))
+      view.rerender(dialog(false, close))
+      view.rerender(dialog(true, close))
+      await act(async () => {
+        if (outcome === 'success') resolve({ transport: TRANSPORT, legs: [] })
+        else
+          reject(
+            new Error(
+              encodePublicFailure({
+                kind: 'unexpected',
+                reference: 'late-recovery',
+              }),
+            ),
+          )
+      })
+      expect(document.querySelector('[role="alert"]')).toBeNull()
+      expect(close).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole('heading', { name: 'Edit this transport' }),
+      ).toBeTruthy()
+      expect(
+        screen.queryByRole('button', { name: 'Save as a new transport' }),
+      ).toBeNull()
+    },
+  )
+
+  it.each([
+    'This trip is archived.',
+    'This trip no longer exists.',
+    'This day no longer exists.',
+  ])(
+    'leaves %s to the desk recovery owner without offering recovery',
+    async (message) => {
+      const onWriteError = vi.fn()
+      const other = new Error(
+        encodePublicFailure({
+          kind: 'refusal',
+          message,
+        }),
+      )
+      save.mockRejectedValueOnce(other)
+      render(dialog(true, vi.fn(), onWriteError))
+      submitTheForm()
+
+      await vi.waitFor(() => expect(onWriteError).toHaveBeenCalledWith(other))
+      expect(document.querySelector('[data-part="transport-gone"]')).toBeNull()
+      expect(saveButton().getAttribute('disabled')).toBeNull()
+      expect(
+        screen.queryByRole('button', { name: 'Save as a new transport' }),
+      ).toBeNull()
+    },
+  )
 })
 
 it('keeps the draft and chain across a stale-currency refusal and retries with the refreshed budget currency', async () => {

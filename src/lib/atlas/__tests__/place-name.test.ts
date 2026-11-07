@@ -35,3 +35,10 @@ describe('region names', () => {
     )
   })
 })
+
+it.each(['\u200B', '\u3164', '\u2800'])(
+  'refuses an invisible-only place identity: %j',
+  (value) => {
+    expect(placeNameSchema(120).safeParse(value).success).toBe(false)
+  },
+)

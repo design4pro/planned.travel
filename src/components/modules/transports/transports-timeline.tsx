@@ -346,8 +346,8 @@ export function TransportsTimeline({
     ) : null
 
   // A transport being edited that was the trip's last one, and was deleted elsewhere, leaves the
-  // list empty under an open dialog. The dialog stays where it is, with its gone state, until the
-  // reader closes it; the empty state below is a different tree and would unmount it.
+  // list empty under an open dialog. Keep it mounted while the reader closes it or recovers the
+  // draft; the empty state below is a different tree and would unmount it.
   if (transports.length === 0 && editing === null) {
     return (
       <>

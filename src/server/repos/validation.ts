@@ -6,6 +6,7 @@
  * once for the whole data layer.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { z } from 'zod'
 
 import { DATE_PATTERN, TIME_PATTERN } from '#/lib/transport-timing'
@@ -16,7 +17,7 @@ export const idSchema = z.string().trim().min(1).max(64)
 export const optionalIdSchema = idSchema.nullish()
 
 /** Free text that must actually contain something. */
-export const titleSchema = z.string().trim().min(1).max(200)
+export const titleSchema = z.string().trim().min(1).max(200).refine(hasVisibleCharacter, { message: 'shell.validation.visibleName' })
 
 export const shortTextSchema = z.string().trim().max(200)
 

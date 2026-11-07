@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { useSession } from './helpers/session'
 import { callsServerFn } from './helpers/server-fn'
-import { FROZEN_NOW } from './helpers/settle'
+import { FROZEN_NOW, settle } from './helpers/settle'
 
 for (const width of [1440, 360]) {
   test(`reference currency conversion remains local and responsive at ${width}px`, async ({
@@ -385,8 +385,25 @@ for (const [picker, lastWidget] of [
     await page.route('**/_serverFn/**', (route) => {
       if (!callsServerFn(new URL(route.request().url()), 'getPublicRatesFn'))
         return route.continue()
+      const now = Date.now()
       return route.fulfill({
-        json: { result: { status: 'unavailable', reason: 'provider-failed' } },
+        json: {
+          result: {
+            status: 'available',
+            freshness: 'fresh',
+            reason: null,
+            checkedAt: now,
+            snapshot: {
+              version: 1,
+              provider: 'frankfurter-ecb',
+              source: 'ECB',
+              base: 'EUR',
+              effectiveOn: new Date(now).toISOString().slice(0, 10),
+              fetchedAt: now,
+              rates: { EUR: 1, USD: 1.25 },
+            },
+          },
+        },
       })
     })
     const other = await context.newPage()
@@ -427,4 +444,179 @@ for (const [picker, lastWidget] of [
       await other.close()
     }
   })
+}
+
+for (const width of [1440, 360]) {
+  for (const failure of ['unavailable', 'rejected'] as const) {
+    test(`compact ${failure} recovery preserves input and focus at ${width}px`, async ({
+      page,
+      context,
+      baseURL,
+    }, testInfo) => {
+      expect(await useSession(context, page, baseURL)).toBe(true)
+      await page.setViewportSize({ width, height: 900 })
+      if (width === 360) await page.emulateMedia({ colorScheme: 'dark' })
+      await page.addInitScript(() =>
+        localStorage.setItem(
+          'planned.dashboard-widgets',
+          JSON.stringify({
+            shown: [],
+            zones: [],
+          }),
+        ),
+      )
+      let reads = 0
+      let recovering = false
+      let releaseFailure: () => void = () => {}
+      const failed = new Promise<void>((resolve) => {
+        releaseFailure = resolve
+      })
+      let releaseRecovery: () => void = () => {}
+      const recovered = new Promise<void>((resolve) => {
+        releaseRecovery = resolve
+      })
+      await page.route('**/_serverFn/**', async (route) => {
+        if (!callsServerFn(new URL(route.request().url()), 'getPublicRatesFn'))
+          return route.continue()
+        reads++
+        if (!recovering) {
+          await failed
+          if (failure === 'rejected') return route.abort('failed')
+          return route.fulfill({
+            json: {
+              result: {
+                status: 'unavailable',
+                reason: 'provider-failed',
+                retryAt: Date.now() + 10000,
+              },
+            },
+          })
+        }
+        await recovered
+        await route.fulfill({
+          json: {
+            result: {
+              status: 'available',
+              freshness: 'fresh',
+              reason: null,
+              checkedAt: Date.now(),
+              snapshot: {
+                version: 1,
+                provider: 'frankfurter-ecb',
+                source: 'ECB',
+                base: 'EUR',
+                effectiveOn: new Date().toISOString().slice(0, 10),
+                fetchedAt: Date.now(),
+                rates: { EUR: 1, USD: 1.25 },
+              },
+            },
+          },
+        })
+      })
+      try {
+        await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+        await settle(page, {
+          name: 'dashboard',
+          path: '/dashboard',
+          ready: 'main',
+        })
+        const menuTrigger = page.getByRole('button', { name: 'Choose widgets' })
+        await menuTrigger.click()
+        await page
+          .getByRole('menuitemcheckbox', { name: 'Currency converter' })
+          .click()
+        await page.keyboard.press('Escape')
+        await expect(menuTrigger).toBeFocused()
+        if (width === 360) {
+          const trigger = page.getByRole('button', {
+            name: 'Reference',
+            exact: true,
+          })
+          await expect(trigger).toBeVisible({ timeout: 30000 })
+          await trigger.click()
+        }
+        const widget = page.locator('[data-part="dashboard-widget-currency"]')
+        await expect.poll(() => reads, { timeout: 30000 }).toBeGreaterThan(0)
+        await expect(widget.getByRole('status')).toContainText('Loading')
+        const amount = widget.getByRole('textbox', {
+          name: 'Amount',
+          exact: true,
+        })
+        await amount.fill('42')
+        if (failure === 'rejected') {
+          await widget.getByRole('button', { name: 'From currency' }).focus()
+          await page.keyboard.press('Enter')
+          await expect(page.getByRole('combobox')).toBeFocused()
+        }
+        const savedAmount = await amount.inputValue()
+        const before = await widget.boundingBox()
+        releaseFailure()
+        const refresh = widget.getByRole('button', { name: 'Refresh rates' })
+        await expect(widget.getByRole('status')).toContainText(
+          'Rates could not be refreshed.',
+        )
+        await expect(amount).toHaveCount(0)
+        await expect(
+          widget.getByRole('button', {
+            name: /From currency|To currency|Swap currencies/,
+          }),
+        ).toHaveCount(0)
+        await expect(
+          widget.getByText('Converted amount', { exact: true }),
+        ).toHaveCount(0)
+        await expect(
+          widget.locator('.invisible, .min-h-28, .min-h-10'),
+        ).toHaveCount(0)
+        await expect(refresh).toBeFocused()
+        const after = await widget.boundingBox()
+        expect(after?.height).toBeLessThan(before?.height ?? 0)
+        await expect(async () => {
+          await widget.screenshot({
+            path: testInfo.outputPath('compact-error.png'),
+          })
+        }).toPass({ timeout: 5000 })
+        await testInfo.attach('compact-error', {
+          path: testInfo.outputPath('compact-error.png'),
+          contentType: 'image/png',
+        })
+        await expect(refresh).toBeFocused()
+        const firstReads = reads
+        if (failure === 'unavailable') {
+          await expect(refresh).toHaveAttribute('aria-disabled', 'true')
+          await page.keyboard.press('Enter')
+          expect(reads).toBe(firstReads)
+        }
+        await expect(refresh).not.toHaveAttribute('aria-disabled', 'true', {
+          timeout: 15000,
+        })
+        recovering = true
+        await page.keyboard.press('Enter')
+        await expect.poll(() => reads).toBe(firstReads + 1)
+        await expect(widget.getByRole('status')).toContainText('Loading')
+        await expect(amount).toHaveCount(0)
+        await expect(refresh).toBeFocused()
+        await page.keyboard.press('Enter')
+        expect(reads).toBe(firstReads + 1)
+        releaseRecovery()
+        await expect(widget.locator('output')).toContainText('52.50')
+        await expect(amount).toHaveValue(savedAmount)
+        await expect(
+          widget.getByRole('button', { name: 'From currency' }),
+        ).toContainText('EUR')
+        await expect(
+          widget.getByRole('button', { name: 'To currency' }),
+        ).toContainText('USD')
+        await expect(refresh).toBeFocused()
+        if (width === 360) {
+          await page.keyboard.press('Escape')
+          await expect(
+            page.getByRole('button', { name: 'Reference', exact: true }),
+          ).toBeFocused()
+        }
+      } finally {
+        releaseFailure()
+        releaseRecovery()
+      }
+    })
+  }
 }

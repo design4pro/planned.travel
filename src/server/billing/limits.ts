@@ -24,7 +24,7 @@
  *    seats (narrowed to the seats actually purchased on a per-seat plan), trips,
  *    storage and every module switch. The coarse tier row in
  *    {@link PLAN_QUOTAS} supplies only the operational metrics the catalogue does not
- *    model: places, files, exports, collections and journeys.
+ *    model: places, files, exports, collections, journeys and taxonomy.
  * 3. **Per-tenant ceilings stored on the subscription row** — `seat_limit`,
  *    `storage_limit_bytes`, then `quota_overrides` — have the last word. This is the
  *    deliberate escape hatch: it is how a customer is grandfathered above the plan

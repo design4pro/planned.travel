@@ -31,6 +31,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'أدخل حرفًا مرئيًا واحدًا على الأقل.',
   'dashboard.mascot.notification': 'هناك إشعار بانتظارك.',
   'dashboard.mascot.actionNotification': 'هناك إشعار بانتظار ردك.',
   'dashboard.mascot.event': 'يبدأ حدث مخطط له في {date}.',

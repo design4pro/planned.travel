@@ -50,6 +50,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': 'Nhập ít nhất một ký tự hiển thị.',
   'dashboard.mascot.notification': 'Bạn có một thông báo đang chờ.',
   'dashboard.mascot.actionNotification':
     'Có một thông báo đang chờ bạn phản hồi.',

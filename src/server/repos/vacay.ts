@@ -7,6 +7,7 @@
  * the year grid.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import { and, asc, count, desc, eq, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
 import { ENTRY_KIND_COST, MAX_ENTRY_RANGE_DAYS } from '#/lib/vacay/entry-kinds'
@@ -150,14 +151,14 @@ export type SetEntitlementInput = z.infer<typeof setEntitlementInput>
 export const addCompanyHolidayInput = z.object({
   planId: idSchema,
   date: dateSchema,
-  label: shortTextSchema.nullish(),
+  label: shortTextSchema.refine(value => value === '' || hasVisibleCharacter(value), { message: 'shell.validation.visibleName' }).nullish(),
 })
 export type AddCompanyHolidayInput = z.infer<typeof addCompanyHolidayInput>
 
 export const addHolidayCalendarInput = z.object({
   planId: idSchema,
   region: z.string().trim().min(2).max(16),
-  label: shortTextSchema.nullish(),
+  label: shortTextSchema.refine(value => value === '' || hasVisibleCharacter(value), { message: 'shell.validation.visibleName' }).nullish(),
   colour: colourSchema.optional(),
   sortOrder: sortOrderSchema.optional(),
 })

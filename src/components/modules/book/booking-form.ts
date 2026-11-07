@@ -12,6 +12,7 @@
  * name owned once, by `shell.bookingType.*`.
  */
 
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import type { MessageKey } from '#/lib/i18n'
 import type { DeferredMessage } from '../shared/deferred-message'
 
@@ -737,7 +738,7 @@ export function validateBookingDraft(
   const errors: BookingErrors =
     stay === undefined ? {} : validateStayDraft(draft, stay)
 
-  if (draft.title.trim().length === 0) {
+  if (!hasVisibleCharacter(draft.title)) {
     errors.title = { key: 'modules.book.error.titleEmpty' }
   } else if (draft.title.trim().length > 160) {
     errors.title = { key: 'modules.error.titleLong' }

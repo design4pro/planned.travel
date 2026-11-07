@@ -1,14 +1,12 @@
 /**
  * The line a day is actually walked along.
  *
- * The reference planner draws pins and nothing else, which leaves the reader to
- * infer the order of a day from a numbered badge on each pin — a puzzle rather
- * than an answer. Joining the stops of one day in visiting order turns the map
+ * Joining the stops of one day in visiting order turns the map
  * into the shape of the day: where it doubles back, which stop is the outlier,
  * how much of it is one walk.
  *
- * One line per day, never one line for the trip: joining the last stop of Tuesday
- * to the first stop of Wednesday would draw an overnight as if it were a stroll.
+ * One line per journey-bounded stretch, never across days: joining the last stop
+ * of Tuesday to the first stop of Wednesday would draw an overnight as a stroll.
  *
  * Pure geometry — the GeoJSON goes straight to a MapLibre `geojson` source, and
  * this module never touches the map.
@@ -18,7 +16,7 @@ import { isValidLngLat } from './bounds'
 
 import type { LngLat } from './bounds'
 
-/** A day's stops in the order they are visited. */
+/** One journey-bounded stretch of a Day, with stops in visiting order. */
 export interface RouteDay {
   /** 1-based itinerary day. Becomes the feature's `day` property. */
   readonly dayNumber: number
@@ -74,9 +72,9 @@ function withoutRepeats(
 }
 
 /**
- * Turns the itinerary into one line per day.
+ * Turns the itinerary into one line per stretch, retaining its Day.
  *
- * Days with fewer than two distinct coordinates produce no feature at all: a
+ * Stretches with fewer than two distinct coordinates produce no feature at all: a
  * single-stop day has no route, and an empty `LineString` is not valid GeoJSON.
  * Features are ordered by day number so the paint order is chronological.
  */
@@ -90,9 +88,8 @@ export function routeCollection(
     if (coordinates.length < 2) continue
     features.push({
       type: 'Feature',
-      // A numeric id is what lets MapLibre feature-state highlight one day's
-      // line without rebuilding the source on every hover.
-      id: day.dayNumber,
+      // Several stretches can share a Day, but MapLibre feature ids must be unique.
+      id: features.length,
       geometry: { type: 'LineString', coordinates },
       properties: { day: day.dayNumber, legs: coordinates.length - 1 },
     })
@@ -117,7 +114,7 @@ export function distanceMetres(from: LngLat, to: LngLat): number {
 }
 
 /**
- * Metres walked along one day's line.
+ * Metres between consecutive stops within one route stretch.
  *
  * Straight-line distance between consecutive stops, which is the honest claim:
  * we have no routing engine, so this is a lower bound on the real walk and the

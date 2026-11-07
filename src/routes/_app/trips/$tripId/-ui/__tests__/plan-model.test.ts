@@ -2,8 +2,8 @@
  * The planner's materialiser.
  *
  * Where a Day's order comes from is `plan-board.test.ts`. `planModel` owes the
- * map a guarantee the type system cannot state — that `PlannerDay.rows` is stops and only stops, because the route line draws every row it
- * is handed and a note has no coordinate to draw.
+ * map a guarantee the type system cannot state — that `PlannerDay.rows` holds only stops
+ * for the map pins, while route lines read the whole displayed sequence.
  */
 import { describe, expect, it } from 'vitest'
 
@@ -78,8 +78,8 @@ describe('planModel', () => {
     ).toEqual([['a1', 'n1', 'a2'], ['n2']])
   })
 
-  /** The map draws every row it is handed, and a note has nothing to draw. */
-  it('keeps notes out of the rows the route line reads', () => {
+  /** The map pins read stops only; a note has nothing to draw. */
+  it('keeps notes out of the rows the map pins read', () => {
     expect(
       model().days.map((entry) => entry.rows.map((row) => row.itemId)),
     ).toEqual([['a1', 'a2'], []])

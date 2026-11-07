@@ -93,7 +93,8 @@ const messages = {
   'transports.toast.statusFailed.title': 'Durum değişmedi',
   'transports.toast.statusFailed.body': 'Yolculuk önceki durumunda kaldı.',
   'transports.refusal.gone':
-    'Bu pencere açıkken silindi, bu yüzden değişiklikler kaydedilemez. Güncel listeyi görmek için pencereyi kapat.',
+    'Bu yolculuk pencere açıkken silindi. Taslağınızı yeni bir yolculuk olarak kaydedin veya güncel listeyi görmek için pencereyi kapatın.',
+  'transports.action.saveAsNew': 'Yeni yolculuk olarak kaydet',
   'transports.refusal.goneTitle': 'Bu yolculuk artık yok',
   'transports.error.saveFallback': 'Birazdan yeniden dene.',
   'transports.toast.removed': 'Yolculuk kaldırıldı',

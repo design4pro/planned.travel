@@ -17,6 +17,7 @@ import type En from '../en/shell'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'validation.visibleName': '表示される文字を1文字以上入力してください。',
   'dashboard.mascot.notification': '通知が届いています。',
   'dashboard.mascot.actionNotification': '返信を待っている通知があります。',
   'dashboard.mascot.event': '予定されたイベントが{date}に始まります。',
