@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import { getPlatformProxy } from 'wrangler'
 import { expect, it } from 'vitest'
 import { organization } from '#/server/db/auth-schema'
-import { subscriptions, usageRecords, USAGE_METRICS } from '#/server/db/schema'
+import { subscriptions, usageRecords, USAGE_METRICS, categoryInitializations, categories } from '#/server/db/schema'
 import {
   shippedMigrations,
   statementsOf,
@@ -15,6 +15,7 @@ import { createScope } from '../base'
 import { upsertSubscription } from '../billing'
 import {
   createCategory,
+  deleteCategory,
   ensureDefaultCategories,
   listCategories,
 } from '../categories'
@@ -144,6 +145,13 @@ it('preserves old usage and executes the shared quota atomically on migrations-b
         .run(),
     ).rejects.toThrow()
 
+    const [custom] = await db.insert(categories).values({ organizationId: 'alpha', name: 'Custom', slug: 'custom' }).returning()
+    await upsertSubscription(alpha, { plan: 'free', status: 'active', quotaOverrides: { taxonomy: 0 } })
+    expect(await ensureDefaultCategories(alpha)).toEqual([custom])
+    expect(await db.select().from(categoryInitializations).where(eq(categoryInitializations.organizationId, 'beta'))).toHaveLength(0)
+    for (const scope of [alpha, beta]) {
+      for (const row of await ensureDefaultCategories(scope)) await deleteCategory(scope, row.id)
+    }
     await upsertSubscription(alpha, {
       plan: 'free',
       status: 'active',
@@ -180,10 +188,9 @@ it('preserves old usage and executes the shared quota atomically on migrations-b
     await expect(
       resolveTags(alpha, ['No room', 'Another']),
     ).rejects.toBeInstanceOf(QuotaExceededError)
-    await expect(ensureDefaultCategories(alpha)).rejects.toBeInstanceOf(
-      QuotaExceededError,
-    )
-    expect(await ensureDefaultCategories(beta)).toHaveLength(8)
+    const alphaBeforeRetry = await listCategories(alpha)
+    expect(await ensureDefaultCategories(alpha)).toEqual(alphaBeforeRetry)
+    expect(await ensureDefaultCategories(beta)).toHaveLength(0)
 
     await binding
       .prepare(
@@ -194,6 +201,38 @@ it('preserves old usage and executes the shared quota atomically on migrations-b
     expect((await listTags(beta)).map((tag) => tag.slug)).toEqual(['foreign'])
     await binding.prepare('DROP TRIGGER interrupt_tags').run()
     expect(await resolveTags(beta, ['First', 'Fail second'])).toHaveLength(2)
+    // A fresh tenant gets the complete bootstrap even at zero capacity; a silent partial
+    // seed or marker must roll back on real D1, not just on the SQLite proxy.
+    for (const [index, trigger] of [
+      "BEFORE INSERT ON categories WHEN NEW.slug = 'museums' BEGIN SELECT RAISE(IGNORE); END",
+      "BEFORE INSERT ON categories BEGIN SELECT RAISE(IGNORE); END",
+      "BEFORE INSERT ON category_initializations BEGIN SELECT RAISE(IGNORE); END",
+      "BEFORE INSERT ON category_initializations BEGIN SELECT RAISE(ABORT, 'marker failed'); END",
+    ].entries()) {
+      const id = `bootstrap-${index}`
+      await db.insert(organization).values({ id, name: id, slug: id, createdAt: now, updatedAt: now })
+      const scope = createScope(db, { ...alpha.ctx, organizationId: id })
+      await upsertSubscription(scope, { plan: 'free', status: 'active', quotaOverrides: { taxonomy: 0 } })
+      await binding.prepare(`CREATE TRIGGER interrupt_bootstrap ${trigger}`).run()
+      await expect(ensureDefaultCategories(scope)).rejects.toThrow()
+      expect(await listCategories(scope)).toHaveLength(0)
+      expect(await db.select().from(categoryInitializations).where(eq(categoryInitializations.organizationId, id))).toHaveLength(0)
+      await binding.prepare('DROP TRIGGER interrupt_bootstrap').run()
+      const race = await Promise.allSettled([
+        ensureDefaultCategories(scope), ensureDefaultCategories(scope),
+        createCategory(scope, { name: 'No slot' }), createTag(scope, { name: 'No slot' }),
+        resolveTags(scope, ['No slot']),
+      ])
+      expect(race.slice(0, 2).every(result => result.status === 'fulfilled')).toBe(true)
+      expect(race.slice(2).every(result => result.status === 'rejected' && result.reason instanceof QuotaExceededError)).toBe(true)
+      const rows = await listCategories(scope)
+      expect(rows).toHaveLength(8)
+      expect(await db.select().from(categoryInitializations).where(eq(categoryInitializations.organizationId, id))).toHaveLength(1)
+      for (const row of rows) await deleteCategory(scope, row.id)
+      expect(await ensureDefaultCategories(scope)).toHaveLength(0)
+      await db.delete(organization).where(eq(organization.id, id))
+      expect(await db.select().from(categoryInitializations).where(eq(categoryInitializations.organizationId, id))).toHaveLength(0)
+    }
     expect(
       (await binding.prepare('PRAGMA foreign_key_check').all()).results,
     ).toEqual([])

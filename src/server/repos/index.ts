@@ -18,7 +18,7 @@
  * | `itinerary`     | `day_assignments`, `assignment_participants`, `day_accommodations` |
  * | `places`        | `places`, `place_tags` |
  * | `place-photos`  | `place_photo_selections`; serializes legacy `places.image_url` writes |
- * | `categories`    | `categories` |
+ * | `categories`    | `categories`, `category_initializations` |
  * | `tags`          | `tags` |
  * | `transports`    | `transports` |
  * | `day-journeys`  | — `transports.sort_order` and `transport_legs.sort_order`: where a journey sits on a day's number line, planned for `itinerary` and `transports` and written in their batches |
