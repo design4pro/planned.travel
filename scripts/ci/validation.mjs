@@ -11,6 +11,7 @@ import {
   existsSync,
   unlinkSync,
   rmdirSync,
+  rmSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -121,11 +122,16 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
+  const temporaryRoot = join(cwd, '.ai/tmp/validation')
+  mkdirSync(temporaryRoot, { recursive: true, mode: 0o700 })
+  const temporaryDirectory = mkdtempSync(join(temporaryRoot, 'tmp-'))
   return new Promise((done) => {
     const started = Date.now()
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
+      // Isolate even an inherited TMPDIR: shared /tmp can exhaust inodes between gates.
+      env: { ...process.env, TMPDIR: temporaryDirectory },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -167,6 +173,7 @@ export function runValidationCommand(
       clearTimeout(force)
       process.removeListener('SIGINT', interrupt)
       process.removeListener('SIGTERM', interrupt)
+      rmSync(temporaryDirectory, { recursive: true, force: true })
       let result = code === 0 ? 'passed' : 'failed'
       let exitCode = code ?? 1
       if (code === 126 || code === 127) result = 'infrastructure'

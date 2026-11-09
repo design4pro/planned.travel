@@ -2,12 +2,13 @@ import { execFileSync } from 'node:child_process'
 import {
   mkdtempSync,
   mkdirSync,
+  existsSync,
   readFileSync,
   writeFileSync,
   rmSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   executeGate,
@@ -175,6 +176,28 @@ describe('configured validation execution', () => {
     expect(timeout.result).toBe('timeout')
     expect(timeout.exitCode).toBe(124)
   })
+
+  it.each([
+    ['success', 'process.exit(0)', 0],
+    ['failure', 'process.exit(1)', 1],
+    ['timeout', 'setTimeout(() => {}, 30000)', 124],
+  ])(
+    'isolates and cleans temporary files after %s',
+    async (_, ending, exitCode) => {
+      const cwd = fixture()
+      const logPath = join(cwd, 'command.log')
+      const result = await runValidationCommand(
+        `node -e 'const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path"); const dir = os.tmpdir(); const file = path.join(dir, "probe"); fs.writeFileSync(file, "writable"); process.stdout.write(JSON.stringify({dir, value: fs.readFileSync(file, "utf8"), mode: fs.statSync(dir).mode & 0o777})); ${ending}'`,
+        { cwd, logPath, timeoutMs: 3000 },
+      )
+      const { dir, value, mode } = JSON.parse(readFileSync(logPath, 'utf8'))
+      expect(dirname(dir)).toBe(join(cwd, '.ai/tmp/validation'))
+      expect(value).toBe('writable')
+      expect(mode).toBe(0o700)
+      expect(result.exitCode).toBe(exitCode)
+      expect(existsSync(dir)).toBe(false)
+    },
+  )
 
   it('runs fresh by default even with a green receipt, then permits explicit local resume', async () => {
     const cwd = fixture()

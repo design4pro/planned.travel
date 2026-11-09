@@ -24,7 +24,11 @@ the rules of `SDLC.md`.
   runs. Unknown data is never green. QA freshness, security approval and blocking-label checks
   still belong to the existing merge skills. No model is needed between polling attempts.
 - `node scripts/ci/validation.mjs [--resume]` owns the configured ordered gate, bounded projects,
-  shard fallback and compact reports. Full logs stay in `.ai/tmp/validation/`. Resume is local-only;
+  shard fallback and compact reports. Each command receives a private `0700` temporary directory
+  under `.ai/tmp/validation/` via `TMPDIR`, overriding the inherited value to avoid shared `/tmp`
+  inode exhaustion. Only that directory is removed after the command exits, including failure or
+  timeout; standalone commands outside this executor retain their usual temporary-directory policy.
+  Full logs stay in `.ai/tmp/validation/`. Resume is local-only;
   `attestation.mjs attest` always runs fresh. Full gate nodes use this executor; the scheduled scan's
   initial diagnostic sweep still gathers independent findings and the plan-to-spec gate remains
   intentionally scoped to spec checks.
