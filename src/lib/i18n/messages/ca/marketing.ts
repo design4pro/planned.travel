@@ -319,6 +319,47 @@ const messages = {
   'footer.link.createAccount': 'Crea un compte',
   'footer.link.terms': 'Condicions del servei',
   'footer.link.privacy': 'Avís de privacitat',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Viatges que val la pena descobrir',
+  'gallery.heading': 'Troba la teva propera idea',
+  'gallery.intro': 'Explora itineraris compartits per altres viatgers.',
+  'gallery.read': 'Llegeix l’itinerari',
+  'gallery.by': 'Compartit per {name}',
+  'gallery.published': 'Publicat el {date}',
+  'gallery.searchLabel': 'Cerca a la galeria',
+  'gallery.searchPlaceholder': 'Títol, viatger o país',
+  'gallery.clearSearch': 'Esborra la cerca',
+  'gallery.emptyTitle': 'La galeria espera el seu primer viatge',
+  'gallery.emptyBody':
+    'Un administrador de l’espai de treball amb accés a un viatge el pot enviar a revisió des de la pestanya Collab.',
+  'gallery.noResults':
+    'Cap viatge coincideix amb «{query}». Prova una altra cerca.',
+  'gallery.errorTitle': 'No s’ha pogut carregar la galeria',
+  'gallery.errorBody': 'Torna-ho a provar d’aquí a un moment.',
+  'gallery.loading': 'S’està carregant la galeria',
+  'gallery.searchNoscript': 'La cerca està disponible amb JavaScript activat.',
+  'gallery.noTripsFound': 'No s’ha trobat cap viatge',
+  'gallery.days': {
+    one: '{value} dia',
+    other: '{value} dies',
+    many: '{value} dies',
+  },
+  'gallery.places': {
+    one: '{value} lloc',
+    other: '{value} llocs',
+    many: '{value} llocs',
+  },
+  'gallery.results': {
+    one: 'S’ha trobat {value} viatge',
+    other: 'S’han trobat {value} viatges',
+    many: 'S’han trobat {value} viatges',
+  },
+  'gallery.rateLimited': {
+    one: 'Massa sol·licituds. Torna-ho a provar d’aquí a {seconds} segon.',
+    other: 'Massa sol·licituds. Torna-ho a provar d’aquí a {seconds} segons.',
+    many: 'Massa sol·licituds. Torna-ho a provar d’aquí a {seconds} segons.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

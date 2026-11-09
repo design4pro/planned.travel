@@ -283,6 +283,30 @@ const messages = {
   'footer.link.createAccount': '创建账户',
   'footer.link.terms': '服务条款',
   'footer.link.privacy': '隐私声明',
+
+  /* Gallery browse */
+  'gallery.eyebrow': '值得探索的旅程',
+  'gallery.heading': '寻找下一个灵感',
+  'gallery.intro': '探索其他旅行者分享的行程。',
+  'gallery.read': '阅读行程',
+  'gallery.by': '由{name}分享',
+  'gallery.published': '发布于{date}',
+  'gallery.searchLabel': '搜索旅行展厅',
+  'gallery.searchPlaceholder': '标题、旅行者或国家',
+  'gallery.clearSearch': '清除搜索',
+  'gallery.emptyTitle': '旅行展厅正等待第一段旅程',
+  'gallery.emptyBody':
+    '有权访问旅程的工作区管理员可从旅程的Collab选项卡提交审核。',
+  'gallery.noResults': '没有与“{query}”匹配的旅程。请换个词搜索。',
+  'gallery.errorTitle': '无法加载旅行展厅',
+  'gallery.errorBody': '请稍后重试。',
+  'gallery.loading': '正在加载旅行展厅',
+  'gallery.searchNoscript': '启用JavaScript后即可搜索。',
+  'gallery.noTripsFound': '未找到旅程',
+  'gallery.days': { other: '{value}天' },
+  'gallery.places': { other: '{value}个地点' },
+  'gallery.results': { other: '找到{value}段旅程' },
+  'gallery.rateLimited': { other: '请求过多。请在{seconds}秒后重试。' },
 } satisfies TranslationOf<typeof En>
 
 export default messages

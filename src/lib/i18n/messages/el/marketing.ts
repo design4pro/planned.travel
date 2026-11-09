@@ -313,6 +313,39 @@ const messages = {
   'footer.link.createAccount': 'Δημιουργία λογαριασμού',
   'footer.link.terms': 'Όροι υπηρεσίας',
   'footer.link.privacy': 'Ειδοποίηση απορρήτου',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Ταξίδια που αξίζει να ανακαλύψετε',
+  'gallery.heading': 'Βρείτε την επόμενη ιδέα σας',
+  'gallery.intro':
+    'Εξερευνήστε προγράμματα ταξιδιών που μοιράστηκαν άλλοι ταξιδιώτες.',
+  'gallery.read': 'Διαβάστε το πρόγραμμα',
+  'gallery.by': 'Κοινοποιήθηκε από {name}',
+  'gallery.published': 'Δημοσιεύτηκε στις {date}',
+  'gallery.searchLabel': 'Αναζήτηση στη συλλογή',
+  'gallery.searchPlaceholder': 'Τίτλος, ταξιδιώτης ή χώρα',
+  'gallery.clearSearch': 'Εκκαθάριση αναζήτησης',
+  'gallery.emptyTitle': 'Η συλλογή περιμένει το πρώτο της ταξίδι',
+  'gallery.emptyBody':
+    'Ένας διαχειριστής του χώρου εργασίας με πρόσβαση σε ένα ταξίδι μπορεί να το υποβάλει για έλεγχο από την καρτέλα Collab.',
+  'gallery.noResults':
+    'Κανένα ταξίδι δεν ταιριάζει με το «{query}». Δοκιμάστε άλλη αναζήτηση.',
+  'gallery.errorTitle': 'Δεν ήταν δυνατή η φόρτωση της συλλογής',
+  'gallery.errorBody': 'Δοκιμάστε ξανά σε λίγο.',
+  'gallery.loading': 'Φόρτωση της συλλογής',
+  'gallery.searchNoscript':
+    'Η αναζήτηση είναι διαθέσιμη με ενεργοποιημένη τη JavaScript.',
+  'gallery.noTripsFound': 'Δεν βρέθηκαν ταξίδια',
+  'gallery.days': { one: '{value} ημέρα', other: '{value} ημέρες' },
+  'gallery.places': { one: '{value} μέρος', other: '{value} μέρη' },
+  'gallery.results': {
+    one: 'Βρέθηκε {value} ταξίδι',
+    other: 'Βρέθηκαν {value} ταξίδια',
+  },
+  'gallery.rateLimited': {
+    one: 'Πάρα πολλά αιτήματα. Δοκιμάστε ξανά σε {seconds} δευτερόλεπτο.',
+    other: 'Πάρα πολλά αιτήματα. Δοκιμάστε ξανά σε {seconds} δευτερόλεπτα.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

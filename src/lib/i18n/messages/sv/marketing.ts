@@ -308,6 +308,37 @@ const messages = {
   'footer.link.createAccount': 'Skapa ett konto',
   'footer.link.terms': 'Användarvillkor',
   'footer.link.privacy': 'Integritetsmeddelande',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Resor värda att upptäcka',
+  'gallery.heading': 'Hitta din nästa idé',
+  'gallery.intro': 'Utforska resplaner som andra resenärer har delat.',
+  'gallery.read': 'Läs resplanen',
+  'gallery.by': 'Delad av {name}',
+  'gallery.published': 'Publicerad {date}',
+  'gallery.searchLabel': 'Sök i galleriet',
+  'gallery.searchPlaceholder': 'Titel, resenär eller land',
+  'gallery.clearSearch': 'Rensa sökning',
+  'gallery.emptyTitle': 'Galleriet väntar på sin första resa',
+  'gallery.emptyBody':
+    'En administratör för arbetsytan med åtkomst till en resa kan skicka in den för granskning från dess Collab-flik.',
+  'gallery.noResults': 'Inga resor matchar ”{query}”. Prova en annan sökning.',
+  'gallery.errorTitle': 'Galleriet kunde inte läsas in',
+  'gallery.errorBody': 'Försök igen om en stund.',
+  'gallery.loading': 'Läser in galleriet',
+  'gallery.searchNoscript':
+    'Sökning är tillgänglig när JavaScript är aktiverat.',
+  'gallery.noTripsFound': 'Inga resor hittades',
+  'gallery.days': { one: '{value} dag', other: '{value} dagar' },
+  'gallery.places': { one: '{value} plats', other: '{value} platser' },
+  'gallery.results': {
+    one: '{value} resa hittades',
+    other: '{value} resor hittades',
+  },
+  'gallery.rateLimited': {
+    one: 'För många förfrågningar. Försök igen om {seconds} sekund.',
+    other: 'För många förfrågningar. Försök igen om {seconds} sekunder.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

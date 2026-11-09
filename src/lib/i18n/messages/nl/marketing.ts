@@ -314,6 +314,38 @@ const messages = {
   'footer.link.createAccount': 'Account aanmaken',
   'footer.link.terms': 'Servicevoorwaarden',
   'footer.link.privacy': 'Privacyverklaring',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Reizen die het ontdekken waard zijn',
+  'gallery.heading': 'Vind je volgende idee',
+  'gallery.intro': 'Ontdek reisplannen die andere reizigers hebben gedeeld.',
+  'gallery.read': 'Lees het reisplan',
+  'gallery.by': 'Gedeeld door {name}',
+  'gallery.published': 'Gepubliceerd op {date}',
+  'gallery.searchLabel': 'Zoeken in de galerij',
+  'gallery.searchPlaceholder': 'Titel, reiziger of land',
+  'gallery.clearSearch': 'Zoekopdracht wissen',
+  'gallery.emptyTitle': 'De galerij wacht op de eerste reis',
+  'gallery.emptyBody':
+    'Een beheerder van de werkruimte met toegang tot een reis kan deze via het tabblad Collab ter beoordeling indienen.',
+  'gallery.noResults':
+    'Geen reizen komen overeen met ‘{query}’. Probeer een andere zoekopdracht.',
+  'gallery.errorTitle': 'De galerij kon niet worden geladen',
+  'gallery.errorBody': 'Probeer het over een ogenblik opnieuw.',
+  'gallery.loading': 'Galerij laden',
+  'gallery.searchNoscript':
+    'Zoeken is beschikbaar als JavaScript is ingeschakeld.',
+  'gallery.noTripsFound': 'Geen reizen gevonden',
+  'gallery.days': { one: '{value} dag', other: '{value} dagen' },
+  'gallery.places': { one: '{value} plek', other: '{value} plekken' },
+  'gallery.results': {
+    one: '{value} reis gevonden',
+    other: '{value} reizen gevonden',
+  },
+  'gallery.rateLimited': {
+    one: 'Te veel verzoeken. Probeer het over {seconds} seconde opnieuw.',
+    other: 'Te veel verzoeken. Probeer het over {seconds} seconden opnieuw.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

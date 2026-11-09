@@ -293,6 +293,33 @@ const messages = {
   'footer.link.createAccount': 'アカウントを作成',
   'footer.link.terms': '利用規約',
   'footer.link.privacy': 'プライバシーに関する通知',
+
+  /* Gallery browse */
+  'gallery.eyebrow': '見つけたくなる旅',
+  'gallery.heading': '次の旅のヒントを探そう',
+  'gallery.intro': 'ほかの旅行者が共有した旅程を見てみましょう。',
+  'gallery.read': '旅程を読む',
+  'gallery.by': '共有者：{name}',
+  'gallery.published': '公開日：{date}',
+  'gallery.searchLabel': 'ギャラリーを検索',
+  'gallery.searchPlaceholder': 'タイトル、旅行者、国',
+  'gallery.clearSearch': '検索をクリア',
+  'gallery.emptyTitle': 'ギャラリーは最初の旅を待っています',
+  'gallery.emptyBody':
+    '旅にアクセスできるワークスペース管理者は、その旅のCollabタブから審査を申請できます。',
+  'gallery.noResults':
+    '「{query}」に一致する旅はありません。別の言葉で検索してください。',
+  'gallery.errorTitle': 'ギャラリーを読み込めませんでした',
+  'gallery.errorBody': 'しばらくしてからもう一度お試しください。',
+  'gallery.loading': 'ギャラリーを読み込み中',
+  'gallery.searchNoscript': 'JavaScriptを有効にすると検索できます。',
+  'gallery.noTripsFound': '旅が見つかりませんでした',
+  'gallery.days': { other: '{value}日' },
+  'gallery.places': { other: '{value}か所' },
+  'gallery.results': { other: '{value}件の旅が見つかりました' },
+  'gallery.rateLimited': {
+    other: 'リクエストが多すぎます。{seconds}秒後にもう一度お試しください。',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
