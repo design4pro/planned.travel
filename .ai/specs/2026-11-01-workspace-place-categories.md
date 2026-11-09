@@ -20,8 +20,12 @@ Issue #1842 implements Phase 1 step 1: the shared quota and generated usage-metr
 Issue #1843 implements Phase 1 step 2: `ensureDefaultCategories` now atomically initializes
 the full eight starters and tenant marker once, or marks an existing list without changing it.
 Category/tag creators and both authenticated planner consumers await it. Generic reads and
-downloads stay pure. The settings taxonomy handler belongs to Phase 2 and must await the same
-initializer before reading or writing categories.
+downloads stay pure. Issue #1844 adds Phase 2 step 3: authenticated `taxonomy.ts` functions call binding-free
+handlers that await the same initializer, allow member reads, enforce owner/admin writes and audit
+impersonated tenant actions. Category moves use one materialized, tenant-filtered UPDATE with
+adjacency/stale-state checks and deterministic `(sortOrder, name, id)` ordering. Category deletion
+keeps both trip and saved places uncategorized and retains `Promise<void>`. The settings editor
+and consumer-refresh work remain Phase 3.
 The current base has no implemented carry overlay; this slice preserves the existing limits resolver
 and does not implement the separate carry spec.
 
