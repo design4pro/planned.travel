@@ -295,14 +295,10 @@ function UpNext({
     [trip, data.upcoming, data.mine],
   )
   const mascot =
-    workspaceId === null ? null : (
+    workspaceId === null || trip === null ? null : (
       <DashboardMascot
         key={JSON.stringify([userId, workspaceId])}
-        trip={
-          trip
-            ? { id: trip.id, startDate: trip.startDate, endDate: trip.endDate }
-            : null
-        }
+        trip={{ id: trip.id, startDate: trip.startDate, endDate: trip.endDate }}
         trips={mascotTrips}
         reservations={mascotReservations}
         candidates={data.mascot?.candidates}
@@ -333,7 +329,7 @@ function UpNext({
           description={t('shell.dashboard.blank.body')}
           action={
             <Button asChild variant="primary" shape="pill" size="lg">
-              <Link to="/trips">
+              <Link to="/trips" data-dashboard-create-trip="">
                 <Plus aria-hidden strokeWidth={2.5} />
                 {t('shell.dashboard.blank.action')}
               </Link>
@@ -345,7 +341,6 @@ function UpNext({
             </Button>
           }
         />
-        {mascot}
       </Card>
     )
   }
