@@ -12,4 +12,5 @@ CREATE TABLE `gallery_previews` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `gallery_previews_actor_trip_unq` ON `gallery_previews` (`organization_id`,`actor_user_id`,`trip_id`);--> statement-breakpoint
 CREATE INDEX `gallery_previews_expiry_idx` ON `gallery_previews` (`expires_at`,`id`);--> statement-breakpoint
-CREATE INDEX `gallery_previews_org_trip_idx` ON `gallery_previews` (`organization_id`,`trip_id`);
+CREATE INDEX `gallery_previews_org_trip_idx` ON `gallery_previews` (`organization_id`,`trip_id`);--> statement-breakpoint
+CREATE INDEX `gallery_previews_org_expiry_idx` ON `gallery_previews` (`organization_id`,`expires_at`,`id`);

@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d6438cd5-0e17-45da-a4af-a3b1a197e54b",
-  "prevId": "d1c27d71-e777-4b8b-870c-653d89c8a64e",
+  "id": "a1c277a5-125c-426a-9a27-50d06150805c",
+  "prevId": "d7a21521-37a5-4989-a464-e730cdee9fd3",
   "tables": {
     "account": {
       "name": "account",
@@ -2771,6 +2771,59 @@
         "categories_organization_id_organization_id_fk": {
           "name": "categories_organization_id_organization_id_fk",
           "tableFrom": "categories",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "category_initializations": {
+      "name": "category_initializations",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "initialized_at": {
+          "name": "initialized_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "category_initializations_org_unq": {
+          "name": "category_initializations_org_unq",
+          "columns": [
+            "organization_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "category_initializations_organization_id_organization_id_fk": {
+          "name": "category_initializations_organization_id_organization_id_fk",
+          "tableFrom": "category_initializations",
           "tableTo": "organization",
           "columnsFrom": [
             "organization_id"

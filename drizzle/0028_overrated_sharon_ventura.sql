@@ -1,1 +1,0 @@
-CREATE INDEX `gallery_previews_org_expiry_idx` ON `gallery_previews` (`organization_id`,`expires_at`,`id`);
