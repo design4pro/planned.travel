@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -175,6 +176,50 @@ describe('configured validation execution', () => {
     expect(timeout.result).toBe('timeout')
     expect(timeout.exitCode).toBe(124)
   })
+
+  it.each([
+    ['passed', '', 0],
+    ['failed', '; exit 7', 7],
+    ['timeout', '; exec sleep 30', 124],
+  ])(
+    'isolates temporary files and cleans up after %s',
+    async (result, ending, exitCode) => {
+      const cwd = fixture()
+      const inherited = process.env.TMPDIR
+      const unavailable = join(cwd, 'unavailable')
+      process.env.TMPDIR = unavailable
+      const command =
+        'test "$TMPDIR" = "$TMP" && test "$TMP" = "$TEMP" && touch "$TMPDIR/probe" && printf "%s" "$TMPDIR"'
+      let runs
+      try {
+        runs = await Promise.all(
+          [1, 2].map((n) =>
+            runValidationCommand(command + ending, {
+              cwd,
+              logPath: join(cwd, `${n}.log`),
+              timeoutMs: 500,
+            }),
+          ),
+        )
+      } finally {
+        if (inherited === undefined) delete process.env.TMPDIR
+        else process.env.TMPDIR = inherited
+      }
+      expect(runs.map((run) => run.exitCode)).toEqual([exitCode, exitCode])
+      expect(runs.map((run) => run.result)).toEqual([result, result])
+      const paths = [1, 2].map((n) =>
+        readFileSync(join(cwd, `${n}.log`), 'utf8'),
+      )
+      expect(paths[0]).not.toBe(paths[1])
+      for (const path of paths) {
+        expect(path.startsWith(join(cwd, '.ai/tmp/validation/command-'))).toBe(
+          true,
+        )
+        expect(existsSync(path)).toBe(false)
+      }
+      expect(existsSync(unavailable)).toBe(false)
+    },
+  )
 
   it('runs fresh by default even with a green receipt, then permits explicit local resume', async () => {
     const cwd = fixture()
