@@ -77,6 +77,16 @@ beforeEach(async () => {
 describe.each(['geojson', 'gpx'] as const)(
   'the %s places download server function',
   (format) => {
+    it('exports an unprepared workspace without initializing categories', async () => {
+      const { categoryInitializations } = await import('#/server/db/schema')
+      const { eq } = await import('drizzle-orm')
+      for (const row of await categoryReads.listCategories(tenant.scope)) await categoryReads.deleteCategory(tenant.scope, row.id)
+      await harness.db.delete(categoryInitializations).where(eq(categoryInitializations.organizationId, tenant.organizationId))
+      await download(tenant.scope, tripId, format)
+      expect(await categoryReads.listCategories(tenant.scope)).toEqual([])
+      expect(await harness.db.select().from(categoryInitializations)).toEqual([])
+    })
+
     it.each(['owner', 'editor', 'viewer', 'organization'] as const)(
       'allows a %s reader on the free plan too',
       async (role) => {

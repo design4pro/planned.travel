@@ -162,6 +162,10 @@ const messages = {
   'language.legal':
     'Ketentuan dan pemberitahuan privasi hanya diterbitkan dalam bahasa Inggris. Selebihnya diterjemahkan seluruhnya.',
 
+  'appearance.layout.title': 'Tata letak',
+  'appearance.layout.label': 'Tata letak lebar',
+  'appearance.layout.hint':
+    'Gunakan seluruh lebar aplikasi dan sejajarkan widget dasbor dengan perjalanan mendatang. Disimpan hanya di browser ini.',
   'appearance.error': 'Tampilan gagal dimuat',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':

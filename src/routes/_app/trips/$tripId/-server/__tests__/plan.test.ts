@@ -224,6 +224,20 @@ beforeEach(async () => {
 /* --------------------------------------------------------------------- read */
 
 describe('readPlanBoard', () => {
+  it('prepares a newly activated workspace once for an authenticated member and surfaces failure', async () => {
+    const categories = await import('#/server/repos/categories')
+    const first = await readPlanBoard(viewer, fixture.tripId)
+    expect(first.categories).toHaveLength(8)
+    for (const row of await categories.listCategories(owner)) await categories.deleteCategory(owner, row.id)
+    expect((await readPlanBoard(viewer, fixture.tripId)).categories).toEqual([])
+    const preparation = vi.spyOn(categories, 'ensureDefaultCategories').mockRejectedValueOnce(new Error('initialization unavailable'))
+    try {
+      await expect(readPlanBoard(viewer, fixture.tripId)).rejects.toThrow('initialization unavailable')
+    } finally {
+      preparation.mockRestore()
+    }
+  })
+
   it('projects only the resolved photo after a legacy write, including explicit fallback', async () => {
     await updatePlace(owner, fixture.operaId, {
       imageUrl: 'https://example.test/opera.jpg',

@@ -30,6 +30,7 @@ for (const ddl of ['schema', 'migrations'] as const) {
       harness = await createHarness({ ddl })
       tenant = await harness.seedTenant('taxonomy')
       await subscribeTenant(tenant.scope, 'free')
+      for (const row of await ensureDefaultCategories(tenant.scope)) await deleteCategory(tenant.scope, row.id)
     })
     afterEach(() => harness.close())
 
@@ -73,6 +74,7 @@ for (const ddl of ['schema', 'migrations'] as const) {
 
     it('does not count or reuse another tenant’s taxonomy', async () => {
       const other = await harness.seedTenant('other')
+      for (const row of await ensureDefaultCategories(other.scope)) await deleteCategory(other.scope, row.id)
       await createCategory(other.scope, { name: 'Culture' })
       const foreign = await resolveTags(other.scope, ['Cafe'])
       await limit(2)
@@ -135,7 +137,8 @@ for (const ddl of ['schema', 'migrations'] as const) {
       ]).toContainEqual(slugs)
     })
 
-    it('rolls back the entire default refill on a database error and permits retry', async () => {
+    it('rolls back the entire initialization on a database error and permits retry', async () => {
+      tenant = await harness.seedTenant('fresh')
       harness.sqlite.exec(
         "CREATE TRIGGER interrupt_categories BEFORE INSERT ON categories WHEN NEW.slug = 'museums' BEGIN SELECT RAISE(ABORT, 'fixture failure'); END",
       )
@@ -180,7 +183,7 @@ for (const ddl of ['schema', 'migrations'] as const) {
         limits: { ...resolved.limits, taxonomy: Number.POSITIVE_INFINITY },
       })
       try {
-        expect(await ensureDefaultCategories(tenant.scope)).toHaveLength(8)
+        expect(await ensureDefaultCategories(tenant.scope)).toHaveLength(0)
         await createCategory(tenant.scope, { name: 'Extra' })
         await createTag(tenant.scope, { name: 'Extra' })
         expect(
@@ -202,17 +205,12 @@ for (const ddl of ['schema', 'migrations'] as const) {
       }
     })
 
-    it('guards the existing default refill as one all-or-none write', async () => {
+    it('bootstraps once even below quota and preserves a marked empty list', async () => {
       await limit(7)
-      await expect(
-        ensureDefaultCategories(tenant.scope),
-      ).rejects.toBeInstanceOf(QuotaExceededError)
-      expect(await listCategories(tenant.scope)).toHaveLength(0)
+      expect(await ensureDefaultCategories(tenant.scope)).toHaveLength(0)
       const other = await harness.seedTenant('other-defaults')
       expect(await ensureDefaultCategories(other.scope)).toHaveLength(8)
-      await limit(8)
-      expect(await ensureDefaultCategories(tenant.scope)).toHaveLength(8)
-      expect(await ensureDefaultCategories(tenant.scope)).toHaveLength(8)
+      expect(await ensureDefaultCategories(other.scope)).toHaveLength(8)
     })
   })
 }

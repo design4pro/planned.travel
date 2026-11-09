@@ -7,13 +7,14 @@
 
 import { and, asc, count, eq, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
-import { categories, places, newId } from '#/server/db/schema'
+import { categories, categoryInitializations, places, newId } from '#/server/db/schema'
 import { createTenantRepository, prepareTenantInsert, tenantFilter } from './base'
 import {
   taxonomyCapacity,
   taxonomyLimit,
   refuseTaxonomyQuota,
 } from './taxonomy-quota'
+import { runAtomicBatch } from './batch'
 import { isUniqueConstraintViolation, RepositoryError } from './context'
 import {
   colourSchema,
@@ -28,6 +29,7 @@ import type { Category } from '#/server/db/types'
 import type { TenantScope } from './base'
 
 export const categoriesRepository = createTenantRepository(categories, 'category')
+const initializations = createTenantRepository(categoryInitializations, 'category initialization')
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -123,6 +125,7 @@ export async function createCategory(
   input: CreateCategoryInput,
 ): Promise<Category> {
   const values = createCategoryInput.parse(input)
+  await ensureDefaultCategories(scope)
   const limit = await taxonomyLimit(scope)
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const slug = await reserveSlug(scope, values.slug ?? values.name)
@@ -182,21 +185,15 @@ const DEFAULT_CATEGORIES: ReadonlyArray<{
   { name: 'Transport', slug: 'transport', icon: 'train-front', colour: '#0E7490', sortOrder: 8 },
 ]
 
-/**
- * Development seeder refill, quota-guarded as one missing set. Normal reads never call it.
- * The durable once-only initializer and its bounded bootstrap exception belong to #1843.
- */
+/** Prepare a workspace once; reads stay pure and intentional emptiness survives retries. */
 export async function ensureDefaultCategories(
   scope: TenantScope,
 ): Promise<Array<Category>> {
-  const existing = await listCategories(scope)
-  if (
-    DEFAULT_CATEGORIES.every((candidate) =>
-      existing.some((row) => row.slug === candidate.slug),
-    )
-  )
-    return existing
-  const limit = await taxonomyLimit(scope)
+  if (await initializations.findOne(scope, sql`1`)) return listCategories(scope)
+  const unmarked = sql`not exists (select 1 from ${categoryInitializations}
+    where ${tenantFilter(scope, categoryInitializations)})`
+  const hasCategories = sql`exists (select 1 from ${categories}
+    where ${tenantFilter(scope, categories)})`
   const candidates = JSON.stringify(
     DEFAULT_CATEGORIES.map((row) => ({
       ...row,
@@ -205,26 +202,31 @@ export async function ensureDefaultCategories(
       updatedAt: Number(categories.updatedAt.defaultFn?.()),
     })),
   )
-  await scope.db.insert(categories).select(sql`
-    with missing as materialized (
-      select json_extract(value, '$.id') as id, json_extract(value, '$.name') as name,
-        json_extract(value, '$.slug') as slug, json_extract(value, '$.colour') as colour,
-        json_extract(value, '$.icon') as icon, json_extract(value, '$.sortOrder') as sort_order,
-        json_extract(value, '$.createdAt') as created_at, json_extract(value, '$.updatedAt') as updated_at
-      from json_each(${candidates})
-      where not exists (select 1 from ${categories} where ${tenantFilter(scope, categories)}
-        and ${categories.slug} = json_extract(value, '$.slug'))
-    )
-    select id, ${scope.ctx.organizationId}, name, slug, colour, icon, 1, sort_order, created_at, updated_at
-    from missing where ${taxonomyCapacity(scope, limit, sql`(select count(*) from missing)`)}
-  `)
-  const rows = await listCategories(scope)
-  if (
-    DEFAULT_CATEGORIES.some(
-      (candidate) => !rows.some((row) => row.slug === candidate.slug),
-    )
-  ) {
-    return refuseTaxonomyQuota(scope, limit)
-  }
-  return rows
+  await runAtomicBatch(scope, [
+    scope.db.insert(categories).select(sql`
+      with starters as materialized (
+        select value from json_each(${candidates})
+        where ${unmarked} and not (${hasCategories})
+      )
+      select json_extract(value, '$.id'), ${scope.ctx.organizationId},
+        json_extract(value, '$.name'), json_extract(value, '$.slug'),
+        json_extract(value, '$.colour'), json_extract(value, '$.icon'), 1,
+        json_extract(value, '$.sortOrder'), json_extract(value, '$.createdAt'),
+        json_extract(value, '$.updatedAt') from starters
+    `),
+    prepareTenantInsert(
+      scope,
+      categoryInitializations,
+      { initializedAt: new Date() },
+      // Invalid JSON aborts the transaction if a trigger skipped any part of the seed.
+      sql`${unmarked} and case
+        when changes() = 8 or (changes() = 0 and ${hasCategories}) then 1
+        else json('incomplete category initialization') end`,
+    ),
+    // Also refuse a silently skipped marker before committing the seed.
+    scope.db
+      .select({ valid: sql`json(case when not (${unmarked}) then '{}' else '' end)` })
+      .from(sql`(select 1)`),
+  ])
+  return listCategories(scope)
 }

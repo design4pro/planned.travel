@@ -124,3 +124,4 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Gallery browse** - the read-only collection of reviewed trip publications, with its newest entry featured and local search over the authorized entries.
 - **Trip art** - deterministic decorative route geometry reduced from approved coordinates; segment starts preserve day boundaries and do not describe additional travel legs.
+- **Wide layout** - a browser-local appearance choice that expands authenticated app content and aligns desktop dashboard widgets with the upcoming trip. It changes presentation across workspaces in that browser and grants no access.

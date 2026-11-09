@@ -1278,3 +1278,61 @@ html[dir='rtl'] #sentry-feedback {
     transform: none !important;
   }
 }
+
+/* Opt-in widths only on the authenticated content well and aligned shell rows.
+   Inner reading containers and full-bleed map overlays keep their own measure. */
+html[data-wide-layout] [data-app-shell] .app-content-width {
+  max-width: none;
+}
+
+.dashboard-layout {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+.dashboard-main {
+  display: contents;
+}
+.dashboard-rail {
+  display: none;
+}
+@media (min-width: 48rem) {
+  .dashboard-rail {
+    display: block;
+    grid-row: 4;
+  }
+}
+@media (min-width: 64rem) {
+  .dashboard-layout {
+    gap: 2rem;
+  }
+}
+@media (min-width: 80rem) {
+  .dashboard-layout[data-has-widgets] {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+  }
+  .dashboard-hero,
+  .dashboard-stats,
+  .dashboard-controls {
+    grid-column: 1 / -1;
+  }
+  .dashboard-trips {
+    grid-column: 1;
+  }
+  .dashboard-rail {
+    grid-column: 2;
+    grid-row: 4;
+    align-self: start;
+    position: sticky;
+    top: 6rem;
+  }
+  html[data-wide-layout] .dashboard-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  html[data-wide-layout] .dashboard-rail {
+    grid-row: 1;
+  }
+}

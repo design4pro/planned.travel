@@ -156,6 +156,10 @@ const messages = {
     'A feltételek és az adatvédelmi tájékoztató csak angolul jelennek meg. A termékben minden más le van fordítva.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Elrendezés',
+  'appearance.layout.label': 'Széles elrendezés',
+  'appearance.layout.hint':
+    'Használja az alkalmazás teljes szélességét, és igazítsa az áttekintő moduljait a közelgő utazáshoz. Csak ebben a böngészőben mentjük.',
   'appearance.error': 'A megjelenés nem töltődött be',
   'appearance.theme.title': 'Téma',
   'appearance.theme.description':
