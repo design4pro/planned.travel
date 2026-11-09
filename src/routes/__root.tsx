@@ -20,6 +20,7 @@ import {
   RECOVERY_CATALOGUES,
 } from '#/lib/i18n'
 import { themeBootstrapScript } from '#/lib/theme'
+import { wideLayoutBootstrapScript } from '#/lib/wide-layout'
 import { takeWorkspaceDocumentFetch } from '#/lib/workspace-claim-store'
 import { negotiateRequestLocale } from '#/server/fns/locale'
 
@@ -194,6 +195,9 @@ export function RootDocument({ children }: { children: ReactNode }) {
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: themeBootstrapScript }}
+        />
+        <script
+          dangerouslySetInnerHTML={{ __html: wideLayoutBootstrapScript }}
         />
         <HeadContent />
       </head>

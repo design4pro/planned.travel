@@ -134,6 +134,10 @@ const messages = {
   'language.sample.money': '금액',
   'language.legal':
     '이용약관과 개인정보 처리방침은 영어로만 게시해요. 그 밖의 모든 것은 번역돼 있어요.',
+  'appearance.layout.title': '레이아웃',
+  'appearance.layout.label': '넓은 레이아웃',
+  'appearance.layout.hint':
+    '앱의 전체 너비를 사용하고 대시보드 위젯을 다가오는 여행과 위쪽으로 맞춥니다. 이 브라우저에만 저장됩니다.',
   'appearance.error': '화면 설정을 불러오지 못했어요',
   'appearance.theme.title': '테마',
   'appearance.theme.description':

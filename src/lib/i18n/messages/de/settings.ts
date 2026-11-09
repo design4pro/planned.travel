@@ -162,6 +162,10 @@ const messages = {
     'Die Nutzungsbedingungen und der Datenschutzhinweis erscheinen nur auf Englisch. Alles andere im Produkt ist übersetzt.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Anordnung',
+  'appearance.layout.label': 'Breites Layout',
+  'appearance.layout.hint':
+    'Nutze die volle App-Breite und richte Dashboard-Widgets an der nächsten Reise aus. Wird nur in diesem Browser gespeichert.',
   'appearance.error': 'Die Darstellung wurde nicht geladen',
   'appearance.theme.title': 'Thema',
   'appearance.theme.description':

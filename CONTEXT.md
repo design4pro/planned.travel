@@ -121,3 +121,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Factor proposal** - an expiring, encrypted setup bound to one initiating session and security operation; it does not change the active authenticator until confirmed.
 - **Security receipt** - a restricted signed browser cookie issued before a security operation, used to recover its result without returning credentials or backup codes.
+
+- **Wide layout** - a browser-local appearance choice that expands authenticated app content and aligns desktop dashboard widgets with the upcoming trip. It changes presentation across workspaces in that browser and grants no access.

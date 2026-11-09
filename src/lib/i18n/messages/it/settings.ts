@@ -159,6 +159,10 @@ const messages = {
     'Le condizioni e l’informativa sulla privacy sono pubblicate solo in inglese. Tutto il resto del prodotto è tradotto.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Disposizione',
+  'appearance.layout.label': 'Disposizione ampia',
+  'appearance.layout.hint':
+    'Usa tutta la larghezza dell’app e allinea i widget della panoramica al prossimo viaggio. Salvata solo in questo browser.',
   'appearance.error': 'L’aspetto non si è caricato',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':
