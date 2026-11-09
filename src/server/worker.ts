@@ -32,6 +32,7 @@ import {
   TripRoom as UninstrumentedTripRoom,
 } from './do'
 import { sweepScheduledAccountSecurity } from './auth/account-security-scheduled'
+import { sweepGalleryPreviews } from './community/expiry'
 import { sweepReminders } from './queue/reminders'
 import { sentryOptions, workerLogger } from './observability/sentry'
 
@@ -155,6 +156,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
       case REMINDER_CRON: {
         const results = await Promise.allSettled([
           sweepReminders(bindings, logger, controller.scheduledTime),
+          sweepGalleryPreviews(createDb(env.DB), controller.scheduledTime),
           sweepScheduledAccountSecurity(env, controller.scheduledTime),
         ])
         const failed = results.find((result) => result.status === 'rejected')

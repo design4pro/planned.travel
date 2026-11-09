@@ -121,3 +121,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Factor proposal** - an expiring, encrypted setup bound to one initiating session and security operation; it does not change the active authenticator until confirmed.
 - **Security receipt** - a restricted signed browser cookie issued before a security operation, used to recover its result without returning credentials or backup codes.
+
+- **Gallery preview** - a private, actor-bound copy of the exact allowlisted document a workspace owner or admin inspects before confirming a possible gallery submission. It expires after fifteen minutes and grants no publication or public access.

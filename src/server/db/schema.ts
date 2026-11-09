@@ -3463,3 +3463,36 @@ export const workspaceDeletions = sqliteTable(
     index('workspace_deletions_stale_idx').on(t.state, t.updatedAt),
   ],
 )
+
+/** Private, short-lived consent documents; never a public projection. */
+export const galleryPreviews = sqliteTable(
+  'gallery_previews',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    actorUserId: userRef('actor_user_id').notNull(),
+    document: text('document').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('gallery_previews_actor_trip_unq').on(
+      t.organizationId,
+      t.actorUserId,
+      t.tripId,
+    ),
+    index('gallery_previews_expiry_idx').on(t.expiresAt, t.id),
+    index('gallery_previews_org_trip_idx').on(t.organizationId, t.tripId),
+    index('gallery_previews_org_expiry_idx').on(
+      t.organizationId,
+      t.expiresAt,
+      t.id,
+    ),
+    check(
+      'gallery_previews_bytes_chk',
+      sql`length(cast(${t.document} as blob)) <= 524288`,
+    ),
+  ],
+)

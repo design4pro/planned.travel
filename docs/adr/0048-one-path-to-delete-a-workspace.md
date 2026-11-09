@@ -33,3 +33,14 @@ driver lands; the catalog import graph still cannot reach tenant repositories.
 Reserve `system:workspace-deletion` for that later driver's scope bound to its leased ledger row.
 A request may never fabricate it. The later implementation needs a transitive import guard.
 This reservation changes no existing request authorization or payment policy.
+
+## Amendment - private gallery previews (#1884, 2026-11-09)
+
+`repos/community.ts` is one additional importer of the existing catalog-owned
+`workspaceDeletionAbsent` predicate, exclusively for atomic private preview capture and
+actor-bound preview reads. This closes the workspace-deletion race required by the publication
+specification. The importer guard names only that module and predicate. Ledger projections and
+writes remain catalog-owned; unrelated ordinary reads gain no lookup. Both `requested` and
+`done` refuse preview operations; `refused` lifts the fence, and another workspace's ledger
+cannot affect the caller's preview. Independent security and tenancy approval accepted this
+narrow amendment with actual local D1 coverage as a condition.

@@ -43,6 +43,7 @@ const harness = vi.hoisted(() => {
       .mockResolvedValue({ listed: 0, deleted: 0, drained: true }),
     sweep: vi.fn(),
     securitySweep: vi.fn(),
+    gallerySweep: vi.fn(),
   }
 })
 
@@ -67,6 +68,9 @@ vi.mock('../audit/retention', () => ({
 }))
 
 vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
+vi.mock('../community/expiry', () => ({
+  sweepGalleryPreviews: harness.gallerySweep,
+}))
 vi.mock('../auth/account-security-scheduled', () => ({
   sweepScheduledAccountSecurity: harness.securitySweep,
 }))
@@ -358,11 +362,16 @@ describe('the weekly retention slot', () => {
     harness.prune.mockReset()
     harness.rollUp.mockReset()
     harness.sweep.mockReset().mockResolvedValue(undefined)
+    harness.gallerySweep.mockReset().mockResolvedValue(undefined)
 
     await worker.scheduled(controller('*/15 * * * *'), env, executionContext())
     await worker.scheduled(controller('0 0 31 2 *'), env, executionContext())
 
     expect(harness.sweep).toHaveBeenCalledTimes(1)
+    expect(harness.gallerySweep).toHaveBeenCalledExactlyOnceWith(
+      { name: 'platform-db' },
+      SCHEDULED_AT,
+    )
     expect(harness.prune).not.toHaveBeenCalled()
     expect(harness.rollUp).not.toHaveBeenCalled()
     expect(pendingWarnings()).toEqual([])
@@ -403,4 +412,16 @@ describe('tenant audit weekly retention', () => {
     expect(harness.rollUp).toHaveBeenCalledTimes(1)
     expect(harness.deadLetters).toHaveBeenCalledTimes(1)
   })
+})
+
+it('keeps gallery preview cleanup retryable when its scheduled deletion fails', async () => {
+  const failure = new Error('preview cleanup failed')
+  harness.gallerySweep.mockReset().mockRejectedValueOnce(failure)
+  harness.sweep.mockReset().mockResolvedValue(undefined)
+  harness.securitySweep.mockReset().mockResolvedValue(undefined)
+  await expect(
+    worker.scheduled(controller('*/15 * * * *'), env, executionContext()),
+  ).rejects.toBe(failure)
+  expect(harness.sweep).toHaveBeenCalledTimes(1)
+  expect(harness.securitySweep).toHaveBeenCalledTimes(1)
 })

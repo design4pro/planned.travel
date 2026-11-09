@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Bản xem trước này đã hết hạn. Hãy tạo bản mới trước khi xác nhận.',
+  'gallery.publish.title': 'Xem trước thư viện',
+  'gallery.publish.publicTitle': 'Tiêu đề công khai',
+  'gallery.publish.attribution': 'Tên hiển thị',
+  'gallery.publish.showDates': 'Bao gồm ngày đi',
+  'gallery.publish.preview': 'Xem trước nội dung sẽ chia sẻ',
+  'gallery.publish.confirm': 'Xác nhận bản xem trước này',
+  'gallery.publish.captureFailed':
+    'Không thể chuẩn bị bản xem trước. Kiểm tra các trường rồi thử lại.',
+  'gallery.publish.tooLarge': 'Chuyến đi này quá lớn để xem trước.',
+  'gallery.publish.empty': 'Trống',
+  'gallery.publish.version': 'Phiên bản',
+  'gallery.publish.countries': 'Mã quốc gia',
+  'gallery.publish.days': 'Ngày',
+  'gallery.publish.places': 'Địa điểm',
+  'gallery.publish.order': 'Thứ tự',
+  'gallery.publish.yes': 'Có',
+  'gallery.publish.no': 'Không',
+  'gallery.publish.publicFields':
+    'Tiêu đề, tóm tắt, tên hiển thị, mã quốc gia, tiêu đề ngày, tên và danh mục địa điểm cùng tọa độ có thể được công khai. Ngày đi chỉ được bao gồm nếu bạn chọn.',
+  'gallery.publish.privateFields':
+    'Không bao gồm người đi, ghi chú, tệp, chi phí và đặt chỗ.',
+  'gallery.publish.freeTextWarning':
+    'Trước khi xác nhận, hãy kiểm tra thông tin cá nhân trong tiêu đề, tóm tắt, tên hiển thị, tiêu đề ngày và tên địa điểm.',
+
   'plan.photo.edit': 'Chỉnh sửa ảnh',
   'plan.photo.unavailable':
     'Tính năng tải lên và chỉnh sửa ảnh hiện không khả dụng. Ảnh hiện tại được giữ nguyên.',
