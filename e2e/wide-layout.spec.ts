@@ -264,7 +264,8 @@ test('wide dashboard controls follow the Arabic catalogue at all three widths', 
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   await page
     .getByRole('link', { name: ArabicShell['nav.dashboardLink'] })
-    .click()
+    .focus()
+  await page.keyboard.press('Enter')
   await expect(page.locator('.dashboard-layout')).toBeVisible()
   for (const width of [2560, 1280, 360]) {
     await page.setViewportSize({ width, height: 1000 })
@@ -276,7 +277,8 @@ test('wide dashboard controls follow the Arabic catalogue at all three widths', 
     ).toBeLessThanOrEqual(width)
     if (width < 768) {
       const trigger = page.locator('[data-part="dashboard-widgets-trigger"]')
-      await trigger.click()
+      await trigger.focus()
+      await page.keyboard.press('Enter')
       await expect(
         page.locator('[data-part="dashboard-widgets-sheet"]'),
       ).toBeVisible()
@@ -315,7 +317,8 @@ test('empty upcoming-trip state keeps the wide composition', async ({
     })
   })
   try {
-    await page.getByRole('link', { name: 'planned.travel dashboard' }).click()
+    await page.getByRole('link', { name: 'planned.travel dashboard' }).focus()
+    await page.keyboard.press('Enter')
     await expect(page.locator('.dashboard-hero h1')).toHaveText(
       Shell['dashboard.blank.title'],
     )
