@@ -11,8 +11,9 @@ import {
   existsSync,
   unlinkSync,
   rmdirSync,
+  rmSync,
 } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const git = (cwd, args) =>
@@ -121,11 +122,13 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  return new Promise((done) => {
+  return new Promise((done, reject) => {
     const started = Date.now()
+    const scratch = mkdtempSync(join(dirname(resolve(logPath)), 'tmp-'))
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
+      env: { ...process.env, TMPDIR: scratch },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -181,6 +184,12 @@ export function runValidationCommand(
       if (interrupted) {
         result = 'interrupted'
         exitCode = 130
+      }
+      try {
+        rmSync(scratch, { recursive: true, force: true })
+      } catch (error) {
+        reject(error)
+        return
       }
       done({ exitCode, result, durationMs: Date.now() - started, logPath })
     }
