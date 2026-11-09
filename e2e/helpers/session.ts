@@ -126,9 +126,9 @@ async function storeSession(
  * write belongs — a per-test reset would be a write per frame against a
  * database every worker shares. That is enforced by the call graph rather than
  * asserted in prose: the callers are `cacheSession()`, which `auth.setup.ts`
- * alone runs, and the `finally` blocks of the Chromium-only journeys that
- * write the demo member's language (`journeys.spec.ts` and `wide-layout.spec.ts`),
- * which put the fixture back and assert they did. The sign-in fallback a filtered run needs goes to `storeSession()`
+ * alone runs, and the `finally` block of the Chromium-only journey that
+ * writes the demo member's language (`journeys.spec.ts`), which puts the fixture
+ * back and asserts it did. The sign-in fallback a filtered run needs goes to `storeSession()`
  * instead, which touches no fixture data.
  *
  * The workspace default itself is not ours to set: it is `organization_settings`

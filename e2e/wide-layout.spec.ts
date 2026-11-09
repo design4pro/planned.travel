@@ -1,9 +1,24 @@
+import { createRequire } from 'node:module'
 import { expect, test } from '@playwright/test'
-import { pinDemoLanguage, useSession } from './helpers/session'
+import { useSession } from './helpers/session'
 import { settle } from './helpers/settle'
 import { callsServerFn } from './helpers/server-fn'
 import Shell from '../src/lib/i18n/messages/en/shell'
+import ArabicShell from '../src/lib/i18n/messages/ar/shell'
+import type { DashboardPayload } from '../src/routes/_app/-server/overview'
 import type { Page } from '@playwright/test'
+
+const { fromCrossJSON, toCrossJSONAsync } = createRequire(
+  import.meta.resolve('@tanstack/react-start'),
+)('seroval') as {
+  fromCrossJSON: (
+    value: unknown,
+    options: { refs: Map<number, unknown> },
+  ) => {
+    result: DashboardPayload
+  }
+  toCrossJSONAsync: (value: unknown) => Promise<unknown>
+}
 
 const KEY = 'planned.wide-layout'
 const well = (page: Page) => page.locator('main.app-content-width')
@@ -222,49 +237,54 @@ test('saved composition is already applied while application hydration is held',
   await expectAligned(page)
 })
 
-test('wide dashboard controls follow the actual Arabic locale at all three widths', async ({
+test('wide dashboard controls follow the Arabic catalogue at all three widths', async ({
   page,
 }) => {
-  try {
-    await page.goto('/settings/language', { waitUntil: 'networkidle' })
-    await settle(page, {
-      name: 'language',
-      path: '/settings/language',
-      ready: '[data-testid="locale-chip-ar"]',
-    })
-    const written = page.waitForResponse(
-      (response) =>
-        response.request().method() === 'POST' &&
-        callsServerFn(new URL(response.url()), 'saveLanguagePreference'),
-    )
-    await page.getByTestId('locale-chip-ar').click()
-    await written
-    await remember(page, true)
-    await open(page, '/dashboard')
-    await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
-    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
-    for (const width of [2560, 1280, 360]) {
-      await page.setViewportSize({ width, height: 1000 })
+  await open(page, '/settings/appearance')
+  await page.getByRole('switch', { name: 'Wide layout' }).check()
+  await page.goto('/settings/language', { waitUntil: 'networkidle' })
+  await settle(page, {
+    name: 'language',
+    path: '/settings/language',
+    ready: '[data-testid="locale-chip-ar"]',
+  })
+  // Keep the locale scenario inside this browser context; other workers share the demo account.
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (callsServerFn(url, 'saveLanguagePreference'))
+      return route.fulfill({ json: { result: { locale: 'ar' } } })
+    if (callsServerFn(url, 'negotiateRequestLocale'))
+      return route.fulfill({
+        json: { result: { locale: 'ar', dir: 'rtl', signedIn: true } },
+      })
+    return route.continue()
+  })
+  await page.getByTestId('locale-chip-ar').click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+  await page
+    .getByRole('link', { name: ArabicShell['nav.dashboardLink'] })
+    .click()
+  await expect(page.locator('.dashboard-layout')).toBeVisible()
+  for (const width of [2560, 1280, 360]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await expect(
+      page.locator('[data-part="dashboard-widgets-menu"]'),
+    ).toBeVisible()
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width)
+    if (width < 768) {
+      const trigger = page.locator('[data-part="dashboard-widgets-trigger"]')
+      await trigger.click()
       await expect(
-        page.locator('[data-part="dashboard-widgets-menu"]'),
+        page.locator('[data-part="dashboard-widgets-sheet"]'),
       ).toBeVisible()
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(width)
-      if (width < 768) {
-        const trigger = page.locator('[data-part="dashboard-widgets-trigger"]')
-        await trigger.click()
-        await expect(
-          page.locator('[data-part="dashboard-widgets-sheet"]'),
-        ).toBeVisible()
-        await page.keyboard.press('Escape')
-        await expect(trigger).toBeFocused()
-      } else {
-        await expectAligned(page)
-      }
+      await page.keyboard.press('Escape')
+      await expect(trigger).toBeFocused()
+    } else {
+      await expectAligned(page)
     }
-  } finally {
-    expect(await pinDemoLanguage(page)).toBe(true)
   }
 })
 
@@ -272,14 +292,37 @@ test('empty upcoming-trip state keeps the wide composition', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 2560, height: 1440 })
-  await page.setExtraHTTPHeaders({ 'x-pt-server-today': '2099-01-01' })
   await open(page, '/settings/appearance')
-  await remember(page, true)
-  await open(page, '/dashboard')
-  await expect(page.locator('.dashboard-hero h1')).toHaveText(
-    Shell['dashboard.blank.title'],
-  )
-  await expectAligned(page)
+  await page.getByRole('switch', { name: 'Wide layout' }).check()
+  // Client navigation lets the same response fixture work in dev and compiled E2E previews.
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (
+      !callsServerFn(url, 'loadDashboard') ||
+      callsServerFn(url, 'loadDashboardMascot')
+    )
+      return route.continue()
+    const response = await route.fetch()
+    const body = fromCrossJSON(await response.json(), { refs: new Map() })
+    await route.fulfill({
+      response,
+      body: JSON.stringify(
+        await toCrossJSONAsync({
+          ...body,
+          result: { ...body.result, upNext: null, elapsed: null, upcoming: [] },
+        }),
+      ),
+    })
+  })
+  try {
+    await page.getByRole('link', { name: 'planned.travel dashboard' }).click()
+    await expect(page.locator('.dashboard-hero h1')).toHaveText(
+      Shell['dashboard.blank.title'],
+    )
+    await expectAligned(page)
+  } finally {
+    await page.unrouteAll({ behavior: 'wait' })
+  }
 })
 
 test('client navigation reserves the wide pending composition before the payload arrives', async ({
