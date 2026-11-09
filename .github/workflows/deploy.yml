@@ -198,7 +198,7 @@ jobs:
 
       - name: Save last verified healthy production version
         if: steps.gate.outputs.configured == 'true' && (vars.RELEASE_OBSERVATION == 'true' || vars.AUTONOMOUS_RELEASES == 'true')
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: production-healthy
           path: release-smoke.json
