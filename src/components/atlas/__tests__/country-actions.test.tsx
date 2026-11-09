@@ -1288,6 +1288,8 @@ it('offers the shared visit editor and submits a correction without marking agai
     />,
   )
   await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+  const first = await screen.findByLabelText('First visit')
+  await waitFor(() => expect(document.activeElement).toBe(first))
   await userEvent.type(await screen.findByLabelText('Note'), 'Paris')
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
   await waitFor(() =>
