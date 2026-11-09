@@ -8,10 +8,10 @@ its `H1` names the issue and the pull requests behind it, and both are held toge
 
 ## Draft — being written (2)
 
-| Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
-| [Content Studio staff plane](2026-11-09-content-studio-staff-plane.md)                                                                   | 2026-11-09 | —                                                               | —                                                               | —              |
-| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
+| Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                           | Implementation |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
+| [Content Studio staff plane](2026-11-09-content-studio-staff-plane.md)                                                                   | 2026-11-09 | —                                                               | [#1904](https://github.com/design4pro/planned.travel/issues/1904) | —              |
+| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627)   | —              |
 
 ## Ready — merged, waiting for a build (31)
 
