@@ -11,6 +11,7 @@ import {
   existsSync,
   unlinkSync,
   rmdirSync,
+  rmSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -121,11 +122,16 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  return new Promise((done) => {
+  return new Promise((done, fail) => {
     const started = Date.now()
+    // Keep command caches off the shared, inode-limited system temporary filesystem.
+    const tempRoot = resolve(cwd, '.ai/tmp/validation')
+    mkdirSync(tempRoot, { recursive: true, mode: 0o700 })
+    const temp = mkdtempSync(join(tempRoot, 'tmp-'))
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
+      env: { ...process.env, TMPDIR: temp, TMP: temp, TEMP: temp },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -181,6 +187,12 @@ export function runValidationCommand(
       if (interrupted) {
         result = 'interrupted'
         exitCode = 130
+      }
+      try {
+        rmSync(temp, { recursive: true })
+      } catch (error) {
+        fail(error)
+        return
       }
       done({ exitCode, result, durationMs: Date.now() - started, logPath })
     }
