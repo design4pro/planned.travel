@@ -14,7 +14,6 @@ import {
   SectionLabel,
   Skeleton,
 } from '#/components/ui'
-import { countryName } from '#/lib/atlas/country-names'
 import { cn } from '#/lib/cn'
 import './browse-screen.css'
 import { formatDate, formatNumber } from '#/lib/format'
@@ -28,7 +27,8 @@ export interface BrowseEntry {
   readonly attribution: string
   readonly dayCount: number
   readonly placeCount: number
-  readonly countryCodes: ReadonlyArray<string>
+  /** Already localized for the provider locale by the data owner, identical for SSR and hydration. */
+  readonly countryNames: ReadonlyArray<string>
   readonly publishedAt: string
   readonly art: ReadonlyArray<TripArtPoint>
 }
@@ -68,12 +68,7 @@ export function BrowseScreen({ state, hrefFor, onRetry }: BrowseScreenProps) {
         )
       : []
   const matches = items.filter((item) =>
-    [
-      item.title,
-      item.summary,
-      item.attribution,
-      ...item.countryCodes.map(countryName),
-    ]
+    [item.title, item.summary, item.attribution, ...item.countryNames]
       .join(' ')
       .normalize('NFC')
       .toLocaleLowerCase(locale)
@@ -143,7 +138,7 @@ export function BrowseScreen({ state, hrefFor, onRetry }: BrowseScreenProps) {
               </span>
             </p>
             <p className="text-label text-ink-3">
-              {item.countryCodes.map(countryName).join(' · ')}
+              {item.countryNames.join(' · ')}
             </p>
             <p className="text-micro text-ink-3">
               {t('marketing.gallery.published', {

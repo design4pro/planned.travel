@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { I18nProvider } from '#/lib/i18n'
+import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import modules from '#/lib/i18n/messages/en/modules'
 import marketing from '#/lib/i18n/messages/en/marketing'
 import { BrowseScreen } from '../browse-screen'
@@ -24,11 +24,11 @@ const messages = {
 const entry = (
   title: string,
   publishedAt: string,
-  countryCodes = ['JP'],
+  countryNames = ['Japan'],
 ): BrowseEntry => ({
   title,
   publishedAt,
-  countryCodes,
+  countryNames,
   slug: title.toLowerCase(),
   summary: `${title} coast`,
   attribution: 'Alex',
@@ -38,7 +38,7 @@ const entry = (
 })
 const items = [
   entry('Older', '2026-01-01T00:00:00Z'),
-  entry('Newest', '2026-02-01T00:00:00Z', ['FR']),
+  entry('Newest', '2026-02-01T00:00:00Z', ['France']),
 ]
 function view(props: Partial<BrowseScreenProps> = {}, locale: Locale = 'en') {
   return (
@@ -90,6 +90,37 @@ describe('unmounted Gallery browse', () => {
     )
     fireEvent.change(input, { target: { value: 'newest coast' } })
     expect(screen.getAllByRole('link')[0]?.getAttribute('href')).toBe('#newest')
+  })
+
+  it('renders and searches caller-localized country names with real Polish copy', async () => {
+    const localizedItems = [
+      { ...items[0], countryNames: ['Japonia'] },
+      { ...items[1], countryNames: ['Francja'] },
+    ]
+    const localizedMessages = await loadCatalogue('pl')
+    const localizedView = (
+      <I18nProvider locale="pl" messages={localizedMessages}>
+        <BrowseScreen
+          state={{ kind: 'ready', items: localizedItems }}
+          hrefFor={(item) => `#${item.slug}`}
+        />
+      </I18nProvider>
+    )
+    expect(renderToStaticMarkup(localizedView)).toContain('Japonia')
+    render(localizedView)
+    expect(screen.getByText('Japonia')).toBeTruthy()
+    fireEvent.change(screen.getByRole('searchbox'), {
+      target: { value: 'JAPONIA' },
+    })
+    expect(
+      screen.getAllByRole('link').map((a) => a.getAttribute('href')),
+    ).toEqual(['#older'])
+    expect(screen.queryByTestId('gallery-hero')).toBeNull()
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Znaleziono 1 podróż',
+      ),
+    )
   })
 
   it('retries an unavailable load only through the supplied callback', () => {
