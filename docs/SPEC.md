@@ -346,7 +346,7 @@ Every domain row is scoped by `organization_id`. A user belongs to one or more o
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
 Tenant isolation is enforced in the repository layer and covered by tests. The bounded
-`…Unscoped` shape below, the four closed catalog exceptions and the identity-table SQL of the auth provisioning module (§6) are the explicit exceptions to the tenant-context argument.
+`…Unscoped` shape below, four closed catalog members, identity-table provisioning, bounded account-auth capability and seven-table content/release repositories (§6, ADR 0051) are the explicit exceptions to the tenant-context argument.
 
 Erasure repository primitives use `createErasureScope` (`server/erasure/scope.ts`), the single
 factory for the reserved `system:erasure` owner actor. It binds one organization and no session;
@@ -780,6 +780,18 @@ The account-owned `account_security_room_cleanup.organization_id` is a routing t
 content: it deliberately survives workspace deletion until queue acknowledgement, and cascades
 only with its account operation. Workspace deletion must not erase pending account cleanup.
 
+### Bounded release-content repositories (ADR 0051)
+
+[ADR 0051](adr/0051-bounded-release-content-contract.md) admits exactly `content_entries`, `content_versions`, `content_translations`,
+`release_publications`, `release_deployments`, `release_deployment_entries` and
+`release_production_state`, only in `src/server/repos/content.ts` and
+`src/server/repos/releases.ts` taking `Database`. This fifth exception adds neither a catalog
+member nor an FU-3 resolver. Its exact table constraints, unique `(production, headingVersion)`,
+whitelisted approved/non-withdrawn published projection, fresh admin-only guard, single audit
+writer and fail-closed atomic batch are binding. Existing tenant, account-auth and catalog
+boundaries remain intact. This is a contract amendment only; no runtime implementation or
+production-write approval follows from it.
+
 ## 6. Repo conventions
 
 ```
@@ -819,8 +831,8 @@ Rules:
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`, normally through the tenant-scoped base repository; the closed account-auth boundary above and FU-3
-  permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The account-auth repository is the separately bounded fourth exception above (ADR 0049). The other stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
+  permits the bounded `…Unscoped` shape above with a plain `Database`; the fifth exception admits only the seven-table content/release boundary (ADR 0051). Routes call server functions; server functions call repos.
+- The account-auth repository is the fourth exception (ADR 0049), and the bounded content/release repositories are the fifth (ADR 0051). The original three remain closed: the bounded `…Unscoped` shape above, `server/catalog`
   and the identity-table access of the auth provisioning module. §5 states `server/catalog` as a closed list of four. The
   first member is thirteen global tables: eleven carry no `organization_id`, while
   `provider_usage` and `workspace_deletions` carry attribution only, so none of them can pass through the tenant
@@ -852,7 +864,7 @@ Rules:
   anchor): the withdrawal is never pointed at an organization that already exists. Adding a table is
   a contract change.
 - Better Auth's own tables, reached through the library's adapter (`ctx.context.adapter`), are
-  not application SQL and sit outside this contract: this is not a fourth exception and not a
+  not application SQL and sit outside this contract: this is not an additional exception and not a
   precedent for SQL. The passkey plugin (`src/server/auth/passkey/plugin.ts`) reads and writes the
   `passkey` table that way; that table is user-keyed and has no `organization_id`, but other
   Better Auth tables do relate to a workspace, so being auth-owned says nothing about tenancy.
@@ -1015,7 +1027,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 1. **In-house.** §3's dependency freeze holds — there is no i18n package and none is to be added.
    The message layer, the plural rules and the interpolation are ours, built on the platform `Intl`.
 2. **Source locale is `en`.** Every key exists in every locale. A test proves parity — no missing
-   key, no orphan key, no locale silently falling back to English at runtime.
+   key, no orphan key, no interface locale silently falling back to English at runtime. Reviewed release prose follows rule 11 only.
 3. **Negotiation happens on the server, once, before first paint**: user setting → workspace
    setting → visitor cookie → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are
    server-rendered. No locale flash, no hydration mismatch, no second render to correct the language.
@@ -1028,7 +1040,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    proven identical in workerd and WebKit, or frozen in a table. This is the hardest constraint on
    this task — treat a divergence as a defect, never as a tolerance.
 6. **No untranslated string reaches a screen.** §7.5's ban on placeholder copy covers an
-   English string sitting in a non-English catalogue.
+   English string sitting in a non-English catalogue. Rule 11 separates reviewed release prose from interface messages.
 7. **One language picker** lists every locale in its native name and script, shows the active one,
    and persists through a reload. Settings saves a personal override (or follows the workspace);
    signed-out controls reuse this picker and save only the visitor cookie. Each visitor write checks
@@ -1042,7 +1054,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
    and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
    prose, which stays English and says so on the page — translated legal text needs review this
-   build cannot give it.
+   build cannot give it. Reviewed release editorial content on signed-in surfaces follows rule 11.
 9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
    copy is our own, and each translation is made from _our_ English — never from the reference's
    catalogues, which are AGPL-licensed source.
@@ -1065,6 +1077,16 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     an error's own `code`, and `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
     `refusal` channel, with the existing sentences moved into the catalogue, is the work that
     retires this exception.
+
+11. **Reviewed release prose is editorial content, separate from interface messages.**
+    [ADR 0051](adr/0051-bounded-release-content-contract.md) bounds this exception to release
+    entries and the exact approved immutable source revision. A missing, unreviewed or stale
+    translation uses whole-entry English fallback, including title and body, with `lang="en"`
+    and `dir="ltr"` on that entry and a localized catalogue notice. Reviewed translations use
+    their own entry language/direction. `server/content/resolve.ts` is the sole planned owner;
+    no mixed paragraphs or stale translated revisions. Rules 2/6/8 continue unchanged for
+    interface messages: interface messages have no fallback and retain all-locale parity.
+    Other collections and future Studio publication need separate amendments.
 
 ### Catalogue layout (fixed — every i18n item builds against this)
 
