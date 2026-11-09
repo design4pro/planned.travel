@@ -154,6 +154,10 @@ const messages = {
     'Koşullar ve gizlilik bildirimi yalnızca İngilizce yayımlanır. Ürünün geri kalanı çevrilmiştir.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Düzen',
+  'appearance.layout.label': 'Geniş düzen',
+  'appearance.layout.hint':
+    'Uygulamanın tüm genişliğini kullanın ve pano araçlarını yaklaşan yolculukla hizalayın. Yalnızca bu tarayıcıda kaydedilir.',
   'appearance.error': 'Görünüm yüklenmedi',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':

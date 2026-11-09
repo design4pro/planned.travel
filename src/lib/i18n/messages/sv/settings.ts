@@ -155,6 +155,10 @@ const messages = {
     'Villkoren och integritetspolicyn finns bara på engelska. Allt annat i produkten är översatt.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Sidlayout',
+  'appearance.layout.label': 'Bred layout',
+  'appearance.layout.hint':
+    'Använd appens fulla bredd och placera panelens widgetar i höjd med nästa resa. Sparas bara i den här webbläsaren.',
   'appearance.error': 'Utseendet lästes inte in',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':

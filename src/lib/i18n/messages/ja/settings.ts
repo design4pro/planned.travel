@@ -147,6 +147,10 @@ const messages = {
   'language.sample.money': '金額',
   'language.legal':
     '利用規約とプライバシーに関するお知らせは英語のみで公開しています。ほかはすべて翻訳されています。',
+  'appearance.layout.title': 'レイアウト',
+  'appearance.layout.label': 'ワイドレイアウト',
+  'appearance.layout.hint':
+    'アプリの幅全体を使い、ダッシュボードのウィジェットを次の旅行と上揃えにします。このブラウザーにのみ保存されます。',
   'appearance.error': '表示の設定を読み込めませんでした',
   'appearance.theme.title': 'テーマ',
   'appearance.theme.description':

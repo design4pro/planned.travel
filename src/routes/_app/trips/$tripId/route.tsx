@@ -99,7 +99,7 @@ function TripPending() {
           APP_HEADER_TOP_CLASS,
         )}
       >
-        <div className="mx-auto flex h-subnav max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-subnav max-w-content app-content-width items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Skeleton
             className="h-6 w-16 shrink-0 bg-inverse-surface"
             radius="full"

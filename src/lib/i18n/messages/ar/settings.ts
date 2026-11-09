@@ -152,6 +152,10 @@ const messages = {
     'الشروط وإشعار الخصوصية منشوران بالإنجليزية فقط. وكل ما عدا ذلك في المنتج مترجم.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'التخطيط',
+  'appearance.layout.label': 'تخطيط عريض',
+  'appearance.layout.hint':
+    'استخدم عرض التطبيق بالكامل وحاذِ أدوات لوحة المعلومات مع الرحلة القادمة. يُحفظ في هذا المتصفح فقط.',
   'appearance.error': 'لم يُحمّل المظهر',
   'appearance.theme.title': 'الثيم',
   'appearance.theme.description':

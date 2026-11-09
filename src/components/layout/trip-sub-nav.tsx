@@ -66,7 +66,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
       )}
     >
       {/* Narrow viewports get the trip context on its own line. */}
-      <div className="mx-auto flex h-11 max-w-content items-center gap-2 px-4 sm:px-6 lg:hidden">
+      <div className="mx-auto flex h-11 max-w-content app-content-width items-center gap-2 px-4 sm:px-6 lg:hidden">
         <BackToTrips />
         <p className="min-w-0 flex-1 truncate font-display text-label font-bold">
           {tripName}
@@ -74,7 +74,7 @@ export function TripSubNav({ tripId, tripName }: TripSubNavProps) {
         <ShareLink tripId={tripId} compact />
       </div>
 
-      <div className="mx-auto flex max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-content app-content-width items-center gap-3 px-4 sm:px-6 lg:px-8">
         <div className="hidden shrink-0 items-center gap-3 lg:flex">
           <BackToTrips />
           <span aria-hidden className="h-4 w-px bg-inverse-edge" />
