@@ -127,6 +127,10 @@ const messages = {
   'language.sample.money': '一筆金額',
   'language.legal':
     '服務條款與隱私權聲明只以英文發佈，產品裡其他內容都已翻譯。',
+  'appearance.layout.title': '版面配置',
+  'appearance.layout.label': '寬螢幕版面配置',
+  'appearance.layout.hint':
+    '使用應用程式的完整寬度，並將儀表板小工具與即將開始的旅行頂端對齊。僅儲存在此瀏覽器中。',
   'appearance.error': '外觀設定沒能載入',
   'appearance.theme.title': '主題',
   'appearance.theme.description':

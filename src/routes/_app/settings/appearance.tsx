@@ -7,6 +7,7 @@ import { Card, Skeleton, Switch } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { useTranslate } from '#/lib/i18n'
 import { useTheme } from '#/lib/theme'
+import { useWideLayout, wideLayoutPreference } from '#/lib/wide-layout'
 import { loadAppearance, saveAppearance } from '../-server/settings'
 import { BasemapPicker } from '../-ui/basemap-picker'
 import { SettingsRow, SettingsSection } from '../-ui/settings-nav'
@@ -74,6 +75,7 @@ function AppearancePage() {
   const data = Route.useLoaderData()
   const router = useRouter()
   const theme = useTheme()
+  const wideLayout = useWideLayout()
   const t = useTranslate()
 
   const [reduceMotion, setReduceMotion] = useState(data.reduceMotion)
@@ -178,6 +180,27 @@ function AppearancePage() {
             ? t('settings.appearance.theme.showingSystem', { palette })
             : t('settings.appearance.theme.showing', { palette })}
         </p>
+      </SettingsSection>
+
+      <SettingsSection title={t('settings.appearance.layout.title')}>
+        <SettingsRow
+          label={t('settings.appearance.layout.label')}
+          hint={
+            <span id="wide-layout-hint">
+              {t('settings.appearance.layout.hint')}
+            </span>
+          }
+          control={
+            <div className="flex sm:justify-end">
+              <Switch
+                checked={wideLayout}
+                aria-label={t('settings.appearance.layout.label')}
+                aria-describedby="wide-layout-hint"
+                onCheckedChange={wideLayoutPreference.write}
+              />
+            </div>
+          }
+        />
       </SettingsSection>
 
       <SettingsSection title={t('settings.appearance.motion.title')}>

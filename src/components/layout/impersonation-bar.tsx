@@ -335,7 +335,7 @@ function ImpersonatedSessionBar({
           border box measures exactly `--impersonation-h` and every offset that
           composes the token needs one term rather than two. Safe here and
           nowhere else: this element only exists while the token is non-zero. */}
-      <div className="mx-auto flex h-[calc(var(--impersonation-h)-1px)] max-w-content items-center gap-3 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex h-[calc(var(--impersonation-h)-1px)] max-w-content app-content-width items-center gap-3 px-4 sm:px-6 lg:px-8">
         <span
           aria-hidden
           className="hidden size-8 shrink-0 items-center justify-center rounded-md bg-warning text-warning-on shadow-card sm:flex"
