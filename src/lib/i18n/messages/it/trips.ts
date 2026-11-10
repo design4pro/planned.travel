@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Questa anteprima è scaduta. Generane una nuova prima di confermare.',
+  'gallery.publish.title': 'Anteprima della galleria',
+  'gallery.publish.publicTitle': 'Titolo pubblico',
+  'gallery.publish.attribution': 'Nome visualizzato',
+  'gallery.publish.showDates': 'Includi le date del viaggio',
+  'gallery.publish.preview': 'Visualizza cosa verrà condiviso',
+  'gallery.publish.confirm': 'Conferma questa anteprima',
+  'gallery.publish.captureFailed':
+    'Impossibile preparare l’anteprima. Controlla i campi e riprova.',
+  'gallery.publish.tooLarge': 'Questo viaggio è troppo grande per l’anteprima.',
+  'gallery.publish.empty': 'Vuoto',
+  'gallery.publish.version': 'Versione',
+  'gallery.publish.countries': 'Codici paese',
+  'gallery.publish.days': 'Giorni',
+  'gallery.publish.places': 'Luoghi',
+  'gallery.publish.order': 'Ordine',
+  'gallery.publish.yes': 'Sì',
+  'gallery.publish.no': 'No',
+  'gallery.publish.publicFields':
+    'Titolo, riepilogo, nome visualizzato, codici paese, titoli dei giorni, nomi e categorie dei luoghi e le loro coordinate possono essere pubblici. Le date sono incluse solo se lo scegli.',
+  'gallery.publish.privateFields':
+    'Viaggiatori, note, file, costi e prenotazioni non sono inclusi.',
+  'gallery.publish.freeTextWarning':
+    'Prima di confermare, verifica la presenza di informazioni personali nel titolo, nel riepilogo, nel nome visualizzato, nei titoli dei giorni e nei nomi dei luoghi.',
+
   'plan.photo.edit': 'Modifica immagine',
   'plan.photo.unavailable':
     'Il caricamento e la modifica delle immagini non sono disponibili. L’immagine attuale viene mantenuta.',

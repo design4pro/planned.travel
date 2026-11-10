@@ -32,6 +32,7 @@ import {
   TripRoom as UninstrumentedTripRoom,
 } from './do'
 import { sweepScheduledAccountSecurity } from './auth/account-security-scheduled'
+import { sweepGalleryPreviews } from './community/expiry'
 import { sweepReminders } from './queue/reminders'
 import { createWorkspaceDeletionRuntime } from './workspace-deletion/runtime'
 import { callProvider } from './metering/outbound'
@@ -175,6 +176,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         const results = await Promise.allSettled([
           deletion.recover(),
           sweepReminders(bindings, logger, controller.scheduledTime),
+          sweepGalleryPreviews(createDb(env.DB), controller.scheduledTime),
           sweepScheduledAccountSecurity(env, controller.scheduledTime),
         ])
         const failed = results.find((result) => result.status === 'rejected')

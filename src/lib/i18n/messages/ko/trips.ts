@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    '이 미리보기는 만료되었습니다. 확인하기 전에 새 미리보기를 생성하세요.',
+  'gallery.publish.title': '갤러리 미리보기',
+  'gallery.publish.publicTitle': '공개 제목',
+  'gallery.publish.attribution': '표시 이름',
+  'gallery.publish.showDates': '여행 날짜 포함',
+  'gallery.publish.preview': '공유할 내용 미리보기',
+  'gallery.publish.confirm': '이 미리보기 확인',
+  'gallery.publish.captureFailed':
+    '미리보기를 준비하지 못했습니다. 입력 내용을 확인하고 다시 시도하세요.',
+  'gallery.publish.tooLarge': '여행이 너무 커서 미리 볼 수 없습니다.',
+  'gallery.publish.empty': '비어 있음',
+  'gallery.publish.version': '버전',
+  'gallery.publish.countries': '국가 코드',
+  'gallery.publish.days': '일정',
+  'gallery.publish.places': '장소',
+  'gallery.publish.order': '순서',
+  'gallery.publish.yes': '예',
+  'gallery.publish.no': '아니요',
+  'gallery.publish.publicFields':
+    '제목, 요약, 표시 이름, 국가 코드, 일정 제목, 장소 이름과 카테고리, 좌표가 공개될 수 있습니다. 날짜는 선택한 경우에만 포함됩니다.',
+  'gallery.publish.privateFields':
+    '여행자, 메모, 파일, 비용, 예약은 포함되지 않습니다.',
+  'gallery.publish.freeTextWarning':
+    '확인하기 전에 제목, 요약, 표시 이름, 일정 제목, 장소 이름에 개인정보가 있는지 확인하세요.',
+
   'plan.photo.edit': '이미지 편집',
   'plan.photo.unavailable':
     '이미지 업로드 및 편집을 사용할 수 없습니다. 현재 이미지는 유지됩니다.',

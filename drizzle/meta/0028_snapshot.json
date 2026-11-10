@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "225e5a56-1c40-4b71-bdad-a15b2fa529b7",
+  "id": "a1c277a5-125c-426a-9a27-50d06150805c",
   "prevId": "d7a21521-37a5-4989-a464-e730cdee9fd3",
   "tables": {
     "account": {
@@ -109,12 +109,17 @@
       "indexes": {
         "account_issuer_account_id_unique": {
           "name": "account_issuer_account_id_unique",
-          "columns": ["issuer", "account_id"],
+          "columns": [
+            "issuer",
+            "account_id"
+          ],
           "isUnique": true
         },
         "account_user_id_idx": {
           "name": "account_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -123,8 +128,12 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -182,12 +191,16 @@
       "indexes": {
         "account_security_last_fence_idx": {
           "name": "account_security_last_fence_idx",
-          "columns": ["last_fence"],
+          "columns": [
+            "last_fence"
+          ],
           "isUnique": false
         },
         "account_security_deletion_idx": {
           "name": "account_security_deletion_idx",
-          "columns": ["deletion_started_at"],
+          "columns": [
+            "deletion_started_at"
+          ],
           "isUnique": false
         }
       },
@@ -196,8 +209,12 @@
           "name": "account_security_user_id_user_id_fk",
           "tableFrom": "account_security",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -254,15 +271,22 @@
           "name": "factor_budget_user_id_user_id_fk",
           "tableFrom": "factor_budget",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "factor_budget_user_id_domain_pk": {
-          "columns": ["user_id", "domain"],
+          "columns": [
+            "user_id",
+            "domain"
+          ],
           "name": "factor_budget_user_id_domain_pk"
         }
       },
@@ -311,17 +335,23 @@
       "indexes": {
         "factor_proposal_operation_id_unique": {
           "name": "factor_proposal_operation_id_unique",
-          "columns": ["operation_id"],
+          "columns": [
+            "operation_id"
+          ],
           "isUnique": true
         },
         "factor_proposal_expiry_idx": {
           "name": "factor_proposal_expiry_idx",
-          "columns": ["expires_at"],
+          "columns": [
+            "expires_at"
+          ],
           "isUnique": false
         },
         "factor_proposal_user_idx": {
           "name": "factor_proposal_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -330,8 +360,12 @@
           "name": "factor_proposal_operation_id_account_security_operation_id_fk",
           "tableFrom": "factor_proposal",
           "tableTo": "account_security_operation",
-          "columnsFrom": ["operation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "operation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -339,8 +373,12 @@
           "name": "factor_proposal_user_id_user_id_fk",
           "tableFrom": "factor_proposal",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -380,15 +418,22 @@
           "name": "factor_replay_user_id_user_id_fk",
           "tableFrom": "factor_replay",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "factor_replay_user_id_secret_digest_pk": {
-          "columns": ["user_id", "secret_digest"],
+          "columns": [
+            "user_id",
+            "secret_digest"
+          ],
           "name": "factor_replay_user_id_secret_digest_pk"
         }
       },
@@ -459,17 +504,23 @@
       "indexes": {
         "invitation_organization_id_idx": {
           "name": "invitation_organization_id_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "invitation_email_idx": {
           "name": "invitation_email_idx",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": false
         },
         "invitation_status_idx": {
           "name": "invitation_status_idx",
-          "columns": ["status"],
+          "columns": [
+            "status"
+          ],
           "isUnique": false
         }
       },
@@ -478,8 +529,12 @@
           "name": "invitation_organization_id_organization_id_fk",
           "tableFrom": "invitation",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -487,8 +542,12 @@
           "name": "invitation_inviter_id_user_id_fk",
           "tableFrom": "invitation",
           "tableTo": "user",
-          "columnsFrom": ["inviter_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "inviter_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -540,17 +599,24 @@
       "indexes": {
         "member_organization_id_user_id_unique": {
           "name": "member_organization_id_user_id_unique",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "member_organization_id_idx": {
           "name": "member_organization_id_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "member_user_id_idx": {
           "name": "member_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -559,8 +625,12 @@
           "name": "member_organization_id_organization_id_fk",
           "tableFrom": "member",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -568,8 +638,12 @@
           "name": "member_user_id_user_id_fk",
           "tableFrom": "member",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -634,7 +708,9 @@
       "indexes": {
         "organization_slug_unique": {
           "name": "organization_slug_unique",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -743,12 +819,16 @@
       "indexes": {
         "passkey_credential_id_unique": {
           "name": "passkey_credential_id_unique",
-          "columns": ["credential_id"],
+          "columns": [
+            "credential_id"
+          ],
           "isUnique": true
         },
         "passkey_user_id_idx": {
           "name": "passkey_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -757,8 +837,12 @@
           "name": "passkey_user_id_user_id_fk",
           "tableFrom": "passkey",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -803,7 +887,9 @@
       "indexes": {
         "security_cleanup_operation_idx": {
           "name": "security_cleanup_operation_idx",
-          "columns": ["operation_id"],
+          "columns": [
+            "operation_id"
+          ],
           "isUnique": false
         }
       },
@@ -812,8 +898,12 @@
           "name": "account_security_cleanup_operation_id_account_security_operation_id_fk",
           "tableFrom": "account_security_cleanup",
           "tableTo": "account_security_operation",
-          "columnsFrom": ["operation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "operation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -998,12 +1088,16 @@
       "indexes": {
         "security_operation_user_idx": {
           "name": "security_operation_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         },
         "security_operation_pending_idx": {
           "name": "security_operation_pending_idx",
-          "columns": ["cleanup_pending"],
+          "columns": [
+            "cleanup_pending"
+          ],
           "isUnique": false
         }
       },
@@ -1012,8 +1106,12 @@
           "name": "account_security_operation_user_id_user_id_fk",
           "tableFrom": "account_security_operation",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1054,15 +1152,22 @@
           "name": "account_security_room_cleanup_operation_id_account_security_operation_id_fk",
           "tableFrom": "account_security_room_cleanup",
           "tableTo": "account_security_operation",
-          "columnsFrom": ["operation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "operation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "account_security_room_cleanup_operation_id_organization_id_pk": {
-          "columns": ["operation_id", "organization_id"],
+          "columns": [
+            "operation_id",
+            "organization_id"
+          ],
           "name": "account_security_room_cleanup_operation_id_organization_id_pk"
         }
       },
@@ -1146,17 +1251,23 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": ["token"],
+          "columns": [
+            "token"
+          ],
           "isUnique": true
         },
         "session_user_id_idx": {
           "name": "session_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         },
         "session_expires_at_idx": {
           "name": "session_expires_at_idx",
-          "columns": ["expires_at"],
+          "columns": [
+            "expires_at"
+          ],
           "isUnique": false
         }
       },
@@ -1165,8 +1276,12 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1174,8 +1289,12 @@
           "name": "session_active_organization_id_organization_id_fk",
           "tableFrom": "session",
           "tableTo": "organization",
-          "columnsFrom": ["active_organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "active_organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1226,7 +1345,9 @@
       "indexes": {
         "session_authority_user_idx": {
           "name": "session_authority_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -1235,8 +1356,12 @@
           "name": "session_authority_session_id_session_id_fk",
           "tableFrom": "session_authority",
           "tableTo": "session",
-          "columnsFrom": ["session_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1244,8 +1369,12 @@
           "name": "session_authority_user_id_user_id_fk",
           "tableFrom": "session_authority",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1312,12 +1441,16 @@
       "indexes": {
         "two_factor_user_id_idx": {
           "name": "two_factor_user_id_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         },
         "two_factor_secret_idx": {
           "name": "two_factor_secret_idx",
-          "columns": ["secret"],
+          "columns": [
+            "secret"
+          ],
           "isUnique": false
         }
       },
@@ -1326,8 +1459,12 @@
           "name": "two_factor_user_id_user_id_fk",
           "tableFrom": "two_factor",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1430,12 +1567,16 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         },
         "user_role_idx": {
           "name": "user_role_idx",
-          "columns": ["role"],
+          "columns": [
+            "role"
+          ],
           "isUnique": false
         }
       },
@@ -1493,12 +1634,16 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": ["identifier"],
+          "columns": [
+            "identifier"
+          ],
           "isUnique": false
         },
         "verification_expires_at_idx": {
           "name": "verification_expires_at_idx",
-          "columns": ["expires_at"],
+          "columns": [
+            "expires_at"
+          ],
           "isUnique": false
         }
       },
@@ -1557,7 +1702,9 @@
       "indexes": {
         "verification_authority_user_idx": {
           "name": "verification_authority_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -1566,8 +1713,12 @@
           "name": "verification_authority_user_id_user_id_fk",
           "tableFrom": "verification_authority",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1660,32 +1811,44 @@
       "indexes": {
         "airports_iata_unq": {
           "name": "airports_iata_unq",
-          "columns": ["iata_code"],
+          "columns": [
+            "iata_code"
+          ],
           "isUnique": true
         },
         "airports_icao_unq": {
           "name": "airports_icao_unq",
-          "columns": ["icao_code"],
+          "columns": [
+            "icao_code"
+          ],
           "isUnique": true
         },
         "airports_iata_prefix_idx": {
           "name": "airports_iata_prefix_idx",
-          "columns": ["\"iata_code\" COLLATE NOCASE"],
+          "columns": [
+            "\"iata_code\" COLLATE NOCASE"
+          ],
           "isUnique": false
         },
         "airports_icao_prefix_idx": {
           "name": "airports_icao_prefix_idx",
-          "columns": ["\"icao_code\" COLLATE NOCASE"],
+          "columns": [
+            "\"icao_code\" COLLATE NOCASE"
+          ],
           "isUnique": false
         },
         "airports_name_idx": {
           "name": "airports_name_idx",
-          "columns": ["\"name\" COLLATE NOCASE"],
+          "columns": [
+            "\"name\" COLLATE NOCASE"
+          ],
           "isUnique": false
         },
         "airports_city_idx": {
           "name": "airports_city_idx",
-          "columns": ["\"city\" COLLATE NOCASE"],
+          "columns": [
+            "\"city\" COLLATE NOCASE"
+          ],
           "isUnique": false
         }
       },
@@ -1745,7 +1908,9 @@
       "indexes": {
         "app_settings_updated_at_idx": {
           "name": "app_settings_updated_at_idx",
-          "columns": ["updated_at"],
+          "columns": [
+            "updated_at"
+          ],
           "isUnique": false
         }
       },
@@ -1789,12 +1954,16 @@
       "indexes": {
         "assignment_participants_org_idx": {
           "name": "assignment_participants_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "assignment_participants_user_idx": {
           "name": "assignment_participants_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -1803,8 +1972,12 @@
           "name": "assignment_participants_organization_id_organization_id_fk",
           "tableFrom": "assignment_participants",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1812,15 +1985,22 @@
           "name": "assignment_participants_assignment_id_day_assignments_id_fk",
           "tableFrom": "assignment_participants",
           "tableTo": "day_assignments",
-          "columnsFrom": ["assignment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "assignment_participants_assignment_id_user_id_pk": {
-          "columns": ["assignment_id", "user_id"],
+          "columns": [
+            "assignment_id",
+            "user_id"
+          ],
           "name": "assignment_participants_assignment_id_user_id_pk"
         }
       },
@@ -1904,22 +2084,34 @@
       "indexes": {
         "audit_log_org_created_at_idx": {
           "name": "audit_log_org_created_at_idx",
-          "columns": ["organization_id", "created_at"],
+          "columns": [
+            "organization_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "audit_log_org_actor_idx": {
           "name": "audit_log_org_actor_idx",
-          "columns": ["organization_id", "actor_user_id"],
+          "columns": [
+            "organization_id",
+            "actor_user_id"
+          ],
           "isUnique": false
         },
         "audit_log_org_action_idx": {
           "name": "audit_log_org_action_idx",
-          "columns": ["organization_id", "action"],
+          "columns": [
+            "organization_id",
+            "action"
+          ],
           "isUnique": false
         },
         "audit_log_entity_idx": {
           "name": "audit_log_entity_idx",
-          "columns": ["entity_type", "entity_id"],
+          "columns": [
+            "entity_type",
+            "entity_id"
+          ],
           "isUnique": false
         }
       },
@@ -1928,8 +2120,12 @@
           "name": "audit_log_organization_id_organization_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2060,22 +2256,34 @@
       "indexes": {
         "bucket_list_items_org_user_idx": {
           "name": "bucket_list_items_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         },
         "bucket_list_items_user_achieved_idx": {
           "name": "bucket_list_items_user_achieved_idx",
-          "columns": ["user_id", "is_achieved"],
+          "columns": [
+            "user_id",
+            "is_achieved"
+          ],
           "isUnique": false
         },
         "bucket_list_items_org_country_idx": {
           "name": "bucket_list_items_org_country_idx",
-          "columns": ["organization_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "country_code"
+          ],
           "isUnique": false
         },
         "bucket_list_items_user_sort_idx": {
           "name": "bucket_list_items_user_sort_idx",
-          "columns": ["user_id", "sort_order"],
+          "columns": [
+            "user_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -2084,8 +2292,12 @@
           "name": "bucket_list_items_organization_id_organization_id_fk",
           "tableFrom": "bucket_list_items",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2230,17 +2442,26 @@
       "indexes": {
         "budget_items_org_trip_idx": {
           "name": "budget_items_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "budget_items_trip_category_idx": {
           "name": "budget_items_trip_category_idx",
-          "columns": ["trip_id", "category"],
+          "columns": [
+            "trip_id",
+            "category"
+          ],
           "isUnique": false
         },
         "budget_items_trip_sort_idx": {
           "name": "budget_items_trip_sort_idx",
-          "columns": ["trip_id", "sort_order"],
+          "columns": [
+            "trip_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -2249,8 +2470,12 @@
           "name": "budget_items_organization_id_organization_id_fk",
           "tableFrom": "budget_items",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2258,8 +2483,12 @@
           "name": "budget_items_trip_id_trips_id_fk",
           "tableFrom": "budget_items",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2369,24 +2598,35 @@
       "indexes": {
         "calendar_feeds_token_unq": {
           "name": "calendar_feeds_token_unq",
-          "columns": ["token_digest"],
+          "columns": [
+            "token_digest"
+          ],
           "isUnique": true
         },
         "calendar_feeds_workspace_unq": {
           "name": "calendar_feeds_workspace_unq",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": true,
           "where": "\"calendar_feeds\".\"scope\" = 'workspace'"
         },
         "calendar_feeds_trip_unq": {
           "name": "calendar_feeds_trip_unq",
-          "columns": ["organization_id", "user_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "trip_id"
+          ],
           "isUnique": true,
           "where": "\"calendar_feeds\".\"scope\" = 'trip'"
         },
         "calendar_feeds_trip_idx": {
           "name": "calendar_feeds_trip_idx",
-          "columns": ["trip_id"],
+          "columns": [
+            "trip_id"
+          ],
           "isUnique": false
         }
       },
@@ -2395,8 +2635,12 @@
           "name": "calendar_feeds_organization_id_organization_id_fk",
           "tableFrom": "calendar_feeds",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2404,8 +2648,12 @@
           "name": "calendar_feeds_trip_id_trips_id_fk",
           "tableFrom": "calendar_feeds",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2504,12 +2752,18 @@
       "indexes": {
         "categories_org_slug_unq": {
           "name": "categories_org_slug_unq",
-          "columns": ["organization_id", "slug"],
+          "columns": [
+            "organization_id",
+            "slug"
+          ],
           "isUnique": true
         },
         "categories_org_sort_idx": {
           "name": "categories_org_sort_idx",
-          "columns": ["organization_id", "sort_order"],
+          "columns": [
+            "organization_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -2518,8 +2772,12 @@
           "name": "categories_organization_id_organization_id_fk",
           "tableFrom": "categories",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2556,7 +2814,9 @@
       "indexes": {
         "category_initializations_org_unq": {
           "name": "category_initializations_org_unq",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": true
         }
       },
@@ -2565,8 +2825,12 @@
           "name": "category_initializations_organization_id_organization_id_fk",
           "tableFrom": "category_initializations",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2688,27 +2952,41 @@
       "indexes": {
         "check_ins_org_user_idx": {
           "name": "check_ins_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         },
         "check_ins_org_trip_idx": {
           "name": "check_ins_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "check_ins_user_checked_in_at_idx": {
           "name": "check_ins_user_checked_in_at_idx",
-          "columns": ["user_id", "checked_in_at"],
+          "columns": [
+            "user_id",
+            "checked_in_at"
+          ],
           "isUnique": false
         },
         "check_ins_org_country_idx": {
           "name": "check_ins_org_country_idx",
-          "columns": ["organization_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "country_code"
+          ],
           "isUnique": false
         },
         "check_ins_place_idx": {
           "name": "check_ins_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         }
       },
@@ -2717,8 +2995,12 @@
           "name": "check_ins_organization_id_organization_id_fk",
           "tableFrom": "check_ins",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2726,8 +3008,12 @@
           "name": "check_ins_trip_id_trips_id_fk",
           "tableFrom": "check_ins",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2735,8 +3021,12 @@
           "name": "check_ins_place_id_places_id_fk",
           "tableFrom": "check_ins",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2800,12 +3090,16 @@
       "indexes": {
         "collab_message_reactions_org_idx": {
           "name": "collab_message_reactions_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "collab_message_reactions_user_idx": {
           "name": "collab_message_reactions_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -2814,8 +3108,12 @@
           "name": "collab_message_reactions_organization_id_organization_id_fk",
           "tableFrom": "collab_message_reactions",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2823,15 +3121,23 @@
           "name": "collab_message_reactions_message_id_collab_messages_id_fk",
           "tableFrom": "collab_message_reactions",
           "tableTo": "collab_messages",
-          "columnsFrom": ["message_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "message_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "collab_message_reactions_message_id_user_id_emoji_pk": {
-          "columns": ["message_id", "user_id", "emoji"],
+          "columns": [
+            "message_id",
+            "user_id",
+            "emoji"
+          ],
           "name": "collab_message_reactions_message_id_user_id_emoji_pk"
         }
       },
@@ -2922,27 +3228,40 @@
       "indexes": {
         "collab_messages_org_trip_idx": {
           "name": "collab_messages_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "collab_messages_trip_created_at_idx": {
           "name": "collab_messages_trip_created_at_idx",
-          "columns": ["trip_id", "created_at"],
+          "columns": [
+            "trip_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "collab_messages_org_user_idx": {
           "name": "collab_messages_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         },
         "collab_messages_reply_to_idx": {
           "name": "collab_messages_reply_to_idx",
-          "columns": ["reply_to_id"],
+          "columns": [
+            "reply_to_id"
+          ],
           "isUnique": false
         },
         "collab_messages_file_idx": {
           "name": "collab_messages_file_idx",
-          "columns": ["file_id"],
+          "columns": [
+            "file_id"
+          ],
           "isUnique": false
         }
       },
@@ -2951,8 +3270,12 @@
           "name": "collab_messages_organization_id_organization_id_fk",
           "tableFrom": "collab_messages",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2960,8 +3283,12 @@
           "name": "collab_messages_trip_id_trips_id_fk",
           "tableFrom": "collab_messages",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2969,8 +3296,12 @@
           "name": "collab_messages_reply_to_id_collab_messages_id_fk",
           "tableFrom": "collab_messages",
           "tableTo": "collab_messages",
-          "columnsFrom": ["reply_to_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "reply_to_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2978,8 +3309,12 @@
           "name": "collab_messages_file_id_trip_files_id_fk",
           "tableFrom": "collab_messages",
           "tableTo": "trip_files",
-          "columnsFrom": ["file_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "file_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3081,22 +3416,33 @@
       "indexes": {
         "collab_notes_org_trip_idx": {
           "name": "collab_notes_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "collab_notes_trip_pinned_idx": {
           "name": "collab_notes_trip_pinned_idx",
-          "columns": ["trip_id", "is_pinned"],
+          "columns": [
+            "trip_id",
+            "is_pinned"
+          ],
           "isUnique": false
         },
         "collab_notes_trip_sort_idx": {
           "name": "collab_notes_trip_sort_idx",
-          "columns": ["trip_id", "sort_order"],
+          "columns": [
+            "trip_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "collab_notes_created_by_idx": {
           "name": "collab_notes_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         }
       },
@@ -3105,8 +3451,12 @@
           "name": "collab_notes_organization_id_organization_id_fk",
           "tableFrom": "collab_notes",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3114,8 +3464,12 @@
           "name": "collab_notes_trip_id_trips_id_fk",
           "tableFrom": "collab_notes",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3173,17 +3527,26 @@
       "indexes": {
         "collab_poll_votes_poll_user_option_unq": {
           "name": "collab_poll_votes_poll_user_option_unq",
-          "columns": ["poll_id", "user_id", "option_id"],
+          "columns": [
+            "poll_id",
+            "user_id",
+            "option_id"
+          ],
           "isUnique": true
         },
         "collab_poll_votes_org_poll_idx": {
           "name": "collab_poll_votes_org_poll_idx",
-          "columns": ["organization_id", "poll_id"],
+          "columns": [
+            "organization_id",
+            "poll_id"
+          ],
           "isUnique": false
         },
         "collab_poll_votes_user_idx": {
           "name": "collab_poll_votes_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -3192,8 +3555,12 @@
           "name": "collab_poll_votes_organization_id_organization_id_fk",
           "tableFrom": "collab_poll_votes",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3201,8 +3568,12 @@
           "name": "collab_poll_votes_poll_id_collab_polls_id_fk",
           "tableFrom": "collab_poll_votes",
           "tableTo": "collab_polls",
-          "columnsFrom": ["poll_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "poll_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3297,22 +3668,32 @@
       "indexes": {
         "collab_polls_org_trip_idx": {
           "name": "collab_polls_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "collab_polls_trip_closed_idx": {
           "name": "collab_polls_trip_closed_idx",
-          "columns": ["trip_id", "is_closed"],
+          "columns": [
+            "trip_id",
+            "is_closed"
+          ],
           "isUnique": false
         },
         "collab_polls_created_by_idx": {
           "name": "collab_polls_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         },
         "collab_polls_closes_at_idx": {
           "name": "collab_polls_closes_at_idx",
-          "columns": ["closes_at"],
+          "columns": [
+            "closes_at"
+          ],
           "isUnique": false
         }
       },
@@ -3321,8 +3702,12 @@
           "name": "collab_polls_organization_id_organization_id_fk",
           "tableFrom": "collab_polls",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3330,8 +3715,12 @@
           "name": "collab_polls_trip_id_trips_id_fk",
           "tableFrom": "collab_polls",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3405,17 +3794,26 @@
       "indexes": {
         "collection_labels_collection_name_unq": {
           "name": "collection_labels_collection_name_unq",
-          "columns": ["collection_id", "name"],
+          "columns": [
+            "collection_id",
+            "name"
+          ],
           "isUnique": true
         },
         "collection_labels_org_collection_idx": {
           "name": "collection_labels_org_collection_idx",
-          "columns": ["organization_id", "collection_id"],
+          "columns": [
+            "organization_id",
+            "collection_id"
+          ],
           "isUnique": false
         },
         "collection_labels_collection_sort_idx": {
           "name": "collection_labels_collection_sort_idx",
-          "columns": ["collection_id", "sort_order"],
+          "columns": [
+            "collection_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -3424,8 +3822,12 @@
           "name": "collection_labels_organization_id_organization_id_fk",
           "tableFrom": "collection_labels",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3433,8 +3835,12 @@
           "name": "collection_labels_collection_id_collections_id_fk",
           "tableFrom": "collection_labels",
           "tableTo": "collections",
-          "columnsFrom": ["collection_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "collection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3478,12 +3884,16 @@
       "indexes": {
         "collection_place_labels_org_idx": {
           "name": "collection_place_labels_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "collection_place_labels_label_idx": {
           "name": "collection_place_labels_label_idx",
-          "columns": ["label_id"],
+          "columns": [
+            "label_id"
+          ],
           "isUnique": false
         }
       },
@@ -3492,8 +3902,12 @@
           "name": "collection_place_labels_organization_id_organization_id_fk",
           "tableFrom": "collection_place_labels",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3501,8 +3915,12 @@
           "name": "collection_place_labels_collection_place_id_collection_places_id_fk",
           "tableFrom": "collection_place_labels",
           "tableTo": "collection_places",
-          "columnsFrom": ["collection_place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "collection_place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3510,15 +3928,22 @@
           "name": "collection_place_labels_label_id_collection_labels_id_fk",
           "tableFrom": "collection_place_labels",
           "tableTo": "collection_labels",
-          "columnsFrom": ["label_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "label_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "collection_place_labels_collection_place_id_label_id_pk": {
-          "columns": ["collection_place_id", "label_id"],
+          "columns": [
+            "collection_place_id",
+            "label_id"
+          ],
           "name": "collection_place_labels_collection_place_id_label_id_pk"
         }
       },
@@ -3717,37 +4142,55 @@
       "indexes": {
         "collection_places_org_collection_idx": {
           "name": "collection_places_org_collection_idx",
-          "columns": ["organization_id", "collection_id"],
+          "columns": [
+            "organization_id",
+            "collection_id"
+          ],
           "isUnique": false
         },
         "collection_places_collection_sort_idx": {
           "name": "collection_places_collection_sort_idx",
-          "columns": ["collection_id", "sort_order"],
+          "columns": [
+            "collection_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "collection_places_org_status_idx": {
           "name": "collection_places_org_status_idx",
-          "columns": ["organization_id", "status"],
+          "columns": [
+            "organization_id",
+            "status"
+          ],
           "isUnique": false
         },
         "collection_places_org_country_idx": {
           "name": "collection_places_org_country_idx",
-          "columns": ["organization_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "country_code"
+          ],
           "isUnique": false
         },
         "collection_places_category_idx": {
           "name": "collection_places_category_idx",
-          "columns": ["category_id"],
+          "columns": [
+            "category_id"
+          ],
           "isUnique": false
         },
         "collection_places_source_trip_idx": {
           "name": "collection_places_source_trip_idx",
-          "columns": ["source_trip_id"],
+          "columns": [
+            "source_trip_id"
+          ],
           "isUnique": false
         },
         "collection_places_source_place_idx": {
           "name": "collection_places_source_place_idx",
-          "columns": ["source_place_id"],
+          "columns": [
+            "source_place_id"
+          ],
           "isUnique": false
         }
       },
@@ -3756,8 +4199,12 @@
           "name": "collection_places_organization_id_organization_id_fk",
           "tableFrom": "collection_places",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3765,8 +4212,12 @@
           "name": "collection_places_collection_id_collections_id_fk",
           "tableFrom": "collection_places",
           "tableTo": "collections",
-          "columnsFrom": ["collection_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "collection_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3774,8 +4225,12 @@
           "name": "collection_places_category_id_categories_id_fk",
           "tableFrom": "collection_places",
           "tableTo": "categories",
-          "columnsFrom": ["category_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3783,8 +4238,12 @@
           "name": "collection_places_source_trip_id_trips_id_fk",
           "tableFrom": "collection_places",
           "tableTo": "trips",
-          "columnsFrom": ["source_trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "source_trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3792,8 +4251,12 @@
           "name": "collection_places_source_place_id_places_id_fk",
           "tableFrom": "collection_places",
           "tableTo": "places",
-          "columnsFrom": ["source_place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "source_place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3925,22 +4388,34 @@
       "indexes": {
         "collections_org_slug_unq": {
           "name": "collections_org_slug_unq",
-          "columns": ["organization_id", "slug"],
+          "columns": [
+            "organization_id",
+            "slug"
+          ],
           "isUnique": true
         },
         "collections_org_owner_idx": {
           "name": "collections_org_owner_idx",
-          "columns": ["organization_id", "owner_user_id"],
+          "columns": [
+            "organization_id",
+            "owner_user_id"
+          ],
           "isUnique": false
         },
         "collections_org_sort_idx": {
           "name": "collections_org_sort_idx",
-          "columns": ["organization_id", "sort_order"],
+          "columns": [
+            "organization_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "collections_org_updated_at_idx": {
           "name": "collections_org_updated_at_idx",
-          "columns": ["organization_id", "updated_at"],
+          "columns": [
+            "organization_id",
+            "updated_at"
+          ],
           "isUnique": false
         }
       },
@@ -3949,8 +4424,12 @@
           "name": "collections_organization_id_organization_id_fk",
           "tableFrom": "collections",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4097,27 +4576,38 @@
       "indexes": {
         "day_accommodations_org_trip_idx": {
           "name": "day_accommodations_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "day_accommodations_start_day_idx": {
           "name": "day_accommodations_start_day_idx",
-          "columns": ["start_day_id"],
+          "columns": [
+            "start_day_id"
+          ],
           "isUnique": false
         },
         "day_accommodations_end_day_idx": {
           "name": "day_accommodations_end_day_idx",
-          "columns": ["end_day_id"],
+          "columns": [
+            "end_day_id"
+          ],
           "isUnique": false
         },
         "day_accommodations_place_idx": {
           "name": "day_accommodations_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         },
         "day_accommodations_reservation_idx": {
           "name": "day_accommodations_reservation_idx",
-          "columns": ["reservation_id"],
+          "columns": [
+            "reservation_id"
+          ],
           "isUnique": false
         }
       },
@@ -4126,8 +4616,12 @@
           "name": "day_accommodations_organization_id_organization_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4135,8 +4629,12 @@
           "name": "day_accommodations_trip_id_trips_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4144,8 +4642,12 @@
           "name": "day_accommodations_place_id_places_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4153,8 +4655,12 @@
           "name": "day_accommodations_start_day_id_days_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "days",
-          "columnsFrom": ["start_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "start_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4162,8 +4668,12 @@
           "name": "day_accommodations_end_day_id_days_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "days",
-          "columnsFrom": ["end_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "end_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4171,8 +4681,12 @@
           "name": "day_accommodations_reservation_id_reservations_id_fk",
           "tableFrom": "day_accommodations",
           "tableTo": "reservations",
-          "columnsFrom": ["reservation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "reservation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4293,22 +4807,33 @@
       "indexes": {
         "day_assignments_day_place_unq": {
           "name": "day_assignments_day_place_unq",
-          "columns": ["day_id", "place_id"],
+          "columns": [
+            "day_id",
+            "place_id"
+          ],
           "isUnique": true
         },
         "day_assignments_org_trip_idx": {
           "name": "day_assignments_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "day_assignments_day_order_idx": {
           "name": "day_assignments_day_order_idx",
-          "columns": ["day_id", "order_index"],
+          "columns": [
+            "day_id",
+            "order_index"
+          ],
           "isUnique": false
         },
         "day_assignments_place_idx": {
           "name": "day_assignments_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         }
       },
@@ -4317,8 +4842,12 @@
           "name": "day_assignments_organization_id_organization_id_fk",
           "tableFrom": "day_assignments",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4326,8 +4855,12 @@
           "name": "day_assignments_trip_id_trips_id_fk",
           "tableFrom": "day_assignments",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4335,8 +4868,12 @@
           "name": "day_assignments_day_id_days_id_fk",
           "tableFrom": "day_assignments",
           "tableTo": "days",
-          "columnsFrom": ["day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4344,8 +4881,12 @@
           "name": "day_assignments_place_id_places_id_fk",
           "tableFrom": "day_assignments",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4460,12 +5001,18 @@
       "indexes": {
         "day_notes_org_trip_idx": {
           "name": "day_notes_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "day_notes_day_sort_idx": {
           "name": "day_notes_day_sort_idx",
-          "columns": ["day_id", "sort_order"],
+          "columns": [
+            "day_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -4474,8 +5021,12 @@
           "name": "day_notes_organization_id_organization_id_fk",
           "tableFrom": "day_notes",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4483,8 +5034,12 @@
           "name": "day_notes_trip_id_trips_id_fk",
           "tableFrom": "day_notes",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4492,8 +5047,12 @@
           "name": "day_notes_day_id_days_id_fk",
           "tableFrom": "day_notes",
           "tableTo": "days",
-          "columnsFrom": ["day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4572,17 +5131,26 @@
       "indexes": {
         "days_trip_number_unq": {
           "name": "days_trip_number_unq",
-          "columns": ["trip_id", "day_number"],
+          "columns": [
+            "trip_id",
+            "day_number"
+          ],
           "isUnique": true
         },
         "days_org_trip_idx": {
           "name": "days_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "days_org_date_idx": {
           "name": "days_org_date_idx",
-          "columns": ["organization_id", "date"],
+          "columns": [
+            "organization_id",
+            "date"
+          ],
           "isUnique": false
         }
       },
@@ -4591,8 +5159,12 @@
           "name": "days_organization_id_organization_id_fk",
           "tableFrom": "days",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4600,8 +5172,12 @@
           "name": "days_trip_id_trips_id_fk",
           "tableFrom": "days",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4695,17 +5271,26 @@
       "indexes": {
         "expense_shares_expense_user_unq": {
           "name": "expense_shares_expense_user_unq",
-          "columns": ["expense_id", "user_id"],
+          "columns": [
+            "expense_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "expense_shares_org_trip_idx": {
           "name": "expense_shares_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "expense_shares_org_user_idx": {
           "name": "expense_shares_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -4714,8 +5299,12 @@
           "name": "expense_shares_organization_id_organization_id_fk",
           "tableFrom": "expense_shares",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4723,8 +5312,12 @@
           "name": "expense_shares_trip_id_trips_id_fk",
           "tableFrom": "expense_shares",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4732,8 +5325,12 @@
           "name": "expense_shares_expense_id_expenses_id_fk",
           "tableFrom": "expense_shares",
           "tableTo": "expenses",
-          "columnsFrom": ["expense_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "expense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4909,42 +5506,62 @@
       "indexes": {
         "expenses_org_trip_idx": {
           "name": "expenses_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "expenses_trip_spent_on_idx": {
           "name": "expenses_trip_spent_on_idx",
-          "columns": ["trip_id", "spent_on"],
+          "columns": [
+            "trip_id",
+            "spent_on"
+          ],
           "isUnique": false
         },
         "expenses_trip_category_idx": {
           "name": "expenses_trip_category_idx",
-          "columns": ["trip_id", "category"],
+          "columns": [
+            "trip_id",
+            "category"
+          ],
           "isUnique": false
         },
         "expenses_org_paid_by_idx": {
           "name": "expenses_org_paid_by_idx",
-          "columns": ["organization_id", "paid_by"],
+          "columns": [
+            "organization_id",
+            "paid_by"
+          ],
           "isUnique": false
         },
         "expenses_day_idx": {
           "name": "expenses_day_idx",
-          "columns": ["day_id"],
+          "columns": [
+            "day_id"
+          ],
           "isUnique": false
         },
         "expenses_place_idx": {
           "name": "expenses_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         },
         "expenses_budget_item_idx": {
           "name": "expenses_budget_item_idx",
-          "columns": ["budget_item_id"],
+          "columns": [
+            "budget_item_id"
+          ],
           "isUnique": false
         },
         "expenses_cost_category_idx": {
           "name": "expenses_cost_category_idx",
-          "columns": ["cost_category_id"],
+          "columns": [
+            "cost_category_id"
+          ],
           "isUnique": false
         }
       },
@@ -4953,8 +5570,12 @@
           "name": "expenses_organization_id_organization_id_fk",
           "tableFrom": "expenses",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4962,8 +5583,12 @@
           "name": "expenses_trip_id_trips_id_fk",
           "tableFrom": "expenses",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4971,8 +5596,12 @@
           "name": "expenses_day_id_days_id_fk",
           "tableFrom": "expenses",
           "tableTo": "days",
-          "columnsFrom": ["day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4980,8 +5609,12 @@
           "name": "expenses_place_id_places_id_fk",
           "tableFrom": "expenses",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4989,8 +5622,12 @@
           "name": "expenses_budget_item_id_budget_items_id_fk",
           "tableFrom": "expenses",
           "tableTo": "budget_items",
-          "columnsFrom": ["budget_item_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "budget_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4998,8 +5635,12 @@
           "name": "expenses_cost_category_id_trip_cost_categories_id_fk",
           "tableFrom": "expenses",
           "tableTo": "trip_cost_categories",
-          "columnsFrom": ["cost_category_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "cost_category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5022,6 +5663,125 @@
         "expenses_original_amount_chk": {
           "name": "expenses_original_amount_chk",
           "value": "(\"original_amount_minor\" IS NULL OR \"original_amount_minor\" >= 0)"
+        }
+      }
+    },
+    "gallery_previews": {
+      "name": "gallery_previews",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor_user_id": {
+          "name": "actor_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "document": {
+          "name": "document",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "gallery_previews_actor_trip_unq": {
+          "name": "gallery_previews_actor_trip_unq",
+          "columns": [
+            "organization_id",
+            "actor_user_id",
+            "trip_id"
+          ],
+          "isUnique": true
+        },
+        "gallery_previews_expiry_idx": {
+          "name": "gallery_previews_expiry_idx",
+          "columns": [
+            "expires_at",
+            "id"
+          ],
+          "isUnique": false
+        },
+        "gallery_previews_org_trip_idx": {
+          "name": "gallery_previews_org_trip_idx",
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
+          "isUnique": false
+        },
+        "gallery_previews_org_expiry_idx": {
+          "name": "gallery_previews_org_expiry_idx",
+          "columns": [
+            "organization_id",
+            "expires_at",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "gallery_previews_organization_id_organization_id_fk": {
+          "name": "gallery_previews_organization_id_organization_id_fk",
+          "tableFrom": "gallery_previews",
+          "tableTo": "organization",
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "gallery_previews_trip_id_trips_id_fk": {
+          "name": "gallery_previews_trip_id_trips_id_fk",
+          "tableFrom": "gallery_previews",
+          "tableTo": "trips",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "gallery_previews_bytes_chk": {
+          "name": "gallery_previews_bytes_chk",
+          "value": "length(cast(\"gallery_previews\".\"document\" as blob)) <= 524288"
         }
       }
     },
@@ -5188,42 +5948,62 @@
       "indexes": {
         "journey_entries_org_journey_idx": {
           "name": "journey_entries_org_journey_idx",
-          "columns": ["organization_id", "journey_id"],
+          "columns": [
+            "organization_id",
+            "journey_id"
+          ],
           "isUnique": false
         },
         "journey_entries_journey_date_idx": {
           "name": "journey_entries_journey_date_idx",
-          "columns": ["journey_id", "entry_date"],
+          "columns": [
+            "journey_id",
+            "entry_date"
+          ],
           "isUnique": false
         },
         "journey_entries_journey_sort_idx": {
           "name": "journey_entries_journey_sort_idx",
-          "columns": ["journey_id", "sort_order"],
+          "columns": [
+            "journey_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "journey_entries_org_author_idx": {
           "name": "journey_entries_org_author_idx",
-          "columns": ["organization_id", "author_user_id"],
+          "columns": [
+            "organization_id",
+            "author_user_id"
+          ],
           "isUnique": false
         },
         "journey_entries_mood_idx": {
           "name": "journey_entries_mood_idx",
-          "columns": ["mood_id"],
+          "columns": [
+            "mood_id"
+          ],
           "isUnique": false
         },
         "journey_entries_check_in_idx": {
           "name": "journey_entries_check_in_idx",
-          "columns": ["check_in_id"],
+          "columns": [
+            "check_in_id"
+          ],
           "isUnique": false
         },
         "journey_entries_source_trip_idx": {
           "name": "journey_entries_source_trip_idx",
-          "columns": ["source_trip_id"],
+          "columns": [
+            "source_trip_id"
+          ],
           "isUnique": false
         },
         "journey_entries_source_place_idx": {
           "name": "journey_entries_source_place_idx",
-          "columns": ["source_place_id"],
+          "columns": [
+            "source_place_id"
+          ],
           "isUnique": false
         }
       },
@@ -5232,8 +6012,12 @@
           "name": "journey_entries_organization_id_organization_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5241,8 +6025,12 @@
           "name": "journey_entries_journey_id_journeys_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "journeys",
-          "columnsFrom": ["journey_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "journey_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5250,8 +6038,12 @@
           "name": "journey_entries_mood_id_journey_moods_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "journey_moods",
-          "columnsFrom": ["mood_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "mood_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5259,8 +6051,12 @@
           "name": "journey_entries_check_in_id_check_ins_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "check_ins",
-          "columnsFrom": ["check_in_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "check_in_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5268,8 +6064,12 @@
           "name": "journey_entries_source_trip_id_trips_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "trips",
-          "columnsFrom": ["source_trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "source_trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -5277,8 +6077,12 @@
           "name": "journey_entries_source_place_id_places_id_fk",
           "tableFrom": "journey_entries",
           "tableTo": "places",
-          "columnsFrom": ["source_place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "source_place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5372,12 +6176,18 @@
       "indexes": {
         "journey_moods_org_key_unq": {
           "name": "journey_moods_org_key_unq",
-          "columns": ["organization_id", "key"],
+          "columns": [
+            "organization_id",
+            "key"
+          ],
           "isUnique": true
         },
         "journey_moods_org_sort_idx": {
           "name": "journey_moods_org_sort_idx",
-          "columns": ["organization_id", "sort_order"],
+          "columns": [
+            "organization_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -5386,8 +6196,12 @@
           "name": "journey_moods_organization_id_organization_id_fk",
           "tableFrom": "journey_moods",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5531,22 +6345,33 @@
       "indexes": {
         "journey_photos_storage_key_unq": {
           "name": "journey_photos_storage_key_unq",
-          "columns": ["storage_key"],
+          "columns": [
+            "storage_key"
+          ],
           "isUnique": true
         },
         "journey_photos_org_journey_idx": {
           "name": "journey_photos_org_journey_idx",
-          "columns": ["organization_id", "journey_id"],
+          "columns": [
+            "organization_id",
+            "journey_id"
+          ],
           "isUnique": false
         },
         "journey_photos_entry_sort_idx": {
           "name": "journey_photos_entry_sort_idx",
-          "columns": ["entry_id", "sort_order"],
+          "columns": [
+            "entry_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "journey_photos_org_taken_at_idx": {
           "name": "journey_photos_org_taken_at_idx",
-          "columns": ["organization_id", "taken_at"],
+          "columns": [
+            "organization_id",
+            "taken_at"
+          ],
           "isUnique": false
         }
       },
@@ -5555,8 +6380,12 @@
           "name": "journey_photos_organization_id_organization_id_fk",
           "tableFrom": "journey_photos",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5564,8 +6393,12 @@
           "name": "journey_photos_journey_id_journeys_id_fk",
           "tableFrom": "journey_photos",
           "tableTo": "journeys",
-          "columnsFrom": ["journey_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "journey_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5573,8 +6406,12 @@
           "name": "journey_photos_entry_id_journey_entries_id_fk",
           "tableFrom": "journey_photos",
           "tableTo": "journey_entries",
-          "columnsFrom": ["entry_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5731,32 +6568,48 @@
       "indexes": {
         "journeys_org_slug_unq": {
           "name": "journeys_org_slug_unq",
-          "columns": ["organization_id", "slug"],
+          "columns": [
+            "organization_id",
+            "slug"
+          ],
           "isUnique": true
         },
         "journeys_public_token_unq": {
           "name": "journeys_public_token_unq",
-          "columns": ["public_token"],
+          "columns": [
+            "public_token"
+          ],
           "isUnique": true
         },
         "journeys_org_owner_idx": {
           "name": "journeys_org_owner_idx",
-          "columns": ["organization_id", "owner_user_id"],
+          "columns": [
+            "organization_id",
+            "owner_user_id"
+          ],
           "isUnique": false
         },
         "journeys_org_status_idx": {
           "name": "journeys_org_status_idx",
-          "columns": ["organization_id", "status"],
+          "columns": [
+            "organization_id",
+            "status"
+          ],
           "isUnique": false
         },
         "journeys_org_updated_at_idx": {
           "name": "journeys_org_updated_at_idx",
-          "columns": ["organization_id", "updated_at"],
+          "columns": [
+            "organization_id",
+            "updated_at"
+          ],
           "isUnique": false
         },
         "journeys_trip_idx": {
           "name": "journeys_trip_idx",
-          "columns": ["trip_id"],
+          "columns": [
+            "trip_id"
+          ],
           "isUnique": false
         }
       },
@@ -5765,8 +6618,12 @@
           "name": "journeys_organization_id_organization_id_fk",
           "tableFrom": "journeys",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5774,8 +6631,12 @@
           "name": "journeys_trip_id_trips_id_fk",
           "tableFrom": "journeys",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5857,12 +6718,20 @@
       "indexes": {
         "notification_preferences_org_user_event_channel_unq": {
           "name": "notification_preferences_org_user_event_channel_unq",
-          "columns": ["organization_id", "user_id", "event_type", "channel"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "event_type",
+            "channel"
+          ],
           "isUnique": true
         },
         "notification_preferences_org_user_idx": {
           "name": "notification_preferences_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -5871,8 +6740,12 @@
           "name": "notification_preferences_organization_id_organization_id_fk",
           "tableFrom": "notification_preferences",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6029,22 +6902,35 @@
       "indexes": {
         "notifications_org_recipient_read_idx": {
           "name": "notifications_org_recipient_read_idx",
-          "columns": ["organization_id", "recipient_user_id", "is_read"],
+          "columns": [
+            "organization_id",
+            "recipient_user_id",
+            "is_read"
+          ],
           "isUnique": false
         },
         "notifications_recipient_created_at_idx": {
           "name": "notifications_recipient_created_at_idx",
-          "columns": ["recipient_user_id", "created_at"],
+          "columns": [
+            "recipient_user_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "notifications_org_scope_idx": {
           "name": "notifications_org_scope_idx",
-          "columns": ["organization_id", "scope"],
+          "columns": [
+            "organization_id",
+            "scope"
+          ],
           "isUnique": false
         },
         "notifications_entity_idx": {
           "name": "notifications_entity_idx",
-          "columns": ["entity_type", "entity_id"],
+          "columns": [
+            "entity_type",
+            "entity_id"
+          ],
           "isUnique": false
         }
       },
@@ -6053,8 +6939,12 @@
           "name": "notifications_organization_id_organization_id_fk",
           "tableFrom": "notifications",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6181,7 +7071,9 @@
       "indexes": {
         "organization_settings_org_unq": {
           "name": "organization_settings_org_unq",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": true
         }
       },
@@ -6190,8 +7082,12 @@
           "name": "organization_settings_organization_id_organization_id_fk",
           "tableFrom": "organization_settings",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6339,27 +7235,41 @@
       "indexes": {
         "packing_items_org_trip_idx": {
           "name": "packing_items_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "packing_items_list_sort_idx": {
           "name": "packing_items_list_sort_idx",
-          "columns": ["list_id", "sort_order"],
+          "columns": [
+            "list_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "packing_items_list_done_idx": {
           "name": "packing_items_list_done_idx",
-          "columns": ["list_id", "is_done"],
+          "columns": [
+            "list_id",
+            "is_done"
+          ],
           "isUnique": false
         },
         "packing_items_org_assigned_idx": {
           "name": "packing_items_org_assigned_idx",
-          "columns": ["organization_id", "assigned_to"],
+          "columns": [
+            "organization_id",
+            "assigned_to"
+          ],
           "isUnique": false
         },
         "packing_items_due_date_idx": {
           "name": "packing_items_due_date_idx",
-          "columns": ["due_date"],
+          "columns": [
+            "due_date"
+          ],
           "isUnique": false
         }
       },
@@ -6368,8 +7278,12 @@
           "name": "packing_items_organization_id_organization_id_fk",
           "tableFrom": "packing_items",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6377,8 +7291,12 @@
           "name": "packing_items_trip_id_trips_id_fk",
           "tableFrom": "packing_items",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6386,8 +7304,12 @@
           "name": "packing_items_list_id_packing_lists_id_fk",
           "tableFrom": "packing_items",
           "tableTo": "packing_lists",
-          "columnsFrom": ["list_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "list_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6502,22 +7424,33 @@
       "indexes": {
         "packing_lists_org_trip_idx": {
           "name": "packing_lists_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "packing_lists_trip_kind_idx": {
           "name": "packing_lists_trip_kind_idx",
-          "columns": ["trip_id", "kind"],
+          "columns": [
+            "trip_id",
+            "kind"
+          ],
           "isUnique": false
         },
         "packing_lists_trip_sort_idx": {
           "name": "packing_lists_trip_sort_idx",
-          "columns": ["trip_id", "sort_order"],
+          "columns": [
+            "trip_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "packing_lists_owner_idx": {
           "name": "packing_lists_owner_idx",
-          "columns": ["owner_user_id"],
+          "columns": [
+            "owner_user_id"
+          ],
           "isUnique": false
         }
       },
@@ -6526,8 +7459,12 @@
           "name": "packing_lists_organization_id_organization_id_fk",
           "tableFrom": "packing_lists",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6535,8 +7472,12 @@
           "name": "packing_lists_trip_id_trips_id_fk",
           "tableFrom": "packing_lists",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6626,12 +7567,17 @@
       "indexes": {
         "packing_template_items_org_idx": {
           "name": "packing_template_items_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "packing_template_items_template_sort_idx": {
           "name": "packing_template_items_template_sort_idx",
-          "columns": ["template_id", "sort_order"],
+          "columns": [
+            "template_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -6640,8 +7586,12 @@
           "name": "packing_template_items_organization_id_organization_id_fk",
           "tableFrom": "packing_template_items",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6649,8 +7599,12 @@
           "name": "packing_template_items_template_id_packing_templates_id_fk",
           "tableFrom": "packing_template_items",
           "tableTo": "packing_templates",
-          "columnsFrom": ["template_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6743,17 +7697,25 @@
       "indexes": {
         "packing_templates_org_name_unq": {
           "name": "packing_templates_org_name_unq",
-          "columns": ["organization_id", "name"],
+          "columns": [
+            "organization_id",
+            "name"
+          ],
           "isUnique": true
         },
         "packing_templates_org_kind_idx": {
           "name": "packing_templates_org_kind_idx",
-          "columns": ["organization_id", "kind"],
+          "columns": [
+            "organization_id",
+            "kind"
+          ],
           "isUnique": false
         },
         "packing_templates_created_by_idx": {
           "name": "packing_templates_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         }
       },
@@ -6762,8 +7724,12 @@
           "name": "packing_templates_organization_id_organization_id_fk",
           "tableFrom": "packing_templates",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -6827,7 +7793,10 @@
       "indexes": {
         "place_photo_selections_trip_idx": {
           "name": "place_photo_selections_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         }
       },
@@ -6836,8 +7805,12 @@
           "name": "place_photo_selections_organization_id_organization_id_fk",
           "tableFrom": "place_photo_selections",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6845,15 +7818,26 @@
           "name": "place_photo_selections_organization_id_trip_id_place_id_places_organization_id_trip_id_id_fk",
           "tableFrom": "place_photo_selections",
           "tableTo": "places",
-          "columnsFrom": ["organization_id", "trip_id", "place_id"],
-          "columnsTo": ["organization_id", "trip_id", "id"],
+          "columnsFrom": [
+            "organization_id",
+            "trip_id",
+            "place_id"
+          ],
+          "columnsTo": [
+            "organization_id",
+            "trip_id",
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "place_photo_selections_organization_id_place_id_pk": {
-          "columns": ["organization_id", "place_id"],
+          "columns": [
+            "organization_id",
+            "place_id"
+          ],
           "name": "place_photo_selections_organization_id_place_id_pk"
         }
       },
@@ -6904,12 +7888,16 @@
       "indexes": {
         "place_tags_org_idx": {
           "name": "place_tags_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         },
         "place_tags_tag_idx": {
           "name": "place_tags_tag_idx",
-          "columns": ["tag_id"],
+          "columns": [
+            "tag_id"
+          ],
           "isUnique": false
         }
       },
@@ -6918,8 +7906,12 @@
           "name": "place_tags_organization_id_organization_id_fk",
           "tableFrom": "place_tags",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6927,8 +7919,12 @@
           "name": "place_tags_place_id_places_id_fk",
           "tableFrom": "place_tags",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -6936,15 +7932,22 @@
           "name": "place_tags_tag_id_tags_id_fk",
           "tableFrom": "place_tags",
           "tableTo": "tags",
-          "columnsFrom": ["tag_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "tag_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "place_tags_place_id_tag_id_pk": {
-          "columns": ["place_id", "tag_id"],
+          "columns": [
+            "place_id",
+            "tag_id"
+          ],
           "name": "place_tags_place_id_tag_id_pk"
         }
       },
@@ -7152,37 +8155,59 @@
       "indexes": {
         "places_org_trip_idx": {
           "name": "places_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "places_org_category_idx": {
           "name": "places_org_category_idx",
-          "columns": ["organization_id", "category_id"],
+          "columns": [
+            "organization_id",
+            "category_id"
+          ],
           "isUnique": false
         },
         "places_org_country_idx": {
           "name": "places_org_country_idx",
-          "columns": ["organization_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "country_code"
+          ],
           "isUnique": false
         },
         "places_trip_sort_idx": {
           "name": "places_trip_sort_idx",
-          "columns": ["trip_id", "sort_order"],
+          "columns": [
+            "trip_id",
+            "sort_order"
+          ],
           "isUnique": false
         },
         "places_org_name_idx": {
           "name": "places_org_name_idx",
-          "columns": ["organization_id", "name"],
+          "columns": [
+            "organization_id",
+            "name"
+          ],
           "isUnique": false
         },
         "places_photo_parent_idx": {
           "name": "places_photo_parent_idx",
-          "columns": ["organization_id", "trip_id", "id"],
+          "columns": [
+            "organization_id",
+            "trip_id",
+            "id"
+          ],
           "isUnique": true
         },
         "places_external_idx": {
           "name": "places_external_idx",
-          "columns": ["source", "external_id"],
+          "columns": [
+            "source",
+            "external_id"
+          ],
           "isUnique": false
         }
       },
@@ -7191,8 +8216,12 @@
           "name": "places_organization_id_organization_id_fk",
           "tableFrom": "places",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7200,8 +8229,12 @@
           "name": "places_trip_id_trips_id_fk",
           "tableFrom": "places",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7209,8 +8242,12 @@
           "name": "places_category_id_categories_id_fk",
           "tableFrom": "places",
           "tableTo": "categories",
-          "columnsFrom": ["category_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "category_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -7339,27 +8376,41 @@
       "indexes": {
         "platform_audit_log_entity_idx": {
           "name": "platform_audit_log_entity_idx",
-          "columns": ["entity_type", "entity_id", "created_at"],
+          "columns": [
+            "entity_type",
+            "entity_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "platform_audit_log_actor_idx": {
           "name": "platform_audit_log_actor_idx",
-          "columns": ["actor_user_id", "created_at"],
+          "columns": [
+            "actor_user_id",
+            "created_at"
+          ],
           "isUnique": false
         },
         "platform_audit_log_action_idx": {
           "name": "platform_audit_log_action_idx",
-          "columns": ["action", "created_at"],
+          "columns": [
+            "action",
+            "created_at"
+          ],
           "isUnique": false
         },
         "platform_audit_log_token_idx": {
           "name": "platform_audit_log_token_idx",
-          "columns": ["token_id"],
+          "columns": [
+            "token_id"
+          ],
           "isUnique": false
         },
         "platform_audit_log_created_at_idx": {
           "name": "platform_audit_log_created_at_idx",
-          "columns": ["created_at"],
+          "columns": [
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -7368,8 +8419,12 @@
           "name": "platform_audit_log_token_id_staff_api_tokens_id_fk",
           "tableFrom": "platform_audit_log",
           "tableTo": "staff_api_tokens",
-          "columnsFrom": ["token_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "token_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -7502,7 +8557,9 @@
       "indexes": {
         "provider_registry_slug_unq": {
           "name": "provider_registry_slug_unq",
-          "columns": ["slug"],
+          "columns": [
+            "slug"
+          ],
           "isUnique": true
         }
       },
@@ -7628,18 +8685,31 @@
         },
         "provider_usage_platform_unq": {
           "name": "provider_usage_platform_unq",
-          "columns": ["grain", "provider", "operation", "bucket"],
+          "columns": [
+            "grain",
+            "provider",
+            "operation",
+            "bucket"
+          ],
           "isUnique": true,
           "where": "\"organization_id\" IS NULL"
         },
         "provider_usage_window_idx": {
           "name": "provider_usage_window_idx",
-          "columns": ["grain", "provider", "bucket"],
+          "columns": [
+            "grain",
+            "provider",
+            "bucket"
+          ],
           "isUnique": false
         },
         "provider_usage_org_idx": {
           "name": "provider_usage_org_idx",
-          "columns": ["organization_id", "grain", "bucket"],
+          "columns": [
+            "organization_id",
+            "grain",
+            "bucket"
+          ],
           "isUnique": false
         }
       },
@@ -7875,57 +8945,84 @@
       "indexes": {
         "reservations_org_trip_idx": {
           "name": "reservations_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "reservations_trip_start_idx": {
           "name": "reservations_trip_start_idx",
-          "columns": ["trip_id", "start_date"],
+          "columns": [
+            "trip_id",
+            "start_date"
+          ],
           "isUnique": false
         },
         "reservations_org_status_idx": {
           "name": "reservations_org_status_idx",
-          "columns": ["organization_id", "status"],
+          "columns": [
+            "organization_id",
+            "status"
+          ],
           "isUnique": false
         },
         "reservations_org_type_idx": {
           "name": "reservations_org_type_idx",
-          "columns": ["organization_id", "type"],
+          "columns": [
+            "organization_id",
+            "type"
+          ],
           "isUnique": false
         },
         "reservations_day_idx": {
           "name": "reservations_day_idx",
-          "columns": ["day_id"],
+          "columns": [
+            "day_id"
+          ],
           "isUnique": false
         },
         "reservations_end_day_idx": {
           "name": "reservations_end_day_idx",
-          "columns": ["end_day_id"],
+          "columns": [
+            "end_day_id"
+          ],
           "isUnique": false
         },
         "reservations_place_idx": {
           "name": "reservations_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         },
         "reservations_assignment_idx": {
           "name": "reservations_assignment_idx",
-          "columns": ["assignment_id"],
+          "columns": [
+            "assignment_id"
+          ],
           "isUnique": false
         },
         "reservations_transport_idx": {
           "name": "reservations_transport_idx",
-          "columns": ["transport_id"],
+          "columns": [
+            "transport_id"
+          ],
           "isUnique": false
         },
         "reservations_expense_idx": {
           "name": "reservations_expense_idx",
-          "columns": ["expense_id"],
+          "columns": [
+            "expense_id"
+          ],
           "isUnique": false
         },
         "reservations_org_imported_at_idx": {
           "name": "reservations_org_imported_at_idx",
-          "columns": ["organization_id", "imported_at"],
+          "columns": [
+            "organization_id",
+            "imported_at"
+          ],
           "isUnique": false
         }
       },
@@ -7934,8 +9031,12 @@
           "name": "reservations_organization_id_organization_id_fk",
           "tableFrom": "reservations",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7943,8 +9044,12 @@
           "name": "reservations_trip_id_trips_id_fk",
           "tableFrom": "reservations",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7952,8 +9057,12 @@
           "name": "reservations_day_id_days_id_fk",
           "tableFrom": "reservations",
           "tableTo": "days",
-          "columnsFrom": ["day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7961,8 +9070,12 @@
           "name": "reservations_end_day_id_days_id_fk",
           "tableFrom": "reservations",
           "tableTo": "days",
-          "columnsFrom": ["end_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "end_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7970,8 +9083,12 @@
           "name": "reservations_place_id_places_id_fk",
           "tableFrom": "reservations",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7979,8 +9096,12 @@
           "name": "reservations_assignment_id_day_assignments_id_fk",
           "tableFrom": "reservations",
           "tableTo": "day_assignments",
-          "columnsFrom": ["assignment_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7988,8 +9109,12 @@
           "name": "reservations_transport_id_transports_id_fk",
           "tableFrom": "reservations",
           "tableTo": "transports",
-          "columnsFrom": ["transport_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "transport_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7997,8 +9122,12 @@
           "name": "reservations_expense_id_expenses_id_fk",
           "tableFrom": "reservations",
           "tableTo": "expenses",
-          "columnsFrom": ["expense_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "expense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -8146,22 +9275,34 @@
       "indexes": {
         "settlements_org_trip_idx": {
           "name": "settlements_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "settlements_trip_settled_on_idx": {
           "name": "settlements_trip_settled_on_idx",
-          "columns": ["trip_id", "settled_on"],
+          "columns": [
+            "trip_id",
+            "settled_on"
+          ],
           "isUnique": false
         },
         "settlements_org_from_idx": {
           "name": "settlements_org_from_idx",
-          "columns": ["organization_id", "from_user_id"],
+          "columns": [
+            "organization_id",
+            "from_user_id"
+          ],
           "isUnique": false
         },
         "settlements_org_to_idx": {
           "name": "settlements_org_to_idx",
-          "columns": ["organization_id", "to_user_id"],
+          "columns": [
+            "organization_id",
+            "to_user_id"
+          ],
           "isUnique": false
         }
       },
@@ -8170,8 +9311,12 @@
           "name": "settlements_organization_id_organization_id_fk",
           "tableFrom": "settlements",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8179,8 +9324,12 @@
           "name": "settlements_trip_id_trips_id_fk",
           "tableFrom": "settlements",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8294,17 +9443,24 @@
       "indexes": {
         "share_links_token_unq": {
           "name": "share_links_token_unq",
-          "columns": ["token"],
+          "columns": [
+            "token"
+          ],
           "isUnique": true
         },
         "share_links_org_trip_idx": {
           "name": "share_links_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "share_links_expires_at_idx": {
           "name": "share_links_expires_at_idx",
-          "columns": ["expires_at"],
+          "columns": [
+            "expires_at"
+          ],
           "isUnique": false
         }
       },
@@ -8313,8 +9469,12 @@
           "name": "share_links_organization_id_organization_id_fk",
           "tableFrom": "share_links",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -8322,8 +9482,12 @@
           "name": "share_links_trip_id_trips_id_fk",
           "tableFrom": "share_links",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8428,22 +9592,31 @@
       "indexes": {
         "staff_api_tokens_token_hash_unq": {
           "name": "staff_api_tokens_token_hash_unq",
-          "columns": ["token_hash"],
+          "columns": [
+            "token_hash"
+          ],
           "isUnique": true
         },
         "staff_api_tokens_user_revoked_idx": {
           "name": "staff_api_tokens_user_revoked_idx",
-          "columns": ["user_id", "revoked_at"],
+          "columns": [
+            "user_id",
+            "revoked_at"
+          ],
           "isUnique": false
         },
         "staff_api_tokens_expires_at_idx": {
           "name": "staff_api_tokens_expires_at_idx",
-          "columns": ["expires_at"],
+          "columns": [
+            "expires_at"
+          ],
           "isUnique": false
         },
         "staff_api_tokens_created_by_idx": {
           "name": "staff_api_tokens_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         }
       },
@@ -8545,17 +9718,26 @@
       "indexes": {
         "storage_objects_key_unq": {
           "name": "storage_objects_key_unq",
-          "columns": ["storage_key"],
+          "columns": [
+            "storage_key"
+          ],
           "isUnique": true
         },
         "storage_objects_org_trip_idx": {
           "name": "storage_objects_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "storage_objects_org_state_expiry_idx": {
           "name": "storage_objects_org_state_expiry_idx",
-          "columns": ["organization_id", "state", "expires_at"],
+          "columns": [
+            "organization_id",
+            "state",
+            "expires_at"
+          ],
           "isUnique": false
         }
       },
@@ -8564,8 +9746,12 @@
           "name": "storage_objects_organization_id_organization_id_fk",
           "tableFrom": "storage_objects",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8761,27 +9947,37 @@
       "indexes": {
         "subscriptions_org_unq": {
           "name": "subscriptions_org_unq",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": true
         },
         "subscriptions_provider_subscription_unq": {
           "name": "subscriptions_provider_subscription_unq",
-          "columns": ["provider_subscription_id"],
+          "columns": [
+            "provider_subscription_id"
+          ],
           "isUnique": true
         },
         "subscriptions_provider_customer_idx": {
           "name": "subscriptions_provider_customer_idx",
-          "columns": ["provider_customer_id"],
+          "columns": [
+            "provider_customer_id"
+          ],
           "isUnique": false
         },
         "subscriptions_status_idx": {
           "name": "subscriptions_status_idx",
-          "columns": ["status"],
+          "columns": [
+            "status"
+          ],
           "isUnique": false
         },
         "subscriptions_current_period_end_idx": {
           "name": "subscriptions_current_period_end_idx",
-          "columns": ["current_period_end"],
+          "columns": [
+            "current_period_end"
+          ],
           "isUnique": false
         }
       },
@@ -8790,8 +9986,12 @@
           "name": "subscriptions_organization_id_organization_id_fk",
           "tableFrom": "subscriptions",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -8878,12 +10078,18 @@
       "indexes": {
         "tags_org_slug_unq": {
           "name": "tags_org_slug_unq",
-          "columns": ["organization_id", "slug"],
+          "columns": [
+            "organization_id",
+            "slug"
+          ],
           "isUnique": true
         },
         "tags_org_name_idx": {
           "name": "tags_org_name_idx",
-          "columns": ["organization_id", "name"],
+          "columns": [
+            "organization_id",
+            "name"
+          ],
           "isUnique": false
         }
       },
@@ -8892,8 +10098,12 @@
           "name": "tags_organization_id_organization_id_fk",
           "tableFrom": "tags",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -9100,32 +10310,49 @@
       "indexes": {
         "transport_legs_org_trip_idx": {
           "name": "transport_legs_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "transport_legs_transport_position_idx": {
           "name": "transport_legs_transport_position_idx",
-          "columns": ["transport_id", "position"],
+          "columns": [
+            "transport_id",
+            "position"
+          ],
           "isUnique": false
         },
         "transport_legs_departure_day_idx": {
           "name": "transport_legs_departure_day_idx",
-          "columns": ["departure_day_id"],
+          "columns": [
+            "departure_day_id"
+          ],
           "isUnique": false
         },
         "transport_legs_arrival_day_idx": {
           "name": "transport_legs_arrival_day_idx",
-          "columns": ["arrival_day_id"],
+          "columns": [
+            "arrival_day_id"
+          ],
           "isUnique": false
         },
         "transport_legs_org_trip_departure_day_idx": {
           "name": "transport_legs_org_trip_departure_day_idx",
-          "columns": ["organization_id", "trip_id", "departure_day_id"],
+          "columns": [
+            "organization_id",
+            "trip_id",
+            "departure_day_id"
+          ],
           "isUnique": false
         },
         "transport_legs_org_transport_idx": {
           "name": "transport_legs_org_transport_idx",
-          "columns": ["organization_id", "transport_id"],
+          "columns": [
+            "organization_id",
+            "transport_id"
+          ],
           "isUnique": false
         }
       },
@@ -9134,8 +10361,12 @@
           "name": "transport_legs_organization_id_organization_id_fk",
           "tableFrom": "transport_legs",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9143,8 +10374,12 @@
           "name": "transport_legs_trip_id_trips_id_fk",
           "tableFrom": "transport_legs",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9152,8 +10387,12 @@
           "name": "transport_legs_transport_id_transports_id_fk",
           "tableFrom": "transport_legs",
           "tableTo": "transports",
-          "columnsFrom": ["transport_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "transport_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9161,8 +10400,12 @@
           "name": "transport_legs_departure_day_id_days_id_fk",
           "tableFrom": "transport_legs",
           "tableTo": "days",
-          "columnsFrom": ["departure_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "departure_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -9170,8 +10413,12 @@
           "name": "transport_legs_arrival_day_id_days_id_fk",
           "tableFrom": "transport_legs",
           "tableTo": "days",
-          "columnsFrom": ["arrival_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "arrival_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -9442,42 +10689,65 @@
       "indexes": {
         "transports_org_trip_idx": {
           "name": "transports_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "transports_trip_departure_idx": {
           "name": "transports_trip_departure_idx",
-          "columns": ["trip_id", "departure_date"],
+          "columns": [
+            "trip_id",
+            "departure_date"
+          ],
           "isUnique": false
         },
         "transports_org_status_idx": {
           "name": "transports_org_status_idx",
-          "columns": ["organization_id", "status"],
+          "columns": [
+            "organization_id",
+            "status"
+          ],
           "isUnique": false
         },
         "transports_org_mode_idx": {
           "name": "transports_org_mode_idx",
-          "columns": ["organization_id", "mode"],
+          "columns": [
+            "organization_id",
+            "mode"
+          ],
           "isUnique": false
         },
         "transports_day_idx": {
           "name": "transports_day_idx",
-          "columns": ["day_id"],
+          "columns": [
+            "day_id"
+          ],
           "isUnique": false
         },
         "transports_arrival_day_idx": {
           "name": "transports_arrival_day_idx",
-          "columns": ["arrival_day_id"],
+          "columns": [
+            "arrival_day_id"
+          ],
           "isUnique": false
         },
         "transports_org_arrival_day_idx": {
           "name": "transports_org_arrival_day_idx",
-          "columns": ["organization_id", "arrival_day_id"],
+          "columns": [
+            "organization_id",
+            "arrival_day_id"
+          ],
           "isUnique": false
         },
         "transports_org_trip_day_idx": {
           "name": "transports_org_trip_day_idx",
-          "columns": ["organization_id", "trip_id", "day_id"],
+          "columns": [
+            "organization_id",
+            "trip_id",
+            "day_id"
+          ],
           "isUnique": false
         }
       },
@@ -9486,8 +10756,12 @@
           "name": "transports_organization_id_organization_id_fk",
           "tableFrom": "transports",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9495,8 +10769,12 @@
           "name": "transports_trip_id_trips_id_fk",
           "tableFrom": "transports",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9504,8 +10782,12 @@
           "name": "transports_day_id_days_id_fk",
           "tableFrom": "transports",
           "tableTo": "days",
-          "columnsFrom": ["day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -9513,8 +10795,12 @@
           "name": "transports_arrival_day_id_days_id_fk",
           "tableFrom": "transports",
           "tableTo": "days",
-          "columnsFrom": ["arrival_day_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "arrival_day_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -9691,17 +10977,26 @@
       "indexes": {
         "travel_stats_org_user_year_unq": {
           "name": "travel_stats_org_user_year_unq",
-          "columns": ["organization_id", "user_id", "stat_year"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "stat_year"
+          ],
           "isUnique": true
         },
         "travel_stats_org_year_idx": {
           "name": "travel_stats_org_year_idx",
-          "columns": ["organization_id", "stat_year"],
+          "columns": [
+            "organization_id",
+            "stat_year"
+          ],
           "isUnique": false
         },
         "travel_stats_last_trip_idx": {
           "name": "travel_stats_last_trip_idx",
-          "columns": ["last_trip_id"],
+          "columns": [
+            "last_trip_id"
+          ],
           "isUnique": false
         }
       },
@@ -9710,8 +11005,12 @@
           "name": "travel_stats_organization_id_organization_id_fk",
           "tableFrom": "travel_stats",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9719,8 +11018,12 @@
           "name": "travel_stats_last_trip_id_trips_id_fk",
           "tableFrom": "travel_stats",
           "tableTo": "trips",
-          "columnsFrom": ["last_trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "last_trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -9799,12 +11102,18 @@
       "indexes": {
         "trip_cost_categories_org_trip_idx": {
           "name": "trip_cost_categories_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "trip_cost_categories_trip_sort_idx": {
           "name": "trip_cost_categories_trip_sort_idx",
-          "columns": ["trip_id", "sort_order"],
+          "columns": [
+            "trip_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -9813,8 +11122,12 @@
           "name": "trip_cost_categories_organization_id_organization_id_fk",
           "tableFrom": "trip_cost_categories",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9822,8 +11135,12 @@
           "name": "trip_cost_categories_trip_id_trips_id_fk",
           "tableFrom": "trip_cost_categories",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -9872,7 +11189,10 @@
       "indexes": {
         "trip_favourites_org_user_idx": {
           "name": "trip_favourites_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -9881,8 +11201,12 @@
           "name": "trip_favourites_organization_id_organization_id_fk",
           "tableFrom": "trip_favourites",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -9890,15 +11214,22 @@
           "name": "trip_favourites_trip_id_trips_id_fk",
           "tableFrom": "trip_favourites",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "trip_favourites_trip_id_user_id_pk": {
-          "columns": ["trip_id", "user_id"],
+          "columns": [
+            "trip_id",
+            "user_id"
+          ],
           "name": "trip_favourites_trip_id_user_id_pk"
         }
       },
@@ -10047,42 +11378,61 @@
       "indexes": {
         "trip_files_storage_key_unq": {
           "name": "trip_files_storage_key_unq",
-          "columns": ["storage_key"],
+          "columns": [
+            "storage_key"
+          ],
           "isUnique": true
         },
         "trip_files_org_trip_idx": {
           "name": "trip_files_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "trip_files_trip_kind_idx": {
           "name": "trip_files_trip_kind_idx",
-          "columns": ["trip_id", "kind"],
+          "columns": [
+            "trip_id",
+            "kind"
+          ],
           "isUnique": false
         },
         "trip_files_place_idx": {
           "name": "trip_files_place_idx",
-          "columns": ["place_id"],
+          "columns": [
+            "place_id"
+          ],
           "isUnique": false
         },
         "trip_files_reservation_idx": {
           "name": "trip_files_reservation_idx",
-          "columns": ["reservation_id"],
+          "columns": [
+            "reservation_id"
+          ],
           "isUnique": false
         },
         "trip_files_transport_idx": {
           "name": "trip_files_transport_idx",
-          "columns": ["transport_id"],
+          "columns": [
+            "transport_id"
+          ],
           "isUnique": false
         },
         "trip_files_expense_idx": {
           "name": "trip_files_expense_idx",
-          "columns": ["expense_id"],
+          "columns": [
+            "expense_id"
+          ],
           "isUnique": false
         },
         "trip_files_org_created_at_idx": {
           "name": "trip_files_org_created_at_idx",
-          "columns": ["organization_id", "created_at"],
+          "columns": [
+            "organization_id",
+            "created_at"
+          ],
           "isUnique": false
         }
       },
@@ -10091,8 +11441,12 @@
           "name": "trip_files_organization_id_organization_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10100,8 +11454,12 @@
           "name": "trip_files_trip_id_trips_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10109,8 +11467,12 @@
           "name": "trip_files_place_id_places_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "places",
-          "columnsFrom": ["place_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "place_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -10118,8 +11480,12 @@
           "name": "trip_files_reservation_id_reservations_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "reservations",
-          "columnsFrom": ["reservation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "reservation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -10127,8 +11493,12 @@
           "name": "trip_files_transport_id_transports_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "transports",
-          "columnsFrom": ["transport_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "transport_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -10136,8 +11506,12 @@
           "name": "trip_files_expense_id_expenses_id_fk",
           "tableFrom": "trip_files",
           "tableTo": "expenses",
-          "columnsFrom": ["expense_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "expense_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -10218,12 +11592,18 @@
       "indexes": {
         "trip_guests_org_trip_idx": {
           "name": "trip_guests_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "trip_guests_trip_name_unq": {
           "name": "trip_guests_trip_name_unq",
-          "columns": ["trip_id", "display_name"],
+          "columns": [
+            "trip_id",
+            "display_name"
+          ],
           "isUnique": true
         }
       },
@@ -10232,8 +11612,12 @@
           "name": "trip_guests_organization_id_organization_id_fk",
           "tableFrom": "trip_guests",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10241,8 +11625,12 @@
           "name": "trip_guests_trip_id_trips_id_fk",
           "tableFrom": "trip_guests",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10352,17 +11740,24 @@
       "indexes": {
         "trip_invite_links_token_unq": {
           "name": "trip_invite_links_token_unq",
-          "columns": ["token"],
+          "columns": [
+            "token"
+          ],
           "isUnique": true
         },
         "trip_invite_links_trip_unq": {
           "name": "trip_invite_links_trip_unq",
-          "columns": ["trip_id"],
+          "columns": [
+            "trip_id"
+          ],
           "isUnique": true
         },
         "trip_invite_links_org_trip_idx": {
           "name": "trip_invite_links_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         }
       },
@@ -10371,8 +11766,12 @@
           "name": "trip_invite_links_organization_id_organization_id_fk",
           "tableFrom": "trip_invite_links",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10380,8 +11779,12 @@
           "name": "trip_invite_links_trip_id_trips_id_fk",
           "tableFrom": "trip_invite_links",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10477,17 +11880,26 @@
       "indexes": {
         "trip_members_trip_user_unq": {
           "name": "trip_members_trip_user_unq",
-          "columns": ["trip_id", "user_id"],
+          "columns": [
+            "trip_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "trip_members_org_trip_idx": {
           "name": "trip_members_org_trip_idx",
-          "columns": ["organization_id", "trip_id"],
+          "columns": [
+            "organization_id",
+            "trip_id"
+          ],
           "isUnique": false
         },
         "trip_members_org_user_idx": {
           "name": "trip_members_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -10496,8 +11908,12 @@
           "name": "trip_members_organization_id_organization_id_fk",
           "tableFrom": "trip_members",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -10505,8 +11921,12 @@
           "name": "trip_members_trip_id_trips_id_fk",
           "tableFrom": "trip_members",
           "tableTo": "trips",
-          "columnsFrom": ["trip_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10715,32 +12135,49 @@
       "indexes": {
         "trips_org_slug_unq": {
           "name": "trips_org_slug_unq",
-          "columns": ["organization_id", "slug"],
+          "columns": [
+            "organization_id",
+            "slug"
+          ],
           "isUnique": true
         },
         "trips_org_status_idx": {
           "name": "trips_org_status_idx",
-          "columns": ["organization_id", "status"],
+          "columns": [
+            "organization_id",
+            "status"
+          ],
           "isUnique": false
         },
         "trips_org_start_date_idx": {
           "name": "trips_org_start_date_idx",
-          "columns": ["organization_id", "start_date"],
+          "columns": [
+            "organization_id",
+            "start_date"
+          ],
           "isUnique": false
         },
         "trips_org_updated_at_idx": {
           "name": "trips_org_updated_at_idx",
-          "columns": ["organization_id", "updated_at"],
+          "columns": [
+            "organization_id",
+            "updated_at"
+          ],
           "isUnique": false
         },
         "trips_org_archived_idx": {
           "name": "trips_org_archived_idx",
-          "columns": ["organization_id", "is_archived"],
+          "columns": [
+            "organization_id",
+            "is_archived"
+          ],
           "isUnique": false
         },
         "trips_created_by_idx": {
           "name": "trips_created_by_idx",
-          "columns": ["created_by"],
+          "columns": [
+            "created_by"
+          ],
           "isUnique": false
         }
       },
@@ -10749,8 +12186,12 @@
           "name": "trips_organization_id_organization_id_fk",
           "tableFrom": "trips",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -10834,12 +12275,19 @@
       "indexes": {
         "usage_records_org_metric_period_unq": {
           "name": "usage_records_org_metric_period_unq",
-          "columns": ["organization_id", "metric", "period"],
+          "columns": [
+            "organization_id",
+            "metric",
+            "period"
+          ],
           "isUnique": true
         },
         "usage_records_org_period_idx": {
           "name": "usage_records_org_period_idx",
-          "columns": ["organization_id", "period"],
+          "columns": [
+            "organization_id",
+            "period"
+          ],
           "isUnique": false
         }
       },
@@ -10848,8 +12296,12 @@
           "name": "usage_records_organization_id_organization_id_fk",
           "tableFrom": "usage_records",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11003,12 +12455,17 @@
       "indexes": {
         "user_settings_org_user_unq": {
           "name": "user_settings_org_user_unq",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "user_settings_user_idx": {
           "name": "user_settings_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -11017,8 +12474,12 @@
           "name": "user_settings_organization_id_organization_id_fk",
           "tableFrom": "user_settings",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11096,17 +12557,26 @@
       "indexes": {
         "vacay_company_holidays_plan_date_unq": {
           "name": "vacay_company_holidays_plan_date_unq",
-          "columns": ["plan_id", "date"],
+          "columns": [
+            "plan_id",
+            "date"
+          ],
           "isUnique": true
         },
         "vacay_company_holidays_org_plan_idx": {
           "name": "vacay_company_holidays_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         },
         "vacay_company_holidays_plan_date_idx": {
           "name": "vacay_company_holidays_plan_date_idx",
-          "columns": ["plan_id", "date"],
+          "columns": [
+            "plan_id",
+            "date"
+          ],
           "isUnique": false
         }
       },
@@ -11115,8 +12585,12 @@
           "name": "vacay_company_holidays_organization_id_organization_id_fk",
           "tableFrom": "vacay_company_holidays",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11124,8 +12598,12 @@
           "name": "vacay_company_holidays_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_company_holidays",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11205,22 +12683,35 @@
       "indexes": {
         "vacay_entries_plan_user_date_unq": {
           "name": "vacay_entries_plan_user_date_unq",
-          "columns": ["plan_id", "user_id", "date"],
+          "columns": [
+            "plan_id",
+            "user_id",
+            "date"
+          ],
           "isUnique": true
         },
         "vacay_entries_org_plan_idx": {
           "name": "vacay_entries_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         },
         "vacay_entries_plan_date_idx": {
           "name": "vacay_entries_plan_date_idx",
-          "columns": ["plan_id", "date"],
+          "columns": [
+            "plan_id",
+            "date"
+          ],
           "isUnique": false
         },
         "vacay_entries_org_user_idx": {
           "name": "vacay_entries_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -11229,8 +12720,12 @@
           "name": "vacay_entries_organization_id_organization_id_fk",
           "tableFrom": "vacay_entries",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11238,8 +12733,12 @@
           "name": "vacay_entries_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_entries",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11325,17 +12824,26 @@
       "indexes": {
         "vacay_holiday_calendars_plan_region_unq": {
           "name": "vacay_holiday_calendars_plan_region_unq",
-          "columns": ["plan_id", "region"],
+          "columns": [
+            "plan_id",
+            "region"
+          ],
           "isUnique": true
         },
         "vacay_holiday_calendars_org_plan_idx": {
           "name": "vacay_holiday_calendars_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         },
         "vacay_holiday_calendars_plan_sort_idx": {
           "name": "vacay_holiday_calendars_plan_sort_idx",
-          "columns": ["plan_id", "sort_order"],
+          "columns": [
+            "plan_id",
+            "sort_order"
+          ],
           "isUnique": false
         }
       },
@@ -11344,8 +12852,12 @@
           "name": "vacay_holiday_calendars_organization_id_organization_id_fk",
           "tableFrom": "vacay_holiday_calendars",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11353,8 +12865,12 @@
           "name": "vacay_holiday_calendars_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_holiday_calendars",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11420,17 +12936,26 @@
       "indexes": {
         "vacay_plan_members_plan_user_unq": {
           "name": "vacay_plan_members_plan_user_unq",
-          "columns": ["plan_id", "user_id"],
+          "columns": [
+            "plan_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "vacay_plan_members_org_plan_idx": {
           "name": "vacay_plan_members_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         },
         "vacay_plan_members_org_user_idx": {
           "name": "vacay_plan_members_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -11439,8 +12964,12 @@
           "name": "vacay_plan_members_organization_id_organization_id_fk",
           "tableFrom": "vacay_plan_members",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11448,8 +12977,12 @@
           "name": "vacay_plan_members_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_plan_members",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11553,12 +13086,17 @@
       "indexes": {
         "vacay_plans_org_owner_unq": {
           "name": "vacay_plans_org_owner_unq",
-          "columns": ["organization_id", "owner_user_id"],
+          "columns": [
+            "organization_id",
+            "owner_user_id"
+          ],
           "isUnique": true
         },
         "vacay_plans_org_idx": {
           "name": "vacay_plans_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": false
         }
       },
@@ -11567,8 +13105,12 @@
           "name": "vacay_plans_organization_id_organization_id_fk",
           "tableFrom": "vacay_plans",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11639,12 +13181,18 @@
       "indexes": {
         "vacay_user_colours_plan_user_unq": {
           "name": "vacay_user_colours_plan_user_unq",
-          "columns": ["plan_id", "user_id"],
+          "columns": [
+            "plan_id",
+            "user_id"
+          ],
           "isUnique": true
         },
         "vacay_user_colours_org_plan_idx": {
           "name": "vacay_user_colours_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         }
       },
@@ -11653,8 +13201,12 @@
           "name": "vacay_user_colours_organization_id_organization_id_fk",
           "tableFrom": "vacay_user_colours",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11662,8 +13214,12 @@
           "name": "vacay_user_colours_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_user_colours",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11744,17 +13300,28 @@
       "indexes": {
         "vacay_user_years_plan_user_year_unq": {
           "name": "vacay_user_years_plan_user_year_unq",
-          "columns": ["plan_id", "user_id", "year"],
+          "columns": [
+            "plan_id",
+            "user_id",
+            "year"
+          ],
           "isUnique": true
         },
         "vacay_user_years_org_plan_idx": {
           "name": "vacay_user_years_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         },
         "vacay_user_years_org_user_year_idx": {
           "name": "vacay_user_years_org_user_year_idx",
-          "columns": ["organization_id", "user_id", "year"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "year"
+          ],
           "isUnique": false
         }
       },
@@ -11763,8 +13330,12 @@
           "name": "vacay_user_years_organization_id_organization_id_fk",
           "tableFrom": "vacay_user_years",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11772,8 +13343,12 @@
           "name": "vacay_user_years_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_user_years",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11840,12 +13415,18 @@
       "indexes": {
         "vacay_years_plan_year_unq": {
           "name": "vacay_years_plan_year_unq",
-          "columns": ["plan_id", "year"],
+          "columns": [
+            "plan_id",
+            "year"
+          ],
           "isUnique": true
         },
         "vacay_years_org_plan_idx": {
           "name": "vacay_years_org_plan_idx",
-          "columns": ["organization_id", "plan_id"],
+          "columns": [
+            "organization_id",
+            "plan_id"
+          ],
           "isUnique": false
         }
       },
@@ -11854,8 +13435,12 @@
           "name": "vacay_years_organization_id_organization_id_fk",
           "tableFrom": "vacay_years",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -11863,8 +13448,12 @@
           "name": "vacay_years_plan_id_vacay_plans_id_fk",
           "tableFrom": "vacay_years",
           "tableTo": "vacay_plans",
-          "columnsFrom": ["plan_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "plan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -11958,17 +13547,27 @@
       "indexes": {
         "visited_countries_org_user_country_unq": {
           "name": "visited_countries_org_user_country_unq",
-          "columns": ["organization_id", "user_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "country_code"
+          ],
           "isUnique": true
         },
         "visited_countries_org_user_idx": {
           "name": "visited_countries_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         },
         "visited_countries_org_continent_idx": {
           "name": "visited_countries_org_continent_idx",
-          "columns": ["organization_id", "continent"],
+          "columns": [
+            "organization_id",
+            "continent"
+          ],
           "isUnique": false
         }
       },
@@ -11977,8 +13576,12 @@
           "name": "visited_countries_organization_id_organization_id_fk",
           "tableFrom": "visited_countries",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -12062,17 +13665,27 @@
       "indexes": {
         "visited_regions_org_user_region_unq": {
           "name": "visited_regions_org_user_region_unq",
-          "columns": ["organization_id", "user_id", "region_code"],
+          "columns": [
+            "organization_id",
+            "user_id",
+            "region_code"
+          ],
           "isUnique": true
         },
         "visited_regions_org_user_idx": {
           "name": "visited_regions_org_user_idx",
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "isUnique": false
         },
         "visited_regions_org_country_idx": {
           "name": "visited_regions_org_country_idx",
-          "columns": ["organization_id", "country_code"],
+          "columns": [
+            "organization_id",
+            "country_code"
+          ],
           "isUnique": false
         }
       },
@@ -12081,8 +13694,12 @@
           "name": "visited_regions_organization_id_organization_id_fk",
           "tableFrom": "visited_regions",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -12173,13 +13790,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "refusal_reason": {
-          "name": "refusal_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "snapshot": {
           "name": "snapshot",
           "type": "text",
@@ -12234,13 +13844,18 @@
       "indexes": {
         "workspace_deletions_live_org_idx": {
           "name": "workspace_deletions_live_org_idx",
-          "columns": ["organization_id"],
+          "columns": [
+            "organization_id"
+          ],
           "isUnique": true,
           "where": "\"workspace_deletions\".\"state\" <> 'refused'"
         },
         "workspace_deletions_stale_idx": {
           "name": "workspace_deletions_stale_idx",
-          "columns": ["state", "updated_at"],
+          "columns": [
+            "state",
+            "updated_at"
+          ],
           "isUnique": false
         }
       },
@@ -12315,7 +13930,9 @@
       "indexes": {
         "workspace_participants_user_idx": {
           "name": "workspace_participants_user_idx",
-          "columns": ["user_id"],
+          "columns": [
+            "user_id"
+          ],
           "isUnique": false
         }
       },
@@ -12324,15 +13941,22 @@
           "name": "workspace_participants_organization_id_organization_id_fk",
           "tableFrom": "workspace_participants",
           "tableTo": "organization",
-          "columnsFrom": ["organization_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "organization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "workspace_participants_organization_id_user_id_pk": {
-          "columns": ["organization_id", "user_id"],
+          "columns": [
+            "organization_id",
+            "user_id"
+          ],
           "name": "workspace_participants_organization_id_user_id_pk"
         }
       },

@@ -52,6 +52,10 @@ import type { RecordAuditInput, TenantScope } from '#/server/repos'
  * `platform_audit_log` through `src/server/catalog/audit.ts`.
  */
 export const AUDIT_ACTIONS = {
+  CATEGORY_CREATED: 'category.created',
+  CATEGORY_UPDATED: 'category.updated',
+  CATEGORY_MOVED: 'category.moved',
+  CATEGORY_DELETED: 'category.deleted',
   FILE_UPLOADED: 'file.uploaded',
   FILE_DELETED: 'file.deleted',
   RESERVATION_CREATED: 'reservation.created',

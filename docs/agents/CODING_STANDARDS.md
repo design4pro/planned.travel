@@ -4,7 +4,7 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 
 ## Layering (contract, not style)
 
-- All SQL lives in `src/server/repos` and passes through the tenant-scoped base repository — the tenant filter must not be removable. The stated exceptions are four, and closed (SPEC §6, ADR 0049): the bounded `repos/account-security.ts` account-auth capability, `src/server/auth/provisioning.ts` (identity tables `user`, `organization`, `member` only), the `…Unscoped` shape below and `server/catalog` (exactly four members: global tables, the bounded reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and the ids-only tenant audit retention discovery read, SPEC §5). An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- All SQL lives in `src/server/repos` and passes through the tenant-scoped base repository — the tenant filter must not be removable. The stated exceptions are five, and closed (SPEC §6, ADR 0049, ADR 0051): the bounded `repos/account-security.ts` account-auth capability, `src/server/auth/provisioning.ts` (identity tables `user`, `organization`, `member` only), the `…Unscoped` shape below and `server/catalog` (exactly four members: global tables, the bounded reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and the ids-only tenant audit retention discovery read, SPEC §5). The fifth is the bounded seven-table content/release repository exception in SPEC §5 and ADR 0051, owned only by `repos/content.ts` and `repos/releases.ts` with a plain `Database`; it does not expand catalog or FU-3. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6); raw SQL against an auth table outside provisioning or the closed account-auth repository is still a violation.
 - Routes call server functions (`server/fns`); server functions call repos. No SQL anywhere else.
 - `components/ui` never fetches data and never imports from `server/`.
@@ -12,6 +12,15 @@ Distilled from docs/SPEC.md §6–§7. The repo overrides this file where they d
 - Validate every server-function input with Zod. Never trust the client.
 - Generated files are never hand-edited: `src/routeTree.gen.ts` (`pnpm generate-routes`), `drizzle/` (`pnpm db:generate`).
 - Database migrations are additive — a running Worker must survive the migrate-then-deploy window.
+
+
+Release-content contract only: [ADR 0051](../adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
 
 ## Style
 

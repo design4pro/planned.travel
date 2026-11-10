@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Pratinjau ini telah kedaluwarsa. Buat pratinjau baru sebelum mengonfirmasi.',
+  'gallery.publish.title': 'Pratinjau galeri',
+  'gallery.publish.publicTitle': 'Judul publik',
+  'gallery.publish.attribution': 'Nama tampilan',
+  'gallery.publish.showDates': 'Sertakan tanggal perjalanan',
+  'gallery.publish.preview': 'Lihat konten yang akan dibagikan',
+  'gallery.publish.confirm': 'Konfirmasi pratinjau ini',
+  'gallery.publish.captureFailed':
+    'Pratinjau tidak dapat disiapkan. Periksa kolom dan coba lagi.',
+  'gallery.publish.tooLarge': 'Perjalanan ini terlalu besar untuk dipratinjau.',
+  'gallery.publish.empty': 'Kosong',
+  'gallery.publish.version': 'Versi',
+  'gallery.publish.countries': 'Kode negara',
+  'gallery.publish.days': 'Hari',
+  'gallery.publish.places': 'Tempat',
+  'gallery.publish.order': 'Urutan',
+  'gallery.publish.yes': 'Ya',
+  'gallery.publish.no': 'Tidak',
+  'gallery.publish.publicFields':
+    'Judul, ringkasan, nama tampilan, kode negara, judul hari, nama dan kategori tempat serta koordinatnya dapat menjadi publik. Tanggal hanya disertakan jika Anda memilihnya.',
+  'gallery.publish.privateFields':
+    'Pelancong, catatan, berkas, biaya, dan reservasi tidak disertakan.',
+  'gallery.publish.freeTextWarning':
+    'Sebelum mengonfirmasi, periksa informasi pribadi pada judul, ringkasan, nama tampilan, judul hari, dan nama tempat.',
+
   'plan.photo.edit': 'Edit gambar',
   'plan.photo.unavailable':
     'Unggah dan pengeditan gambar tidak tersedia. Gambar saat ini tetap disimpan.',

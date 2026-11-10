@@ -162,6 +162,10 @@ const messages = {
     'Regulamin i informacja o prywatności są publikowane tylko po angielsku. Wszystko inne w produkcie jest przetłumaczone.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Układ',
+  'appearance.layout.label': 'Szeroki układ',
+  'appearance.layout.hint':
+    'Wykorzystaj pełną szerokość aplikacji i wyrównaj widżety pulpitu do nadchodzącej podróży. Ustawienie zapisuje się tylko w tej przeglądarce.',
   'appearance.error': 'Wygląd się nie wczytał',
   'appearance.theme.title': 'Motyw',
   'appearance.theme.description':

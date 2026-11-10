@@ -81,3 +81,14 @@ requests and matching-id acceptance before CAS for local contract verification. 
 nonterminal erasure resumes are retryable, original deliveries park without consuming, and cron
 reissues the same id after audit/CAS failure or exhaustion. This internal contract needs independent
 acceptance; it neither supplies the production consumer nor waives its activation hold.
+
+## Amendment - private gallery previews (#1884, 2026-11-09)
+
+`repos/community.ts` is one additional importer of the existing catalog-owned
+`workspaceDeletionAbsent` predicate, exclusively for atomic private preview capture and
+actor-bound preview reads. This closes the workspace-deletion race required by the publication
+specification. The importer guard names only that module and predicate. Ledger projections and
+writes remain catalog-owned; unrelated ordinary reads gain no lookup. Both `requested` and
+`done` refuse preview operations; `refused` lifts the fence, and another workspace's ledger
+cannot affect the caller's preview. Independent security and tenancy approval accepted this
+narrow amendment with actual local D1 coverage as a condition.

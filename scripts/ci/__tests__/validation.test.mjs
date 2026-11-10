@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import {
+  existsSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -174,6 +175,76 @@ describe('configured validation execution', () => {
     })
     expect(timeout.result).toBe('timeout')
     expect(timeout.exitCode).toBe(124)
+  })
+
+  it.each([
+    ['success', 'process.exit(0)', 0],
+    ['failure', 'process.exit(1)', 1],
+    ['timeout', 'setInterval(() => {}, 1000)', 124],
+  ])(
+    'isolates writable command temp files and cleans up after %s',
+    async (_, ending, exitCode) => {
+      const cwd = fixture()
+      const logPath = join(cwd, 'command.log')
+      const parentTemp = [process.env.TMPDIR, process.env.TMP, process.env.TEMP]
+      const foreign = join(cwd, 'foreign-temp')
+      mkdirSync(foreign)
+      writeFileSync(join(foreign, 'keep'), 'unrelated')
+      const script = `
+      const fs = require("node:fs");
+      const os = require("node:os");
+      const path = require("node:path");
+      fs.writeFileSync(path.join(os.tmpdir(), "probe"), "writable");
+      process.stdout.write(JSON.stringify({ temp: os.tmpdir(), tmp: process.env.TMP, windowsTemp: process.env.TEMP, mode: fs.statSync(os.tmpdir()).mode & 0o777, home: process.env.HOME }));
+      ${ending};
+    `
+      const result = await runValidationCommand(`node -e '${script}'`, {
+        cwd,
+        logPath,
+        timeoutMs: 1000,
+      })
+      expect(result.exitCode).toBe(exitCode)
+      const evidence = JSON.parse(readFileSync(logPath, 'utf8'))
+      expect(evidence.home).toBe(process.env.HOME)
+      expect([process.env.TMPDIR, process.env.TMP, process.env.TEMP]).toEqual(
+        parentTemp,
+      )
+      expect(evidence.tmp).toBe(evidence.temp)
+      expect(evidence.windowsTemp).toBe(evidence.temp)
+      expect(evidence.mode).toBe(0o700)
+      expect(readFileSync(join(foreign, 'keep'), 'utf8')).toBe('unrelated')
+      expect(evidence.temp.startsWith(join(cwd, '.ai/tmp/validation/'))).toBe(
+        true,
+      )
+      expect(existsSync(evidence.temp)).toBe(false)
+    },
+  )
+  it('isolates concurrent command temp files from the inherited host directory and cleans every outcome', async () => {
+    const cwd = fixture()
+    const inherited = process.env.TMPDIR
+    process.env.TMPDIR = join(cwd, 'unavailable')
+    try {
+      const commands = ['exit 0', 'exit 7', 'sleep 30']
+      const logs = commands.map((_, index) => join(cwd, `${index}.log`))
+      const results = await Promise.all(
+        commands.map((command, index) =>
+          runValidationCommand(
+            `printf '%s' "$TMPDIR"; test "$TMPDIR" = "$TMP" && test "$TMPDIR" = "$TEMP" && touch "$TMPDIR/probe" || exit 9; ${command}`,
+            { cwd, logPath: logs[index], timeoutMs: 500 },
+          ),
+        ),
+      )
+      expect(results.map((result) => result.exitCode)).toEqual([0, 7, 124])
+      const paths = logs.map((log) => readFileSync(log, 'utf8'))
+      expect(new Set(paths).size).toBe(3)
+      for (const path of paths) {
+        expect(path.startsWith(join(cwd, '.ai/tmp/validation/'))).toBe(true)
+        expect(existsSync(path)).toBe(false)
+      }
+    } finally {
+      if (inherited === undefined) delete process.env.TMPDIR
+      else process.env.TMPDIR = inherited
+    }
   })
 
   it('runs fresh by default even with a green receipt, then permits explicit local resume', async () => {

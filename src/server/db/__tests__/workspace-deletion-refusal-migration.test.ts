@@ -10,7 +10,7 @@ it('adds nullable refusal intent without losing ledger data or weakening erasure
   try {
     const migrations = shippedMigrations()
     const index = migrations.findIndex(
-      (migration) => migration.tag === '0028_yellow_nehzno',
+      (migration) => migration.tag === '0029_mean_ben_grimm',
     )
     expect(index).toBeGreaterThan(0)
     for (const migration of migrations.slice(0, index))

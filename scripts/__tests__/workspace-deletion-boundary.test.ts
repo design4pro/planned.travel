@@ -27,6 +27,7 @@ it('pins every production ledger reader and admits state writers only inside the
     ],
     'server/auth/index.ts': ['assertWorkspaceNotDeleting'],
     'server/billing/store.ts': ['workspaceDeletionPending'],
+    'server/repos/community.ts': ['workspaceDeletionAbsent'],
     'server/repos/members.ts': [
       'assertWorkspaceNotDeleting',
       'workspaceDeletionAbsent',

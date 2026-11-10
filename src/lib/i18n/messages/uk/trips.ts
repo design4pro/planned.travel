@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Термін дії перегляду минув. Перед підтвердженням створіть новий.',
+  'gallery.publish.title': 'Попередній перегляд галереї',
+  'gallery.publish.publicTitle': 'Публічна назва',
+  'gallery.publish.attribution': 'Відображуване ім’я',
+  'gallery.publish.showDates': 'Включити дати подорожі',
+  'gallery.publish.preview': 'Переглянути дані для поширення',
+  'gallery.publish.confirm': 'Підтвердити цей перегляд',
+  'gallery.publish.captureFailed':
+    'Не вдалося підготувати перегляд. Перевірте поля та спробуйте ще раз.',
+  'gallery.publish.tooLarge': 'Ця подорож завелика для перегляду.',
+  'gallery.publish.empty': 'Порожньо',
+  'gallery.publish.version': 'Версія',
+  'gallery.publish.countries': 'Коди країн',
+  'gallery.publish.days': 'Дні',
+  'gallery.publish.places': 'Місця',
+  'gallery.publish.order': 'Порядок',
+  'gallery.publish.yes': 'Так',
+  'gallery.publish.no': 'Ні',
+  'gallery.publish.publicFields':
+    'Назва, опис, відображуване ім’я, коди країн, назви днів, назви й категорії місць та їхні координати можуть стати публічними. Дати включаються лише за вашим вибором.',
+  'gallery.publish.privateFields':
+    'Мандрівники, нотатки, файли, витрати та бронювання не включаються.',
+  'gallery.publish.freeTextWarning':
+    'Перед підтвердженням перевірте назву, опис, відображуване ім’я, назви днів і місць на наявність особистих даних.',
+
   'plan.photo.edit': 'Редагувати зображення',
   'plan.photo.unavailable':
     'Завантаження та редагування зображень недоступні. Поточне зображення зберігається.',

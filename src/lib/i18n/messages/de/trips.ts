@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Diese Vorschau ist abgelaufen. Erstelle vor der Bestätigung eine neue Vorschau.',
+  'gallery.publish.title': 'Galerievorschau',
+  'gallery.publish.publicTitle': 'Öffentlicher Titel',
+  'gallery.publish.attribution': 'Anzeigename',
+  'gallery.publish.showDates': 'Reisedaten einschließen',
+  'gallery.publish.preview': 'Geteilte Inhalte ansehen',
+  'gallery.publish.confirm': 'Diese Vorschau bestätigen',
+  'gallery.publish.captureFailed':
+    'Die Vorschau konnte nicht erstellt werden. Prüfe die Felder und versuche es erneut.',
+  'gallery.publish.tooLarge': 'Diese Reise ist für eine Vorschau zu groß.',
+  'gallery.publish.empty': 'Leer',
+  'gallery.publish.version': 'Version',
+  'gallery.publish.countries': 'Ländercodes',
+  'gallery.publish.days': 'Tage',
+  'gallery.publish.places': 'Orte',
+  'gallery.publish.order': 'Reihenfolge',
+  'gallery.publish.yes': 'Ja',
+  'gallery.publish.no': 'Nein',
+  'gallery.publish.publicFields':
+    'Titel, Zusammenfassung, Anzeigename, Ländercodes, Tagestitel, Ortsnamen und Kategorien sowie Ortskoordinaten können öffentlich sein. Datumsangaben werden nur auf Wunsch aufgenommen.',
+  'gallery.publish.privateFields':
+    'Reisende, Notizen, Dateien, Kosten und Buchungen werden nicht aufgenommen.',
+  'gallery.publish.freeTextWarning':
+    'Prüfe Titel, Zusammenfassung, Anzeigename, Tagestitel und Ortsnamen vor der Bestätigung auf persönliche Informationen.',
+
   'plan.photo.edit': 'Bild bearbeiten',
   'plan.photo.unavailable':
     'Das Hochladen und Bearbeiten von Bildern ist nicht verfügbar. Das aktuelle Bild bleibt erhalten.',
