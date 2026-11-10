@@ -9,6 +9,7 @@ import type {
 import { describe, expect, it } from 'vitest'
 
 const callers: Record<string, string> = {
+  listExpiredGalleryPreviewsUnscoped: 'src/server/community/expiry.ts',
   resolveWorkspaceInvitationScopeUnscoped:
     'src/server/auth/organization-invitations.ts',
   findSubscriptionByOrganizationUnscoped: 'src/server/billing/store.ts',

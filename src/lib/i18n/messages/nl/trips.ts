@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Dit voorbeeld is verlopen. Maak een nieuw voorbeeld voordat je bevestigt.',
+  'gallery.publish.title': 'Galerijvoorbeeld',
+  'gallery.publish.publicTitle': 'Openbare titel',
+  'gallery.publish.attribution': 'Weergavenaam',
+  'gallery.publish.showDates': 'Reisdatums opnemen',
+  'gallery.publish.preview': 'Bekijken wat wordt gedeeld',
+  'gallery.publish.confirm': 'Dit voorbeeld bevestigen',
+  'gallery.publish.captureFailed':
+    'Het voorbeeld kon niet worden gemaakt. Controleer de velden en probeer het opnieuw.',
+  'gallery.publish.tooLarge': 'Deze reis is te groot voor een voorbeeld.',
+  'gallery.publish.empty': 'Leeg',
+  'gallery.publish.version': 'Versie',
+  'gallery.publish.countries': 'Landcodes',
+  'gallery.publish.days': 'Dagen',
+  'gallery.publish.places': 'Plaatsen',
+  'gallery.publish.order': 'Volgorde',
+  'gallery.publish.yes': 'Ja',
+  'gallery.publish.no': 'Nee',
+  'gallery.publish.publicFields':
+    'Titel, samenvatting, weergavenaam, landcodes, dagtitels, plaatsnamen, categorieën en coördinaten kunnen openbaar zijn. Datums worden alleen opgenomen als je daarvoor kiest.',
+  'gallery.publish.privateFields':
+    'Reizigers, notities, bestanden, kosten en boekingen worden niet opgenomen.',
+  'gallery.publish.freeTextWarning':
+    'Controleer de titel, samenvatting, weergavenaam, dagtitels en plaatsnamen op persoonlijke informatie voordat je bevestigt.',
+
   'plan.photo.edit': 'Afbeelding bewerken',
   'plan.photo.unavailable':
     'Afbeeldingen uploaden en bewerken is niet beschikbaar. De huidige afbeelding blijft behouden.',
