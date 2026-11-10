@@ -1,12 +1,17 @@
+import { appendWorkspaceDeletionAudit, PLATFORM_SYSTEM_ACTOR } from '../audit'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { createPlatformTables } from './platform-tables'
 import {
   insertWorkspaceDeletion,
+  recordWorkspaceDeletionRefusal,
   workspaceDeletionPending,
   acquireDeletionLease,
   transitionWorkspaceDeletion,
   listStaleWorkspaceDeletions,
   pruneWorkspaceDeletions,
+  consumeWorkspaceDeletionErasure,
+  readLeasedWorkspaceDeletion,
+  leaseWorkspaceDeletion,
 } from '../workspace-deletions'
 import type { PlatformTables } from './platform-tables'
 
@@ -19,10 +24,189 @@ const request = {
   receiptTo: 'owner@example.com',
   receiptName: 'Alpha',
 }
+
+async function prepareRefusal(id: string, token: string, at = now) {
+  expect(
+    await recordWorkspaceDeletionRefusal(
+      h.db,
+      id,
+      token,
+      'has-other-members',
+      at,
+    ),
+  ).toBe(true)
+  const row = await readLeasedWorkspaceDeletion(h.db, id, token, at)
+  if (!row) throw new Error('Missing refusal lease')
+  await appendWorkspaceDeletionAudit(
+    h.db,
+    row,
+    row.initiator === 'erasure'
+      ? PLATFORM_SYSTEM_ACTOR
+      : {
+          actorKind: 'human',
+          userId: row.requestedBy,
+          role: null,
+          tokenId: null,
+        },
+    'deletion_refused',
+    at,
+  )
+}
+
 beforeEach(async () => {
   h = await createPlatformTables()
 })
 afterEach(() => h.close())
+it('distinguishes held work from terminal or missing deletion ids', async () => {
+  const row = await insertWorkspaceDeletion(h.db, request, now)
+  expect(await leaseWorkspaceDeletion(h.db, 'missing', now)).toBeNull()
+  const lease = await leaseWorkspaceDeletion(h.db, row.id, now)
+  if (!lease || lease === 'busy') throw new Error('Missing lease')
+  expect(lease.row.organizationId).toBe('alpha')
+  expect(await leaseWorkspaceDeletion(h.db, row.id, now)).toBe('busy')
+  await prepareRefusal(row.id, lease.token)
+  await transitionWorkspaceDeletion(
+    h.db,
+    row.id,
+    lease.token,
+    'requested',
+    'refused',
+    now,
+  )
+  expect(await leaseWorkspaceDeletion(h.db, row.id, now)).toBeNull()
+})
+it('recovers at most five rows strictly older than fifteen minutes', async () => {
+  for (let index = 0; index < 8; index += 1) {
+    await insertWorkspaceDeletion(
+      h.db,
+      { ...request, organizationId: `org-${index}` },
+      now,
+    )
+  }
+  expect(
+    await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 900_000)),
+  ).toEqual([])
+  const rows = await listStaleWorkspaceDeletions(
+    h.db,
+    new Date(now.getTime() + 900_001),
+  )
+  expect(rows).toHaveLength(5)
+  expect(new Set(rows.map((row) => row.id)).size).toBe(5)
+})
+it('does not restart the second-sweep wait when checkpointing the swept state', async () => {
+  const row = await insertWorkspaceDeletion(h.db, request, now)
+  let state: typeof row.state = 'requested'
+  for (const next of ['drained', 'rows_deleted', 'audited', 'swept'] as const) {
+    const token = await acquireDeletionLease(h.db, row.id, now)
+    if (!token) throw new Error('Missing lease')
+    await transitionWorkspaceDeletion(h.db, row.id, token, state, next, now)
+    state = next
+  }
+  const later = new Date(now.getTime() + 899_999)
+  const token = await acquireDeletionLease(h.db, row.id, later)
+  if (!token) throw new Error('Missing lease')
+  await transitionWorkspaceDeletion(
+    h.db,
+    row.id,
+    token,
+    'swept',
+    'swept',
+    later,
+  )
+  const nextToken = await acquireDeletionLease(h.db, row.id, later)
+  if (!nextToken) throw new Error('Missing lease')
+  expect(
+    (await readLeasedWorkspaceDeletion(h.db, row.id, nextToken, later))
+      ?.sweptAt,
+  ).toEqual(now)
+})
+it('exposes the organization only for the current unexpired lease token', async () => {
+  const row = await insertWorkspaceDeletion(h.db, request, now)
+  const other = await insertWorkspaceDeletion(
+    h.db,
+    { ...request, organizationId: 'beta' },
+    now,
+  )
+  const token = await acquireDeletionLease(h.db, row.id, now)
+  if (!token) throw new Error('Missing lease')
+  expect(
+    (await readLeasedWorkspaceDeletion(h.db, row.id, token, now))
+      ?.organizationId,
+  ).toBe('alpha')
+  expect(
+    await readLeasedWorkspaceDeletion(h.db, other.id, token, now),
+  ).toBeNull()
+  expect(
+    await readLeasedWorkspaceDeletion(h.db, row.id, 'foreign', now),
+  ).toBeNull()
+  expect(
+    await readLeasedWorkspaceDeletion(
+      h.db,
+      row.id,
+      token,
+      new Date(now.getTime() + 300_000),
+    ),
+  ).toBeNull()
+})
+it('lets only one erasure envelope consume ready work and lets its redelivery recover', async () => {
+  const row = await insertWorkspaceDeletion(
+    h.db,
+    {
+      organizationId: 'alpha',
+      initiator: 'erasure',
+      erasureId: 'erase-alpha',
+    },
+    now,
+  )
+  const owner = await insertWorkspaceDeletion(
+    h.db,
+    { ...request, organizationId: 'beta' },
+    now,
+  )
+  expect(
+    await consumeWorkspaceDeletionErasure(h.db, row.id, 'erase-alpha', 'live'),
+  ).toBe(false)
+  const token = await acquireDeletionLease(h.db, row.id, now)
+  if (!token) throw new Error('Missing lease')
+  await prepareRefusal(row.id, token)
+  await transitionWorkspaceDeletion(
+    h.db,
+    row.id,
+    token,
+    'requested',
+    'refused',
+    now,
+  )
+  expect(
+    await consumeWorkspaceDeletionErasure(
+      h.db,
+      row.id,
+      'erase-beta',
+      'foreign',
+    ),
+  ).toBe(false)
+  expect(
+    await consumeWorkspaceDeletionErasure(
+      h.db,
+      owner.id,
+      'erase-alpha',
+      'foreign',
+    ),
+  ).toBe(false)
+  const results = await Promise.all([
+    consumeWorkspaceDeletionErasure(h.db, row.id, 'erase-alpha', 'live'),
+    consumeWorkspaceDeletionErasure(h.db, row.id, 'erase-alpha', 'resume'),
+  ])
+  expect(results.filter(Boolean)).toHaveLength(1)
+  const winner = results[0] ? 'live' : 'resume'
+  const loser = results[0] ? 'resume' : 'live'
+  expect(
+    await consumeWorkspaceDeletionErasure(h.db, row.id, 'erase-alpha', winner),
+  ).toBe(true)
+  expect(
+    await consumeWorkspaceDeletionErasure(h.db, row.id, 'erase-alpha', loser),
+  ).toBe(false)
+})
 it('inserts once concurrently and fences only the named workspace', async () => {
   const [a, b] = await Promise.all([
     insertWorkspaceDeletion(h.db, request, now),
@@ -43,6 +227,7 @@ it('protects a live lease and rejects its expired holder after replacement', asy
   const later = new Date(now.getTime() + 300_000)
   const second = await acquireDeletionLease(h.db, row.id, later)
   if (!second) throw new Error('Missing replacement lease')
+  await prepareRefusal(row.id, second, later)
   expect(
     await transitionWorkspaceDeletion(
       h.db,
@@ -72,6 +257,7 @@ it('lists stale unfinished work and prunes only terminal rows after thirty days'
   const refused = await insertWorkspaceDeletion(h.db, request, now)
   const lease = await acquireDeletionLease(h.db, refused.id, now)
   if (!lease) throw new Error('Missing lease')
+  await prepareRefusal(refused.id, lease)
   await transitionWorkspaceDeletion(
     h.db,
     refused.id,
@@ -83,7 +269,7 @@ it('lists stale unfinished work and prunes only terminal rows after thirty days'
   const unfinished = await insertWorkspaceDeletion(h.db, request, now)
   expect(
     (
-      await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 61_000))
+      await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 900_001))
     ).map((r) => r.id),
   ).toEqual([unfinished.id])
   expect(
@@ -150,7 +336,7 @@ it('checkpoints only a live lease, clears queued receipts and retains done fenci
   expect(await workspaceDeletionPending(h.db, 'alpha')).toBe(true)
   expect(await acquireDeletionLease(h.db, row.id, now)).toBeNull()
   expect(
-    await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 61_000)),
+    await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 900_001)),
   ).toEqual([])
   expect(
     await pruneWorkspaceDeletions(
@@ -203,7 +389,7 @@ it('validates erasure attribution, transitions and checkpoints without releasing
   ).toBe(true)
   expect(
     (
-      await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 61_000))
+      await listStaleWorkspaceDeletions(h.db, new Date(now.getTime() + 900_001))
     )[0],
   ).toMatchObject({
     lastError: 'billing-unavailable',
@@ -248,6 +434,7 @@ it('refuses after drain under a live lease and lifts the fence for retry', async
   ).toBe(true)
   const refusalToken = await acquireDeletionLease(h.db, row.id, now)
   if (!refusalToken) throw new Error('Missing refusal lease')
+  await prepareRefusal(row.id, refusalToken)
   expect(
     await transitionWorkspaceDeletion(
       h.db,

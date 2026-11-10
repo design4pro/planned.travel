@@ -1,3 +1,4 @@
+import { prepareWorkspaceDeletionRefusal } from '#/server/catalog/__tests__/workspace-deletion-fixture'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { eq } from 'drizzle-orm'
@@ -351,6 +352,7 @@ it('atomically fences recipient acceptance and preserves the pending invitation 
   expect(await getMembership(tenant.scope, recipientId)).toBeNull()
   const token = await acquireDeletionLease(h.db, row.id)
   if (!token) throw new Error('Missing lease')
+  await prepareWorkspaceDeletionRefusal(h.db, row.id, token)
   await transitionWorkspaceDeletion(h.db, row.id, token, 'requested', 'refused')
   expect(
     await acceptWorkspaceInvitation(recipient(), invitation.id, now),

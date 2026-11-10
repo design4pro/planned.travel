@@ -149,6 +149,8 @@ export interface HarnessOptions {
    * such a gap has to be tested on the second one, or the test proves the gap does not matter.
    */
   readonly ddl?: 'schema' | 'migrations'
+  /** Test-only barrier after SQL construction and before SQLite execution. */
+  readonly beforeStatement?: (query: string) => Promise<void>
 }
 
 /** Builds a fresh, fully migrated database. Call it in `beforeEach` so tests never share state. */
@@ -170,6 +172,7 @@ export async function createHarness(
   const db: Database = drizzle(
     async (query, params, method) => {
       statements.push(query)
+      await options.beforeStatement?.(query)
       return runStatement(sqlite, query, params, method)
     },
     async (queries) => {

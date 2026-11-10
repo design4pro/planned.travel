@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
-import { user, invitation, member } from '#/server/db/auth-schema'
+import { organization, user, invitation, member } from '#/server/db/auth-schema'
 import { workspaceParticipants } from '#/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { createScope } from '../base'
@@ -186,4 +186,17 @@ it('does not consume a pending reservation for an existing member or above the l
   expect(await acceptWorkspaceInvitation(scope(), row.id, now)).toBeNull()
   expect(await countMembers(a.scope)).toBe(100)
   expect(await listPendingInvitations(a.scope)).toHaveLength(1)
+})
+
+it('cannot revive a cascaded workspace by accepting a previously issued invitation', async () => {
+  const row = await invite()
+  const recipientScope = scope()
+  await h.db.delete(organization).where(eq(organization.id, a.organizationId))
+  expect(
+    await resolveWorkspaceInvitationScopeUnscoped(h.db, row.id, recipientId),
+  ).toBeNull()
+  expect(
+    await acceptWorkspaceInvitation(recipientScope, row.id, now),
+  ).toBeNull()
+  expect(await countMembers(recipientScope)).toBe(0)
 })

@@ -18,7 +18,6 @@ and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklis
 A red required check or a conflicted head is reported as a blocker together with the full code
 review, never instead of it.
 
-
 Release-content contract only: [ADR 0051](docs/adr/0051-bounded-release-content-contract.md)
 admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
 with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
@@ -88,6 +87,13 @@ floor guard script; the review now does.
   union; `src/server/queue/handlers/email.ts` delivers.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
   See BACKWARD_COMPATIBILITY.md.
+
+- **Workspace deletion authority is checked inside each destructive SQL statement** (SPEC §§5–6,
+  ADR 0048): only the named catalog EXISTS sibling and boolean diagnostic accompany the admission
+  anti-exists. Keep tenant/member/subscription checks, closed operation-state mapping and SQLite
+  statement-time expiry. Empty SELECT/zero-row DELETE must distinguish lost lease from business
+  refusal and real missing organization. Never add authority fields to request input. Require real
+  SQLite deferred-room and post-construction final-DELETE races and retirement of old Workers.
 
 ## Mutation recovery (should fix)
 
