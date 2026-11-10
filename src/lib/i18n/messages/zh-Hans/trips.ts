@@ -14,6 +14,43 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': '提交审核',
+  'gallery.publish.loadFailed': '无法加载发布信息。',
+  'gallery.publish.dialogTitle': '与社区分享此行程',
+  'gallery.publish.neverShared': '尚未分享',
+  'gallery.publish.inReview': '审核中',
+  'gallery.publish.preparing': '正在准备审核',
+  'gallery.publish.preparationFailed': '准备失败',
+  'gallery.publish.preparingUpdate':
+    '版本 {live} 已公开；版本 {pending} 正在准备审核。',
+  'gallery.publish.failedUpdate':
+    '版本 {live} 已公开；版本 {pending} 准备失败。',
+  'gallery.publish.changesRequested': '需要修改',
+  'gallery.publish.published': '已发布',
+  'gallery.publish.withdrawn': '已撤回',
+  'gallery.publish.liveAndPending':
+    '版本 {live} 已公开；版本 {pending} 正在审核。',
+  'gallery.publish.stalePreview':
+    '行程已更改或预览已过期。提交前请查看新的预览。',
+  'gallery.publish.quotaExceeded': '已达到发布上限。请撤回其他发布以腾出名额。',
+  'gallery.publish.storageFull': '工作区存储空间不足，无法准备此发布。',
+  'gallery.publish.submitFailed': '无法提交此行程。请重试。',
+  'gallery.publish.saved': '发布信息已更新。',
+  'gallery.publish.retry': '重试',
+  'gallery.publish.submitted': '提交日期',
+  'gallery.publish.curatorNote': '编辑备注',
+  'gallery.publish.copyLink': '复制链接',
+  'gallery.publish.linkCopied': '链接已复制',
+  'gallery.publish.copyFailed': '无法复制链接。请重试。',
+  'gallery.publish.adminOnly': '工作区管理员可以提交行程。',
+  'gallery.publish.update': '发布更新',
+  'gallery.publish.withdraw': '撤回',
+  'gallery.publish.withdrawConfirm':
+    '撤回后将阻止新读者访问。已保存、下载或缓存的副本无法收回。',
+  'gallery.publish.confirmWithdrawal': '确认撤回',
+  'gallery.publish.cancel': '取消',
+  'gallery.publish.saving': '正在保存…',
+
   'gallery.publish.expired': '此预览已过期。请在确认前重新生成预览。',
   'gallery.publish.title': '图库预览',
   'gallery.publish.publicTitle': '公开标题',

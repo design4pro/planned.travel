@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Надіслати на перевірку',
+  'gallery.publish.loadFailed': 'Не вдалося завантажити публікацію.',
+  'gallery.publish.dialogTitle': 'Поділитися подорожжю зі спільнотою',
+  'gallery.publish.neverShared': 'Ще не оприлюднено',
+  'gallery.publish.inReview': 'На перевірці',
+  'gallery.publish.preparing': 'Підготовка до перевірки',
+  'gallery.publish.preparationFailed': 'Помилка підготовки',
+  'gallery.publish.preparingUpdate':
+    'Версія {live} загальнодоступна; версія {pending} готується до перевірки.',
+  'gallery.publish.failedUpdate':
+    'Версія {live} загальнодоступна; підготовка версії {pending} не вдалася.',
+  'gallery.publish.changesRequested': 'Запитано зміни',
+  'gallery.publish.published': 'Опубліковано',
+  'gallery.publish.withdrawn': 'Відкликано',
+  'gallery.publish.liveAndPending':
+    'Версія {live} загальнодоступна; версія {pending} на перевірці.',
+  'gallery.publish.stalePreview':
+    'Подорож змінилася або термін перегляду минув. Перед надсиланням перевірте новий перегляд.',
+  'gallery.publish.quotaExceeded':
+    'Досягнуто ліміту публікацій. Відкличте іншу публікацію, щоб звільнити місце.',
+  'gallery.publish.storageFull':
+    'Недостатньо місця в робочому просторі для підготовки публікації.',
+  'gallery.publish.submitFailed':
+    'Не вдалося надіслати подорож. Спробуйте ще раз.',
+  'gallery.publish.saved': 'Публікацію оновлено.',
+  'gallery.publish.retry': 'Спробувати ще раз',
+  'gallery.publish.submitted': 'Надіслано',
+  'gallery.publish.curatorNote': 'Примітка редактора',
+  'gallery.publish.copyLink': 'Копіювати посилання',
+  'gallery.publish.linkCopied': 'Посилання скопійовано',
+  'gallery.publish.copyFailed':
+    'Не вдалося скопіювати посилання. Спробуйте ще раз.',
+  'gallery.publish.adminOnly':
+    'Адміністратор робочого простору може надіслати подорож.',
+  'gallery.publish.update': 'Опублікувати оновлення',
+  'gallery.publish.withdraw': 'Відкликати',
+  'gallery.publish.withdrawConfirm':
+    'Відкликання блокує нових читачів. Збережені, завантажені та кешовані копії відкликати неможливо.',
+  'gallery.publish.confirmWithdrawal': 'Підтвердити відкликання',
+  'gallery.publish.cancel': 'Скасувати',
+  'gallery.publish.saving': 'Збереження…',
+
   'gallery.publish.expired':
     'Термін дії перегляду минув. Перед підтвердженням створіть новий.',
   'gallery.publish.title': 'Попередній перегляд галереї',

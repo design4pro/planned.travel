@@ -14,6 +14,47 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': '검토를 위해 제출',
+  'gallery.publish.loadFailed': '게시 정보를 불러오지 못했습니다.',
+  'gallery.publish.dialogTitle': '이 여행을 커뮤니티와 공유',
+  'gallery.publish.neverShared': '아직 공유하지 않음',
+  'gallery.publish.inReview': '검토 중',
+  'gallery.publish.preparing': '검토 준비 중',
+  'gallery.publish.preparationFailed': '준비 실패',
+  'gallery.publish.preparingUpdate':
+    '버전 {live}은 공개 중이며 버전 {pending}은 검토 준비 중입니다.',
+  'gallery.publish.failedUpdate':
+    '버전 {live}은 공개 중이며 버전 {pending}의 준비에 실패했습니다.',
+  'gallery.publish.changesRequested': '변경 요청됨',
+  'gallery.publish.published': '게시됨',
+  'gallery.publish.withdrawn': '철회됨',
+  'gallery.publish.liveAndPending':
+    '버전 {live}은 공개 중이며 버전 {pending}은 검토 중입니다.',
+  'gallery.publish.stalePreview':
+    '여행이 변경되었거나 미리보기가 만료되었습니다. 제출 전에 새 미리보기를 확인하세요.',
+  'gallery.publish.quotaExceeded':
+    '게시 한도에 도달했습니다. 다른 게시물을 철회하여 자리를 확보하세요.',
+  'gallery.publish.storageFull':
+    '이 게시물을 준비할 워크스페이스 저장 공간이 부족합니다.',
+  'gallery.publish.submitFailed':
+    '여행을 제출하지 못했습니다. 다시 시도하세요.',
+  'gallery.publish.saved': '게시 정보가 업데이트되었습니다.',
+  'gallery.publish.retry': '다시 시도',
+  'gallery.publish.submitted': '제출일',
+  'gallery.publish.curatorNote': '편집자 메모',
+  'gallery.publish.copyLink': '링크 복사',
+  'gallery.publish.linkCopied': '링크가 복사됨',
+  'gallery.publish.copyFailed': '링크를 복사하지 못했습니다. 다시 시도하세요.',
+  'gallery.publish.adminOnly':
+    '워크스페이스 관리자가 여행을 제출할 수 있습니다.',
+  'gallery.publish.update': '업데이트 게시',
+  'gallery.publish.withdraw': '철회',
+  'gallery.publish.withdrawConfirm':
+    '철회하면 새 독자의 접근이 차단됩니다. 저장, 다운로드 또는 캐시된 사본은 회수할 수 없습니다.',
+  'gallery.publish.confirmWithdrawal': '철회 확인',
+  'gallery.publish.cancel': '취소',
+  'gallery.publish.saving': '저장 중…',
+
   'gallery.publish.expired':
     '이 미리보기는 만료되었습니다. 확인하기 전에 새 미리보기를 생성하세요.',
   'gallery.publish.title': '갤러리 미리보기',

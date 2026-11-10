@@ -10,7 +10,7 @@
 
 ## TLDR
 
-Plan stage 13-S1 in `docs/plans/13-community-gallery.md` establishes a workspace-admin submission pipeline for a reviewed gallery publication. No gallery publication implementation exists today. It stores an explicitly selected, tenant-isolated snapshot and provides an unmounted publish dialog; subsequent stages mount the dialog, curate and expose the gallery.
+Plan stage 13-S1 in `docs/plans/13-community-gallery.md` establishes a workspace-admin submission pipeline for a reviewed gallery publication. The private preview foundation and unmounted publication dialog are implemented; lifecycle callbacks remain caller-owned until the runtime slices land. It stores an explicitly selected, tenant-isolated snapshot and provides an unmounted publish dialog; subsequent stages mount the dialog, curate and expose the gallery.
 
 ## Problem
 
@@ -109,6 +109,8 @@ Add these English keys under `trips.gallery.publish` and equivalent translations
 | `cancel` | Cancel |
 
 Reuse existing localized generic validation and loading messages wherever they already express these meanings; otherwise provide localized maximum-length errors for 120, 280 and 80 characters in all locales. Preserve entered text on validation errors. Avoid inventing a new pricing promise. The implementation adds any necessary interpolation and validation variants to all 23 locales in the same change.
+
+Implementation note (#1889): `components/gallery/publish-dialog.tsx` composes the private preview with caller-owned load, submit, withdraw and retry callbacks. `publication-status.ts` distinguishes preparation, review and live updates. No route mounts it; component and browser-harness checks do not replace the later mounted visual and manual screen-reader acceptance.
 
 ## Failure and security cases
 

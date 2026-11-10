@@ -14,6 +14,47 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Indienen ter beoordeling',
+  'gallery.publish.loadFailed': 'De publicatie kon niet worden geladen.',
+  'gallery.publish.dialogTitle': 'Deel deze reis met de community',
+  'gallery.publish.neverShared': 'Nooit gedeeld',
+  'gallery.publish.inReview': 'In beoordeling',
+  'gallery.publish.preparing': 'Voorbereiden voor beoordeling',
+  'gallery.publish.preparationFailed': 'Voorbereiding mislukt',
+  'gallery.publish.preparingUpdate':
+    'Versie {live} is openbaar; versie {pending} wordt voorbereid voor beoordeling.',
+  'gallery.publish.failedUpdate':
+    'Versie {live} is openbaar; de voorbereiding van versie {pending} is mislukt.',
+  'gallery.publish.changesRequested': 'Wijzigingen gevraagd',
+  'gallery.publish.published': 'Gepubliceerd',
+  'gallery.publish.withdrawn': 'Ingetrokken',
+  'gallery.publish.liveAndPending':
+    'Versie {live} is openbaar; versie {pending} wordt beoordeeld.',
+  'gallery.publish.stalePreview':
+    'De reis is gewijzigd of het voorbeeld is verlopen. Bekijk een nieuw voorbeeld voordat je indient.',
+  'gallery.publish.quotaExceeded':
+    'Publicatielimiet bereikt. Trek een andere publicatie in om ruimte vrij te maken.',
+  'gallery.publish.storageFull':
+    'Onvoldoende opslagruimte in de werkruimte voor deze publicatie.',
+  'gallery.publish.submitFailed':
+    'Deze reis kon niet worden ingediend. Probeer het opnieuw.',
+  'gallery.publish.saved': 'Publicatie bijgewerkt.',
+  'gallery.publish.retry': 'Opnieuw proberen',
+  'gallery.publish.submitted': 'Ingediend',
+  'gallery.publish.curatorNote': 'Opmerking van de redactie',
+  'gallery.publish.copyLink': 'Link kopiëren',
+  'gallery.publish.linkCopied': 'Link gekopieerd',
+  'gallery.publish.copyFailed':
+    'De link kon niet worden gekopieerd. Probeer het opnieuw.',
+  'gallery.publish.adminOnly': 'Een werkruimtebeheerder kan een reis indienen.',
+  'gallery.publish.update': 'Update publiceren',
+  'gallery.publish.withdraw': 'Intrekken',
+  'gallery.publish.withdrawConfirm':
+    'Intrekken blokkeert nieuwe lezers. Opgeslagen, gedownloade of gecachte kopieën kunnen niet worden teruggehaald.',
+  'gallery.publish.confirmWithdrawal': 'Intrekken bevestigen',
+  'gallery.publish.cancel': 'Annuleren',
+  'gallery.publish.saving': 'Opslaan…',
+
   'gallery.publish.expired':
     'Dit voorbeeld is verlopen. Maak een nieuw voorbeeld voordat je bevestigt.',
   'gallery.publish.title': 'Galerijvoorbeeld',

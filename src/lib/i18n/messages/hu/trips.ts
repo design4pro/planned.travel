@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Beküldés ellenőrzésre',
+  'gallery.publish.loadFailed': 'Nem sikerült betölteni a közzétételt.',
+  'gallery.publish.dialogTitle': 'Oszd meg ezt az utat a közösséggel',
+  'gallery.publish.neverShared': 'Még nincs megosztva',
+  'gallery.publish.inReview': 'Ellenőrzés alatt',
+  'gallery.publish.preparing': 'Előkészítés ellenőrzésre',
+  'gallery.publish.preparationFailed': 'Sikertelen előkészítés',
+  'gallery.publish.preparingUpdate':
+    'A(z) {live}. verzió nyilvános; a(z) {pending}. verzió előkészítés alatt áll az ellenőrzéshez.',
+  'gallery.publish.failedUpdate':
+    'A(z) {live}. verzió nyilvános; a(z) {pending}. verzió előkészítése sikertelen.',
+  'gallery.publish.changesRequested': 'Módosítást kértek',
+  'gallery.publish.published': 'Közzétéve',
+  'gallery.publish.withdrawn': 'Visszavonva',
+  'gallery.publish.liveAndPending':
+    'A(z) {live}. verzió nyilvános; a(z) {pending}. verzió ellenőrzés alatt áll.',
+  'gallery.publish.stalePreview':
+    'Az út megváltozott vagy az előnézet lejárt. Beküldés előtt nézd át az új előnézetet.',
+  'gallery.publish.quotaExceeded':
+    'Elérted a közzétételi korlátot. Vonj vissza egy másik közzétételt a hely felszabadításához.',
+  'gallery.publish.storageFull':
+    'Nincs elég tárhely a munkaterületen a közzététel előkészítéséhez.',
+  'gallery.publish.submitFailed':
+    'Nem sikerült beküldeni az utat. Próbáld újra.',
+  'gallery.publish.saved': 'Közzététel frissítve.',
+  'gallery.publish.retry': 'Újra',
+  'gallery.publish.submitted': 'Beküldve',
+  'gallery.publish.curatorNote': 'Szerkesztői megjegyzés',
+  'gallery.publish.copyLink': 'Hivatkozás másolása',
+  'gallery.publish.linkCopied': 'Hivatkozás másolva',
+  'gallery.publish.copyFailed':
+    'Nem sikerült másolni a hivatkozást. Próbáld újra.',
+  'gallery.publish.adminOnly':
+    'A munkaterület rendszergazdája küldhet be utat.',
+  'gallery.publish.update': 'Frissítés közzététele',
+  'gallery.publish.withdraw': 'Visszavonás',
+  'gallery.publish.withdrawConfirm':
+    'A visszavonás letiltja az új olvasókat. A mentett, letöltött vagy gyorsítótárazott példányok nem hívhatók vissza.',
+  'gallery.publish.confirmWithdrawal': 'Visszavonás megerősítése',
+  'gallery.publish.cancel': 'Mégse',
+  'gallery.publish.saving': 'Mentés…',
+
   'gallery.publish.expired':
     'Ez az előnézet lejárt. Megerősítés előtt készíts új előnézetet.',
   'gallery.publish.title': 'Galéria előnézete',

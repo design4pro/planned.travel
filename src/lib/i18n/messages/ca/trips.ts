@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Envia per a revisió',
+  'gallery.publish.loadFailed': 'No hem pogut carregar la publicació.',
+  'gallery.publish.dialogTitle': 'Comparteix aquest viatge amb la comunitat',
+  'gallery.publish.neverShared': 'Mai compartit',
+  'gallery.publish.inReview': 'En revisió',
+  'gallery.publish.preparing': 'Preparant per a la revisió',
+  'gallery.publish.preparationFailed': 'La preparació ha fallat',
+  'gallery.publish.preparingUpdate':
+    'La versió {live} és pública; s’està preparant la versió {pending} per a la revisió.',
+  'gallery.publish.failedUpdate':
+    'La versió {live} és pública; la preparació de la versió {pending} ha fallat.',
+  'gallery.publish.changesRequested': 'S’han demanat canvis',
+  'gallery.publish.published': 'Publicat',
+  'gallery.publish.withdrawn': 'Retirat',
+  'gallery.publish.liveAndPending':
+    'La versió {live} és pública; la versió {pending} està en revisió.',
+  'gallery.publish.stalePreview':
+    'El viatge ha canviat o la previsualització ha caducat. Revisa una previsualització nova abans d’enviar-lo.',
+  'gallery.publish.quotaExceeded':
+    'S’ha assolit el límit de publicacions. Retira una altra publicació per alliberar una plaça.',
+  'gallery.publish.storageFull':
+    'No hi ha prou emmagatzematge a l’espai de treball per preparar aquesta publicació.',
+  'gallery.publish.submitFailed':
+    'No hem pogut enviar aquest viatge. Torna-ho a provar.',
+  'gallery.publish.saved': 'Publicació actualitzada.',
+  'gallery.publish.retry': 'Torna-ho a provar',
+  'gallery.publish.submitted': 'Enviat',
+  'gallery.publish.curatorNote': 'Nota de l’equip revisor',
+  'gallery.publish.copyLink': 'Copia l’enllaç',
+  'gallery.publish.linkCopied': 'Enllaç copiat',
+  'gallery.publish.copyFailed':
+    'No hem pogut copiar l’enllaç. Torna-ho a provar.',
+  'gallery.publish.adminOnly':
+    'Un administrador de l’espai de treball pot enviar un viatge.',
+  'gallery.publish.update': 'Publica una actualització',
+  'gallery.publish.withdraw': 'Retira',
+  'gallery.publish.withdrawConfirm':
+    'La retirada bloqueja els nous lectors. No es poden recuperar les còpies desades, baixades o a la memòria cau.',
+  'gallery.publish.confirmWithdrawal': 'Confirma la retirada',
+  'gallery.publish.cancel': 'Cancel·la',
+  'gallery.publish.saving': 'Desant…',
+
   'gallery.publish.expired':
     'Aquesta previsualització ha caducat. Genera’n una de nova abans de confirmar.',
   'gallery.publish.title': 'Previsualització de la galeria',

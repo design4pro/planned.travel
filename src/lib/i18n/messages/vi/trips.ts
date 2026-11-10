@@ -14,6 +14,46 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Gửi xét duyệt',
+  'gallery.publish.loadFailed': 'Không thể tải bài xuất bản.',
+  'gallery.publish.dialogTitle': 'Chia sẻ chuyến đi này với cộng đồng',
+  'gallery.publish.neverShared': 'Chưa từng chia sẻ',
+  'gallery.publish.inReview': 'Đang xét duyệt',
+  'gallery.publish.preparing': 'Đang chuẩn bị xét duyệt',
+  'gallery.publish.preparationFailed': 'Chuẩn bị thất bại',
+  'gallery.publish.preparingUpdate':
+    'Phiên bản {live} đang công khai; phiên bản {pending} đang được chuẩn bị để xét duyệt.',
+  'gallery.publish.failedUpdate':
+    'Phiên bản {live} đang công khai; chuẩn bị phiên bản {pending} đã thất bại.',
+  'gallery.publish.changesRequested': 'Đã yêu cầu thay đổi',
+  'gallery.publish.published': 'Đã xuất bản',
+  'gallery.publish.withdrawn': 'Đã thu hồi',
+  'gallery.publish.liveAndPending':
+    'Phiên bản {live} đang công khai; phiên bản {pending} đang xét duyệt.',
+  'gallery.publish.stalePreview':
+    'Chuyến đi đã thay đổi hoặc bản xem trước đã hết hạn. Hãy kiểm tra bản xem trước mới trước khi gửi.',
+  'gallery.publish.quotaExceeded':
+    'Đã đạt giới hạn xuất bản. Hãy thu hồi một bài khác để giải phóng chỗ.',
+  'gallery.publish.storageFull':
+    'Không đủ dung lượng trong không gian làm việc để chuẩn bị bài này.',
+  'gallery.publish.submitFailed': 'Không thể gửi chuyến đi này. Hãy thử lại.',
+  'gallery.publish.saved': 'Đã cập nhật bài xuất bản.',
+  'gallery.publish.retry': 'Thử lại',
+  'gallery.publish.submitted': 'Đã gửi',
+  'gallery.publish.curatorNote': 'Ghi chú của biên tập viên',
+  'gallery.publish.copyLink': 'Sao chép liên kết',
+  'gallery.publish.linkCopied': 'Đã sao chép liên kết',
+  'gallery.publish.copyFailed': 'Không thể sao chép liên kết. Hãy thử lại.',
+  'gallery.publish.adminOnly':
+    'Quản trị viên không gian làm việc có thể gửi chuyến đi.',
+  'gallery.publish.update': 'Xuất bản bản cập nhật',
+  'gallery.publish.withdraw': 'Thu hồi',
+  'gallery.publish.withdrawConfirm':
+    'Thu hồi chặn người đọc mới. Không thể thu hồi các bản đã lưu, tải xuống hoặc lưu trong bộ nhớ đệm.',
+  'gallery.publish.confirmWithdrawal': 'Xác nhận thu hồi',
+  'gallery.publish.cancel': 'Hủy',
+  'gallery.publish.saving': 'Đang lưu…',
+
   'gallery.publish.expired':
     'Bản xem trước này đã hết hạn. Hãy tạo bản mới trước khi xác nhận.',
   'gallery.publish.title': 'Xem trước thư viện',

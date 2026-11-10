@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Υποβολή για έλεγχο',
+  'gallery.publish.loadFailed': 'Δεν ήταν δυνατή η φόρτωση της δημοσίευσης.',
+  'gallery.publish.dialogTitle': 'Μοιραστείτε το ταξίδι με την κοινότητα',
+  'gallery.publish.neverShared': 'Δεν έχει κοινοποιηθεί',
+  'gallery.publish.inReview': 'Υπό έλεγχο',
+  'gallery.publish.preparing': 'Προετοιμασία για έλεγχο',
+  'gallery.publish.preparationFailed': 'Η προετοιμασία απέτυχε',
+  'gallery.publish.preparingUpdate':
+    'Η έκδοση {live} είναι δημόσια· η έκδοση {pending} προετοιμάζεται για έλεγχο.',
+  'gallery.publish.failedUpdate':
+    'Η έκδοση {live} είναι δημόσια· η προετοιμασία της έκδοσης {pending} απέτυχε.',
+  'gallery.publish.changesRequested': 'Ζητήθηκαν αλλαγές',
+  'gallery.publish.published': 'Δημοσιεύτηκε',
+  'gallery.publish.withdrawn': 'Αποσύρθηκε',
+  'gallery.publish.liveAndPending':
+    'Η έκδοση {live} είναι δημόσια· η έκδοση {pending} ελέγχεται.',
+  'gallery.publish.stalePreview':
+    'Το ταξίδι άλλαξε ή η προεπισκόπηση έληξε. Ελέγξτε νέα προεπισκόπηση πριν την υποβολή.',
+  'gallery.publish.quotaExceeded':
+    'Συμπληρώθηκε το όριο δημοσιεύσεων. Αποσύρετε άλλη δημοσίευση για να ελευθερωθεί θέση.',
+  'gallery.publish.storageFull':
+    'Δεν υπάρχει αρκετός χώρος αποθήκευσης στον χώρο εργασίας για αυτή τη δημοσίευση.',
+  'gallery.publish.submitFailed':
+    'Δεν ήταν δυνατή η υποβολή του ταξιδιού. Δοκιμάστε ξανά.',
+  'gallery.publish.saved': 'Η δημοσίευση ενημερώθηκε.',
+  'gallery.publish.retry': 'Δοκιμάστε ξανά',
+  'gallery.publish.submitted': 'Υποβλήθηκε',
+  'gallery.publish.curatorNote': 'Σημείωση επιμελητή',
+  'gallery.publish.copyLink': 'Αντιγραφή συνδέσμου',
+  'gallery.publish.linkCopied': 'Ο σύνδεσμος αντιγράφηκε',
+  'gallery.publish.copyFailed':
+    'Δεν ήταν δυνατή η αντιγραφή του συνδέσμου. Δοκιμάστε ξανά.',
+  'gallery.publish.adminOnly':
+    'Ένας διαχειριστής του χώρου εργασίας μπορεί να υποβάλει ταξίδι.',
+  'gallery.publish.update': 'Δημοσίευση ενημέρωσης',
+  'gallery.publish.withdraw': 'Απόσυρση',
+  'gallery.publish.withdrawConfirm':
+    'Η απόσυρση αποκλείει νέους αναγνώστες. Αποθηκευμένα, ληφθέντα ή προσωρινά αντίγραφα δεν ανακαλούνται.',
+  'gallery.publish.confirmWithdrawal': 'Επιβεβαίωση απόσυρσης',
+  'gallery.publish.cancel': 'Ακύρωση',
+  'gallery.publish.saving': 'Αποθήκευση…',
+
   'gallery.publish.expired':
     'Αυτή η προεπισκόπηση έληξε. Δημιουργήστε νέα πριν την επιβεβαίωση.',
   'gallery.publish.title': 'Προεπισκόπηση συλλογής',

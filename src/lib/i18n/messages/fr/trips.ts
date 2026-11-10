@@ -14,6 +14,47 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Soumettre pour révision',
+  'gallery.publish.loadFailed': 'Nous n’avons pas pu charger la publication.',
+  'gallery.publish.dialogTitle': 'Partager ce voyage avec la communauté',
+  'gallery.publish.neverShared': 'Jamais partagé',
+  'gallery.publish.inReview': 'En cours de révision',
+  'gallery.publish.preparing': 'Préparation pour la révision',
+  'gallery.publish.preparationFailed': 'Échec de la préparation',
+  'gallery.publish.preparingUpdate':
+    'La version {live} est publique ; la version {pending} se prépare pour la révision.',
+  'gallery.publish.failedUpdate':
+    'La version {live} est publique ; la préparation de la version {pending} a échoué.',
+  'gallery.publish.changesRequested': 'Modifications demandées',
+  'gallery.publish.published': 'Publié',
+  'gallery.publish.withdrawn': 'Retiré',
+  'gallery.publish.liveAndPending':
+    'La version {live} est publique ; la version {pending} est en révision.',
+  'gallery.publish.stalePreview':
+    'Ce voyage a changé ou cet aperçu a expiré. Consultez un nouvel aperçu avant de soumettre.',
+  'gallery.publish.quotaExceeded':
+    'Limite de publications atteinte. Retirez une autre publication pour libérer une place.',
+  'gallery.publish.storageFull':
+    'Stockage insuffisant dans cet espace pour préparer cette publication.',
+  'gallery.publish.submitFailed':
+    'Impossible de soumettre ce voyage. Réessayez.',
+  'gallery.publish.saved': 'Publication mise à jour.',
+  'gallery.publish.retry': 'Réessayer',
+  'gallery.publish.submitted': 'Soumis le',
+  'gallery.publish.curatorNote': 'Note de la rédaction',
+  'gallery.publish.copyLink': 'Copier le lien',
+  'gallery.publish.linkCopied': 'Lien copié',
+  'gallery.publish.copyFailed': 'Impossible de copier le lien. Réessayez.',
+  'gallery.publish.adminOnly':
+    'Un administrateur de cet espace peut soumettre un voyage.',
+  'gallery.publish.update': 'Publier une mise à jour',
+  'gallery.publish.withdraw': 'Retirer',
+  'gallery.publish.withdrawConfirm':
+    'Le retrait bloque les nouveaux lecteurs. Les copies enregistrées, téléchargées ou mises en cache ne peuvent pas être rappelées.',
+  'gallery.publish.confirmWithdrawal': 'Confirmer le retrait',
+  'gallery.publish.cancel': 'Annuler',
+  'gallery.publish.saving': 'Enregistrement…',
+
   'gallery.publish.expired':
     'Cet aperçu a expiré. Créez un nouvel aperçu avant de confirmer.',
   'gallery.publish.title': 'Aperçu de la galerie',

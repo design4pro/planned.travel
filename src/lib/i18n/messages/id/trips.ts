@@ -14,6 +14,46 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Kirim untuk ditinjau',
+  'gallery.publish.loadFailed': 'Publikasi tidak dapat dimuat.',
+  'gallery.publish.dialogTitle': 'Bagikan perjalanan ini kepada komunitas',
+  'gallery.publish.neverShared': 'Belum pernah dibagikan',
+  'gallery.publish.inReview': 'Sedang ditinjau',
+  'gallery.publish.preparing': 'Menyiapkan peninjauan',
+  'gallery.publish.preparationFailed': 'Persiapan gagal',
+  'gallery.publish.preparingUpdate':
+    'Versi {live} tersedia untuk umum; versi {pending} sedang disiapkan untuk ditinjau.',
+  'gallery.publish.failedUpdate':
+    'Versi {live} tersedia untuk umum; persiapan versi {pending} gagal.',
+  'gallery.publish.changesRequested': 'Perubahan diminta',
+  'gallery.publish.published': 'Diterbitkan',
+  'gallery.publish.withdrawn': 'Ditarik',
+  'gallery.publish.liveAndPending':
+    'Versi {live} tersedia untuk umum; versi {pending} sedang ditinjau.',
+  'gallery.publish.stalePreview':
+    'Perjalanan berubah atau pratinjau kedaluwarsa. Periksa pratinjau baru sebelum mengirim.',
+  'gallery.publish.quotaExceeded':
+    'Batas publikasi tercapai. Tarik publikasi lain untuk mengosongkan slot.',
+  'gallery.publish.storageFull':
+    'Penyimpanan ruang kerja tidak cukup untuk menyiapkan publikasi ini.',
+  'gallery.publish.submitFailed':
+    'Perjalanan ini tidak dapat dikirim. Coba lagi.',
+  'gallery.publish.saved': 'Publikasi diperbarui.',
+  'gallery.publish.retry': 'Coba lagi',
+  'gallery.publish.submitted': 'Dikirim',
+  'gallery.publish.curatorNote': 'Catatan kurator',
+  'gallery.publish.copyLink': 'Salin tautan',
+  'gallery.publish.linkCopied': 'Tautan disalin',
+  'gallery.publish.copyFailed': 'Tautan tidak dapat disalin. Coba lagi.',
+  'gallery.publish.adminOnly': 'Admin ruang kerja dapat mengirim perjalanan.',
+  'gallery.publish.update': 'Terbitkan pembaruan',
+  'gallery.publish.withdraw': 'Tarik',
+  'gallery.publish.withdrawConfirm':
+    'Penarikan memblokir pembaca baru. Salinan yang disimpan, diunduh, atau disimpan dalam cache tidak dapat ditarik kembali.',
+  'gallery.publish.confirmWithdrawal': 'Konfirmasi penarikan',
+  'gallery.publish.cancel': 'Batal',
+  'gallery.publish.saving': 'Menyimpan…',
+
   'gallery.publish.expired':
     'Pratinjau ini telah kedaluwarsa. Buat pratinjau baru sebelum mengonfirmasi.',
   'gallery.publish.title': 'Pratinjau galeri',
