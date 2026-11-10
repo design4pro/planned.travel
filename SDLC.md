@@ -182,10 +182,10 @@ Use `node scripts/ci/validation.mjs` to execute that list in order. It expands t
 command into the same three Vitest projects (UI starts as four complete shards after exceeding this
 host's nine-minute budget), bounds each job to nine minutes and retries a timed-out
 or killed project as all four shards. It emits a compact JSON result with full log paths under
-`.ai/tmp/validation/`. Each command receives a private `TMPDIR` beside its log, removed after
-exit or timeout, so a full host temporary filesystem cannot break transformation caches.
-`--resume` reuses successful local jobs only when the tracked content, command list, runtime,
-environment and installed manifest digest match; stage untracked inputs first.
+`.ai/tmp/validation/`. Each command receives a private temporary directory there through
+`TMPDIR`, `TMP` and `TEMP`, removed after exit or timeout, so a full host temporary filesystem
+cannot break transformation caches. `--resume` reuses successful local jobs only when the tracked content, command
+list, runtime, environment and installed manifest digest match; stage untracked inputs first.
 Ignored fixtures, services and changes inside installed packages are outside that digest, so resume
 is a local interruption-recovery convenience, never trusted CI evidence. After those inputs change,
 run fresh. Attestation always invokes the same executor fresh and refuses a checkout that changed.

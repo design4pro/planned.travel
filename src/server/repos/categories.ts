@@ -15,7 +15,7 @@ import {
   refuseTaxonomyQuota,
 } from './taxonomy-quota'
 import { runAtomicBatch } from './batch'
-import { isUniqueConstraintViolation, RepositoryError } from './context'
+import { isUniqueConstraintViolation, NotFoundError, RepositoryError } from './context'
 import {
   colourSchema,
   definedOnly,
@@ -58,7 +58,7 @@ export type UpdateCategoryInput = z.infer<typeof updateCategoryInput>
 
 export async function listCategories(scope: TenantScope): Promise<Array<Category>> {
   return categoriesRepository.findMany(scope, {
-    orderBy: [asc(categories.sortOrder), asc(categories.name)],
+    orderBy: [asc(categories.sortOrder), asc(categories.name), asc(categories.id)],
   })
 }
 
@@ -158,6 +158,50 @@ export async function updateCategory(
     categoryId,
     definedOnly(updateCategoryInput.parse(input)),
   )
+}
+
+/** Move one observed adjacent pair from an immutable tenant snapshot, or write nothing. */
+export async function moveCategory(
+  scope: TenantScope,
+  categoryId: string,
+  direction: 'up' | 'down',
+): Promise<void> {
+  const rows = await listCategories(scope)
+  const index = rows.findIndex((row) => row.id === categoryId)
+  const current = rows[index]
+  if (!current) throw new NotFoundError('category', categoryId)
+  const offset = direction === 'up' ? -1 : 1
+  const neighbor = rows[index + offset]
+  if (!neighbor) throw new RepositoryError('Category order changed.', 'CONFLICT')
+
+  const moved = await scope.db.all<{ id: string }>(sql`
+    with ordered as materialized (
+      select id, sort_order, row_number() over (order by sort_order, name, id) as rank
+      from ${categories} where ${tenantFilter(scope, categories)}
+    ), pair as materialized (
+      select current.rank as current_rank, neighbor.rank as neighbor_rank
+      from ordered current, ordered neighbor
+      where current.id = ${current.id} and current.sort_order = ${current.sortOrder}
+        and neighbor.id = ${neighbor.id} and neighbor.sort_order = ${neighbor.sortOrder}
+        and neighbor.rank = current.rank + ${offset}
+        and (select count(*) from ordered) = ${rows.length}
+    ), final as materialized (
+      select ordered.id, case
+        when rank = pair.current_rank then pair.neighbor_rank
+        when rank = pair.neighbor_rank then pair.current_rank
+        else rank end as new_rank
+      from ordered cross join pair
+    )
+    update ${categories}
+    set sort_order = (select new_rank from final where final.id = ${categories.id}),
+      updated_at = ${Date.now()}
+    where ${tenantFilter(scope, categories)}
+      and id in (select id from final)
+    returning id
+  `)
+  if (moved.length !== rows.length) {
+    throw new RepositoryError('Category order changed.', 'CONFLICT')
+  }
 }
 
 /** Deleting a category leaves its places behind: the FK is `ON DELETE SET NULL`. */

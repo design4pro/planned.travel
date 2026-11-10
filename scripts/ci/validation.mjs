@@ -13,7 +13,7 @@ import {
   rmdirSync,
   rmSync,
 } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const git = (cwd, args) =>
@@ -122,13 +122,20 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  return new Promise((done, reject) => {
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
+  return new Promise((done) => {
     const started = Date.now()
-    const scratch = mkdtempSync(join(dirname(resolve(logPath)), 'tmp-'))
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
-      env: { ...process.env, TMPDIR: scratch },
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -185,17 +192,11 @@ export function runValidationCommand(
         result = 'interrupted'
         exitCode = 130
       }
-      try {
-        rmSync(scratch, { recursive: true, force: true })
-      } catch (error) {
-        reject(error)
-        return
-      }
       done({ exitCode, result, durationMs: Date.now() - started, logPath })
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
-  })
+  }).finally(() => rmSync(temporary, { recursive: true, force: true }))
 }
 
 export async function runGate({
