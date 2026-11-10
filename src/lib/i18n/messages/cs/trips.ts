@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Odeslat ke kontrole',
+  'gallery.publish.loadFailed': 'Publikaci se nepodařilo načíst.',
+  'gallery.publish.dialogTitle': 'Sdílet tuto cestu s komunitou',
+  'gallery.publish.neverShared': 'Dosud nesdíleno',
+  'gallery.publish.inReview': 'Probíhá kontrola',
+  'gallery.publish.preparing': 'Příprava ke kontrole',
+  'gallery.publish.preparationFailed': 'Příprava selhala',
+  'gallery.publish.preparingUpdate':
+    'Verze {live} je veřejná; verze {pending} se připravuje ke kontrole.',
+  'gallery.publish.failedUpdate':
+    'Verze {live} je veřejná; příprava verze {pending} selhala.',
+  'gallery.publish.changesRequested': 'Požadovány změny',
+  'gallery.publish.published': 'Zveřejněno',
+  'gallery.publish.withdrawn': 'Staženo',
+  'gallery.publish.liveAndPending':
+    'Verze {live} je veřejná; verze {pending} se kontroluje.',
+  'gallery.publish.stalePreview':
+    'Cesta se změnila nebo náhled vypršel. Před odesláním zkontrolujte nový náhled.',
+  'gallery.publish.quotaExceeded':
+    'Dosažen limit publikací. Stažením jiné publikace uvolníte místo.',
+  'gallery.publish.storageFull':
+    'V pracovním prostoru není dost úložiště pro přípravu publikace.',
+  'gallery.publish.submitFailed':
+    'Cestu se nepodařilo odeslat. Zkuste to znovu.',
+  'gallery.publish.saved': 'Publikace aktualizována.',
+  'gallery.publish.retry': 'Zkusit znovu',
+  'gallery.publish.submitted': 'Odesláno',
+  'gallery.publish.curatorNote': 'Poznámka redakce',
+  'gallery.publish.copyLink': 'Kopírovat odkaz',
+  'gallery.publish.linkCopied': 'Odkaz zkopírován',
+  'gallery.publish.copyFailed':
+    'Odkaz se nepodařilo zkopírovat. Zkuste to znovu.',
+  'gallery.publish.adminOnly':
+    'Cestu může odeslat správce pracovního prostoru.',
+  'gallery.publish.update': 'Zveřejnit aktualizaci',
+  'gallery.publish.withdraw': 'Stáhnout',
+  'gallery.publish.withdrawConfirm':
+    'Stažení zablokuje nové čtenáře. Uložené, stažené nebo mezipaměťové kopie nelze odvolat.',
+  'gallery.publish.confirmWithdrawal': 'Potvrdit stažení',
+  'gallery.publish.cancel': 'Zrušit',
+  'gallery.publish.saving': 'Ukládání…',
+
   'gallery.publish.expired':
     'Tento náhled vypršel. Před potvrzením vytvořte nový náhled.',
   'gallery.publish.title': 'Náhled galerie',

@@ -14,6 +14,46 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'İncelemeye gönder',
+  'gallery.publish.loadFailed': 'Yayın yüklenemedi.',
+  'gallery.publish.dialogTitle': 'Bu geziyi toplulukla paylaş',
+  'gallery.publish.neverShared': 'Henüz paylaşılmadı',
+  'gallery.publish.inReview': 'İnceleniyor',
+  'gallery.publish.preparing': 'İnceleme için hazırlanıyor',
+  'gallery.publish.preparationFailed': 'Hazırlık başarısız',
+  'gallery.publish.preparingUpdate':
+    '{live} sürümü herkese açık; {pending} sürümü inceleme için hazırlanıyor.',
+  'gallery.publish.failedUpdate':
+    '{live} sürümü herkese açık; {pending} sürümünün hazırlığı başarısız oldu.',
+  'gallery.publish.changesRequested': 'Değişiklik istendi',
+  'gallery.publish.published': 'Yayımlandı',
+  'gallery.publish.withdrawn': 'Geri çekildi',
+  'gallery.publish.liveAndPending':
+    '{live} sürümü herkese açık; {pending} sürümü inceleniyor.',
+  'gallery.publish.stalePreview':
+    'Gezi değişti veya önizlemenin süresi doldu. Göndermeden önce yeni bir önizlemeyi inceleyin.',
+  'gallery.publish.quotaExceeded':
+    'Yayın sınırına ulaşıldı. Yer açmak için başka bir yayını geri çekin.',
+  'gallery.publish.storageFull':
+    'Bu yayını hazırlamak için çalışma alanında yeterli depolama yok.',
+  'gallery.publish.submitFailed': 'Bu gezi gönderilemedi. Tekrar deneyin.',
+  'gallery.publish.saved': 'Yayın güncellendi.',
+  'gallery.publish.retry': 'Tekrar dene',
+  'gallery.publish.submitted': 'Gönderildi',
+  'gallery.publish.curatorNote': 'Editör notu',
+  'gallery.publish.copyLink': 'Bağlantıyı kopyala',
+  'gallery.publish.linkCopied': 'Bağlantı kopyalandı',
+  'gallery.publish.copyFailed': 'Bağlantı kopyalanamadı. Tekrar deneyin.',
+  'gallery.publish.adminOnly':
+    'Bir çalışma alanı yöneticisi gezi gönderebilir.',
+  'gallery.publish.update': 'Güncelleme yayımla',
+  'gallery.publish.withdraw': 'Geri çek',
+  'gallery.publish.withdrawConfirm':
+    'Geri çekme yeni okuyucuları engeller. Kaydedilen, indirilen veya önbelleğe alınan kopyalar geri alınamaz.',
+  'gallery.publish.confirmWithdrawal': 'Geri çekmeyi onayla',
+  'gallery.publish.cancel': 'İptal',
+  'gallery.publish.saving': 'Kaydediliyor…',
+
   'gallery.publish.expired':
     'Bu önizlemenin süresi doldu. Onaylamadan önce yeni bir önizleme oluşturun.',
   'gallery.publish.title': 'Galeri önizlemesi',

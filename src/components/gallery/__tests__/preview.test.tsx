@@ -101,7 +101,7 @@ it('renders every public value and explicit empties, then confirms only its opaq
     screen.getByText(/personal information before confirming/),
   ).toBeDefined()
   await user.click(screen.getByRole('button', { name: 'Confirm this preview' }))
-  expect(onConfirm).toHaveBeenCalledExactlyOnceWith('opaque')
+  expect(onConfirm).toHaveBeenCalledExactlyOnceWith('opaque', initialFields)
   expect(document.querySelector('h2')).toBe(document.activeElement)
 })
 
@@ -121,6 +121,9 @@ it('invalidates preview on every field edit and ignores a late response', async 
     screen.getByRole('button', { name: 'Preview what will be shared' }),
   )
   expect(document.activeElement?.tagName).toBe('H2')
+  expect(
+    screen.getByRole('status', { name: 'Gallery preview' }).textContent,
+  ).toBe('Loading')
   fireEvent.change(screen.getByRole('textbox', { name: 'Public title' }), {
     target: { value: 'Changed' },
   })
@@ -227,36 +230,43 @@ it('keeps the last entry of a 1000-place document keyboard-readable without shor
   )
 })
 
-it('labels the length refusal, preserves the full value and focuses its error summary', async () => {
-  const onPreview = vi.fn(async (): Promise<GalleryPreviewResult> => ready)
-  render(
-    <I18nProvider locale="en" messages={messages}>
-      <GalleryPreviewView
-        initialFields={{ ...initialFields, publicTitle: 'a'.repeat(121) }}
-        onPreview={onPreview}
-        onConfirm={vi.fn()}
-      />
-    </I18nProvider>,
-  )
-  const input = screen.getByRole('textbox', {
-    name: 'Public title',
-  }) as HTMLInputElement
-  const form = input.closest('form')
-  if (!form) throw new Error('Missing preview form')
-  fireEvent.submit(form)
-  expect(onPreview).not.toHaveBeenCalled()
-  expect(input.value).toHaveLength(121)
-  expect(input.getAttribute('aria-invalid')).toBe('true')
-  expect(
-    (input.getAttribute('aria-describedby') ?? '')
-      .split(' ')
-      .map((id) => document.getElementById(id)?.textContent ?? '')
-      .join(' '),
-  ).toContain('120')
-  expect(document.activeElement).toBe(
-    screen.getByRole('status', { name: 'Gallery preview' }),
-  )
-})
+it.each([
+  ['publicTitle', 'Public title', 120],
+  ['summary', 'Summary', 280],
+  ['attribution', 'Display name', 80],
+] as const)(
+  'labels the %s length refusal, preserves the full value and focuses its error summary',
+  async (field, label, maximum) => {
+    const onPreview = vi.fn(async (): Promise<GalleryPreviewResult> => ready)
+    render(
+      <I18nProvider locale="en" messages={messages}>
+        <GalleryPreviewView
+          initialFields={{ ...initialFields, [field]: 'a'.repeat(maximum + 1) }}
+          onPreview={onPreview}
+          onConfirm={vi.fn()}
+        />
+      </I18nProvider>,
+    )
+    const input = screen.getByRole('textbox', {
+      name: label,
+    }) as HTMLInputElement
+    const form = input.closest('form')
+    if (!form) throw new Error('Missing preview form')
+    fireEvent.submit(form)
+    expect(onPreview).not.toHaveBeenCalled()
+    expect(input.value).toHaveLength(maximum + 1)
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(
+      (input.getAttribute('aria-describedby') ?? '')
+        .split(' ')
+        .map((id) => document.getElementById(id)?.textContent ?? '')
+        .join(' '),
+    ).toContain(String(maximum))
+    expect(document.activeElement).toBe(
+      screen.getByRole('status', { name: 'Gallery preview' }),
+    )
+  },
+)
 
 it('uses the localized field refusal instead of browser-native required-field copy', async () => {
   const user = userEvent.setup()

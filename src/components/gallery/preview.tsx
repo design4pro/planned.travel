@@ -17,7 +17,10 @@ interface GalleryPreviewProps {
   readonly onPreview: (
     fields: GalleryPreviewInput,
   ) => Promise<GalleryPreviewResult>
-  readonly onConfirm: (previewId: string) => void
+  readonly confirmLabel?: MessageKey
+  readonly disabled?: boolean
+  readonly invalidationKey?: number
+  readonly onConfirm: (previewId: string, fields: GalleryPreviewInput) => void
 }
 
 /** Unmounted consent view. The caller owns any later submission; this module never fetches. */
@@ -29,6 +32,9 @@ function PreviewSession({
   initialFields,
   onPreview,
   onConfirm,
+  confirmLabel = 'trips.gallery.publish.confirm',
+  disabled = false,
+  invalidationKey,
 }: GalleryPreviewProps) {
   const t = useTranslate()
   const headingId = useId()
@@ -63,6 +69,12 @@ function PreviewSession({
     )
     return () => window.clearTimeout(timer)
   }, [preview])
+  useEffect(() => {
+    request.current += 1
+    setPreview(null)
+    setPending(false)
+    setExpired(false)
+  }, [invalidationKey])
   function change(patch: Partial<GalleryPreviewInput>) {
     request.current += 1
     setFields((current) => ({ ...current, ...patch }))
@@ -140,60 +152,62 @@ function PreviewSession({
         noValidate
         onSubmit={(event) => {
           event.preventDefault()
-          void capture()
+          if (!disabled) void capture()
         }}
         className="space-y-3"
       >
-        <Field
-          label={t('trips.gallery.publish.publicTitle')}
-          hint={t('auth.validation.passwordLong', { count: 120, value: 120 })}
-          error={fieldError('publicTitle', 120)}
-        >
-          <Input
-            required
-            maxLength={120}
-            value={fields.publicTitle}
-            onChange={(event) => change({ publicTitle: event.target.value })}
-          />
-        </Field>
-        <Field
-          label={t('shell.newTrip.summary')}
-          hint={t('auth.validation.passwordLong', { count: 280, value: 280 })}
-          error={fieldError('summary', 280)}
-        >
-          <Input
-            required
-            maxLength={280}
-            value={fields.summary}
-            onChange={(event) => change({ summary: event.target.value })}
-          />
-        </Field>
-        <Field
-          label={t('trips.gallery.publish.attribution')}
-          hint={t('auth.validation.passwordLong', { count: 80, value: 80 })}
-          error={fieldError('attribution', 80)}
-        >
-          <Input
-            required
-            maxLength={80}
-            value={fields.attribution}
-            onChange={(event) => change({ attribution: event.target.value })}
-          />
-        </Field>
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={fields.showDates}
-            onCheckedChange={(checked) =>
-              change({ showDates: checked === true })
-            }
-          />
-          {t('trips.gallery.publish.showDates')}
-        </label>
-        <Button type="submit" disabled={pending}>
-          {pending
-            ? t('ui.status.loading')
-            : t('trips.gallery.publish.preview')}
-        </Button>
+        <fieldset disabled={disabled} className="space-y-3">
+          <Field
+            label={t('trips.gallery.publish.publicTitle')}
+            hint={t('auth.validation.passwordLong', { count: 120, value: 120 })}
+            error={fieldError('publicTitle', 120)}
+          >
+            <Input
+              required
+              maxLength={120}
+              value={fields.publicTitle}
+              onChange={(event) => change({ publicTitle: event.target.value })}
+            />
+          </Field>
+          <Field
+            label={t('shell.newTrip.summary')}
+            hint={t('auth.validation.passwordLong', { count: 280, value: 280 })}
+            error={fieldError('summary', 280)}
+          >
+            <Input
+              required
+              maxLength={280}
+              value={fields.summary}
+              onChange={(event) => change({ summary: event.target.value })}
+            />
+          </Field>
+          <Field
+            label={t('trips.gallery.publish.attribution')}
+            hint={t('auth.validation.passwordLong', { count: 80, value: 80 })}
+            error={fieldError('attribution', 80)}
+          >
+            <Input
+              required
+              maxLength={80}
+              value={fields.attribution}
+              onChange={(event) => change({ attribution: event.target.value })}
+            />
+          </Field>
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={fields.showDates}
+              onCheckedChange={(checked) =>
+                change({ showDates: checked === true })
+              }
+            />
+            {t('trips.gallery.publish.showDates')}
+          </label>
+          <Button type="submit" disabled={pending}>
+            {pending
+              ? t('ui.status.loading')
+              : t('trips.gallery.publish.preview')}
+          </Button>
+        </fieldset>
       </form>
       <div
         ref={status}
@@ -202,6 +216,7 @@ function PreviewSession({
         aria-live="polite"
         tabIndex={-1}
       >
+        {pending && t('ui.status.loading')}
         {error && t(error)}
         {expired && t('trips.gallery.publish.expired')}
       </div>
@@ -216,7 +231,7 @@ function PreviewSession({
             <GallerySnapshotContent document={preview.document} />
           </div>
           <Button
-            disabled={pending || expired}
+            disabled={disabled || pending || expired}
             onClick={() => {
               if (preview.expiresAt <= Date.now()) {
                 setExpired(true)
@@ -224,10 +239,16 @@ function PreviewSession({
                 return
               }
               heading.current?.focus()
-              onConfirm(preview.previewId)
+              onConfirm(preview.previewId, {
+                tripId: fields.tripId,
+                publicTitle: preview.document.publicTitle,
+                summary: preview.document.summary,
+                attribution: preview.document.attribution,
+                showDates: preview.document.showDates,
+              })
             }}
           >
-            {t('trips.gallery.publish.confirm')}
+            {t(confirmLabel)}
           </Button>
         </>
       )}

@@ -14,6 +14,46 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Skicka för granskning',
+  'gallery.publish.loadFailed': 'Publiceringen kunde inte läsas in.',
+  'gallery.publish.dialogTitle': 'Dela denna resa med gemenskapen',
+  'gallery.publish.neverShared': 'Aldrig delad',
+  'gallery.publish.inReview': 'Under granskning',
+  'gallery.publish.preparing': 'Förbereder för granskning',
+  'gallery.publish.preparationFailed': 'Förberedelsen misslyckades',
+  'gallery.publish.preparingUpdate':
+    'Version {live} är offentlig; version {pending} förbereds för granskning.',
+  'gallery.publish.failedUpdate':
+    'Version {live} är offentlig; förberedelsen av version {pending} misslyckades.',
+  'gallery.publish.changesRequested': 'Ändringar begärda',
+  'gallery.publish.published': 'Publicerad',
+  'gallery.publish.withdrawn': 'Tillbakadragen',
+  'gallery.publish.liveAndPending':
+    'Version {live} är offentlig; version {pending} granskas.',
+  'gallery.publish.stalePreview':
+    'Resan har ändrats eller förhandsvisningen har gått ut. Granska en ny förhandsvisning innan du skickar.',
+  'gallery.publish.quotaExceeded':
+    'Publiceringsgränsen är nådd. Dra tillbaka en annan publicering för att frigöra en plats.',
+  'gallery.publish.storageFull':
+    'Inte tillräckligt med lagringsutrymme i arbetsytan för denna publicering.',
+  'gallery.publish.submitFailed': 'Resan kunde inte skickas. Försök igen.',
+  'gallery.publish.saved': 'Publiceringen uppdaterades.',
+  'gallery.publish.retry': 'Försök igen',
+  'gallery.publish.submitted': 'Inskickad',
+  'gallery.publish.curatorNote': 'Redaktionens kommentar',
+  'gallery.publish.copyLink': 'Kopiera länk',
+  'gallery.publish.linkCopied': 'Länk kopierad',
+  'gallery.publish.copyFailed': 'Länken kunde inte kopieras. Försök igen.',
+  'gallery.publish.adminOnly':
+    'En administratör för arbetsytan kan skicka in en resa.',
+  'gallery.publish.update': 'Publicera uppdatering',
+  'gallery.publish.withdraw': 'Dra tillbaka',
+  'gallery.publish.withdrawConfirm':
+    'Tillbakadragandet stoppar nya läsare. Sparade, nedladdade eller cachade kopior kan inte återkallas.',
+  'gallery.publish.confirmWithdrawal': 'Bekräfta tillbakadragande',
+  'gallery.publish.cancel': 'Avbryt',
+  'gallery.publish.saving': 'Sparar…',
+
   'gallery.publish.expired':
     'Denna förhandsvisning har gått ut. Skapa en ny innan du bekräftar.',
   'gallery.publish.title': 'Förhandsvisning av galleri',

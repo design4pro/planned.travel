@@ -14,6 +14,47 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': '審査に送信',
+  'gallery.publish.loadFailed': '公開情報を読み込めませんでした。',
+  'gallery.publish.dialogTitle': 'この旅行をコミュニティと共有',
+  'gallery.publish.neverShared': '未共有',
+  'gallery.publish.inReview': '審査中',
+  'gallery.publish.preparing': '審査の準備中',
+  'gallery.publish.preparationFailed': '準備に失敗しました',
+  'gallery.publish.preparingUpdate':
+    'バージョン{live}は公開中、バージョン{pending}は審査の準備中です。',
+  'gallery.publish.failedUpdate':
+    'バージョン{live}は公開中です。バージョン{pending}の準備に失敗しました。',
+  'gallery.publish.changesRequested': '変更が必要です',
+  'gallery.publish.published': '公開済み',
+  'gallery.publish.withdrawn': '取り下げ済み',
+  'gallery.publish.liveAndPending':
+    'バージョン{live}は公開中、バージョン{pending}は審査中です。',
+  'gallery.publish.stalePreview':
+    '旅行が変更されたか、プレビューの有効期限が切れました。送信前に新しいプレビューを確認してください。',
+  'gallery.publish.quotaExceeded':
+    '公開数の上限に達しました。他の公開を取り下げて枠を空けてください。',
+  'gallery.publish.storageFull':
+    '公開の準備に必要なワークスペースのストレージが不足しています。',
+  'gallery.publish.submitFailed':
+    '旅行を送信できませんでした。もう一度お試しください。',
+  'gallery.publish.saved': '公開情報を更新しました。',
+  'gallery.publish.retry': '再試行',
+  'gallery.publish.submitted': '送信日',
+  'gallery.publish.curatorNote': '編集者からのメモ',
+  'gallery.publish.copyLink': 'リンクをコピー',
+  'gallery.publish.linkCopied': 'リンクをコピーしました',
+  'gallery.publish.copyFailed':
+    'リンクをコピーできませんでした。もう一度お試しください。',
+  'gallery.publish.adminOnly': 'ワークスペースの管理者が旅行を送信できます。',
+  'gallery.publish.update': '更新を公開',
+  'gallery.publish.withdraw': '取り下げる',
+  'gallery.publish.withdrawConfirm':
+    '取り下げると新しい閲覧者はアクセスできなくなります。保存、ダウンロード、キャッシュされたコピーは回収できません。',
+  'gallery.publish.confirmWithdrawal': '取り下げを確認',
+  'gallery.publish.cancel': 'キャンセル',
+  'gallery.publish.saving': '保存中…',
+
   'gallery.publish.expired':
     'このプレビューの有効期限が切れました。確認する前に新しいプレビューを作成してください。',
   'gallery.publish.title': 'ギャラリーのプレビュー',

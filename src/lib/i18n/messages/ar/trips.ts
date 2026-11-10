@@ -14,6 +14,45 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'إرسال للمراجعة',
+  'gallery.publish.loadFailed': 'تعذر تحميل المنشور.',
+  'gallery.publish.dialogTitle': 'شارك هذه الرحلة مع المجتمع',
+  'gallery.publish.neverShared': 'لم تتم المشاركة بعد',
+  'gallery.publish.inReview': 'قيد المراجعة',
+  'gallery.publish.preparing': 'التحضير للمراجعة',
+  'gallery.publish.preparationFailed': 'فشل التحضير',
+  'gallery.publish.preparingUpdate':
+    'الإصدار {live} متاح للجميع؛ يجري تحضير الإصدار {pending} للمراجعة.',
+  'gallery.publish.failedUpdate':
+    'الإصدار {live} متاح للجميع؛ فشل تحضير الإصدار {pending}.',
+  'gallery.publish.changesRequested': 'طُلبت تغييرات',
+  'gallery.publish.published': 'منشور',
+  'gallery.publish.withdrawn': 'مسحوب',
+  'gallery.publish.liveAndPending':
+    'الإصدار {live} متاح للجميع؛ الإصدار {pending} قيد المراجعة.',
+  'gallery.publish.stalePreview':
+    'تغيرت الرحلة أو انتهت صلاحية المعاينة. راجع معاينة جديدة قبل الإرسال.',
+  'gallery.publish.quotaExceeded':
+    'بلغت حد المنشورات. اسحب منشورًا آخر لإخلاء مكان.',
+  'gallery.publish.storageFull':
+    'لا توجد مساحة تخزين كافية في مساحة العمل لتحضير هذا المنشور.',
+  'gallery.publish.submitFailed': 'تعذر إرسال هذه الرحلة. حاول مجددًا.',
+  'gallery.publish.saved': 'تم تحديث المنشور.',
+  'gallery.publish.retry': 'حاول مجددًا',
+  'gallery.publish.submitted': 'تاريخ الإرسال',
+  'gallery.publish.curatorNote': 'ملاحظة المحرر',
+  'gallery.publish.copyLink': 'نسخ الرابط',
+  'gallery.publish.linkCopied': 'تم نسخ الرابط',
+  'gallery.publish.copyFailed': 'تعذر نسخ الرابط. حاول مجددًا.',
+  'gallery.publish.adminOnly': 'يمكن لمسؤول مساحة العمل إرسال رحلة.',
+  'gallery.publish.update': 'نشر تحديث',
+  'gallery.publish.withdraw': 'سحب',
+  'gallery.publish.withdrawConfirm':
+    'يمنع السحب وصول قراء جدد. لا يمكن استرجاع النسخ المحفوظة أو المنزلة أو المخزنة مؤقتًا.',
+  'gallery.publish.confirmWithdrawal': 'تأكيد السحب',
+  'gallery.publish.cancel': 'إلغاء',
+  'gallery.publish.saving': 'جارٍ الحفظ…',
+
   'gallery.publish.expired':
     'انتهت صلاحية هذه المعاينة. أنشئ معاينة جديدة قبل التأكيد.',
   'gallery.publish.title': 'معاينة المعرض',

@@ -17,6 +17,45 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'gallery.publish.submit': 'Submit for review',
+  'gallery.publish.loadFailed': 'We could not load the publication.',
+  'gallery.publish.dialogTitle': 'Share this trip with the community',
+  'gallery.publish.neverShared': 'Never shared',
+  'gallery.publish.inReview': 'In review',
+  'gallery.publish.preparing': 'Preparing for review',
+  'gallery.publish.preparationFailed': 'Preparation failed',
+  'gallery.publish.preparingUpdate':
+    'Version {live} is live; preparing version {pending} for review.',
+  'gallery.publish.failedUpdate':
+    'Version {live} is live; preparation of version {pending} failed.',
+  'gallery.publish.changesRequested': 'Changes requested',
+  'gallery.publish.published': 'Published',
+  'gallery.publish.withdrawn': 'Withdrawn',
+  'gallery.publish.liveAndPending':
+    'Version {live} is live; version {pending} is in review.',
+  'gallery.publish.stalePreview':
+    'This trip changed or the preview expired. Review a fresh preview before submitting.',
+  'gallery.publish.quotaExceeded':
+    'Publication limit reached. Withdraw another publication to free a slot.',
+  'gallery.publish.storageFull':
+    'Not enough workspace storage to prepare this publication.',
+  'gallery.publish.submitFailed': 'We could not submit this trip. Try again.',
+  'gallery.publish.saved': 'Publication updated.',
+  'gallery.publish.retry': 'Try again',
+  'gallery.publish.submitted': 'Submitted',
+  'gallery.publish.curatorNote': 'Curator note',
+  'gallery.publish.copyLink': 'Copy link',
+  'gallery.publish.linkCopied': 'Link copied',
+  'gallery.publish.copyFailed': 'We could not copy the link. Try again.',
+  'gallery.publish.adminOnly': 'A workspace admin can submit a trip.',
+  'gallery.publish.update': 'Publish an update',
+  'gallery.publish.withdraw': 'Withdraw',
+  'gallery.publish.withdrawConfirm':
+    'Withdrawal stops new readers. Saved, downloaded or cached copies cannot be recalled.',
+  'gallery.publish.confirmWithdrawal': 'Confirm withdrawal',
+  'gallery.publish.cancel': 'Cancel',
+  'gallery.publish.saving': 'Saving…',
+
   'gallery.publish.expired':
     'This preview expired. Generate a new preview before confirming.',
   'gallery.publish.title': 'Gallery preview',

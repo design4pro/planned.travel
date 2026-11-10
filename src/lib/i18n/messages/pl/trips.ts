@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Wyślij do oceny',
+  'gallery.publish.loadFailed': 'Nie udało się wczytać publikacji.',
+  'gallery.publish.dialogTitle': 'Udostępnij tę podróż społeczności',
+  'gallery.publish.neverShared': 'Jeszcze nie udostępniono',
+  'gallery.publish.inReview': 'W trakcie oceny',
+  'gallery.publish.preparing': 'Przygotowywanie do oceny',
+  'gallery.publish.preparationFailed': 'Przygotowanie nie powiodło się',
+  'gallery.publish.preparingUpdate':
+    'Wersja {live} jest publiczna; wersja {pending} jest przygotowywana do oceny.',
+  'gallery.publish.failedUpdate':
+    'Wersja {live} jest publiczna; przygotowanie wersji {pending} nie powiodło się.',
+  'gallery.publish.changesRequested': 'Poproszono o zmiany',
+  'gallery.publish.published': 'Opublikowano',
+  'gallery.publish.withdrawn': 'Wycofano',
+  'gallery.publish.liveAndPending':
+    'Wersja {live} jest publiczna; wersja {pending} jest oceniana.',
+  'gallery.publish.stalePreview':
+    'Podróż się zmieniła lub podgląd wygasł. Sprawdź nowy podgląd przed wysłaniem.',
+  'gallery.publish.quotaExceeded':
+    'Osiągnięto limit publikacji. Wycofaj inną publikację, aby zwolnić miejsce.',
+  'gallery.publish.storageFull':
+    'Za mało miejsca w obszarze roboczym na przygotowanie publikacji.',
+  'gallery.publish.submitFailed':
+    'Nie udało się wysłać podróży. Spróbuj ponownie.',
+  'gallery.publish.saved': 'Zaktualizowano publikację.',
+  'gallery.publish.retry': 'Spróbuj ponownie',
+  'gallery.publish.submitted': 'Wysłano',
+  'gallery.publish.curatorNote': 'Uwaga kuratora',
+  'gallery.publish.copyLink': 'Kopiuj link',
+  'gallery.publish.linkCopied': 'Skopiowano link',
+  'gallery.publish.copyFailed':
+    'Nie udało się skopiować linku. Spróbuj ponownie.',
+  'gallery.publish.adminOnly':
+    'Podróż może wysłać administrator obszaru roboczego.',
+  'gallery.publish.update': 'Opublikuj aktualizację',
+  'gallery.publish.withdraw': 'Wycofaj',
+  'gallery.publish.withdrawConfirm':
+    'Wycofanie blokuje nowych czytelników. Zapisanych, pobranych ani buforowanych kopii nie można cofnąć.',
+  'gallery.publish.confirmWithdrawal': 'Potwierdź wycofanie',
+  'gallery.publish.cancel': 'Anuluj',
+  'gallery.publish.saving': 'Zapisywanie…',
+
   'gallery.publish.expired':
     'Ten podgląd wygasł. Przed potwierdzeniem wygeneruj nowy podgląd.',
   'gallery.publish.title': 'Podgląd galerii',

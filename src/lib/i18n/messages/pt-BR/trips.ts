@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Enviar para análise',
+  'gallery.publish.loadFailed': 'Não foi possível carregar a publicação.',
+  'gallery.publish.dialogTitle': 'Compartilhar esta viagem com a comunidade',
+  'gallery.publish.neverShared': 'Nunca compartilhada',
+  'gallery.publish.inReview': 'Em análise',
+  'gallery.publish.preparing': 'Preparando para análise',
+  'gallery.publish.preparationFailed': 'Falha na preparação',
+  'gallery.publish.preparingUpdate':
+    'A versão {live} está pública; a versão {pending} está sendo preparada para análise.',
+  'gallery.publish.failedUpdate':
+    'A versão {live} está pública; a preparação da versão {pending} falhou.',
+  'gallery.publish.changesRequested': 'Alterações solicitadas',
+  'gallery.publish.published': 'Publicada',
+  'gallery.publish.withdrawn': 'Retirada',
+  'gallery.publish.liveAndPending':
+    'A versão {live} está pública; a versão {pending} está em análise.',
+  'gallery.publish.stalePreview':
+    'A viagem mudou ou a prévia expirou. Confira uma nova prévia antes de enviar.',
+  'gallery.publish.quotaExceeded':
+    'Limite de publicações atingido. Retire outra publicação para liberar uma vaga.',
+  'gallery.publish.storageFull':
+    'Não há armazenamento suficiente no espaço de trabalho para preparar esta publicação.',
+  'gallery.publish.submitFailed':
+    'Não foi possível enviar esta viagem. Tente novamente.',
+  'gallery.publish.saved': 'Publicação atualizada.',
+  'gallery.publish.retry': 'Tentar novamente',
+  'gallery.publish.submitted': 'Enviada',
+  'gallery.publish.curatorNote': 'Nota da curadoria',
+  'gallery.publish.copyLink': 'Copiar link',
+  'gallery.publish.linkCopied': 'Link copiado',
+  'gallery.publish.copyFailed':
+    'Não foi possível copiar o link. Tente novamente.',
+  'gallery.publish.adminOnly':
+    'Um administrador do espaço de trabalho pode enviar uma viagem.',
+  'gallery.publish.update': 'Publicar atualização',
+  'gallery.publish.withdraw': 'Retirar',
+  'gallery.publish.withdrawConfirm':
+    'A retirada bloqueia novos leitores. Cópias salvas, baixadas ou em cache não podem ser recuperadas.',
+  'gallery.publish.confirmWithdrawal': 'Confirmar retirada',
+  'gallery.publish.cancel': 'Cancelar',
+  'gallery.publish.saving': 'Salvando…',
+
   'gallery.publish.expired':
     'Esta prévia expirou. Gere uma nova antes de confirmar.',
   'gallery.publish.title': 'Prévia da galeria',

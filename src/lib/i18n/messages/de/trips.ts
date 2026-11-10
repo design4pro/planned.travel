@@ -14,6 +14,49 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Zur Prüfung einreichen',
+  'gallery.publish.loadFailed':
+    'Die Veröffentlichung konnte nicht geladen werden.',
+  'gallery.publish.dialogTitle': 'Diese Reise mit der Community teilen',
+  'gallery.publish.neverShared': 'Noch nie geteilt',
+  'gallery.publish.inReview': 'In Prüfung',
+  'gallery.publish.preparing': 'Vorbereitung zur Prüfung',
+  'gallery.publish.preparationFailed': 'Vorbereitung fehlgeschlagen',
+  'gallery.publish.preparingUpdate':
+    'Version {live} ist öffentlich; Version {pending} wird für die Prüfung vorbereitet.',
+  'gallery.publish.failedUpdate':
+    'Version {live} ist öffentlich; die Vorbereitung von Version {pending} ist fehlgeschlagen.',
+  'gallery.publish.changesRequested': 'Änderungen angefordert',
+  'gallery.publish.published': 'Veröffentlicht',
+  'gallery.publish.withdrawn': 'Zurückgezogen',
+  'gallery.publish.liveAndPending':
+    'Version {live} ist öffentlich; Version {pending} wird geprüft.',
+  'gallery.publish.stalePreview':
+    'Die Reise wurde geändert oder die Vorschau ist abgelaufen. Prüfe vor dem Einreichen eine neue Vorschau.',
+  'gallery.publish.quotaExceeded':
+    'Veröffentlichungslimit erreicht. Ziehe eine andere Veröffentlichung zurück, um Platz zu schaffen.',
+  'gallery.publish.storageFull':
+    'Nicht genug Speicherplatz im Arbeitsbereich für diese Veröffentlichung.',
+  'gallery.publish.submitFailed':
+    'Die Reise konnte nicht eingereicht werden. Versuche es erneut.',
+  'gallery.publish.saved': 'Veröffentlichung aktualisiert.',
+  'gallery.publish.retry': 'Erneut versuchen',
+  'gallery.publish.submitted': 'Eingereicht',
+  'gallery.publish.curatorNote': 'Anmerkung der Redaktion',
+  'gallery.publish.copyLink': 'Link kopieren',
+  'gallery.publish.linkCopied': 'Link kopiert',
+  'gallery.publish.copyFailed':
+    'Der Link konnte nicht kopiert werden. Versuche es erneut.',
+  'gallery.publish.adminOnly':
+    'Ein Arbeitsbereichsadmin kann eine Reise einreichen.',
+  'gallery.publish.update': 'Aktualisierung veröffentlichen',
+  'gallery.publish.withdraw': 'Zurückziehen',
+  'gallery.publish.withdrawConfirm':
+    'Das Zurückziehen sperrt neue Leser. Gespeicherte, heruntergeladene oder zwischengespeicherte Kopien können nicht zurückgerufen werden.',
+  'gallery.publish.confirmWithdrawal': 'Zurückziehen bestätigen',
+  'gallery.publish.cancel': 'Abbrechen',
+  'gallery.publish.saving': 'Speichern…',
+
   'gallery.publish.expired':
     'Diese Vorschau ist abgelaufen. Erstelle vor der Bestätigung eine neue Vorschau.',
   'gallery.publish.title': 'Galerievorschau',

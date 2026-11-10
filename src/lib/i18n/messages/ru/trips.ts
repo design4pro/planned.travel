@@ -14,6 +14,48 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.submit': 'Отправить на проверку',
+  'gallery.publish.loadFailed': 'Не удалось загрузить публикацию.',
+  'gallery.publish.dialogTitle': 'Поделиться поездкой с сообществом',
+  'gallery.publish.neverShared': 'Ещё не опубликовано',
+  'gallery.publish.inReview': 'На проверке',
+  'gallery.publish.preparing': 'Подготовка к проверке',
+  'gallery.publish.preparationFailed': 'Ошибка подготовки',
+  'gallery.publish.preparingUpdate':
+    'Версия {live} доступна всем; версия {pending} готовится к проверке.',
+  'gallery.publish.failedUpdate':
+    'Версия {live} доступна всем; подготовка версии {pending} не удалась.',
+  'gallery.publish.changesRequested': 'Запрошены изменения',
+  'gallery.publish.published': 'Опубликовано',
+  'gallery.publish.withdrawn': 'Отозвано',
+  'gallery.publish.liveAndPending':
+    'Версия {live} доступна всем; версия {pending} на проверке.',
+  'gallery.publish.stalePreview':
+    'Поездка изменилась или срок предпросмотра истёк. Перед отправкой проверьте новый предпросмотр.',
+  'gallery.publish.quotaExceeded':
+    'Достигнут лимит публикаций. Отзовите другую публикацию, чтобы освободить место.',
+  'gallery.publish.storageFull':
+    'Недостаточно места в рабочем пространстве для подготовки публикации.',
+  'gallery.publish.submitFailed':
+    'Не удалось отправить поездку. Повторите попытку.',
+  'gallery.publish.saved': 'Публикация обновлена.',
+  'gallery.publish.retry': 'Повторить',
+  'gallery.publish.submitted': 'Отправлено',
+  'gallery.publish.curatorNote': 'Примечание редактора',
+  'gallery.publish.copyLink': 'Копировать ссылку',
+  'gallery.publish.linkCopied': 'Ссылка скопирована',
+  'gallery.publish.copyFailed':
+    'Не удалось скопировать ссылку. Повторите попытку.',
+  'gallery.publish.adminOnly':
+    'Администратор рабочего пространства может отправить поездку.',
+  'gallery.publish.update': 'Опубликовать обновление',
+  'gallery.publish.withdraw': 'Отозвать',
+  'gallery.publish.withdrawConfirm':
+    'Отзыв блокирует новых читателей. Сохранённые, скачанные и кешированные копии отозвать нельзя.',
+  'gallery.publish.confirmWithdrawal': 'Подтвердить отзыв',
+  'gallery.publish.cancel': 'Отмена',
+  'gallery.publish.saving': 'Сохранение…',
+
   'gallery.publish.expired':
     'Срок действия предпросмотра истёк. Перед подтверждением создайте новый.',
   'gallery.publish.title': 'Предпросмотр галереи',
