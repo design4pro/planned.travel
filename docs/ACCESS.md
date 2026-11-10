@@ -931,7 +931,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                                              |
 | `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                                                         |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                                                          |
-| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider` · `workspace`. The mapping to `action` is in §4.2 |
+| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider` · `workspace` · `release`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                                                     |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                                                  |
 | `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                                                        |
@@ -993,7 +993,7 @@ Two consequences worth stating, because both were found by measurement:
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
 distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
 writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
-that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the ten
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eleven
 fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
 grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
 column nowhere at all, which is what the first attempt did.

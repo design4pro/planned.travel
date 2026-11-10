@@ -492,7 +492,7 @@ export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
  * The eleven entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
- * column table, so an eleventh entity costs an amendment to §4.2's mapping rather than a recreate of
+ * column table, so a twelfth entity costs an amendment to §4.2's mapping rather than a recreate of
  * an append-only log.
  */
 export const PLATFORM_AUDIT_ENTITY_TYPES = [
