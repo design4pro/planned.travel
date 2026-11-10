@@ -247,11 +247,22 @@ revision reads and conditional native session/trust writes cannot use KV as auth
 - `src/server/catalog/**` (phase C) — the global catalogue tables. SPEC §5 lists thirteen: eleven carry no
   `organization_id`; `provider_usage` and the deletion recovery ledger use it only for attribution.
   The latter is owned by `catalog/workspace-deletions.ts`, with rare-path reader guards and no
-  production writer until the deletion driver lands (ADR 0048). Catalog is one of the three
-  closed exceptions outside repos (SPEC §6; the others are the `…Unscoped` shape and the identity-table SQL of `src/server/auth/provisioning.ts`), with exactly four members (these tables, bounded reminder discovery,
+  production writer until the deletion driver lands (ADR 0048). Catalog is one of five
+  closed application-SQL exceptions (SPEC §6; account-auth and content/release repositories, the `…Unscoped` shape and identity-table provisioning are the others), with exactly four members (these tables, bounded reminder discovery,
   the erasure catalog (ids-only discovery and system-actor cleanup) and ids-only tenant audit retention discovery). Platform-content access uses an explicit
   platform actor, `requirePermission`, and a `platform_audit_log` write in the same call, with
   the bounded shape-based exceptions stated in SPEC §5.
+- Release content (contract only, [ADR 0051](adr/0051-bounded-release-content-contract.md)) admits seven application-wide tables only
+  through `repos/content.ts` and `repos/releases.ts` with `Database`. It is not a catalog
+  member or FU-3 resolver. Fresh primary role/ban reads feed the existing pure guard;
+  only platform admin may review/publish. The audit owner prepares the audit statement
+  for the same fail-closed atomic batch as each mutation; existing audit callers stay
+  after-commit/non-throwing. No catalog-to-repos dependency or sequential fallback.
+  Published Settings reads project approved, shipped, non-withdrawn fields only. The sole
+  editorial resolver selects a reviewed exact-version translation or whole-entry English
+  with entry language/direction and localized notice; interface messages retain no fallback.
+  The ADR owns the source grammar, identity adapter and threat model. Runtime and production
+  authorization remain separate; this amendment changes no application behavior.
 - `src/server/mcp/**` (phase E) — JSON-RPC transport and tool schemas only. Every tool
   authorises through the same `requirePermission` the console uses and reaches data through
   `server/catalog`; it never grows a second authorisation path or a second query layer.

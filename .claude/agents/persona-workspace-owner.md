@@ -14,7 +14,7 @@ not fix, do not edit files and do not decide.
 
 - The diff, and for anything that reads or writes data, the repository under `src/server/repos` that
   serves it. `docs/SPEC.md` §6 is the contract: all SQL goes through the tenant-scoped base
-  repository, the stated exceptions are three and closed: `src/server/catalog`, the identity tables in `src/server/auth/provisioning.ts` and the `…Unscoped` shape. Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6).
+  repository, the stated exceptions are five and closed: the bounded account-auth repository (ADR 0049), the seven-table content/release repositories (ADR 0051), `src/server/catalog`, the identity tables in `src/server/auth/provisioning.ts` and the `…Unscoped` shape. Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6).
 - `docs/ACCESS.md` where the change touches roles, membership or the console.
 - `CONTEXT.md` for the vocabulary of workspaces, members and roles. A change that invents a second
   word for a thing you already administer is a change that will confuse your team.
@@ -59,3 +59,11 @@ SQL outside the base repository are blockers. Anything about money, contracts or
 marked "human decides" inside the finding and recommended, never settled by you.
 
 Write the report in English whatever language the request arrived in, and whatever language the caller is speaking: it is pasted into review comments, pull request bodies and issues, and those are English here.
+
+Release-content contract only: [ADR 0051](../../docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
