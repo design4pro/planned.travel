@@ -808,6 +808,45 @@ const messages = {
     'Aggiorna la pagina per usare i nuovi controlli di sicurezza.',
   'twoFactor.security.unavailable':
     'Le modifiche di sicurezza non sono disponibili. Ricarica per verificare di nuovo.',
+
+  'taxonomy.title': 'Categorie dei luoghi',
+  'taxonomy.description': 'Organizza i luoghi di questo spazio di lavoro.',
+  'taxonomy.addCategory': 'Aggiungi categoria',
+  'taxonomy.readOnly':
+    'Proprietari e amministratori dello spazio possono gestire le categorie.',
+  'taxonomy.empty':
+    'Nessuna categoria ancora. I luoghi possono restare senza categoria.',
+  'taxonomy.placeCount': 'Luoghi: {count}',
+  'taxonomy.moveUp': 'Sposta {name} in alto',
+  'taxonomy.moveDown': 'Sposta {name} in basso',
+  'taxonomy.rename': 'Rinomina {name}',
+  'taxonomy.delete': 'Elimina {name}',
+  'taxonomy.deleteTitle': 'Eliminare la categoria {name}?',
+  'taxonomy.deleteImpact': 'Luoghi che resteranno senza categoria: {count}.',
+  'taxonomy.deletePreserves':
+    'I luoghi saranno conservati. Il numero può cambiare mentre altri modificano. Anche i luoghi salvati con questa categoria resteranno senza categoria.',
+  'taxonomy.loadFailed': 'Impossibile caricare le categorie. Riprova.',
+  'taxonomy.unknownOutcome': 'Verifica del salvataggio della modifica.',
+  'taxonomy.reconcileFailed':
+    'Impossibile confermare lo stato salvato. Ricarica prima di riprovare.',
+  'taxonomy.stale':
+    'Le categorie sono cambiate durante la modifica. Controlla l’elenco aggiornato.',
+  'taxonomy.permissionChanged':
+    'I tuoi permessi nello spazio sono cambiati. Puoi ancora vedere le categorie.',
+  'taxonomy.usage': '{used} spazi per categorie e tag utilizzati su {limit}',
+  'taxonomy.unlimited':
+    'Spazi per categorie e tag utilizzati: {used}. Nessun limite.',
+  'taxonomy.limitReached':
+    'Limite di categorie e tag raggiunto. Rimuovi una voce inutilizzata prima di aggiungerne un’altra.',
+  'taxonomy.saved': 'Categoria salvata.',
+  'taxonomy.deleted': 'Categoria eliminata. I luoghi sono stati conservati.',
+  'taxonomy.reload': 'Ricarica',
+  'taxonomy.review':
+    'Controlla l’elenco aggiornato prima di riprovare. La bozza è conservata.',
+  'taxonomy.colourInvalid':
+    'Inserisci un colore esadecimale, ad esempio #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Questa categoria è stata rimossa. Scegline un’altra o lascia il luogo senza categoria.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

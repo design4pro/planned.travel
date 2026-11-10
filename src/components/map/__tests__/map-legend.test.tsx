@@ -25,6 +25,28 @@ const CATEGORIES: ReadonlyArray<MapCategory> = [
 ]
 
 describe('MapLegend', () => {
+  it('replaces renamed, recolored and removed entries when category props refresh', () => {
+    const view = render(<MapLegend categories={CATEGORIES} />)
+    view.rerender(
+      <MapLegend
+        categories={[
+          {
+            ...CATEGORIES[0],
+            name: 'Historic places',
+            colour: '#abcdef',
+            icon: 'camera',
+          },
+        ]}
+      />,
+    )
+    expect(screen.getByText('Historic places')).toBeDefined()
+    expect(screen.queryByText('Landmarks')).toBeNull()
+    expect(screen.queryByText('Food and drink')).toBeNull()
+    expect(view.container.innerHTML).toContain('#abcdef')
+    view.rerender(<MapLegend categories={[]} showPinKey={false} />)
+    expect(view.container.firstChild).toBeNull()
+  })
+
   it('lists the taxonomy with its counts', () => {
     render(<MapLegend categories={CATEGORIES} counts={{ c1: 4, c2: 11 }} />)
     expect(screen.getByRole('heading', { name: 'Legend' })).toBeDefined()

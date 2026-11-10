@@ -58,7 +58,7 @@ export const place = (id: string): PlanBoardPlace => ({
   name: `Place ${id}`,
   address: null,
   city: null,
-  categoryId: 'c1',
+  categoryId: null,
   imageUrl: null,
   website: null,
   description: null,

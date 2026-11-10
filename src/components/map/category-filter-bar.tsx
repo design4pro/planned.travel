@@ -119,6 +119,11 @@ export function CategoryFilterBar({
   label,
 }: CategoryFilterBarProps) {
   const t = useAtlasCopy()
+  React.useEffect(() => {
+    const currentIds = new Set(categories.map((category) => category.id))
+    const surviving = selected.filter((id) => currentIds.has(id))
+    if (surviving.length !== selected.length) onChange(surviving)
+  }, [categories, selected, onChange])
   const selectedSet = React.useMemo(() => new Set(selected), [selected])
   // The "All" chip is the first item in the roving order.
   const roving = useRovingFocus({

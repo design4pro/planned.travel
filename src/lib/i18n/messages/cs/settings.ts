@@ -805,6 +805,43 @@ const messages = {
     'Obnovte stránku a použijte nové bezpečnostní kontroly.',
   'twoFactor.security.unavailable':
     'Změny zabezpečení nejsou dostupné. Obnovte stránku a zkuste to znovu.',
+
+  'taxonomy.title': 'Kategorie míst',
+  'taxonomy.description': 'Uspořádejte místa v tomto pracovním prostoru.',
+  'taxonomy.addCategory': 'Přidat kategorii',
+  'taxonomy.readOnly':
+    'Kategorie mohou spravovat vlastníci a správci prostoru.',
+  'taxonomy.empty': 'Zatím žádné kategorie. Místa mohou zůstat bez kategorie.',
+  'taxonomy.placeCount': 'Místa: {count}',
+  'taxonomy.moveUp': 'Přesunout {name} nahoru',
+  'taxonomy.moveDown': 'Přesunout {name} dolů',
+  'taxonomy.rename': 'Přejmenovat {name}',
+  'taxonomy.delete': 'Smazat {name}',
+  'taxonomy.deleteTitle': 'Smazat kategorii {name}?',
+  'taxonomy.deleteImpact': 'Místa, která zůstanou bez kategorie: {count}.',
+  'taxonomy.deletePreserves':
+    'Místa zůstanou zachována. Počet se může měnit při úpravách ostatních. Uložená místa s touto kategorií také zůstanou bez kategorie.',
+  'taxonomy.loadFailed': 'Kategorie se nepodařilo načíst. Zkuste to znovu.',
+  'taxonomy.unknownOutcome': 'Ověřování, zda byla změna uložena.',
+  'taxonomy.reconcileFailed':
+    'Uložený stav se nepodařilo potvrdit. Před dalším pokusem načtěte znovu.',
+  'taxonomy.stale':
+    'Kategorie se během úprav změnily. Zkontrolujte aktuální seznam.',
+  'taxonomy.permissionChanged':
+    'Vaše oprávnění v prostoru se změnilo. Kategorie můžete stále prohlížet.',
+  'taxonomy.usage': 'Využito {used} z {limit} míst pro kategorie a štítky',
+  'taxonomy.unlimited':
+    'Využitá místa pro kategorie a štítky: {used}. Bez omezení.',
+  'taxonomy.limitReached':
+    'Byl dosažen limit kategorií a štítků. Před přidáním další položky odstraňte nepoužívanou.',
+  'taxonomy.saved': 'Kategorie uložena.',
+  'taxonomy.deleted': 'Kategorie smazána. Místa byla zachována.',
+  'taxonomy.reload': 'Načíst znovu',
+  'taxonomy.review':
+    'Před dalším pokusem zkontrolujte aktuální seznam. Koncept je zachován.',
+  'taxonomy.colourInvalid': 'Zadejte hexadecimální barvu, například #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Tato kategorie byla odstraněna. Vyberte jinou nebo ponechte místo bez kategorie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

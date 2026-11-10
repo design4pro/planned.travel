@@ -805,6 +805,45 @@ const messages = {
     'Atualize esta página para usar as novas verificações de segurança.',
   'twoFactor.security.unavailable':
     'As alterações de segurança estão indisponíveis. Recarregue para verificar novamente.',
+
+  'taxonomy.title': 'Categorias de lugares',
+  'taxonomy.description': 'Organize os lugares deste espaço de trabalho.',
+  'taxonomy.addCategory': 'Adicionar categoria',
+  'taxonomy.readOnly':
+    'Proprietários e administradores do espaço podem gerenciar categorias.',
+  'taxonomy.empty':
+    'Ainda não há categorias. Os lugares podem ficar sem categoria.',
+  'taxonomy.placeCount': 'Lugares: {count}',
+  'taxonomy.moveUp': 'Mover {name} para cima',
+  'taxonomy.moveDown': 'Mover {name} para baixo',
+  'taxonomy.rename': 'Renomear {name}',
+  'taxonomy.delete': 'Excluir {name}',
+  'taxonomy.deleteTitle': 'Excluir a categoria {name}?',
+  'taxonomy.deleteImpact': 'Lugares que ficarão sem categoria: {count}.',
+  'taxonomy.deletePreserves':
+    'Os lugares serão mantidos. A quantidade pode mudar enquanto outras pessoas editam. Lugares salvos com esta categoria também ficarão sem categoria.',
+  'taxonomy.loadFailed':
+    'Não foi possível carregar as categorias. Tente novamente.',
+  'taxonomy.unknownOutcome': 'Verificando se a alteração foi salva.',
+  'taxonomy.reconcileFailed':
+    'Não foi possível confirmar o estado salvo. Recarregue antes de tentar novamente.',
+  'taxonomy.stale':
+    'As categorias mudaram durante a edição. Confira a lista atual.',
+  'taxonomy.permissionChanged':
+    'Sua permissão no espaço mudou. Você ainda pode visualizar as categorias.',
+  'taxonomy.usage': '{used} de {limit} vagas de categorias e etiquetas usadas',
+  'taxonomy.unlimited':
+    'Vagas de categorias e etiquetas usadas: {used}. Sem limite.',
+  'taxonomy.limitReached':
+    'Limite de categorias e etiquetas atingido. Remova uma entrada não usada antes de adicionar outra.',
+  'taxonomy.saved': 'Categoria salva.',
+  'taxonomy.deleted': 'Categoria excluída. Os lugares foram mantidos.',
+  'taxonomy.reload': 'Recarregar',
+  'taxonomy.review':
+    'Confira a lista atual antes de tentar novamente. Seu rascunho foi mantido.',
+  'taxonomy.colourInvalid': 'Digite uma cor hexadecimal, como #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Esta categoria foi removida. Escolha outra ou deixe o lugar sem categoria.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -88,6 +88,40 @@ function RefusedSave({
 }
 
 describe('translated planner forms', () => {
+  it('preserves unrelated draft edits when a selected category disappears', async () => {
+    const categories = [
+      { id: 'c1', name: 'Museums', colour: '#123456', icon: 'landmark' },
+    ]
+    const initial = { ...place, categoryId: 'c1' }
+    const props = {
+      open: true,
+      onOpenChange: vi.fn(),
+      mode: 'edit' as const,
+      initial,
+      days: [],
+      saving: false,
+      error: null,
+      onSubmit: vi.fn(),
+    }
+    const view = render(
+      local(<PlaceDialog {...props} categories={categories} />),
+    )
+    fireEvent.change(screen.getByLabelText(/Nazwa/), {
+      target: { value: 'My draft name' },
+    })
+    view.rerender(local(<PlaceDialog {...props} categories={[]} />))
+    expect((screen.getByLabelText(/Nazwa/) as HTMLInputElement).value).toBe(
+      'My draft name',
+    )
+    expect(
+      screen.getAllByText(String(messages['settings.taxonomy.categoryRemoved']))
+        .length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getByRole('button', { name: /Zapisz/ }).hasAttribute('disabled'),
+    ).toBe(true)
+  })
+
   it('explains an invisible place name before the disabled submit is used', () => {
     const onSubmit = vi.fn()
     render(

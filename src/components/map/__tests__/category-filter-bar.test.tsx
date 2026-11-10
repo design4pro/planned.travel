@@ -32,6 +32,26 @@ const CATEGORIES: ReadonlyArray<MapCategory> = [
 ]
 
 describe('CategoryFilterBar', () => {
+  it('clears deleted selections while retaining surviving categories after refresh', () => {
+    const onChange = vi.fn()
+    const view = render(
+      <CategoryFilterBar
+        categories={CATEGORIES}
+        selected={['deleted', CATEGORIES[0].id]}
+        onChange={onChange}
+      />,
+    )
+    expect(onChange).toHaveBeenCalledWith([CATEGORIES[0].id])
+    view.rerender(
+      <CategoryFilterBar
+        categories={[]}
+        selected={[CATEGORIES[0].id]}
+        onChange={onChange}
+      />,
+    )
+    expect(onChange).toHaveBeenLastCalledWith([])
+  })
+
   it('is a toolbar of real toggle buttons', () => {
     render(
       <CategoryFilterBar

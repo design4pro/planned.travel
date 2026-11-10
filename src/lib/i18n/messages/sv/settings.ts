@@ -791,6 +791,44 @@ const messages = {
     'Uppdatera sidan för att använda de nya säkerhetskontrollerna.',
   'twoFactor.security.unavailable':
     'Säkerhetsändringar är inte tillgängliga. Läs in sidan igen för att kontrollera.',
+
+  'taxonomy.title': 'Platskategorier',
+  'taxonomy.description': 'Ordna platserna i den här arbetsytan.',
+  'taxonomy.addCategory': 'Lägg till kategori',
+  'taxonomy.readOnly':
+    'Arbetsytans ägare och administratörer kan hantera kategorier.',
+  'taxonomy.empty': 'Inga kategorier ännu. Platser kan vara utan kategori.',
+  'taxonomy.placeCount': 'Platser: {count}',
+  'taxonomy.moveUp': 'Flytta {name} uppåt',
+  'taxonomy.moveDown': 'Flytta {name} nedåt',
+  'taxonomy.rename': 'Byt namn på {name}',
+  'taxonomy.delete': 'Ta bort {name}',
+  'taxonomy.deleteTitle': 'Ta bort kategorin {name}?',
+  'taxonomy.deleteImpact': 'Platser som blir utan kategori: {count}.',
+  'taxonomy.deletePreserves':
+    'Platserna behålls. Antalet kan ändras när andra redigerar. Sparade platser med denna kategori blir också utan kategori.',
+  'taxonomy.loadFailed': 'Kategorierna kunde inte laddas. Försök igen.',
+  'taxonomy.unknownOutcome': 'Kontrollerar om ändringen sparades.',
+  'taxonomy.reconcileFailed':
+    'Det sparade läget kunde inte bekräftas. Ladda om innan du försöker igen.',
+  'taxonomy.stale':
+    'Kategorierna ändrades medan du redigerade. Granska den aktuella listan.',
+  'taxonomy.permissionChanged':
+    'Din behörighet i arbetsytan har ändrats. Du kan fortfarande se kategorierna.',
+  'taxonomy.usage':
+    '{used} av {limit} platser för kategorier och taggar används',
+  'taxonomy.unlimited':
+    'Använda platser för kategorier och taggar: {used}. Ingen gräns.',
+  'taxonomy.limitReached':
+    'Gränsen för kategorier och taggar har nåtts. Ta bort en oanvänd post innan du lägger till en ny.',
+  'taxonomy.saved': 'Kategorin sparades.',
+  'taxonomy.deleted': 'Kategorin togs bort. Platserna behölls.',
+  'taxonomy.reload': 'Ladda om',
+  'taxonomy.review':
+    'Granska den aktuella listan innan du försöker igen. Ditt utkast behålls.',
+  'taxonomy.colourInvalid': 'Ange en hexadecimal färg, till exempel #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Den här kategorin har tagits bort. Välj en annan eller lämna platsen utan kategori.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

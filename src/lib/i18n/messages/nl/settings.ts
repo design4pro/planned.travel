@@ -805,6 +805,46 @@ const messages = {
     'Vernieuw deze pagina om de bijgewerkte beveiligingscontroles te gebruiken.',
   'twoFactor.security.unavailable':
     'Beveiligingswijzigingen zijn niet beschikbaar. Laad opnieuw om het nogmaals te controleren.',
+
+  'taxonomy.title': 'Plaatscategorieën',
+  'taxonomy.description': 'Orden de plaatsen in deze werkruimte.',
+  'taxonomy.addCategory': 'Categorie toevoegen',
+  'taxonomy.readOnly':
+    'Eigenaren en beheerders van de werkruimte kunnen categorieën beheren.',
+  'taxonomy.empty':
+    'Nog geen categorieën. Plaatsen kunnen zonder categorie blijven.',
+  'taxonomy.placeCount': 'Plaatsen: {count}',
+  'taxonomy.moveUp': '{name} omhoog verplaatsen',
+  'taxonomy.moveDown': '{name} omlaag verplaatsen',
+  'taxonomy.rename': '{name} hernoemen',
+  'taxonomy.delete': '{name} verwijderen',
+  'taxonomy.deleteTitle': 'Categorie {name} verwijderen?',
+  'taxonomy.deleteImpact': 'Plaatsen die geen categorie meer hebben: {count}.',
+  'taxonomy.deletePreserves':
+    'De plaatsen blijven behouden. Het aantal kan veranderen terwijl anderen bewerken. Opgeslagen plaatsen met deze categorie krijgen ook geen categorie meer.',
+  'taxonomy.loadFailed':
+    'Categorieën konden niet worden geladen. Probeer opnieuw.',
+  'taxonomy.unknownOutcome': 'Controleren of je wijziging is opgeslagen.',
+  'taxonomy.reconcileFailed':
+    'De opgeslagen staat kon niet worden bevestigd. Laad opnieuw voordat je het nogmaals probeert.',
+  'taxonomy.stale':
+    'Categorieën zijn gewijzigd tijdens het bewerken. Bekijk de actuele lijst.',
+  'taxonomy.permissionChanged':
+    'Je rechten in de werkruimte zijn veranderd. Je kunt categorieën nog steeds bekijken.',
+  'taxonomy.usage':
+    '{used} van {limit} plaatsen voor categorieën en tags gebruikt',
+  'taxonomy.unlimited':
+    'Gebruikte plaatsen voor categorieën en tags: {used}. Onbeperkt.',
+  'taxonomy.limitReached':
+    'De limiet voor categorieën en tags is bereikt. Verwijder eerst een ongebruikte vermelding.',
+  'taxonomy.saved': 'Categorie opgeslagen.',
+  'taxonomy.deleted': 'Categorie verwijderd. De plaatsen zijn behouden.',
+  'taxonomy.reload': 'Opnieuw laden',
+  'taxonomy.review':
+    'Bekijk de actuele lijst voordat je het opnieuw probeert. Je concept blijft behouden.',
+  'taxonomy.colourInvalid': 'Voer een hexadecimale kleur in, zoals #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Deze categorie is verwijderd. Kies een andere of laat de plaats zonder categorie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

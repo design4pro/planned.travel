@@ -1,7 +1,7 @@
 /**
  * The settings section index, and the frame every settings section renders in.
  *
- * Kept out of the route file so the seven sections can share it without
+ * Kept out of the route file so the settings sections can share it without
  * importing from each other's route modules.
  *
  * The index carries message *keys* rather than sentences. A `SECTIONS` array of
@@ -27,7 +27,7 @@ import { useTranslate } from '#/lib/i18n'
 
 import type { MessageKey } from '#/lib/i18n'
 import type { LucideIcon } from 'lucide-react'
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 
 /**
  * `to` is a param-free literal from the router's own path union, so each entry
@@ -42,6 +42,7 @@ interface SettingsSectionLink {
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/billing'
+    | '/settings/places'
   readonly label: MessageKey
   readonly description: MessageKey
   readonly icon: LucideIcon
@@ -86,6 +87,12 @@ const SECTIONS: ReadonlyArray<SettingsSectionLink> = [
     label: 'settings.nav.workspace',
     description: 'settings.nav.workspace.hint',
     icon: Building2,
+  },
+  {
+    to: '/settings/places',
+    label: 'settings.taxonomy.title',
+    description: 'settings.taxonomy.description',
+    icon: Palette,
   },
   {
     to: '/settings/billing',
@@ -163,15 +170,17 @@ export function SettingsNav() {
 
 export interface SettingsSectionProps {
   title: string
+  titleRef?: Ref<HTMLHeadingElement>
   description?: string
   actions?: ReactNode
   children: ReactNode
   className?: string
 }
 
-/** The card every settings section sits in, so all seven are framed identically. */
+/** The card every settings section sits in, so all sections are framed identically. */
 export function SettingsSection({
   title,
+  titleRef,
   description,
   actions,
   children,
@@ -181,7 +190,11 @@ export function SettingsSection({
     <Card padding="none" className={cn('flex min-w-0 flex-col', className)}>
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-edge-faint px-5 py-4 sm:px-6">
         <div className="min-w-0">
-          <h2 className="font-display text-subtitle font-bold tracking-tight text-ink">
+          <h2
+            ref={titleRef}
+            tabIndex={titleRef ? -1 : undefined}
+            className="font-display text-subtitle font-bold tracking-tight text-ink"
+          >
             {title}
           </h2>
           {description === undefined ? null : (

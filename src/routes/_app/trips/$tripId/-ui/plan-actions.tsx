@@ -438,6 +438,7 @@ export interface PlaceDialogProps {
     readonly label: string
     readonly href: string
   } | null
+  readonly onReloadCategories?: () => Promise<void>
   readonly onSubmit: (values: PlaceFormValues) => void
 }
 
@@ -466,6 +467,7 @@ export function PlaceDialog({
   error,
   errorAction = null,
   onSubmit,
+  onReloadCategories,
 }: PlaceDialogProps) {
   const t = useTranslate()
   const [draft, setDraft] = React.useState(initial)
@@ -487,6 +489,17 @@ export function PlaceDialog({
     // `initial` is rebuilt by the screen when it opens the dialog for a new row.
   }, [initial, open])
 
+  const categoryMissing =
+    draft.categoryId !== NO_CATEGORY &&
+    draft.categoryId !== '' &&
+    !categories.some((category) => category.id === draft.categoryId)
+  const categoryField = React.useRef<HTMLDivElement>(null)
+  const [reloadingCategories, setReloadingCategories] = React.useState(false)
+  React.useEffect(() => {
+    if (open && categoryMissing)
+      categoryField.current?.querySelector('button')?.focus()
+  }, [open, categoryMissing])
+
   const lat = parseCoordinate(draft.lat)
   const lng = parseCoordinate(draft.lng)
   const latValid = lat === null || (Number.isFinite(lat) && Math.abs(lat) <= 90)
@@ -494,7 +507,13 @@ export function PlaceDialog({
     lng === null || (Number.isFinite(lng) && Math.abs(lng) <= 180)
   const paired = (lat === null) === (lng === null)
   const named = hasVisibleCharacter(draft.name)
-  const canSave = named && latValid && lngValid && paired
+  const canSave =
+    named &&
+    latValid &&
+    lngValid &&
+    paired &&
+    !categoryMissing &&
+    !reloadingCategories
 
   let latitudeError: string | undefined
   if (touched && !latValid) latitudeError = t('trips.plan.editor.latitudeError')
@@ -646,15 +665,49 @@ export function PlaceDialog({
                   autoComplete="off"
                 />
               </Field>
-              <Field label={t('modules.field.category')}>
+              <Field
+                ref={categoryField}
+                label={t('modules.field.category')}
+                error={
+                  categoryMissing
+                    ? t('settings.taxonomy.categoryRemoved')
+                    : undefined
+                }
+              >
                 <SimpleSelect
-                  options={categoryOptions(categories, t)}
+                  options={
+                    categoryMissing
+                      ? [
+                          {
+                            value: draft.categoryId,
+                            label: t('settings.taxonomy.categoryRemoved'),
+                            disabled: true,
+                          },
+                          ...categoryOptions(categories, t),
+                        ]
+                      : categoryOptions(categories, t)
+                  }
                   value={draft.categoryId}
                   onValueChange={(value) =>
                     setDraft({ ...draft, categoryId: value })
                   }
                   ariaLabel={t('modules.field.category')}
                 />
+                {error && onReloadCategories ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={reloadingCategories}
+                    onClick={() => {
+                      setReloadingCategories(true)
+                      void onReloadCategories()
+                        .catch(() => {})
+                        .finally(() => setReloadingCategories(false))
+                    }}
+                  >
+                    {t('settings.taxonomy.reload')}
+                  </Button>
+                ) : null}
               </Field>
             </div>
 

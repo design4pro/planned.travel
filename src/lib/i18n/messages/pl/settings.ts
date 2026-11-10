@@ -823,6 +823,45 @@ const messages = {
     'Odśwież stronę, aby użyć nowych mechanizmów zabezpieczeń.',
   'twoFactor.security.unavailable':
     'Zmiany zabezpieczeń są niedostępne. Odśwież stronę, aby sprawdzić ponownie.',
+
+  'taxonomy.title': 'Kategorie miejsc',
+  'taxonomy.description': 'Uporządkuj miejsca w tej przestrzeni roboczej.',
+  'taxonomy.addCategory': 'Dodaj kategorię',
+  'taxonomy.readOnly':
+    'Właściciele i administratorzy przestrzeni mogą zarządzać kategoriami.',
+  'taxonomy.empty':
+    'Nie ma jeszcze kategorii. Miejsca mogą pozostać bez kategorii.',
+  'taxonomy.placeCount': 'Miejsca: {count}',
+  'taxonomy.moveUp': 'Przenieś {name} wyżej',
+  'taxonomy.moveDown': 'Przenieś {name} niżej',
+  'taxonomy.rename': 'Zmień nazwę {name}',
+  'taxonomy.delete': 'Usuń {name}',
+  'taxonomy.deleteTitle': 'Usunąć kategorię {name}?',
+  'taxonomy.deleteImpact': 'Miejsca, które pozostaną bez kategorii: {count}.',
+  'taxonomy.deletePreserves':
+    'Miejsca zostaną zachowane. Ich liczba może się zmieniać podczas edycji przez innych. Zapisane miejsca z tą kategorią także pozostaną bez kategorii.',
+  'taxonomy.loadFailed': 'Nie udało się wczytać kategorii. Spróbuj ponownie.',
+  'taxonomy.unknownOutcome': 'Sprawdzanie, czy zmiana została zapisana.',
+  'taxonomy.reconcileFailed':
+    'Nie udało się potwierdzić zapisu. Wczytaj ponownie przed kolejną próbą.',
+  'taxonomy.stale':
+    'Kategorie zmieniły się podczas edycji. Sprawdź aktualną listę.',
+  'taxonomy.permissionChanged':
+    'Twoje uprawnienia w przestrzeni uległy zmianie. Nadal możesz przeglądać kategorie.',
+  'taxonomy.usage':
+    'Wykorzystane miejsca na kategorie i tagi: {used} z {limit}',
+  'taxonomy.unlimited':
+    'Wykorzystane miejsca na kategorie i tagi: {used}. Bez limitu.',
+  'taxonomy.limitReached':
+    'Osiągnięto limit kategorii i tagów. Usuń nieużywany wpis przed dodaniem kolejnego.',
+  'taxonomy.saved': 'Kategoria zapisana.',
+  'taxonomy.deleted': 'Kategoria usunięta. Miejsca zostały zachowane.',
+  'taxonomy.reload': 'Wczytaj ponownie',
+  'taxonomy.review':
+    'Sprawdź aktualną listę przed kolejną próbą. Szkic został zachowany.',
+  'taxonomy.colourInvalid': 'Wpisz kolor szesnastkowy, np. #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Ta kategoria została usunięta. Wybierz inną lub pozostaw miejsce bez kategorii.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -756,6 +756,44 @@ const messages = {
     'ページを更新して新しいセキュリティ確認を使用してください。',
   'twoFactor.security.unavailable':
     'セキュリティの変更は利用できません。再読み込みして確認してください。',
+
+  'taxonomy.title': '場所のカテゴリ',
+  'taxonomy.description': 'このワークスペースの場所を整理します。',
+  'taxonomy.addCategory': 'カテゴリを追加',
+  'taxonomy.readOnly':
+    'ワークスペースのオーナーと管理者はカテゴリを管理できます。',
+  'taxonomy.empty':
+    'カテゴリはまだありません。場所は未分類のままでも利用できます。',
+  'taxonomy.placeCount': '場所数：{count}',
+  'taxonomy.moveUp': '{name}を上へ移動',
+  'taxonomy.moveDown': '{name}を下へ移動',
+  'taxonomy.rename': '{name}の名前を変更',
+  'taxonomy.delete': '{name}を削除',
+  'taxonomy.deleteTitle': 'カテゴリ「{name}」を削除しますか？',
+  'taxonomy.deleteImpact': '未分類になる場所数：{count}。',
+  'taxonomy.deletePreserves':
+    '場所は保持されます。他のメンバーの編集により件数が変わることがあります。このカテゴリを使う保存済みの場所も未分類になります。',
+  'taxonomy.loadFailed':
+    'カテゴリを読み込めませんでした。もう一度お試しください。',
+  'taxonomy.unknownOutcome': '変更が保存されたか確認しています。',
+  'taxonomy.reconcileFailed':
+    '保存状態を確認できませんでした。再試行する前に再読み込みしてください。',
+  'taxonomy.stale':
+    '編集中にカテゴリが変更されました。最新の一覧を確認してください。',
+  'taxonomy.permissionChanged':
+    'ワークスペースの権限が変更されました。カテゴリの閲覧は引き続き可能です。',
+  'taxonomy.usage': 'カテゴリとタグの使用枠：{used}／{limit}',
+  'taxonomy.unlimited': 'カテゴリとタグの使用枠：{used}。上限なし。',
+  'taxonomy.limitReached':
+    'カテゴリとタグの上限に達しました。不要な項目を削除してから追加してください。',
+  'taxonomy.saved': 'カテゴリを保存しました。',
+  'taxonomy.deleted': 'カテゴリを削除しました。場所は保持されました。',
+  'taxonomy.reload': '再読み込み',
+  'taxonomy.review':
+    '再試行する前に最新の一覧を確認してください。下書きは保持されています。',
+  'taxonomy.colourInvalid': '#3b82f6のような16進数の色を入力してください。',
+  'taxonomy.categoryRemoved':
+    'このカテゴリは削除されました。別のカテゴリを選ぶか、場所を未分類のままにしてください。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

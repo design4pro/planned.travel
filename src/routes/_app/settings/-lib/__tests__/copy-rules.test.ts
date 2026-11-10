@@ -33,6 +33,10 @@ import { LOCALE_TAGS } from '#/lib/i18n/locales'
  */
 
 const SETTINGS_DIR = join(process.cwd(), 'src', 'routes', '_app', 'settings')
+const TAXONOMY_FILE = join(
+  process.cwd(),
+  'src/routes/_app/-ui/taxonomy-editor.tsx',
+)
 const NAV_FILE = join(
   process.cwd(),
   'src',
@@ -133,6 +137,7 @@ function shippedSources(): ReadonlyArray<Source> {
   }
 
   walk(SETTINGS_DIR)
+  files.push({ path: TAXONOMY_FILE, text: readFileSync(TAXONOMY_FILE, 'utf8') })
   // Factor lifecycle refusals use the shared auth error mapping.
   const authErrors = join(process.cwd(), 'src/routes/(auth)/-lib/errors.ts')
   files.push({ path: authErrors, text: readFileSync(authErrors, 'utf8') })
@@ -375,7 +380,16 @@ describe('the module reads correctly in Arabic', () => {
 
 describe('the catalogue and the screens agree', () => {
   const used = new Set<string>()
-  for (const source of SOURCES) {
+  // The planner consumes category recovery copy without becoming a settings screen.
+  const placeActions = join(
+    process.cwd(),
+    'src/routes/_app/trips/$tripId/-ui/plan-actions.tsx',
+  )
+  const copyReaders = [
+    ...SOURCES,
+    { path: placeActions, text: readFileSync(placeActions, 'utf8') },
+  ]
+  for (const source of copyReaders) {
     for (const match of source.text.matchAll(/'settings\.([\w.]+)'/g)) {
       used.add(match[1])
     }
