@@ -18,6 +18,7 @@ import {
   getTripStorageBytes,
   listBudgetItems,
   listCategories,
+  ensureDefaultCategories,
   listSettlements,
   listTripDayNotes,
   listTripDays,
@@ -228,6 +229,7 @@ export const loadTripPlan = createServerFn({ method: 'GET' })
   .handler(async ({ data }): Promise<PlanPayload> => {
     const scope = await appScope()
     const trip = await requireTrip(scope, data.tripId)
+    await ensureDefaultCategories(scope)
 
     // The notes come from their own read rather than from the itinerary: this is the only handler
     // that renders them, and `getTripItinerary`'s other two callers discard them (#393).

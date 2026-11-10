@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useWideLayout } from '#/lib/wide-layout'
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 
 import { readWorkspaceShell, roomRefreshToken } from '#/lib/room-refresh'
@@ -102,6 +103,7 @@ export const Route = createFileRoute('/_app')({
  * marketing tree or the auth tree.
  */
 function AppShell() {
+  useWideLayout()
   const { shell } = Route.useRouteContext()
   const impersonated = shell.session.impersonatedBy !== null
 

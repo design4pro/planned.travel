@@ -887,6 +887,17 @@ export const tripFavourites = sqliteTable(
  * Taxonomy
  * ---------------------------------------------------------------------------------------------- */
 
+/** Durable provenance of the once-only workspace category bootstrap. */
+export const categoryInitializations = sqliteTable(
+  'category_initializations',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    initializedAt: integer('initialized_at', { mode: 'timestamp_ms' }).notNull(),
+  },
+  (t) => [uniqueIndex('category_initializations_org_unq').on(t.organizationId)],
+)
+
 export const categories = sqliteTable(
   'categories',
   {

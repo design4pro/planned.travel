@@ -122,15 +122,20 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  const tempRoot = join(cwd, '.ai/tmp/validation')
-  mkdirSync(tempRoot, { recursive: true, mode: 0o700 })
-  const tempDir = mkdtempSync(join(tempRoot, 'command-'))
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
   return new Promise((done) => {
     const started = Date.now()
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
-      env: { ...process.env, TMPDIR: tempDir, TMP: tempDir, TEMP: tempDir },
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -191,7 +196,7 @@ export function runValidationCommand(
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
-  }).finally(() => rmSync(tempDir, { recursive: true, force: true }))
+  }).finally(() => rmSync(temporary, { recursive: true, force: true }))
 }
 
 export async function runGate({

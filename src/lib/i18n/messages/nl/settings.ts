@@ -159,6 +159,10 @@ const messages = {
     'De voorwaarden en de privacyverklaring verschijnen alleen in het Engels. Al het andere in het product is vertaald.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Indeling',
+  'appearance.layout.label': 'Brede indeling',
+  'appearance.layout.hint':
+    'Gebruik de volledige appbreedte en lijn dashboardwidgets uit met de komende reis. Wordt alleen in deze browser opgeslagen.',
   'appearance.error': 'De weergave is niet geladen',
   'appearance.theme.title': 'Thema',
   'appearance.theme.description':

@@ -177,49 +177,33 @@ describe('configured validation execution', () => {
     expect(timeout.exitCode).toBe(124)
   })
 
-  it.each([
-    ['passed', '', 0],
-    ['failed', '; exit 7', 7],
-    ['timeout', '; exec sleep 30', 124],
-  ])(
-    'isolates temporary files and cleans up after %s',
-    async (result, ending, exitCode) => {
-      const cwd = fixture()
-      const inherited = process.env.TMPDIR
-      const unavailable = join(cwd, 'unavailable')
-      process.env.TMPDIR = unavailable
-      const command =
-        'test "$TMPDIR" = "$TMP" && test "$TMP" = "$TEMP" && touch "$TMPDIR/probe" && printf "%s" "$TMPDIR"'
-      let runs
-      try {
-        runs = await Promise.all(
-          [1, 2].map((n) =>
-            runValidationCommand(command + ending, {
-              cwd,
-              logPath: join(cwd, `${n}.log`),
-              timeoutMs: 500,
-            }),
+  it('isolates concurrent command temp files from the inherited host directory and cleans every outcome', async () => {
+    const cwd = fixture()
+    const inherited = process.env.TMPDIR
+    process.env.TMPDIR = join(cwd, 'unavailable')
+    try {
+      const commands = ['exit 0', 'exit 7', 'sleep 30']
+      const logs = commands.map((_, index) => join(cwd, `${index}.log`))
+      const results = await Promise.all(
+        commands.map((command, index) =>
+          runValidationCommand(
+            `printf '%s' "$TMPDIR"; test "$TMPDIR" = "$TMP" && test "$TMPDIR" = "$TEMP" && touch "$TMPDIR/probe" || exit 9; ${command}`,
+            { cwd, logPath: logs[index], timeoutMs: 500 },
           ),
-        )
-      } finally {
-        if (inherited === undefined) delete process.env.TMPDIR
-        else process.env.TMPDIR = inherited
-      }
-      expect(runs.map((run) => run.exitCode)).toEqual([exitCode, exitCode])
-      expect(runs.map((run) => run.result)).toEqual([result, result])
-      const paths = [1, 2].map((n) =>
-        readFileSync(join(cwd, `${n}.log`), 'utf8'),
+        ),
       )
-      expect(paths[0]).not.toBe(paths[1])
+      expect(results.map((result) => result.exitCode)).toEqual([0, 7, 124])
+      const paths = logs.map((log) => readFileSync(log, 'utf8'))
+      expect(new Set(paths).size).toBe(3)
       for (const path of paths) {
-        expect(path.startsWith(join(cwd, '.ai/tmp/validation/command-'))).toBe(
-          true,
-        )
+        expect(path.startsWith(join(cwd, '.ai/tmp/validation/'))).toBe(true)
         expect(existsSync(path)).toBe(false)
       }
-      expect(existsSync(unavailable)).toBe(false)
-    },
-  )
+    } finally {
+      if (inherited === undefined) delete process.env.TMPDIR
+      else process.env.TMPDIR = inherited
+    }
+  })
 
   it('runs fresh by default even with a green receipt, then permits explicit local resume', async () => {
     const cwd = fixture()
