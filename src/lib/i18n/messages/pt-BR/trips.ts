@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Esta prévia expirou. Gere uma nova antes de confirmar.',
+  'gallery.publish.title': 'Prévia da galeria',
+  'gallery.publish.publicTitle': 'Título público',
+  'gallery.publish.attribution': 'Nome de exibição',
+  'gallery.publish.showDates': 'Incluir as datas da viagem',
+  'gallery.publish.preview': 'Ver o que será compartilhado',
+  'gallery.publish.confirm': 'Confirmar esta prévia',
+  'gallery.publish.captureFailed':
+    'Não foi possível preparar a prévia. Confira os campos e tente novamente.',
+  'gallery.publish.tooLarge': 'Esta viagem é grande demais para a prévia.',
+  'gallery.publish.empty': 'Vazio',
+  'gallery.publish.version': 'Versão',
+  'gallery.publish.countries': 'Códigos de país',
+  'gallery.publish.days': 'Dias',
+  'gallery.publish.places': 'Lugares',
+  'gallery.publish.order': 'Ordem',
+  'gallery.publish.yes': 'Sim',
+  'gallery.publish.no': 'Não',
+  'gallery.publish.publicFields':
+    'O título, o resumo, o nome de exibição, os códigos de país, os títulos dos dias, os nomes e categorias dos lugares e suas coordenadas podem ser públicos. As datas só são incluídas se você escolher.',
+  'gallery.publish.privateFields':
+    'Viajantes, notas, arquivos, custos e reservas não são incluídos.',
+  'gallery.publish.freeTextWarning':
+    'Antes de confirmar, confira se o título, o resumo, o nome de exibição, os títulos dos dias e os nomes dos lugares contêm informações pessoais.',
+
   'plan.photo.edit': 'Editar imagem',
   'plan.photo.unavailable':
     'O envio e a edição de imagens não estão disponíveis. A imagem atual é mantida.',

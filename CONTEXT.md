@@ -124,4 +124,5 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 
 - **Release publication** - the production-only record binding a release version to reviewed prose and verified deployment evidence; withdrawal hides it without erasing that evidence.
 - **Content revision** - an immutable version of editorial prose; translations and review apply to that exact version rather than following later edits automatically.
+- **Gallery preview** - a private, actor-bound copy of the exact allowlisted document a workspace owner or admin inspects before confirming a possible gallery submission. It expires after fifteen minutes and grants no publication or public access.
 - **Wide layout** - a browser-local appearance choice that expands authenticated app content and aligns desktop dashboard widgets with the upcoming trip. It changes presentation across workspaces in that browser and grants no access.

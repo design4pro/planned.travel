@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Срок действия предпросмотра истёк. Перед подтверждением создайте новый.',
+  'gallery.publish.title': 'Предпросмотр галереи',
+  'gallery.publish.publicTitle': 'Публичное название',
+  'gallery.publish.attribution': 'Отображаемое имя',
+  'gallery.publish.showDates': 'Включить даты поездки',
+  'gallery.publish.preview': 'Посмотреть данные для публикации',
+  'gallery.publish.confirm': 'Подтвердить этот предпросмотр',
+  'gallery.publish.captureFailed':
+    'Не удалось подготовить предпросмотр. Проверьте поля и повторите попытку.',
+  'gallery.publish.tooLarge': 'Эта поездка слишком велика для предпросмотра.',
+  'gallery.publish.empty': 'Пусто',
+  'gallery.publish.version': 'Версия',
+  'gallery.publish.countries': 'Коды стран',
+  'gallery.publish.days': 'Дни',
+  'gallery.publish.places': 'Места',
+  'gallery.publish.order': 'Порядок',
+  'gallery.publish.yes': 'Да',
+  'gallery.publish.no': 'Нет',
+  'gallery.publish.publicFields':
+    'Название, описание, отображаемое имя, коды стран, названия дней, названия и категории мест и их координаты могут стать публичными. Даты включаются только по вашему выбору.',
+  'gallery.publish.privateFields':
+    'Путешественники, заметки, файлы, расходы и бронирования не включаются.',
+  'gallery.publish.freeTextWarning':
+    'Перед подтверждением проверьте название, описание, отображаемое имя, названия дней и мест на наличие личной информации.',
+
   'plan.photo.edit': 'Изменить изображение',
   'plan.photo.unavailable':
     'Загрузка и редактирование изображений недоступны. Текущее изображение сохраняется.',

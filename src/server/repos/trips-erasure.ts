@@ -3,6 +3,7 @@ import { retainTripStorage } from './storage-admission'
 import { asc, eq, exists, ne, notExists, or, sql } from 'drizzle-orm'
 import { member } from '#/server/db/auth-schema'
 import {
+  galleryPreviews,
   assignmentParticipants,
   auditLog,
   calendarFeeds,
@@ -63,6 +64,7 @@ export async function eraseUserTrips(
   prepareTripRemoval: PrepareTripRemoval,
 ): Promise<ReadonlyArray<string>> {
   assertErasure(scope, userId, formerMemberId)
+  await scrubRows(scope, galleryPreviews, eq(galleryPreviews.actorUserId, userId))
   const workspaceMembers = await scope.db
     .select()
     .from(member)

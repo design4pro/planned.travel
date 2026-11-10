@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Bu önizlemenin süresi doldu. Onaylamadan önce yeni bir önizleme oluşturun.',
+  'gallery.publish.title': 'Galeri önizlemesi',
+  'gallery.publish.publicTitle': 'Herkese açık başlık',
+  'gallery.publish.attribution': 'Görünen ad',
+  'gallery.publish.showDates': 'Seyahat tarihlerini ekle',
+  'gallery.publish.preview': 'Paylaşılacak içeriği önizle',
+  'gallery.publish.confirm': 'Bu önizlemeyi onayla',
+  'gallery.publish.captureFailed':
+    'Önizleme hazırlanamadı. Alanları kontrol edip tekrar deneyin.',
+  'gallery.publish.tooLarge': 'Bu seyahat önizleme için çok büyük.',
+  'gallery.publish.empty': 'Boş',
+  'gallery.publish.version': 'Sürüm',
+  'gallery.publish.countries': 'Ülke kodları',
+  'gallery.publish.days': 'Günler',
+  'gallery.publish.places': 'Yerler',
+  'gallery.publish.order': 'Sıra',
+  'gallery.publish.yes': 'Evet',
+  'gallery.publish.no': 'Hayır',
+  'gallery.publish.publicFields':
+    'Başlık, özet, görünen ad, ülke kodları, gün başlıkları, yer adları ve kategorileri ile koordinatları herkese açık olabilir. Tarihler yalnızca seçerseniz eklenir.',
+  'gallery.publish.privateFields':
+    'Yolcular, notlar, dosyalar, masraflar ve rezervasyonlar eklenmez.',
+  'gallery.publish.freeTextWarning':
+    'Onaylamadan önce başlık, özet, görünen ad, gün başlıkları ve yer adlarında kişisel bilgi olup olmadığını kontrol edin.',
+
   'plan.photo.edit': 'Görseli düzenle',
   'plan.photo.unavailable':
     'Görsel yükleme ve düzenleme kullanılamıyor. Mevcut görsel korunur.',

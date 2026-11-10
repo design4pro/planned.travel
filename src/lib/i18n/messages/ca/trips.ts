@@ -14,6 +14,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Aquesta previsualització ha caducat. Genera’n una de nova abans de confirmar.',
+  'gallery.publish.title': 'Previsualització de la galeria',
+  'gallery.publish.publicTitle': 'Títol públic',
+  'gallery.publish.attribution': 'Nom visible',
+  'gallery.publish.showDates': 'Inclou les dates del viatge',
+  'gallery.publish.preview': 'Mostra què es compartirà',
+  'gallery.publish.confirm': 'Confirma aquesta previsualització',
+  'gallery.publish.captureFailed':
+    'No hem pogut preparar la previsualització. Revisa els camps i torna-ho a provar.',
+  'gallery.publish.tooLarge':
+    'Aquest viatge és massa gran per previsualitzar-lo.',
+  'gallery.publish.empty': 'Buit',
+  'gallery.publish.version': 'Versió',
+  'gallery.publish.countries': 'Codis de país',
+  'gallery.publish.days': 'Dies',
+  'gallery.publish.places': 'Llocs',
+  'gallery.publish.order': 'Ordre',
+  'gallery.publish.yes': 'Sí',
+  'gallery.publish.no': 'No',
+  'gallery.publish.publicFields':
+    'El títol, el resum, el nom visible, els codis de país, els títols dels dies, els noms i les categories dels llocs i les coordenades poden ser públics. Les dates només s’inclouen si ho tries.',
+  'gallery.publish.privateFields':
+    'No s’inclouen viatgers, notes, fitxers, despeses ni reserves.',
+  'gallery.publish.freeTextWarning':
+    'Abans de confirmar, comprova si el títol, el resum, el nom visible, els títols dels dies i els noms dels llocs contenen informació personal.',
+
   'plan.photo.edit': 'Edita la imatge',
   'plan.photo.unavailable':
     'La pujada i l’edició d’imatges no estan disponibles. Es conserva la imatge actual.',

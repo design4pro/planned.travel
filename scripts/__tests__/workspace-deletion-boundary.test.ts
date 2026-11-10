@@ -12,6 +12,7 @@ it('pins every production ledger reader and admits no writer before the driver s
   const allowed: Record<string, ReadonlyArray<string>> = {
     'server/auth/index.ts': ['assertWorkspaceNotDeleting'],
     'server/billing/store.ts': ['workspaceDeletionPending'],
+    'server/repos/community.ts': ['workspaceDeletionAbsent'],
     'server/repos/members.ts': [
       'assertWorkspaceNotDeleting',
       'workspaceDeletionAbsent',

@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Denna förhandsvisning har gått ut. Skapa en ny innan du bekräftar.',
+  'gallery.publish.title': 'Förhandsvisning av galleri',
+  'gallery.publish.publicTitle': 'Offentlig titel',
+  'gallery.publish.attribution': 'Visningsnamn',
+  'gallery.publish.showDates': 'Ta med resedatum',
+  'gallery.publish.preview': 'Visa vad som kommer att delas',
+  'gallery.publish.confirm': 'Bekräfta denna förhandsvisning',
+  'gallery.publish.captureFailed':
+    'Förhandsvisningen kunde inte skapas. Kontrollera fälten och försök igen.',
+  'gallery.publish.tooLarge': 'Resan är för stor för en förhandsvisning.',
+  'gallery.publish.empty': 'Tomt',
+  'gallery.publish.version': 'Version',
+  'gallery.publish.countries': 'Landskoder',
+  'gallery.publish.days': 'Dagar',
+  'gallery.publish.places': 'Platser',
+  'gallery.publish.order': 'Ordning',
+  'gallery.publish.yes': 'Ja',
+  'gallery.publish.no': 'Nej',
+  'gallery.publish.publicFields':
+    'Titel, sammanfattning, visningsnamn, landskoder, dagtitlar, platsnamn, kategorier och koordinater kan bli offentliga. Datum tas endast med om du väljer det.',
+  'gallery.publish.privateFields':
+    'Resenärer, anteckningar, filer, kostnader och bokningar tas inte med.',
+  'gallery.publish.freeTextWarning':
+    'Kontrollera titel, sammanfattning, visningsnamn, dagtitlar och platsnamn efter personuppgifter innan du bekräftar.',
+
   'plan.photo.edit': 'Redigera bild',
   'plan.photo.unavailable':
     'Det går inte att ladda upp eller redigera bilder. Den nuvarande bilden behålls.',
