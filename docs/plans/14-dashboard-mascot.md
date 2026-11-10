@@ -62,7 +62,8 @@ decision, recorded here for the auditor and the executing run alike:
   slower loop, no loop at all.
 - The individual keyframe _segments_ inside a loop (a hop's rise, a head turn) still land in the
   150–260ms envelope; only the loop's period exceeds it, and the loop is what conditions 2–4
-  govern.
+  govern. Card travel uses approximately 200ms segments in each 16s/12s/8s band loop,
+  with rest intervals between outward and returning travel.
 
 #### What is on disk today, measured at HEAD, not recalled
 

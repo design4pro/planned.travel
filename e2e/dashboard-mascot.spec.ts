@@ -318,6 +318,30 @@ test('Nomi travels inside a stationary target and freezes for keyboard activatio
   const bird = page.locator('svg[data-band]')
   await chat.scrollIntoViewIfNeeded()
   await page.mouse.move(0, 0)
+  const segmentDurations = await bird.evaluate((node) => {
+    const originalBand = node.getAttribute('data-band')
+    const durations = []
+    for (const band of ['settled', 'eager', 'countdown']) {
+      node.setAttribute('data-band', band)
+      const effect = node.getAnimations()[0]?.effect as KeyframeEffect
+      const frames = effect.getKeyframes()
+      const period = Number(effect.getTiming().duration)
+      for (let index = 1; index < frames.length; index++) {
+        if (frames[index].transform !== frames[index - 1].transform)
+          durations.push(
+            period *
+              (frames[index].computedOffset - frames[index - 1].computedOffset),
+          )
+      }
+    }
+    node.setAttribute('data-band', originalBand!)
+    return durations
+  })
+  expect(segmentDurations).toHaveLength(6)
+  for (const duration of segmentDurations) {
+    expect(duration).toBeGreaterThanOrEqual(150)
+    expect(duration).toBeLessThanOrEqual(260)
+  }
   const { target, samples } = await chat.evaluate(async (button) => {
     const illustration = button.querySelector('svg[data-band]')
     const animation = illustration?.getAnimations()[0]
@@ -395,7 +419,7 @@ test('live motion preferences and hidden tabs stop both illustration loops', asy
     'none',
   )
   await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await expect(bird).toHaveCSS('animation-name', 'pt-mascot-travel')
+  await expect(bird).toHaveCSS('animation-name', /^pt-mascot-travel/)
   const pause = page.getByRole('button', { name: 'Pause animation' })
   await pause.focus()
   await expect(bird).toHaveCSS('animation-play-state', 'running')

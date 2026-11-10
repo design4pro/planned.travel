@@ -1238,8 +1238,20 @@ html[dir='rtl'] #sentry-feedback {
 
 @keyframes pt-mascot-travel {
   0%, 25%, 100% { transform: translateX(0); }
-  45%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
-  90% { transform: translateX(0); }
+  26.25%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  71.25% { transform: translateX(0); }
+}
+
+@keyframes pt-mascot-travel-eager {
+  0%, 25%, 100% { transform: translateX(0); }
+  26.6667%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  71.6667% { transform: translateX(0); }
+}
+
+@keyframes pt-mascot-travel-countdown {
+  0%, 25%, 100% { transform: translateX(0); }
+  27.5%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  72.5% { transform: translateX(0); }
 }
 
 @keyframes pt-mascot-rest {
@@ -1249,13 +1261,13 @@ html[dir='rtl'] #sentry-feedback {
 
 @media (prefers-reduced-motion: no-preference) {
   .pt-mascot-bird:where([data-moving='true']:not([data-reduced])) {
-    animation: pt-mascot-travel 16s ease-in-out infinite;
+    animation: pt-mascot-travel 16s var(--ease-out-quint) infinite;
   }
   .pt-mascot-bird:where([data-moving='true']:not([data-reduced])) .pt-mascot-pose {
     animation: pt-mascot-rest 2s ease-in-out infinite;
   }
-  .pt-mascot-bird[data-band='eager'][data-moving='true']:not([data-reduced]) { animation-duration: 12s; }
-  .pt-mascot-bird[data-band='countdown'][data-moving='true']:not([data-reduced]) { animation-duration: 8s; }
+  .pt-mascot-bird[data-band='eager'][data-moving='true']:not([data-reduced]) { animation-name: pt-mascot-travel-eager; animation-duration: 12s; }
+  .pt-mascot-bird[data-band='countdown'][data-moving='true']:not([data-reduced]) { animation-name: pt-mascot-travel-countdown; animation-duration: 8s; }
   .pt-mascot-bird[data-paused], .pt-mascot-bird[data-hidden],
   .pt-mascot-bird[data-paused] .pt-mascot-pose, .pt-mascot-bird[data-hidden] .pt-mascot-pose,
   .pt-mascot-launcher:is(:hover, :focus-visible, [aria-expanded='true'], [aria-busy='true']) .pt-mascot-bird,
