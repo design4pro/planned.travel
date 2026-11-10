@@ -221,7 +221,7 @@ describe('platform_audit_log declaration', () => {
  * `tsc --noEmit` as well as run by vitest.
  */
 describe('the four vocabulary columns, narrowed in TypeScript', () => {
-  it('types entity_type as the ten entities of docs/ACCESS.md §4.2', () => {
+  it('types entity_type as the eleven entities of docs/ACCESS.md §4.2', () => {
     expectTypeOf<
       NewPlatformAuditLogEntry['entityType']
     >().toEqualTypeOf<PlatformAuditEntityType>()
@@ -231,7 +231,7 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'trip'>().not.toExtend<PlatformAuditEntityType>()
   })
 
-  it('types action as the thirty-six actions of docs/ACCESS.md §4.2', () => {
+  it('types action as the forty-two actions of docs/ACCESS.md §4.2', () => {
     expectTypeOf<
       NewPlatformAuditLogEntry['action']
     >().toEqualTypeOf<PlatformAuditAction>()
@@ -241,8 +241,8 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'NOT A DOTTED ACTION'>().not.toExtend<PlatformAuditAction>()
     expectTypeOf<'trip.hijacked'>().not.toExtend<PlatformAuditAction>()
 
-    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(36)
-    // §4.2: eighteen two-segment actions and eighteen three-segment platform ones.
+    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(42)
+    // §4.2: twenty-four two-segment actions and eighteen three-segment platform ones.
     const platform = PLATFORM_AUDIT_ACTIONS.filter((action) =>
       action.startsWith('platform.'),
     )
@@ -552,8 +552,8 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
 
   it('leaves entity_type unconstrained in SQL, which is what docs/ACCESS.md §4.1 asks for', async () => {
     // §4.1's type column marks `actor_kind` as text + enumCheck() and `entity_type` as plain text,
-    // with the ten values in the Notes column; `action` is closed the same way in §4.2 and is
-    // plain text too. An eleventh entity type therefore costs an amendment to §4.2's mapping table and
+    // with the eleven values in the Notes column; `action` is closed the same way in §4.2 and is
+    // plain text too. A twelfth entity type therefore costs an amendment to §4.2's mapping table and
     // not a recreate of a table that may not be recreated. This test pins the *absence* of the
     // CHECK, so a future round cannot quietly add one; the narrowing that does the work is the
     // `$type` asserted in the block below, which is why an undeclared value needs a cast to get
@@ -563,7 +563,7 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.entityType).toBe('trip')
     expect(PLATFORM_AUDIT_ENTITY_TYPES).not.toContain('trip')
-    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(10)
+    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(11)
   })
 
   it('leaves action unconstrained in SQL for the same reason', async () => {

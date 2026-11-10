@@ -24,8 +24,8 @@ are required of the later additive generated schema; none is created by this ame
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `content_entries`            | Unique `(collection, slug)`; release entries use `collection=blog`, `category=changelog`; lifecycle and approved published-version pointer.                                                                                                             |
 | `content_versions`           | Immutable; unique `(entryId, revision)`; typed English body, source commit, normalized hash and cutoff SHA.                                                                                                                                             |
-| `content_translations`       | Unique `(versionId, locale)`; typed body and explicit reviewer/time bound to that exact immutable version.                                                                                                                                              |
-| `release_publications`       | Unique `(environment, releaseVersion)`, meaning `(production, headingVersion)`; environment restricted to production; source version/hash, heading date, reviewer/time, visible pointer, first shipped time, withdrawal reason/time and CAS generation. |
+| `content_translations`       | Unique `(versionId, locale)`; typed body and explicit review audit reference/time bound to that exact immutable version.                                                                                                                                              |
+| `release_publications`       | Unique `(environment, releaseVersion)`, meaning `(production, headingVersion)`; environment restricted to production; source version/hash, heading date, review audit reference/time, visible pointer, first shipped time, withdrawal reason/time and CAS generation. |
 | `release_deployments`        | Unique provider deployment/version identity plus run/attempt; exact main commit/tree, verified target, activation time/outcome and receipt digest; no credentials or raw logs/payloads.                                                                 |
 | `release_deployment_entries` | Unique `(deploymentId, publicationId)`; binds the exact source version contained in that deployment.                                                                                                                                                    |
 | `release_production_state`   | Singleton active deployment pointer and CAS generation; older evidence cannot replace current state.                                                                                                                                                    |
@@ -91,6 +91,18 @@ retry/logging behavior; existing `runBatch` and scoped `runAtomicBatch` callers 
 contracts. The prepared-statement seam is a release-only exception to ACCESS §4.3, never a
 request to make existing best-effort audit failures roll back completed work. Keep their
 regression suites passing when the new runtime seams are eventually implemented.
+
+### Review provenance and identity retention
+
+Content translations and source approvals store an opaque `reviewAuditId` and review time,
+not another copy of a reviewer user id. That reference is the principal audit operation id
+inserted by the same fail-closed batch; the audit owner records the current reviewer there.
+Translation audit metadata binds the exact version/hash and supported locale code. No foreign
+key points at the expiring audit row. Reviewer identity is recoverable only within the existing
+400-day platform audit retention; the surviving review reference does not extend it. Reviewer
+erasure or audit pruning must not erase content, revoke completed source approval or invalidate
+an approved exact-version translation. This adds no erasure writer or release permission and
+leaves ADR 0043's registry and closed retention exceptions unchanged.
 
 ## Editorial content and source grammar
 

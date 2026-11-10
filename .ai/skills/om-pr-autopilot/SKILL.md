@@ -3,6 +3,27 @@ name: om-pr-autopilot
 description: planned.travel extension of the installed om-pr-autopilot skill. The PR state is re-read before every push, because a human may merge or close the PR mid-run.
 ---
 
+## Enrolled Paperclip pilot: return control to the PM
+
+Resolve explicit enrollment from the PM-owned pilot control record before selecting
+this branch. If pilot enrollment is claimed but cannot be verified, stop and
+return to the PM. For an enrolled task, read `docs/agents/paperclip-delivery-pilot.md`,
+obtain the existing PR's compact state with the repository PR-state helper, and
+return its exact head/base, validation/QA/review evidence, unresolved findings and
+next action to the PM. `--allow-merge` grants no authority here: refuse that merge
+request and retain the state/evidence handoff.
+
+Run no nested implementation, review, persona, self-QA or merge chain. The PM alone
+assigns the existing implementer and two independent reviewers and consolidates
+corrections within the recorded three-round budget. The independent Quality
+reviewer owns QA approval; the CEO alone performs the policy's guarded publication.
+Stop at the PM handoff; do not enter the unattended state matrix below.
+
+## Outside the pilot
+
+The workflow below, including its unattended routes, applies unchanged only to
+tasks that are not enrolled.
+
 Extends the installed skill: read `.claude/skills/om-pr-autopilot/SKILL.md` and follow it. The following additions apply.
 
 Diagnosis reads the PR state once, at the start, but a human may merge or close the PR while the run works. This rule covers every push the run makes, including those of the chained skills that push to the PR head (`om-auto-continue-pr`, `om-auto-continue-pr-loop`, `om-auto-fix-pr`, `om-auto-review-pr` in autofix), whether or not their own overrides were read:
@@ -14,9 +35,9 @@ GitHub deletes a merged PR's head branch, and a push to it recreates that branch
 
 **"Approvable" in the state matrix follows the ruleset, not a habit.** A PR is approvable (row 9) when no review requests changes, no review thread is unresolved, and the base branch's ruleset requirements for approvals and code-owner review are met - with `required_approving_review_count: 0` and no code-owner review, that holds without any approving review. Read the ruleset exactly as `.ai/skills/om-approve-merge-pr/SKILL.md` step 3 says. A missing approval on a PR this run cannot approve itself (its own account authored it) is not a reason to stop at merge-ready under `--allow-merge` when the ruleset requires none.
 
-**`--allow-merge` means a merge into `develop` only.** Every PR here, agent or human, is authored by the owner's one account, so the author tells nothing apart. A PR whose base is not `develop`, or that carries `do-not-merge`, ends at merge-ready under `--allow-merge` too: the `develop` -> `main` promotion deploys production and is the owner's to merge (`.ai/skills/om-approve-merge-pr/SKILL.md`).
+**Outside the pilot, `--allow-merge` means a merge into `develop` only.** Every PR here, agent or human, is authored by the owner's one account, so the author tells nothing apart. A PR whose base is not `develop`, or that carries `do-not-merge`, ends at merge-ready under `--allow-merge` too: the `develop` -> `main` promotion deploys production and is the owner's to merge (`.ai/skills/om-approve-merge-pr/SKILL.md`).
 
-- **QA runs through the unattended sign-off.** Where the chain reaches the QA stage (state matrix rows 7 and 10) of a PR that touches a user-facing surface, run `om-auto-qa-pr {pr} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how its specialist panel decides) instead of the evidence-only call. The installed "never applies the QA-approval label" rule binds the orchestrator itself, not the QA skill it dispatches. Row 10 never stops to request a person's sign-off: it runs that QA stage, and it also covers a `qa-approved` whose `QA head:` is not the PR's current head (a push after the sign-off makes it stale). After a successful sign-off, re-read the QA labels and continue with row 9 under `--allow-merge` in the same run. Nothing here waits for a person into `develop`, `risk-high` and `security` included (owner decision 2026-10-06, ADR 0035).
+- **Outside the pilot, QA runs through the unattended sign-off.** Where the chain reaches the QA stage (state matrix rows 7 and 10) of a PR that touches a user-facing surface, run `om-auto-qa-pr {pr} --self-qa-signoff` (the repo override of `om-auto-qa-pr` says how its specialist panel decides) instead of the evidence-only call. The installed "never applies the QA-approval label" rule binds the orchestrator itself, not the QA skill it dispatches. Row 10 never stops to request a person's sign-off: it runs that QA stage, and it also covers a `qa-approved` whose `QA head:` is not the PR's current head (a push after the sign-off makes it stale). After a successful sign-off, re-read the QA labels and continue with row 9 under `--allow-merge` in the same run. Nothing here waits for a person into `develop`, `risk-high` and `security` included (owner decision 2026-10-06, ADR 0035).
 
 - **A `risk-high` or `security` PR merges on a security verdict.** A PR is one when it carries either label or its diff touches the `risk-high` paths of `SDLC.md` § This repository, so a lowered label does not skip the verdict. Before row 9 merges one, whether or not it touches a user-facing surface, ask the security and tenancy reviewer (`persona-workspace-owner`) through `.ai/skills/afk-decide/SKILL.md` to judge the diff at the current head (write the diff to `$TMPDIR` and give its path in the brief: the persona agents can read files, not run `git`). `ship` is the approving verdict; `ship with fixes`, `do not ship` and a "human decides" on money are a refusal. Merge only on an approving verdict, recorded in the PR body's Resolved assumptions table with the head it judged; the QA panel's verdict from the same persona on the current head (the `om-auto-qa-pr` override) counts, so ask once per head. A refusal is a failed round of the loop below: post its findings in a 🤖 comment and link it from the round comment, so `om-auto-fix-pr` has the fix list. A verdict on an older head does not count.
 
@@ -32,7 +53,6 @@ Six more rules cover the run and every chained skill, whether or not their own o
 - **Find the dev server from the descriptor.** Read `baseUrl` from `.ai/qa/test-env.json` (`sh .ai/scripts/test-env-up.sh` writes it); never grep `.dev.vars*`, which the deny rules refuse. Quote every path that holds a variable, and never `cd` into a route path such as `src/routes/_app/trips/$tripId` unquoted: the shell expands `$tripId` to nothing.
 - **Never try a denied command; use its allowed equivalent.** A command `permissions.deny` refuses ends the run on the first denial under `dontAsk` (run d232173a in money-tracker.online died on an improvised `git reset --hard origin/<branch>`). Move the worktree to the PR head with `git fetch origin <head>` and `git checkout -B <head> origin/<head>`, after checking `git status --short` is clean and `git log origin/<head>..HEAD` is empty: `checkout -B` refuses only when it would overwrite a local change, and it drops a local branch's unpushed commits. Never force-push a rebased branch (denied, `--force-with-lease` included): merge the base instead, or push a new branch. Never `--no-verify`: fix what the hook reports.
 - **Never open a file `permissions.deny` lists under `Read(...)`, not even redacted through `cat` or `sed`.** It ends the run the same way (run b6eb30ef died on `cat .ai/qa/test-env.env`). The login's `passwordEnv` name is in `.ai/qa/test-env.json`; load the values with `set -a; . "$(jq -r .credentialsFile .ai/qa/test-env.json)"; set +a` and use `"$TEST_DEMO_PASSWORD"` in the command (AGENTS.md).
-
 
 ## Shared PR and CI evidence
 

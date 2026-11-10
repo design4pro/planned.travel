@@ -23,7 +23,7 @@ import { createAccessControl } from 'better-auth/plugins/access'
 import { defaultStatements } from 'better-auth/plugins/admin/access'
 
 /**
- * Eight resources, twenty-seven statements, closed (docs/ACCESS.md §1.1). A ninth resource or a
+ * Nine resources, twenty-nine statements, closed (docs/ACCESS.md §1.1). A tenth resource or a
  * new action on an existing one is an amendment to that document and to the grid in its §2, in the
  * same commit — not a line added here on the way past.
  *
@@ -48,13 +48,14 @@ export const statement = {
   share: ['read', 'revoke'],
   sandcastle: ['read'],
   provider: ['read', 'configure'],
+  release: ['review', 'publish'],
 } as const
 
 export const ac = createAccessControl(statement)
 
 export type PlatformStatement = typeof statement
 
-/** One of the eight resource names in {@link statement}. */
+/** One of the nine resource names in {@link statement}. */
 export type PlatformResource = keyof PlatformStatement
 
 /**
@@ -99,6 +100,7 @@ export const adminRole = ac.newRole({
   share: ['read', 'revoke'],
   sandcastle: ['read'],
   provider: ['read', 'configure'],
+  release: ['review', 'publish'],
 })
 
 /**
@@ -117,9 +119,10 @@ export const curatorRole = ac.newRole({
   share: ['read', 'revoke'],
   sandcastle: [],
   provider: [],
+  release: [],
 })
 
-/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-seven denied. */
+/** Everyone else, which is nearly everyone. No platform surface at all — all twenty-nine denied. */
 export const userRole = ac.newRole({
   user: [],
   session: [],
@@ -129,6 +132,7 @@ export const userRole = ac.newRole({
   share: [],
   sandcastle: [],
   provider: [],
+  release: [],
 })
 
 /**

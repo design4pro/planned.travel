@@ -1,7 +1,33 @@
 ---
 name: om-auto-qa-pr
-description: planned.travel extension of the installed om-auto-qa-pr skill. Evidence is the blind A/B pair from scripts/visual/capture.mjs; a panel of specialist sub-agents judges it, and the run signs off on every PR, risk-high included.
+description: planned.travel QA evidence from blind A/B captures. Enrolled Paperclip pilot work returns evidence to independent Quality; outside the pilot, the specialist panel owns unattended sign-off, risk-high included.
 ---
+
+## Enrolled Paperclip pilot: evidence only
+
+Resolve explicit enrollment from the PM-owned pilot control record before selecting
+this branch. If pilot enrollment is claimed but cannot be verified, stop and
+return to the PM. For an enrolled task, read `docs/agents/paperclip-delivery-pilot.md`
+and execute only the source skill's read-only evidence workflow: prepare the
+isolated environment, inspect the changed flows, capture the required blind
+base/head pairs and Playwright evidence, and return the exact head/base and report
+to the PM and independent Quality & Trust Reviewer.
+
+Use local, tracker-less evidence-only mode on the assigned frozen worktree; omit
+the PR number so the source skill does not acquire a competing claim or launch
+its PR review-first gate. Return artifacts through the independent QA handoff.
+Refuse `--self-qa-signoff` for enrolled work, regardless of
+who requested it. This skill applies no `qa-approved`, `qa-self-verified` or other
+QA labels in pilot mode, starts no persona panel or review-first/autofix chain,
+and never merges. Only the independent Quality & Trust Reviewer may apply the
+current-head QA approval after inspecting the evidence through the policy's
+separate acceptance handoff. The implementer cannot hold that reviewer role.
+Stop at that handoff; do not fall through to the unattended sign-off rules below.
+
+## Outside the pilot
+
+The workflow below applies unchanged to tasks that are not enrolled. All evidence
+capture, safety and freshness requirements also apply to the pilot branch above.
 
 Extends the installed skill: read `.claude/skills/om-auto-qa-pr/SKILL.md` and follow it. On top:
 
@@ -9,7 +35,7 @@ Extends the installed skill: read `.claude/skills/om-auto-qa-pr/SKILL.md` and fo
 - Evidence is the **blind A/B pair** docs/SPEC.md §7 requires: run `node scripts/visual/capture.mjs` for each affected route against base and head, light and dark, at 1440x900 and 360x800, writing into `$ARTIFACTS_DIR` (`.ai/qa/artifacts_<runId>/`). Attach both frames of every pair via **attach-image-evidence**. Read `node scripts/visual/capture.mjs --help` for the flags; it refuses signed-in screens it must not photograph, and that refusal is a finding, not something to work around.
 - `ar` is RTL: when the change touches layout, capture one route in `ar` as well.
 - **Restart the test environment on every new head before a frame counts.** A dev server that is already running does not reliably reload an edited component or any Worker (server) code, so a frame taken from it can show the previous head; a run on #1209 read a stale module as a failed check, and the QA of #1204 had to restart the environment and clear the local KV `wx:*` keys before the weather figures changed. Run `sh .ai/scripts/test-env-up.sh --force` after each push or edit (without `--force` a running environment is reused while its descriptor is younger than the TTL and no file under `src/` is newer) and read `git rev-parse HEAD` beside the frames.
-- Sign-off follows the installed skill's `--self-qa-signoff` rules, and an unattended run always passes that flag. The installed `risk-high` limit does not apply here: the unattended run is the QA reviewer for every PR (owner decision 2026-10-06, ADR 0035). Before applying `qa-approved` + `qa-self-verified`, hand the attached pairs through `.ai/skills/afk-decide/SKILL.md` to a panel, one sub-agent each, none of them shown another's verdict:
+- Outside the pilot, sign-off follows the installed skill's `--self-qa-signoff` rules, and an unattended run always passes that flag. The installed `risk-high` limit does not apply here: the unattended run is the QA reviewer for every PR (owner decision 2026-10-06, ADR 0035). Before applying `qa-approved` + `qa-self-verified`, hand the attached pairs through `.ai/skills/afk-decide/SKILL.md` to a panel, one sub-agent each, none of them shown another's verdict:
   - `persona-manual-tester`, always;
   - `persona-accessibility-auditor`, when the change touches layout or copy;
   - `persona-workspace-owner` (security and tenancy), when the PR is `risk-high` (labelled, or inferred per `SDLC.md` from the diff) or `security`. It judges the diff as well as the evidence: auth, tenancy, money and migrations break silently, so a screenshot cannot clear them.

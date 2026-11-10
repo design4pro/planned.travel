@@ -24,7 +24,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "node scripts/db/generate.mjs",
     "db:migrate:local": "wrangler d1 migrations apply planned-travel-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply planned-travel-db --remote",
     "db:migrate:remote:staging": "wrangler d1 migrations apply planned-travel-db-staging --remote --env staging",
