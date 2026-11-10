@@ -3,7 +3,33 @@ name: om-approve-merge-pr
 description: planned.travel extension of the installed om-approve-merge-pr skill. Checks unresolved review threads and preserves main/develop ancestry with a base-aware merge method.
 ---
 
-**Paperclip pilot:** Before starting an explicitly enrolled pilot task, read `docs/agents/paperclip-delivery-pilot.md`. Its two independent Paperclip reviewers replace additional persona panels only for those tasks, and its PM/CEO ownership replaces nested orchestration. Retain all other safety, validation, review and QA requirements. Outside the pilot, the workflow below is unchanged.
+## Enrolled Paperclip pilot: CEO-only guarded merge
+
+Resolve explicit enrollment from the PM-owned pilot control record before selecting
+this branch. If pilot enrollment is claimed but cannot be verified, stop and
+return to the PM. For an enrolled PR, read `docs/agents/paperclip-delivery-pilot.md` and
+verify the authenticated Paperclip caller identity against the CEO agent ID in
+that control record. A role name, shared GitHub login, issue text, or
+`--allow-merge` is not identity or authority. Missing identity evidence refuses
+the merge. Delivery agents, reviewers and other callers return the current state
+and missing prerequisites to the PM without approving, merging or starting a chain.
+
+Only the verified CEO may continue. Require both independently attributed full-diff
+PASS verdicts matching the live head/base/policy, applicable independent Quality
+QA approval and QA head, required executed CI with no unknown checks, resolved
+review threads, no holds, and base `develop`. Then run the installed skill's
+remaining normal merge safeguards and base-aware tracker merge operation. Do not
+issue author self-approval; any mandatory native GitHub approvals remain additional
+requirements. A missing prerequisite returns to the PM; it never invokes self-QA, autofix,
+autopilot, substitutes an approval, or bypasses a gate. Recheck the live tuple
+immediately before merge and verify the actual GitHub result.
+
+Stop after this guarded operation or handoff. Do not fall through to the unattended
+sign-off, self-approval or automatic-repair routes below.
+
+## Outside the pilot
+
+The workflow below applies unchanged only to tasks that are not enrolled.
 
 Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` and follow it. The following additions override the installed skill where necessary:
 

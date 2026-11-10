@@ -18,14 +18,17 @@ without product work until those conditions hold. Use existing subscriptions and
 allocations; change no company budget, provider, grant or permissions policy.
 
 The PM owns one existing or newly justified rollout task and its `pilot` document.
-Record activation time, policy commit, agent IDs, baseline cohort, two slot rows
-and experiment results there. Existing owners, branches, PRs and holds survive.
+Record activation time, policy commit, authenticated CEO and reviewer agent IDs,
+baseline cohort, two slot rows and experiment results there. Existing owners, branches, PRs and holds survive.
 The infrastructure/policy adoption PR is outside the low-risk product cohort and
 uses the existing acceptance process. At activation verify the PM has a scheduled
-Paperclip heartbeat at least daily. Record the effective cadence and deadlines
+Paperclip heartbeat with saved `enabled=true`, `intervalSec=86400`,
+`maxConcurrentRuns=1`, `wakeOnDemand=true` and
+`skipTimerWhenNoActionableWork=false`. Record the verified fields and deadlines
 (activation + 14 days; last cohort merge + 7 days) in the pilot document. Each
 heartbeat checks due reports even without a GitHub event. If that wake mechanism
-is unavailable, keep activation closed. Use no external scheduler.
+is unavailable, keep activation closed. Use no external scheduler. First actual
+timer execution remains observational; it is not an additional preactivation gate.
 
 ## Ownership and admission
 
@@ -90,6 +93,11 @@ writer or closed PR stops publication. No direct develop/main pushes, force
 pushes, bypassed hooks, admin merges, main promotion or production administration.
 
 ## Validation, independent review and QA
+
+Before the gate, verify actual parent and test-child runtimes against the current
+CI toolchain. For known Node/ICU or managed-shell bootstrap failures, use the
+existing Runtime Engineer and applicable recovery notes in the managed
+`PRE_PILOT.md` reference; preserve managed git/gh launchers.
 
 Run the complete gate from `validation.commands` in `.ai/agentic.config.json`
 through the configured validation runner. A failed gate returns logs directly

@@ -9,7 +9,9 @@ Use revision-checked Paperclip configuration updates; preserve unrelated setting
 ## Common
 
 Read the assigned `pt-delivery-pilot` skill for explicitly enrolled pilot work.
-For existing or non-pilot tasks, read `PRE_PILOT.md` and preserve that task's scope,
+For existing or non-pilot tasks, read `PRE_PILOT.md` from this agent's managed
+instruction bundle (beside this entry file, not the repository root) and preserve
+that task's scope,
 claims, publication authority and resume conditions. Paperclip alone schedules and
 executes work. Follow current repository AGENTS.md, SDLC.md, CODE_REVIEW.md and
 BACKWARD_COMPATIBILITY.md; the pilot policy names its bounded substitutions.
@@ -70,7 +72,8 @@ to the PM; rerun tests only to substantiate a concrete finding.
 
 Independently inspect user flows, manual edge cases, security applicability, i18n,
 WCAG 2.2 AA, keyboard/focus and responsive behavior on the full frozen candidate.
-Verify applicable Playwright and blind screenshot evidence; perform authorized
+Verify required CI, QA-label applicability and independent current-head QA ownership
+on non-UI changes too. Verify applicable Playwright and blind screenshot evidence; perform authorized
 browser QA when evidence is missing. Own independent current-head QA approval,
 never the implementer's self-signoff. Return PASS or CHANGES with head/base,
 evidence and uncovered requirements, without reading the other reviewer's verdict.
