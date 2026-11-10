@@ -13,7 +13,12 @@ import { THEMES, applyTheme } from './helpers/routes.ts'
 import type { RouteCase, Theme } from './helpers/routes.ts'
 import { callsServerFn } from './helpers/server-fn.ts'
 import { settleMutations } from './helpers/settle.ts'
-import { DEMO_EMAIL, hasSession, useSession } from './helpers/session.ts'
+import {
+  DEMO_EMAIL,
+  hasSession,
+  signIn,
+  useSession,
+} from './helpers/session.ts'
 
 /**
  * The documents-and-media plan's own end-to-end gate (`docs/plans/06-documents-and-media.md`).
@@ -1550,5 +1555,249 @@ test.describe('06-S3c - Export links and remaining allowance', () => {
     await expect(panel.getByRole('status')).toHaveText('')
     await expect(panel.locator('[aria-current]')).toHaveCount(0)
     expect(report().fatal).toEqual([])
+  })
+})
+
+// Locale is a stored user preference; this walk restores it before another journey starts.
+test.describe('Files date layout', () => {
+  test('complete dates fit before hydration and after hydration without crowding filenames or actions', async ({
+    browser,
+    context,
+    page,
+    baseURL,
+  }, info) => {
+    test.setTimeout(180_000)
+    // Separate actors keep the two browser projects' stored locale writes independent.
+    if (info.project.name === 'mobile-safari') {
+      await context.clearCookies()
+      expect(await signIn(page, baseURL, 'mika@planned.travel')).toBe(true)
+    } else {
+      await useSession(context, page, baseURL)
+    }
+    expect(await hasSession(page)).toBe(true)
+    const tripId = await tripIdByName(context, SEEDED_TRIPS.spanning)
+    const path = `/trips/${tripId}/files`
+    await page.goto('/settings/language', { waitUntil: 'networkidle' })
+    const original = await page
+      .locator('[data-testid^="locale-chip-"][aria-checked="true"]')
+      .getAttribute('data-testid')
+    expect(original).not.toBeNull()
+    try {
+      for (const locale of ['pl', 'de', 'ar']) {
+        await page.goto('/settings/language', { waitUntil: 'networkidle' })
+        await page.getByTestId(`locale-chip-${locale}`).click()
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
+        const storageState = await context.storageState()
+        for (const colorScheme of ['light', 'dark'] as const) {
+          for (const width of [360, 640, 1440]) {
+            for (const javaScriptEnabled of [false, true]) {
+              const probe = await browser.newContext({
+                baseURL,
+                storageState,
+                javaScriptEnabled,
+                colorScheme,
+                viewport: { width, height: 1000 },
+                deviceScaleFactor: 1,
+              })
+              try {
+                const screen = await probe.newPage()
+                await screen.goto(path, { waitUntil: 'networkidle' })
+                await screen.evaluate(() => document.fonts.ready)
+                await expect(screen.locator('html')).toHaveAttribute(
+                  'lang',
+                  locale,
+                )
+                if (width === 360) {
+                  const filename = screen.getByRole('button', {
+                    name: 'Travel insurance policy 2026.pdf',
+                    exact: true,
+                  })
+                  await expect(filename).toBeVisible()
+                  expect((await filename.boundingBox())!.width).toBeGreaterThan(
+                    100,
+                  )
+                  expect(
+                    await screen.evaluate(
+                      () => document.documentElement.scrollWidth,
+                    ),
+                  ).toBeLessThanOrEqual(width)
+                  if (javaScriptEnabled) {
+                    const menu = screen
+                      .locator('ul[aria-label] > li')
+                      .filter({ visible: true })
+                      .first()
+                      .getByRole('button')
+                      .last()
+                    await menu.focus()
+                    await screen.keyboard.press('Enter')
+                    await expect(screen.getByRole('menu')).toBeVisible()
+                    await screen.keyboard.press('Escape')
+                    await expect(menu).toBeFocused()
+                  }
+                  continue
+                }
+                const rows = screen.locator('table tbody tr')
+                expect(await rows.count()).toBeGreaterThan(0)
+                const geometry = await rows.evaluateAll((elements) =>
+                  elements.map((element) => {
+                    const cells = (element as HTMLTableRowElement).cells
+                    const cell = cells[4]
+                    const range = document.createRange()
+                    range.selectNodeContents(cell)
+                    const rects = [...range.getClientRects()]
+                    const box = cell.getBoundingClientRect()
+                    const style = getComputedStyle(cell)
+                    const name = cells[0].querySelector('button')!
+                    const action = cells[5].querySelector('button')!
+                    const actionBox = action.getBoundingClientRect()
+                    const author = cells[3].firstElementChild ?? cells[3]
+                    const authorRange = document.createRange()
+                    authorRange.setStart(author.firstChild!, 0)
+                    authorRange.setEnd(
+                      author.firstChild!,
+                      Math.min(2, author.textContent!.length),
+                    )
+                    const authorPrefix = authorRange.getBoundingClientRect()
+                    const authorBox = author.getBoundingClientRect()
+                    return {
+                      authorPrefixVisible:
+                        authorPrefix.width > 0 &&
+                        authorPrefix.left >= authorBox.left &&
+                        authorPrefix.right <= authorBox.right,
+                      text: cell.textContent,
+                      lines: new Set(rects.map((rect) => Math.round(rect.top)))
+                        .size,
+                      contained: rects.every(
+                        (rect) =>
+                          rect.left >=
+                            box.left + parseFloat(style.paddingLeft) - 1 &&
+                          rect.right <=
+                            box.right - parseFloat(style.paddingRight) + 1,
+                      ),
+                      filenameWidth: name.getBoundingClientRect().width,
+                      actionVisible:
+                        actionBox.width > 0 &&
+                        actionBox.left >= 0 &&
+                        actionBox.right <= document.documentElement.clientWidth,
+                    }
+                  }),
+                )
+                for (const row of geometry) {
+                  expect(row.text).toContain('2026')
+                  expect(
+                    row.lines,
+                    JSON.stringify({ locale, width, javaScriptEnabled, row }),
+                  ).toBe(1)
+                  expect(row.contained).toBe(true)
+                  expect(row.filenameWidth).toBeGreaterThan(30)
+                  if (locale === 'ar' && width === 640) {
+                    expect(row.authorPrefixVisible).toBe(true)
+                  }
+                  expect(row.actionVisible).toBe(true)
+                }
+                if (locale === 'ar' && width === 640) {
+                  const prefix = await rows
+                    .getByRole('button', {
+                      name: 'Travel insurance policy 2026.pdf',
+                      exact: true,
+                    })
+                    .evaluate((control) => {
+                      const label = control.querySelector('span')!
+                      const text = label.firstChild!
+                      const range = document.createRange()
+                      range.setStart(text, 0)
+                      range.setEnd(text, 'Trav'.length)
+                      const prefixBox = range.getBoundingClientRect()
+                      const labelBox = label.getBoundingClientRect()
+                      const controlBox = control.getBoundingClientRect()
+                      // Leave room for the ellipsis: clipped glyphs still have Range rects.
+                      const ellipsisSpace = parseFloat(
+                        getComputedStyle(label).fontSize,
+                      )
+                      return {
+                        text: text.textContent?.slice(0, 'Trav'.length),
+                        visible:
+                          prefixBox.width > 0 &&
+                          prefixBox.left >=
+                            Math.max(labelBox.left, controlBox.left) &&
+                          prefixBox.right <=
+                            Math.min(labelBox.right, controlBox.right) -
+                              ellipsisSpace,
+                      }
+                    })
+                  expect(prefix.text).toBe('Trav')
+                  expect(
+                    prefix.visible,
+                    JSON.stringify({ colorScheme, javaScriptEnabled, prefix }),
+                  ).toBe(true)
+                }
+                expect(
+                  await screen.evaluate(
+                    () => document.documentElement.scrollWidth,
+                  ),
+                ).toBeLessThanOrEqual(width)
+                if (javaScriptEnabled) {
+                  const menu = rows
+                    .first()
+                    .locator('td')
+                    .last()
+                    .getByRole('button')
+                  await menu.focus()
+                  await screen.keyboard.press('Enter')
+                  await expect(screen.getByRole('menu')).toBeVisible()
+                  await screen.keyboard.press('Escape')
+                  await expect(menu).toBeFocused()
+                }
+              } finally {
+                await probe.close()
+              }
+            }
+          }
+        }
+      }
+      // An RPC fixture supplies the reporter's exact older date without changing stored files.
+      await page.goto('/settings/language', { waitUntil: 'networkidle' })
+      await page.getByTestId('locale-chip-pl').click()
+      await expect(page.locator('html')).toHaveAttribute('lang', 'pl')
+      await page.setViewportSize({ width: 640, height: 1000 })
+      await page.clock.setFixedTime(new Date('2026-11-10T12:00:00Z'))
+      await page.route(
+        (url) => callsServerFn(url, 'loadTripFiles'),
+        async (route) => {
+          const response = await route.fetch()
+          const body = await response.text()
+          expect(body).toContain('2026-08-20')
+          await route.fulfill({
+            response,
+            body: body.replaceAll('2026-08-20', '2026-10-15'),
+          })
+        },
+      )
+      await page.goto(`/trips/${tripId}/people`, { waitUntil: 'networkidle' })
+      await page.locator(`a[href="${path}"]`).first().click()
+      const date = page.locator('table tbody tr').first().locator('td').nth(4)
+      await expect(date).toHaveText('15 paź 2026')
+      expect(
+        await date.evaluate((cell) => {
+          const range = document.createRange()
+          range.selectNodeContents(cell)
+          return new Set(
+            [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+          ).size
+        }),
+      ).toBe(1)
+      await info.attach('reporter-date', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png',
+      })
+    } finally {
+      await page.unrouteAll({ behavior: 'wait' })
+      await page.goto('/settings/language', { waitUntil: 'networkidle' })
+      await page.getByTestId(original!).click()
+      await expect(page.getByTestId(original!)).toHaveAttribute(
+        'aria-checked',
+        'true',
+      )
+    }
   })
 })
