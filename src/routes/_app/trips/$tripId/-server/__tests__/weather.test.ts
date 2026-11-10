@@ -54,6 +54,21 @@ const { loadTripWeather, tripWeatherInputSchema } = await import('../weather')
 
 const NOW = new Date('2026-10-08T19:10:00Z')
 
+/** Assert the weather wire privacy boundary independently of identifier text. */
+function expectPrivateWeatherWire(result: unknown): void {
+  function checkKeys(value: unknown): void {
+    if (value === null || typeof value !== 'object') return
+    for (const [key, child] of Object.entries(value)) {
+      expect(['fetchedAt', 'lat', 'lng']).not.toContain(key)
+      checkKeys(child)
+    }
+  }
+  checkKeys(result)
+  // Preserve the latitude-prefix guard and also reject the fixture's longitude,
+  // even when coordinates are serialized as strings under otherwise harmless keys.
+  expect(JSON.stringify(result)).not.toMatch(/59\.9|10\.7522/)
+}
+
 /* ------------------------------------------------------------------ runtime */
 
 interface Ports {
@@ -187,6 +202,42 @@ beforeEach(async () => {
 
 /* -------------------------------------------------------------------- cases */
 
+describe('weather wire privacy assertion', () => {
+  it.each(['random-lat-id', 'random-lng-id'])(
+    'accepts a legitimate day identifier %s',
+    (dayId) => {
+      expectPrivateWeatherWire({
+        distanceUnit: 'metric',
+        days: [{ dayId, status: 'none' }],
+      })
+    },
+  )
+
+  it.each(['fetchedAt', 'lat', 'lng'])(
+    'rejects the forbidden key %s at every nesting level',
+    (key) => {
+      for (const payload of [
+        { [key]: null },
+        { reading: { [key]: null } },
+        { days: [{ reading: { slots: [{ [key]: null }] } }] },
+      ]) {
+        expect(() => expectPrivateWeatherWire(payload)).toThrow()
+      }
+    },
+  )
+
+  it.each([59.9, 59.9139, 10.7522])(
+    'rejects the private coordinate %s under an innocuous key',
+    (coordinate) => {
+      for (const value of [coordinate, String(coordinate)]) {
+        expect(() =>
+          expectPrivateWeatherWire({ days: [{ reading: { value } }] }),
+        ).toThrow()
+      }
+    },
+  )
+})
+
 describe('loadTripWeather', () => {
   it('answers one entry per day, in day order, with a forecast for each located day', async () => {
     const port = ports()
@@ -244,7 +295,7 @@ describe('loadTripWeather', () => {
       '18:00',
     ])
     // Nothing about who looked a point up, and nothing about where it is.
-    expect(JSON.stringify(result)).not.toMatch(/fetchedAt|lat|lng|59\.9/)
+    expectPrivateWeatherWire(result)
   })
 
   it('carries each located day’s sunrise and sunset, in the trip’s zone, for no further call', async () => {
@@ -539,8 +590,7 @@ describe('loadTripWeather', () => {
       expect(text).not.toContain(key)
     }
     expect(text).not.toContain('Hotel')
-    expect(text).not.toContain('59.9139')
-    expect(text).not.toContain('fetchedAt')
+    expectPrivateWeatherWire(result)
     expect(Object.keys(result).sort()).toEqual(['days', 'distanceUnit'])
   })
 
