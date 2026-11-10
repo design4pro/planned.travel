@@ -39,6 +39,8 @@ export const TASK_KINDS = [
   'participant-backfill',
   // Consumer-first release: no producer until this handler has been deployed.
   'workspace-late-subscription',
+  // Consumer-first deletion driver; request and webhook producers ship separately.
+  'workspace-deletion',
   // Billing follow-ups. The provider webhook answers the provider immediately and
   // hands the slow part off here, so these travel the same queue as everything else.
   //
@@ -326,7 +328,12 @@ export const workspaceLateSubscriptionPayloadSchema = z.strictObject({
   providerSubscriptionId: z.string().uuid(),
 })
 
+export const workspaceDeletionPayloadSchema = z.strictObject({
+  deletionId: z.string().min(1).max(64),
+})
+
 export interface TaskPayloadMap {
+  'workspace-deletion': z.infer<typeof workspaceDeletionPayloadSchema>
   email: EmailPayload
   'pdf-export': PdfExportPayload
   'booking-import': BookingImportPayload
@@ -363,6 +370,11 @@ const envelopeBase = {
 }
 
 export const taskEnvelopeSchema = z.discriminatedUnion('kind', [
+  z.object({
+    ...envelopeBase,
+    kind: z.literal('workspace-deletion'),
+    payload: workspaceDeletionPayloadSchema,
+  }),
   z.object({
     ...envelopeBase,
     kind: z.literal('workspace-late-subscription'),

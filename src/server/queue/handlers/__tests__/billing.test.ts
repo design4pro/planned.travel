@@ -13,7 +13,7 @@
 import { eq } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { member } from '#/server/db/auth-schema'
+import { member, organization } from '#/server/db/auth-schema'
 import { createLogger, createMemorySink } from '#/server/observability/logger'
 import { listForEntity, setPreference } from '#/server/repos'
 import { createHarness } from '#/server/repos/__tests__/harness'
@@ -111,6 +111,38 @@ function recipientsOf(rows: ReadonlyArray<Notification>): Array<string> {
 /* -------------------------------------------------------------------- tests */
 
 describe('billing follow-ups', () => {
+  it.each(['subscriptionChanged', 'invoicePaid'] as const)(
+    '%s acknowledges a deleted workspace without notifying another workspace',
+    async (kind) => {
+      await harness.db
+        .delete(organization)
+        .where(eq(organization.id, alpha.organizationId))
+      const env = fakeEnv()
+      let sends = 0
+      env.TASKS.send = async () => {
+        sends += 1
+      }
+      const result =
+        kind === 'subscriptionChanged'
+          ? await handlers().subscriptionChanged(
+              subscriptionChanged(),
+              context(alpha.organizationId, env),
+            )
+          : await handlers().invoicePaid(
+              invoicePaid(),
+              context(alpha.organizationId, env),
+            )
+      expect(result).toEqual({ outcome: 'organization-deleted' })
+      expect(sends).toBe(0)
+      expect(
+        await listForEntity(beta.scope, 'subscription', PROVIDER_EVENT_ID),
+      ).toEqual([])
+      expect(
+        await listForEntity(beta.scope, 'invoice', PROVIDER_EVENT_ID),
+      ).toEqual([])
+    },
+  )
+
   it('is registered for both kinds the billing webhook enqueues', () => {
     // The whole of #304: a `case` without a registry entry dead-letters on first delivery.
     expect(taskHandlers['billing.subscription.changed']).toBeDefined()

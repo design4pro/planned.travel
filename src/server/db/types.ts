@@ -25,6 +25,8 @@ import type {
 /** Any async SQLite-dialect Drizzle handle. Satisfied by both D1 and the proxy driver. */
 export type Database = BaseSQLiteDatabase<'async', unknown>
 
+export type { WorkspaceDeletion } from './schema'
+
 export type OrganizationPlan = (typeof ORGANIZATION_PLANS)[number]
 export type UsageMetric = (typeof USAGE_METRICS)[number]
 

@@ -113,7 +113,7 @@ Specifically:
 | Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                                       |
 | Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                                   |
 | Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                                             |
-| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Ten React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                  |
+| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Ten React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                   |
 | Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                                   |
 | Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                                      |
 | Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                                       |
@@ -437,35 +437,73 @@ That list is closed. A fourteenth global table is a change to this contract, not
 a builder makes on the way past.
 
 `workspace_deletions` joins the existing global-table member (ADR 0048), not a fifth catalog
-exception. Only `catalog/workspace-deletions.ts` writes its platform recovery state. The eventual
-`workspace-deletion` driver is its sole production writer, authorized by an owner request with
+exception. Only `catalog/workspace-deletions.ts` writes its platform recovery state. The
+`workspace-deletion` driver is its sole production state writer, authorized by an owner request with
 step-up and an impersonation veto, or the independently authorized erasure job, queue or cron.
-No production writer ships in the ledger prerequisite slice. The platform-actor permission and
-per-mutation audit clauses are inapplicable to recovery checkpoints; the eventual driver audits
+No production writer ships in the ledger prerequisite slice. The Phase 6 driver ledger adapter
+owns lease acquisition, durable refusal intent, checkpoints and the bounded weekly terminal-row prune. Its erasure handshake
+reads a state-only catalog projection and atomically consumes ready/refused work by envelope id;
+original-delivery parking writes nothing and the winning redelivery may resume. A canonical
+`person-erasure:<erasureId>:<deletionId>` resume on nonterminal state throws retryable-not-ready;
+it cannot acknowledge successful parking or authorize a done marker. Public producers remain a separate activation slice.
+The platform-actor permission and
+per-mutation audit clauses are inapplicable to recovery checkpoints; the driver audits
 the deletion itself. Importer tests pin rare readers: auth organization hooks, direct membership
 and invitation creation, atomic invitation acceptance, the billing store used by checkout and
 plan changes, and `repos/community.ts` for private gallery-preview capture and actor-bound preview
 reads only. The gallery repository may import only `workspaceDeletionAbsent`, returning no ledger
 projection and adding no writer. All other request paths and webhooks gain no ledger lookup. Repository inserts bind the
-shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate
-is the narrow exception to a tenant statement reaching a global table: it returns no ledger
+shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate and its named sibling
+`workspaceDeletionAuthorityPresent` are the closed exception to a tenant statement reaching this global table: it returns no ledger
 projection and never registers the ledger with the tenant repository factory. Better Auth hooks and external billing
 calls have a check/write window; the downstream guarded deletion and late-subscription handling
 must close its destructive consequences. `done` still fences; only `refused` lifts the fence.
+The sibling EXISTS authorizes every reserved-driver drain DELETE (all seven batch tables) and
+final organization DELETE, retaining the tenant/member/subscription predicates. Its internal
+catalog authority is passed beside scope, never through `deleteWorkspaceInput` or a request.
+It matches organization, deletion id, token, initiator and requester; drain permits only `requested`,
+final deletion only `drained`, both without refusal intent. Strict lease expiry uses the later of
+trusted invocation time and SQLite statement-execution time; equality or null clock/expiry denies.
+The catalog boolean diagnostic `workspaceDeletionAuthorityCurrent` classifies empty SELECT/zero-row
+DELETE only; it cannot replace the atomic predicate. Authority loss yields `lost-lease` without
+checkpointing a replacement, clearing PII or manufacturing business refusal/deleted success.
+A truly absent organization with current authority remains crash recovery; empty tables with
+current authority may finish drain. Neither fragment registers the ledger with the tenant factory.
 
 The row contains ids, state, a token-bound expiring lease, attempts, a bounded error code and a
-closed snapshot of plan/status/counts. Temporary receipt email/name are cleared when queued or
-refused; erasure rows never carry them. No organization foreign key may cascade into this table.
+closed snapshot of plan/status/counts. Nullable `refusal_reason` freezes the first validated
+`billing-unavailable`, `live-subscription` or `has-other-members` outcome under the winning live
+lease while state stays `requested`/`drained`. Recovery resumes refusal follow-up only. Catalog
+transitions forbid destructive progress with that intent; audit insertion predicates on live
+lease and matching persisted outcome, retaining one audit id per deletion. Temporary receipt
+email/name are cleared after receipt acceptance, or after refusal-notice acceptance, confirmed
+refusal audit and terminal CAS; erasure rows never carry them. No organization foreign key may cascade into this table.
 Terminal rows alone are pruned after 30 days (`done_at` for done, `updated_at` for refused), in
 bounded batches. Unfinished recovery is never pruned. A lease token prevents an expired holder
 from advancing or releasing a replacement holder's lease. Requesters and temporary receipts are
 explicit retention exceptions in the erasure registry.
 
-Reserved for the later driver only: a `system:workspace-deletion` owner scope, bound to the
+A driver-only `system:workspace-deletion` owner scope, bound to the
 organization read from a leased ledger row, may drive deletion repositories without a session.
 This is an exception to the scope argument, not permission for requests to fabricate tenant
-contexts. No factory or executable driver ships with this reservation; the eventual factory must
-have a transitive importer guard excluding routes and server functions.
+contexts. `workspace-deletion/scope.ts` requires an unexpired token matching the leased row;
+its transitive importer guard excludes routes and server functions. Owner departures use only
+the recorded requester; erasure and memberless work omit a departing member id. Recovery selects
+at most five unfinished rows strictly older than fifteen minutes. Same-state checkpoints preserve
+the first sweep's timestamp so they cannot restart its fifteen-minute second-sweep wait.
+Queue and quarter-hour recovery share `workspace-deletion/runtime.ts`; recovery calls the driver
+directly rather than publishing work to the queue. Receipt, owner-refusal notice and erasure-resume
+delivery remain explicit ports: missing adapters fail the step without clearing receipt data or
+advancing its checkpoint. AC9 stages strict immutable requests and explicit matching-id acceptance:
+erasure resumes have opaque erasure/deletion ids only, canonical per-deletion id and 30-second delay;
+owner refusal notices have `workspace-deletion:<id>:refused` identity. Accepted resume followed by
+failed audit/CAS remains retryable; cron reissues the same id even after five-attempt exhaustion.
+Original deliveries park without consuming; canonical nonterminal resumes must not produce success
+or a done marker. Contract acceptance needs independent review and final validation. Production
+erasure delivery still requires the separately owned #1060 consumer and reviewed adapters; owner
+delivery awaits activation. No erasure-initiated ledger inserts are enabled. Runtime replaces outgoing errors with constant messages before consumer
+logging/dead-letter sinks while retaining permanent/retry classification and validated retry delay.
+No request or webhook producer is enabled by consumer registration.
 
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
 eight-name form of this sentence contradicted this same section's mandate to write that table on
@@ -548,7 +586,7 @@ expressible, and handing it a fabricated, empty, or placeholder tenant context i
 global rows destroys the single guarantee it was built to give. Reaching for
 `createTenantRepository()` here is a defect, not a shortcut.
 
-Their isolation invariant is different and equally mandatory. `workspace_deletions` is owned only by its recovery catalog module as described above.
+Their isolation invariant is different and equally mandatory. `workspace_deletions` is owned only by its recovery catalog module as described above. Its closed tenant-statement fragments are admission anti-exists and destructive-authority EXISTS, with the catalog-owned boolean diagnostic; they expose no ledger projection or general tenant/global join.
 `platform_audit_log` is another member of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
 reached through it. Its single writer is `src/server/catalog/audit.ts`, and every other clause
 below binds it unchanged - never `createTenantRepository()`, never `base.ts`, always an explicit

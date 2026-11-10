@@ -23,6 +23,10 @@
  * precisely so that marker can do its job.
  */
 
+import { drizzle } from 'drizzle-orm/d1'
+import { createScope } from '#/server/repos/base'
+import { getOrganization } from '#/server/repos/members'
+import { NotFoundError } from '#/server/repos/context'
 import {
   TASK_DEAD_TTL_SECONDS,
   TASK_DONE_TTL_SECONDS,
@@ -33,6 +37,7 @@ import {
 } from './jobs'
 import {
   TaskAbandonedError,
+  TaskConfigurationError,
   TaskPermanentError,
   TaskRetryableError,
   isPermanentFailure,
@@ -43,6 +48,8 @@ import {
   handleInvoicePaid,
   handleSubscriptionChanged,
 } from './handlers/billing'
+import { createWorkspaceDeletionHandler } from './handlers/workspace-deletion'
+import { createWorkspaceDeletionRuntime } from '#/server/workspace-deletion/runtime'
 import { handleWorkspaceLateSubscription } from './handlers/workspace-late-subscription'
 import { handleBookingImport } from './handlers/booking-import'
 import { handleEmail } from './handlers/email'
@@ -56,12 +63,14 @@ import { callProvider } from '#/server/metering/outbound'
 import { serializeError } from '../observability/logger'
 
 import type { Database } from '#/server/db/types'
+import type { DatabaseFor } from './handlers/billing'
 import type { Logger } from '../observability/logger'
 import type {
   TaskBindings,
   TaskContext,
   TaskEnvelope,
   TaskHandlerTable,
+  TaskHandler,
   TaskKind,
   TaskMetrics,
 } from './types'
@@ -92,19 +101,74 @@ export interface QueueBatchLike {
  */
 export type TaskHandlerRegistry = Partial<TaskHandlerTable>
 
-export const taskHandlers: TaskHandlerRegistry = {
-  'workspace-late-subscription': handleWorkspaceLateSubscription,
-  email: handleEmail,
-  'pdf-export': handlePdfExport,
-  'booking-import': handleBookingImport,
-  'travel-stats': handleTravelStats,
-  'trip-purge': handleTripPurge,
-  'trip-copy': handleTripCopy,
-  'trip-room-evict': handleTripRoomEvict,
-  'participant-backfill': handleParticipantBackfill,
-  'billing.subscription.changed': handleSubscriptionChanged,
-  'billing.invoice.paid': handleInvoicePaid,
+/** Production registry; the import parser must not run after its workspace cascade. */
+export function createTaskHandlers(
+  databaseFor: DatabaseFor = (binding) => drizzle(binding),
+): TaskHandlerRegistry {
+  const bookingImport: TaskHandler<'booking-import'> = async (
+    payload,
+    context,
+  ) => {
+    if (!context.env.DB)
+      throw new TaskConfigurationError('DB is required for workspace tasks')
+    const probe = createScope(databaseFor(context.env.DB), {
+      organizationId: context.orgId,
+      userId: 'system:queue-workspace-probe',
+      role: 'member',
+      impersonatedBy: null,
+    })
+    try {
+      await getOrganization(probe)
+    } catch (error) {
+      if (error instanceof NotFoundError)
+        return { outcome: 'organization-deleted' }
+      throw error
+    }
+    return handleBookingImport(payload, context)
+  }
+
+  return {
+    // These three are independent of a live tenant: delivery may include a deletion receipt,
+    // late billing reconciles after the cascade, and backfill discovers its own organizations.
+    'workspace-late-subscription': handleWorkspaceLateSubscription,
+    'workspace-deletion': async (payload, context) => {
+      if (!context.env.DB)
+        throw new TaskConfigurationError(
+          'DB is required for workspace deletion',
+        )
+      const runtime = createWorkspaceDeletionRuntime(
+        databaseFor(context.env.DB),
+        context.env,
+        {
+          now: () => new Date(context.now()),
+          logger: context.logger,
+          send: (url, init) =>
+            context.callProvider(
+              {
+                provider: 'polar',
+                operation: 'api.request',
+                organizationId: null,
+              },
+              () => fetch(url, init),
+            ),
+        },
+      )
+      return createWorkspaceDeletionHandler(runtime.advance)(payload, context)
+    },
+    email: handleEmail,
+    'pdf-export': handlePdfExport,
+    'booking-import': bookingImport,
+    'travel-stats': handleTravelStats,
+    'trip-purge': handleTripPurge,
+    'trip-copy': handleTripCopy,
+    'trip-room-evict': handleTripRoomEvict,
+    'participant-backfill': handleParticipantBackfill,
+    'billing.subscription.changed': handleSubscriptionChanged,
+    'billing.invoice.paid': handleInvoicePaid,
+  }
 }
+
+export const taskHandlers = createTaskHandlers()
 
 function unhandled(kind: TaskKind): never {
   throw new TaskPermanentError(
@@ -123,6 +187,11 @@ function runHandler(
   context: TaskContext,
 ): Promise<TaskMetrics> {
   switch (envelope.kind) {
+    case 'workspace-deletion':
+      return (registry['workspace-deletion'] ?? unhandled(envelope.kind))(
+        envelope.payload,
+        context,
+      )
     case 'workspace-late-subscription':
       return (
         registry['workspace-late-subscription'] ?? unhandled(envelope.kind)
