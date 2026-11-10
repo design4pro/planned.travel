@@ -1,5 +1,7 @@
 # planned.travel
 
+For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
+
 Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 19, D1/Drizzle, KV, R2, Durable Objects, Queues). Package manager: pnpm. Stack is pinned — see docs/SPEC.md §3 before adding or changing any dependency.
 
 ## Commands

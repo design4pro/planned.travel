@@ -3,6 +3,8 @@ name: om-approve-merge-pr
 description: planned.travel extension of the installed om-approve-merge-pr skill. Checks unresolved review threads and preserves main/develop ancestry with a base-aware merge method.
 ---
 
+**Paperclip pilot:** Before starting an explicitly enrolled pilot task, read `docs/agents/paperclip-delivery-pilot.md`. Its two independent Paperclip reviewers replace additional persona panels only for those tasks, and its PM/CEO ownership replaces nested orchestration. Retain all other safety, validation, review and QA requirements. Outside the pilot, the workflow below is unchanged.
+
 Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` and follow it. The following additions override the installed skill where necessary:
 
 - Step 2: run **list-review-threads**. Any thread that is unresolved and not outdated makes the PR not mergeable here, even with `APPROVED` and green checks: report the threads by path and author and offer `om-auto-fix-pr <number>`, which replies in and resolves the ones it handles. Never resolve a thread from this skill: it merges, it does not answer review feedback.

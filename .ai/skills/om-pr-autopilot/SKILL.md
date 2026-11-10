@@ -3,6 +3,8 @@ name: om-pr-autopilot
 description: planned.travel extension of the installed om-pr-autopilot skill. The PR state is re-read before every push, because a human may merge or close the PR mid-run.
 ---
 
+**Paperclip pilot:** Before starting an explicitly enrolled pilot task, read `docs/agents/paperclip-delivery-pilot.md`. Its two independent Paperclip reviewers replace additional persona panels only for those tasks, and its PM/CEO ownership replaces nested orchestration. Retain all other safety, validation, review and QA requirements. Outside the pilot, the workflow below is unchanged.
+
 Extends the installed skill: read `.claude/skills/om-pr-autopilot/SKILL.md` and follow it. The following additions apply.
 
 Diagnosis reads the PR state once, at the start, but a human may merge or close the PR while the run works. This rule covers every push the run makes, including those of the chained skills that push to the PR head (`om-auto-continue-pr`, `om-auto-continue-pr-loop`, `om-auto-fix-pr`, `om-auto-review-pr` in autofix), whether or not their own overrides were read:
@@ -32,7 +34,6 @@ Six more rules cover the run and every chained skill, whether or not their own o
 - **Find the dev server from the descriptor.** Read `baseUrl` from `.ai/qa/test-env.json` (`sh .ai/scripts/test-env-up.sh` writes it); never grep `.dev.vars*`, which the deny rules refuse. Quote every path that holds a variable, and never `cd` into a route path such as `src/routes/_app/trips/$tripId` unquoted: the shell expands `$tripId` to nothing.
 - **Never try a denied command; use its allowed equivalent.** A command `permissions.deny` refuses ends the run on the first denial under `dontAsk` (run d232173a in money-tracker.online died on an improvised `git reset --hard origin/<branch>`). Move the worktree to the PR head with `git fetch origin <head>` and `git checkout -B <head> origin/<head>`, after checking `git status --short` is clean and `git log origin/<head>..HEAD` is empty: `checkout -B` refuses only when it would overwrite a local change, and it drops a local branch's unpushed commits. Never force-push a rebased branch (denied, `--force-with-lease` included): merge the base instead, or push a new branch. Never `--no-verify`: fix what the hook reports.
 - **Never open a file `permissions.deny` lists under `Read(...)`, not even redacted through `cat` or `sed`.** It ends the run the same way (run b6eb30ef died on `cat .ai/qa/test-env.env`). The login's `passwordEnv` name is in `.ai/qa/test-env.json`; load the values with `set -a; . "$(jq -r .credentialsFile .ai/qa/test-env.json)"; set +a` and use `"$TEST_DEMO_PASSWORD"` in the command (AGENTS.md).
-
 
 ## Shared PR and CI evidence
 

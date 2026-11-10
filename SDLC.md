@@ -1,5 +1,7 @@
 # Software delivery process
 
+For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
+
 ## Purpose
 
 This file documents how work flows from ticket to merged PR in this repository. The agent skills configured in `.ai/agentic.config.json` enforce the process; humans read it here. Issues and PRs live in GitHub, with every tracker operation the skills run defined in `.ai/trackers/github.md` (edit that file to extend or override tracker behavior).

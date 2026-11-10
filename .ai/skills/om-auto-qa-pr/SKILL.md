@@ -3,6 +3,8 @@ name: om-auto-qa-pr
 description: planned.travel extension of the installed om-auto-qa-pr skill. Evidence is the blind A/B pair from scripts/visual/capture.mjs; a panel of specialist sub-agents judges it, and the run signs off on every PR, risk-high included.
 ---
 
+**Paperclip pilot:** Before starting an explicitly enrolled pilot task, read `docs/agents/paperclip-delivery-pilot.md`. Its two independent Paperclip reviewers replace additional persona panels only for those tasks, and its PM/CEO ownership replaces nested orchestration. Retain all other safety, validation, review and QA requirements. Outside the pilot, the workflow below is unchanged.
+
 Extends the installed skill: read `.claude/skills/om-auto-qa-pr/SKILL.md` and follow it. On top:
 
 - The environment comes from `sh .ai/scripts/test-env-up.sh` (the `om-prepare-test-env` entrypoint); read `baseUrl` from `.ai/qa/test-env.json`. Sign in with the demo credential reference in the descriptor, never with a literal password.

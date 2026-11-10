@@ -1,5 +1,7 @@
 # Cezar on this repository
 
+Historical Cezar operating instructions. The developer confirmed on 2026-11-10 that current execution uses Paperclip only. For the bounded pilot, use [Paperclip delivery pilot](paperclip-delivery-pilot.md); this document is not authority to start or restore a Cezar service.
+
 [open-mercato/cezar](https://github.com/open-mercato/cezar) is the only orchestrator of agent work
 here (ADR 0014); the work itself is done by the vendored `om-*` skills from
 [open-mercato/skills](https://github.com/open-mercato/skills) (ADR 0018). Cezar runs on a developer
