@@ -37,6 +37,7 @@
 
 import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
+import { LOCALE_TAGS } from '#/lib/i18n/locales'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import {
@@ -102,7 +103,7 @@ export type PlatformActionName =
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
  * beside it, so §4.4's timeline query never has to guess which prefix belongs to which table.
  *
- * Nine rows, and the reason there are nine rather than thirty-four is that the mapping is a
+ * Ten rows, and the reason there are ten rather than forty is that the mapping is a
  * property of the *prefix*: `catalog_place.published` and `catalog_place.retired` are the same
  * entity seen twice. Callers never pass an `entity_type` — {@link entityTypeForAction} derives it,
  * which is what makes "the prefix names the entity" true of the rows and not only of the document.
@@ -117,6 +118,7 @@ export const PLATFORM_AUDIT_ENTITY_BY_PREFIX = Object.freeze({
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
   provider: 'provider',
+  release: 'release',
 } as const satisfies Readonly<Record<string, PlatformAuditEntityType>>)
 
 /**
@@ -644,6 +646,47 @@ export type PlatformAuditEntryInput = Omit<
   'action'
 > & {
   readonly action: PlatformActionName
+}
+
+/** Closed release actions; existing after-commit callers retain their non-throwing contract. */
+export const RELEASE_ACTIONS = [
+  'release.imported', 'release.reviewed', 'release.translation_reviewed',
+  'release.deployment_recorded', 'release.published', 'release.withdrawn',
+] as const satisfies ReadonlyArray<PlatformAuditAction>
+
+const releaseAuditSchema = z.strictObject({
+  action: z.enum(RELEASE_ACTIONS),
+  entityId: identifierSchema,
+  operationId: identifierSchema,
+  versionId: identifierSchema.optional(),
+  locale: z.enum(LOCALE_TAGS).optional(),
+  sourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  generation: z.number().int().nonnegative().safe().optional(),
+  reason: z.enum(['sensitive', 'inaccurate', 'other']).optional(),
+}).refine((entry) => entry.action === 'release.translation_reviewed'
+  ? entry.locale !== undefined && entry.versionId !== undefined && entry.sourceHash !== undefined
+  : entry.locale === undefined)
+
+/** Validate and construct only; the bounded repositories execute this with their mutations. */
+export function preparePlatformAudit(
+  db: Database,
+  actor: PlatformActor,
+  entry: z.input<typeof releaseAuditSchema>,
+) {
+  const parsedActor = platformActorSchema.parse(actor)
+  if (parsedActor.actorKind !== 'human' || resolvePlatformRole(parsedActor.role) !== 'admin') {
+    throw new Error('Release audit requires a platform admin.')
+  }
+  const parsed = releaseAuditSchema.parse(entry)
+  const { action, entityId, ...metadata } = parsed
+  return db.insert(platformAuditLog).values({
+    // The principal audit row is the durable operation claim; retries cannot reapply an old id.
+    id: action === 'release.deployment_recorded' ? `${parsed.operationId}:receipt` : parsed.operationId,
+    actorUserId: parsedActor.userId, actorKind: parsedActor.actorKind,
+    actorRole: resolvePlatformRole(parsedActor.role), tokenId: null,
+    action, entityId, entityType: entityTypeForAction(action),
+    changes: { before: null, after: metadata },
+  })
 }
 
 /* -------------------------------------------------------------------------------------------------

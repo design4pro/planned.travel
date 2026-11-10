@@ -1,5 +1,5 @@
 /**
- * The eighty-one cells, the four resolution rules, and the shape of the guard itself.
+ * The eighty-seven cells, the four resolution rules, and the shape of the guard itself.
  *
  * docs/ACCESS.md §2 prints the grid as literal yes and no with no conditional cell and no
  * footnote, so it is transcribed here as two literal lists rather than derived from `roles` — a
@@ -71,6 +71,8 @@ const ADMIN_ALLOWS: ReadonlyArray<string> = [
   'sandcastle:read',
   'provider:read',
   'provider:configure',
+  'release:review',
+  'release:publish',
 ]
 
 /** docs/ACCESS.md §2.3, `curator` column. Nothing that touches users or sessions. */
@@ -190,7 +192,7 @@ describe('PlatformActor', () => {
 })
 
 describe('the grid is enumerated in full', () => {
-  it('covers twenty-seven statements', () => {
+  it('covers twenty-nine statements', () => {
     expect(ALL_STATEMENTS.map((cell) => cell.key)).toEqual([
       'user:create',
       'user:list',
@@ -219,15 +221,17 @@ describe('the grid is enumerated in full', () => {
       'sandcastle:read',
       'provider:read',
       'provider:configure',
+      'release:review',
+      'release:publish',
     ])
   })
 
-  it('is eighty-one cells across three roles', () => {
-    expect(ALL_STATEMENTS.length * ROLE_NAMES.length).toBe(81)
+  it('is eighty-seven cells across three roles', () => {
+    expect(ALL_STATEMENTS.length * ROLE_NAMES.length).toBe(87)
   })
 
-  it('expects twenty-six yes for `admin`, ten for `curator`, none for `user`', () => {
-    expect(GRID.admin).toHaveLength(26)
+  it('expects twenty-eight yes for `admin`, ten for `curator`, none for `user`', () => {
+    expect(GRID.admin).toHaveLength(28)
     expect(GRID.curator).toHaveLength(10)
     expect(GRID.user).toHaveLength(0)
   })

@@ -96,7 +96,7 @@ const ACCESS_PLATFORM_ACTIONS = [
   'provider.policy_changed',
 ] as const
 
-/** docs/ACCESS.md §4.2's prefix table, all nine rows, transcribed from the document. */
+/** docs/ACCESS.md §4.2's prefix table, all ten rows, transcribed from the document. */
 const ACCESS_PREFIX_TABLE: Record<string, string> = {
   catalog_place: 'catalog_place',
   catalog_ingest: 'catalog_ingest',
@@ -107,6 +107,7 @@ const ACCESS_PREFIX_TABLE: Record<string, string> = {
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
   provider: 'provider',
+  release: 'release',
 }
 
 const OPERATOR: PlatformActor = {
@@ -235,11 +236,11 @@ describe('the platform action vocabulary', () => {
 })
 
 describe('the prefix table', () => {
-  it('equals the nine rows of docs/ACCESS.md §4.2 exactly', () => {
+  it('equals the ten rows of docs/ACCESS.md §4.2 exactly', () => {
     // §4.4's timeline query filters on (entity_type, entity_id), so it never has to guess which
     // prefix belongs to which table — this mapping is the reason it does not have to.
     expect({ ...PLATFORM_AUDIT_ENTITY_BY_PREFIX }).toEqual(ACCESS_PREFIX_TABLE)
-    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(9)
+    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(10)
   })
 
   it('resolves each action to the entity_type its prefix names', () => {

@@ -217,7 +217,7 @@ describe('platform_audit_log declaration', () => {
  * `tsc --noEmit` as well as run by vitest.
  */
 describe('the four vocabulary columns, narrowed in TypeScript', () => {
-  it('types entity_type as the nine entities of docs/ACCESS.md §4.2', () => {
+  it('types entity_type as the ten entities of docs/ACCESS.md §4.2', () => {
     expectTypeOf<
       NewPlatformAuditLogEntry['entityType']
     >().toEqualTypeOf<PlatformAuditEntityType>()
@@ -227,7 +227,7 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'trip'>().not.toExtend<PlatformAuditEntityType>()
   })
 
-  it('types action as the thirty-four actions of docs/ACCESS.md §4.2', () => {
+  it('types action as the forty actions of docs/ACCESS.md §4.2', () => {
     expectTypeOf<
       NewPlatformAuditLogEntry['action']
     >().toEqualTypeOf<PlatformAuditAction>()
@@ -237,8 +237,8 @@ describe('the four vocabulary columns, narrowed in TypeScript', () => {
     expectTypeOf<'NOT A DOTTED ACTION'>().not.toExtend<PlatformAuditAction>()
     expectTypeOf<'trip.hijacked'>().not.toExtend<PlatformAuditAction>()
 
-    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(34)
-    // §4.2: eighteen two-segment actions and sixteen three-segment platform ones.
+    expect(PLATFORM_AUDIT_ACTIONS).toHaveLength(40)
+    // §4.2: twenty-four two-segment actions and sixteen three-segment platform ones.
     const platform = PLATFORM_AUDIT_ACTIONS.filter((action) =>
       action.startsWith('platform.'),
     )
@@ -559,7 +559,7 @@ describe('the platform_audit_log constraints, against real SQLite', () => {
     const rows = await harness.db.select().from(platformAuditLog)
     expect(rows[0]?.entityType).toBe('trip')
     expect(PLATFORM_AUDIT_ENTITY_TYPES).not.toContain('trip')
-    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(9)
+    expect(PLATFORM_AUDIT_ENTITY_TYPES).toHaveLength(10)
   })
 
   it('leaves action unconstrained in SQL for the same reason', async () => {
