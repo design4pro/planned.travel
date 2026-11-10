@@ -203,6 +203,10 @@ const messages = {
     'The terms and the privacy notice are published in English only. Everything else in the product is translated.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Layout',
+  'appearance.layout.label': 'Wide layout',
+  'appearance.layout.hint':
+    'Use the full app width and align dashboard widgets with the upcoming trip. Saved in this browser only.',
   'appearance.error': 'Appearance did not load',
   'appearance.theme.title': 'Theme',
   'appearance.theme.description':

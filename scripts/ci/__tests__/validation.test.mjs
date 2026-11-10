@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import {
-  mkdtempSync,
   existsSync,
+  mkdtempSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -219,6 +219,33 @@ describe('configured validation execution', () => {
       expect(existsSync(evidence.temp)).toBe(false)
     },
   )
+  it('isolates concurrent command temp files from the inherited host directory and cleans every outcome', async () => {
+    const cwd = fixture()
+    const inherited = process.env.TMPDIR
+    process.env.TMPDIR = join(cwd, 'unavailable')
+    try {
+      const commands = ['exit 0', 'exit 7', 'sleep 30']
+      const logs = commands.map((_, index) => join(cwd, `${index}.log`))
+      const results = await Promise.all(
+        commands.map((command, index) =>
+          runValidationCommand(
+            `printf '%s' "$TMPDIR"; test "$TMPDIR" = "$TMP" && test "$TMPDIR" = "$TEMP" && touch "$TMPDIR/probe" || exit 9; ${command}`,
+            { cwd, logPath: logs[index], timeoutMs: 500 },
+          ),
+        ),
+      )
+      expect(results.map((result) => result.exitCode)).toEqual([0, 7, 124])
+      const paths = logs.map((log) => readFileSync(log, 'utf8'))
+      expect(new Set(paths).size).toBe(3)
+      for (const path of paths) {
+        expect(path.startsWith(join(cwd, '.ai/tmp/validation/'))).toBe(true)
+        expect(existsSync(path)).toBe(false)
+      }
+    } finally {
+      if (inherited === undefined) delete process.env.TMPDIR
+      else process.env.TMPDIR = inherited
+    }
+  })
 
   it('runs fresh by default even with a green receipt, then permits explicit local resume', async () => {
     const cwd = fixture()

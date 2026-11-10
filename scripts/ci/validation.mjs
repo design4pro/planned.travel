@@ -122,16 +122,20 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  return new Promise((done, fail) => {
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
+  return new Promise((done) => {
     const started = Date.now()
-    // Keep command caches off the shared, inode-limited system temporary filesystem.
-    const tempRoot = resolve(cwd, '.ai/tmp/validation')
-    mkdirSync(tempRoot, { recursive: true, mode: 0o700 })
-    const temp = mkdtempSync(join(tempRoot, 'tmp-'))
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
-      env: { ...process.env, TMPDIR: temp, TMP: temp, TEMP: temp },
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -188,17 +192,11 @@ export function runValidationCommand(
         result = 'interrupted'
         exitCode = 130
       }
-      try {
-        rmSync(temp, { recursive: true })
-      } catch (error) {
-        fail(error)
-        return
-      }
       done({ exitCode, result, durationMs: Date.now() - started, logPath })
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
-  })
+  }).finally(() => rmSync(temporary, { recursive: true, force: true }))
 }
 
 export async function runGate({

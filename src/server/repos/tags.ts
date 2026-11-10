@@ -7,6 +7,7 @@
 
 import { and, asc, count, eq, inArray, ne, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { ensureDefaultCategories } from './categories'
 import { placeTags, tags, newId } from '#/server/db/schema'
 import { createTenantRepository, prepareTenantInsert, tenantFilter } from './base'
 import {
@@ -101,6 +102,7 @@ export async function createTag(
   input: CreateTagInput,
 ): Promise<Tag> {
   const values = createTagInput.parse(input)
+  await ensureDefaultCategories(scope)
   const limit = await taxonomyLimit(scope)
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const slug = await reserveSlug(scope, values.slug ?? values.name)
@@ -141,6 +143,7 @@ export async function resolveTags(
   names: ResolveTagsInput,
 ): Promise<Array<Tag>> {
   const wanted = resolveTagsInput.parse(names)
+  await ensureDefaultCategories(scope)
   const bySlug = new Map<string, string>()
   for (const name of wanted) {
     const slug = slugify(name, 'tag')

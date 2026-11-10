@@ -13,7 +13,7 @@ import { createHarness } from '#/server/repos/__tests__/harness'
 import type { Harness, SeededTenant } from '#/server/repos/__tests__/harness'
 import type { TenantScope } from '#/server/repos'
 import type * as Repos from '#/server/repos'
-import { loadTripHeader, loadTripFiles } from '../trip'
+import { loadTripHeader, loadTripFiles, loadTripPlan } from '../trip'
 import { AuthRequirementError } from '#/server/auth/tenant'
 
 const stubs = vi.hoisted(() => ({
@@ -65,6 +65,21 @@ describe('trip header read result', () => {
   afterEach(() => {
     harness.close()
     vi.restoreAllMocks()
+  })
+
+  it('prepares category data once and rejects an unavailable bootstrap', async () => {
+    const trip = await createTrip(tenant.scope, { title: 'New workspace' })
+    const categories = await import('#/server/repos/categories')
+    const payload = await loadTripPlan({ data: { tripId: trip.id } })
+    expect(payload.categories).toHaveLength(8)
+    for (const row of await categories.listCategories(tenant.scope)) await categories.deleteCategory(tenant.scope, row.id)
+    expect((await loadTripPlan({ data: { tripId: trip.id } })).categories).toEqual([])
+    const preparation = vi.spyOn(await import('#/server/repos'), 'ensureDefaultCategories').mockRejectedValueOnce(new Error('initialization unavailable'))
+    try {
+      await expect(loadTripPlan({ data: { tripId: trip.id } })).rejects.toThrow('initialization unavailable')
+    } finally {
+      preparation.mockRestore()
+    }
   })
 
   it('returns exactly the same absence for foreign, missing and private unreadable trips', async () => {

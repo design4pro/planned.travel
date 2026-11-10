@@ -159,6 +159,10 @@ const messages = {
     'Les conditions et la politique de confidentialité ne sont publiées qu’en anglais. Tout le reste du produit est traduit.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Disposition',
+  'appearance.layout.label': 'Disposition large',
+  'appearance.layout.hint':
+    'Utilisez toute la largeur de l’application et alignez les widgets du tableau de bord sur le prochain voyage. Enregistré uniquement dans ce navigateur.',
   'appearance.error': 'L’apparence ne s’est pas chargée',
   'appearance.theme.title': 'Thème',
   'appearance.theme.description':

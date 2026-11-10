@@ -18,7 +18,8 @@ import {
   Ticket,
 } from 'lucide-react'
 
-import { AppFrame, AppSections } from '#/components/layout/app-frame'
+import { AppFrame } from '#/components/layout/app-frame'
+import { DashboardLayout } from './-ui/dashboard-layout'
 import { formatStorageSize } from '#/components/layout/storage-size'
 import {
   Badge,
@@ -31,7 +32,6 @@ import {
   StatCard,
 } from '#/components/ui'
 import { workspaceSwitchFetch } from '#/lib/workspace-claim-store'
-import { cn } from '#/lib/cn'
 import { useI18n, useTranslate } from '#/lib/i18n'
 import { loadDashboard } from './-server/overview'
 import { loadDashboardMascot } from '#/server/fns/dashboard-mascot'
@@ -225,43 +225,32 @@ function DashboardPage() {
 
   return (
     <AppFrame>
-      <AppSections>
-        <UpNext
-          data={data}
-          userId={shell.session.user.id}
-          workspaceId={shell.session.organization?.id ?? null}
-          onRefresh={refreshMascot}
-          reduceMotion={shell.reduceMotion ?? true}
-        />
-        <StatRow data={data} />
-
-        {/* The column's own controls, deliberately outside it: the menu can
-            empty the column, and a control that went with the last widget would
-            leave the reader no way of bringing anything back. */}
-        <div className="flex min-h-9 flex-wrap items-center justify-end gap-2">
-          <DashboardWidgetsMenu widgets={widgets} />
-          {inSheet && shown.length > 0 ? (
-            <DashboardWidgetsSheet>{shown}</DashboardWidgetsSheet>
-          ) : null}
-        </div>
-
-        <div
-          className={cn(
-            'grid gap-6',
-            // Every widget switched off collapses the column outright rather
-            // than leaving an empty rail beside the content — the failure mode a
-            // per-widget `display: none` produces.
-            shown.length > 0 && 'xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8',
-          )}
-        >
-          <div className="flex min-w-0 flex-col gap-6">
-            <YourTrips data={data} />
+      <DashboardLayout
+        hero={
+          <UpNext
+            data={data}
+            userId={shell.session.user.id}
+            workspaceId={shell.session.organization?.id ?? null}
+            onRefresh={refreshMascot}
+            reduceMotion={shell.reduceMotion ?? true}
+          />
+        }
+        stats={<StatRow data={data} />}
+        controls={
+          <div className="flex min-h-9 flex-wrap items-center justify-end gap-2">
+            <DashboardWidgetsMenu widgets={widgets} />
+            {inSheet && shown.length > 0 ? (
+              <DashboardWidgetsSheet>{shown}</DashboardWidgetsSheet>
+            ) : null}
           </div>
-          {inSheet || shown.length === 0 ? null : (
+        }
+        trips={<YourTrips data={data} />}
+        widgets={
+          inSheet || shown.length === 0 ? null : (
             <DashboardWidgetsColumn>{shown}</DashboardWidgetsColumn>
-          )}
-        </div>
-      </AppSections>
+          )
+        }
+      />
     </AppFrame>
   )
 }
@@ -739,27 +728,21 @@ function StorageMeter({ data }: { data: DashboardPayload }) {
 function DashboardPending() {
   return (
     <AppFrame>
-      <AppSections>
-        <HeaderSkeleton />
-        <StatsSkeleton />
-        {/* The widget controls' own row, reserved at the height the live header
-            occupies — `min-h-9` on a row of `sm` pills — so the grid below it
-            starts where it will start once the payload lands. */}
-        <div className="flex min-h-9 items-center justify-end">
-          <Skeleton className="h-8 w-36 rounded-full" />
-        </div>
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem] xl:gap-8">
+      <DashboardLayout
+        hero={<HeaderSkeleton />}
+        stats={<StatsSkeleton />}
+        controls={
+          <div className="flex min-h-9 items-center justify-end">
+            <Skeleton className="h-8 w-36 rounded-full" />
+          </div>
+        }
+        trips={
           <Card variant="inset" padding="none">
             <RowsSkeleton rows={4} />
           </Card>
-          {/* The reference column as it arrives by default: the clock, whose
-              first row is the reader's own zone and whose footer is the picker,
-              then the three panels beside it. One block for the whole column
-              would settle by growing a widget's worth of height, which is the
-              layout shift this state exists to avoid. The default is what is
-              reserved, because the pending frame is rendered before anything can
-              read the browser's preference without disagreeing with the server. */}
-          <div className="flex min-w-0 flex-col gap-6">
+        }
+        widgets={
+          <div className="hidden min-w-0 flex-col gap-6 md:flex">
             <Card variant="inset" padding="none">
               <RowsSkeleton rows={2} />
             </Card>
@@ -767,8 +750,8 @@ function DashboardPending() {
               <RowsSkeleton rows={3} />
             </Card>
           </div>
-        </div>
-      </AppSections>
+        }
+      />
     </AppFrame>
   )
 }

@@ -35,3 +35,12 @@ export async function refuseTaxonomyQuota(
     .from(sql`(select 1)`)
   throw new QuotaExceededError('taxonomy', limit, row?.used ?? 0)
 }
+
+/** The live shared meter, read through the same tenant predicate as growing writes. */
+export async function readTaxonomyMeter(scope: TenantScope): Promise<{ used: number; limit: number }> {
+  const [rows, limit] = await Promise.all([
+    scope.db.select({ used: taxonomyUsage(scope) }).from(sql`(select 1)`),
+    taxonomyLimit(scope),
+  ])
+  return { used: rows[0]?.used ?? 0, limit }
+}

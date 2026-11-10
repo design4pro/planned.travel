@@ -160,6 +160,10 @@ const messages = {
     'Las condiciones y el aviso de privacidad se publican solo en inglés. Todo lo demás del producto está traducido.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Distribución',
+  'appearance.layout.label': 'Distribución amplia',
+  'appearance.layout.hint':
+    'Usa todo el ancho de la aplicación y alinea los widgets del panel con el próximo viaje. Se guarda solo en este navegador.',
   'appearance.error': 'La apariencia no se ha cargado',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':
