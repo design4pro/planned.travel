@@ -64,7 +64,7 @@ user: [
 session: ['list', 'revoke', 'delete']
 ```
 
-Together with our six application resources, the current runtime dictionary is:
+Together with our seven application resources, the current runtime dictionary is:
 
 | Resource     | Actions                                                                                                                                    |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -76,9 +76,10 @@ Together with our six application resources, the current runtime dictionary is:
 | `share`      | `read` · `revoke`                                                                                                                          |
 | `provider`   | `read` · `configure`                                                                                                                       |
 | `sandcastle` | `read`                                                                                                                                     |
+| `release` | `review` · `publish` |
 
-**The current runtime dictionary is closed at eight resources.** ADR 0051 reserves `release`
-as the ninth resource (`review`, `publish`) for separately reviewed future runtime work.
+**The current runtime dictionary is closed at nine resources.** ADR 0051's `release` resource
+(`review`, `publish`) is implemented by the bounded local/preview persistence slice (#1873).
 Any other resource, or a new action on an existing
 one, is an edit to this document and to the grid in §2 in the same commit. Authority that has no
 statement of its own is expressed with the statements above - see §2.4 for MCP tokens.
@@ -90,7 +91,7 @@ whichever roles enumerate `user` actions by spread. So a unit test deep-equals
 changes the upstream dictionary fails that test and forces a decision here, rather than shipping a
 statement nobody in this document has ruled on.
 
-### 1.2 What our six application resources cover
+### 1.2 What our seven application resources cover
 
 | Resource     | Tables it governs                                                    | `read`                                                                                                                              | `write`                                                                      | `publish` / `run` / `revoke`                                    |
 | ------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -100,6 +101,7 @@ statement nobody in this document has ruled on.
 | `share`      | `share_links` (every tenant's), through the moderation surface only  | The moderation list defined in §3.4, reached the one legal way §2.4 specifies                                                       | -                                                                            | `revoke`: stamp `revoked_at` on a share link                    |
 | `provider`   | `provider_registry`, `provider_usage`                                | Inspect provider controls and usage                                                                                                 | `configure`: change provider limits/policy                                   | -                                                               |
 | `sandcastle` | No table at all - the `SandcastleRegistry` Durable Object (ADR 0009) | The run registry as `/console/sandcastle` shows it: live runs, the issues each holds, orphaned WIP branches, recently finished runs | -                                                                            | -                                                               |
+| `release` | The seven shared content/release tables (ADR 0051) | Authenticated published whitelist; no separate read permission | `review`: import and approve exact source revisions or translations | `publish`: receipt, pointer and withdrawal transitions; no production caller in #1873 |
 
 A `published` catalogue or pack row needs **no** statement: it is readable by an entitled tenant
 through `src/server/catalog`, and readable without a session only through the whitelisted
@@ -293,12 +295,13 @@ The existing `provider:read` and `provider:configure` statements belong to platf
 only (`auth/access.ts`, SPEC §5). Curator and user have neither; workspace roles confer no
 platform authority. Existing ban and impersonation vetoes apply.
 
-### 2.3c Release history - contract amendment only
+### 2.3c Release history - bounded persistence
 
-[ADR 0051](adr/0051-bounded-release-content-contract.md) adds documented future permissions
-`release:review` and `release:publish`. The current runtime dictionary printed in §1.1 remains
-unchanged in this documentation-only amendment; later runtime adds a `release` resource to
-that same dictionary, never a parallel role resolver or permission path.
+[ADR 0051](adr/0051-bounded-release-content-contract.md) defines `release:review` and
+`release:publish` in the existing dictionary. `auth/release-authority.ts` refreshes primary
+authority through the trusted Better Auth adapter and calls the same pure guard. The #1873
+repositories have no production mutation caller; deployment evidence seeding accepts only
+local/preview fixtures. Production adapters and writes still require separate approval.
 
 | Actor                                                                                           | `release:review` | `release:publish` |
 | ----------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
@@ -315,7 +318,7 @@ Re-read primary role and ban state immediately before calling the existing pure
 resolver. Import and source/translation review require `release:review`; receipt, pointer,
 publication and withdrawal mutations require `release:publish`. No workspace membership or
 owner capability confers either permission. All seven-table mutations require atomic audit
-as §4.3 states. This is no runtime, production-write or main-promotion approval.
+as §4.3 states. These permissions grant no production-write or main-promotion approval.
 
 ### 2.4 The cases the plan left open, closed by name
 
@@ -928,7 +931,7 @@ the retention rather than restating them, so there is one list and it is this on
 | `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                                              |
 | `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                                                         |
 | `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                                                          |
-| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider` · `workspace`. The mapping to `action` is in §4.2 |
+| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider` · `workspace` · `release`. The mapping to `action` is in §4.2 |
 | `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                                                     |
 | `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                                                  |
 | `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                                                        |
@@ -990,7 +993,7 @@ Two consequences worth stating, because both were found by measurement:
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
 distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
 writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
-that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the ten
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eleven
 fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
 grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
 column nowhere at all, which is what the first attempt did.
@@ -1076,24 +1079,25 @@ prefix-equals-`entity_type` rule is declared by the table below rather than inhe
 An action on a user, a session, a credential or a share takes the three-segment
 `platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
 and a bare `user.created` read out of an operational view spanning both tables would be
-attributable to neither. Eighteen of the thirty-six actions below take the first form and eighteen
+attributable to neither. Twenty-four of the forty-two actions below take the first form and eighteen
 take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
 guess which prefix belongs to which table:
 
-| Action prefix          | `entity_type`     |
-| ---------------------- | ----------------- |
-| `catalog_place.*`      | `catalog_place`   |
-| `catalog_ingest.*`     | `catalog_ingest`  |
-| `place_pack.*`         | `place_pack`      |
-| `catalog_source.*`     | `catalog_source`  |
-| `platform.user.*`      | `user`            |
-| `platform.session.*`   | `session`         |
-| `platform.token.*`     | `staff_api_token` |
-| `platform.share.*`     | `share_link`      |
-| `platform.workspace.*` | `workspace`       |
-| `provider.*`           | `provider`        |
+| Action prefix        | `entity_type`     |
+| -------------------- | ----------------- |
+| `catalog_place.*`    | `catalog_place`   |
+| `catalog_ingest.*`   | `catalog_ingest`  |
+| `place_pack.*`       | `place_pack`      |
+| `catalog_source.*`   | `catalog_source`  |
+| `platform.user.*`    | `user`            |
+| `platform.session.*` | `session`         |
+| `platform.token.*`   | `staff_api_token` |
+| `platform.share.*`   | `share_link`      |
+| `platform.workspace.*` | `workspace` |
+| `provider.*`         | `provider`        |
+| `release.*`          | `release`         |
 
 **The list is closed.** Every action this platform can ever write is below. A new action is an
 edit to this table, in the commit that adds the code that writes it.
@@ -1180,10 +1184,10 @@ regex, and that every one of them begins with a prefix listed in the prefix tabl
 the machine-checkable half of the shape, and the half §4.4's query depends on. A name that exists
 in code and not in this table fails it; so does a name in this table that nothing writes.
 
-The release-only amendment reserves the closed actions `release.imported`, `release.reviewed`,
+The release-only vocabulary includes the closed actions `release.imported`, `release.reviewed`,
 `release.translation_reviewed`, `release.deployment_recorded`, `release.published` and
-`release.withdrawn`, each with entity type `release`. Runtime vocabulary remains unchanged
-until separately reviewed implementation. Metadata is bounded ids, hashes, outcomes and reason
+`release.withdrawn`, each with entity type `release`. They are implemented by the
+bounded local/preview persistence slice (#1873). Metadata is bounded ids, hashes, outcomes and reason
 codes only, never prose, credentials, raw payloads or tenant content (ADR 0051).
 
 ### 4.3 Append-only, and never a reason to fail
@@ -1259,7 +1263,7 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
   table.
 
-#### Release-publication atomic exception (contract only)
+#### Release-publication atomic exception
 
 [ADR 0051](adr/0051-bounded-release-content-contract.md) makes one bounded exception to the
 best-effort rule above: every write in the two seven-table content/release repositories must
@@ -1269,16 +1273,21 @@ insert or unsupported atomic driver refuses without any partial mutation. Existi
 logging behavior; none migrates to this exception implicitly.
 
 `catalog/audit.ts` alone owns validation, bounded metadata and statement construction through
-the proposed `preparePlatformAudit(db, actor, entry)` unexecuted-statement seam. Its errors
+`preparePlatformAudit(db, actor, entry)` unexecuted-statement seam. Its errors
 propagate before commit. The release repository composes it with the mutation; no second audit
-writer and no catalog-to-repos import. The proposed
+writer and no catalog-to-repos import.
 `runAtomicDatabaseBatch(db, statements)` lives in the existing `repos/batch.ts` owner, reusing
-its atomic implementation. Current `runAtomicBatch` already fails closed but requires
-`TenantScope`; the new plain-`Database` seam refuses unsupported drivers before executing any
+its atomic implementation. The scoped `runAtomicBatch` continues to require
+`TenantScope`; the plain-`Database` seam accepts only the known D1 driver and refuses others before executing any
 statement. No fabricated tenant scope or sequential fallback is allowed. Existing `runBatch`
-and scoped atomic callers retain their contracts. Future runtime tests must prove validation,
-insert-failure and whole-batch rollback plus regression coverage of existing non-throwing callers.
-No seam or release SQL is implemented by this amendment.
+and scoped atomic callers retain their contracts. Real D1 tests prove validation, insert-failure, lost-CAS and whole-batch rollback; existing
+non-throwing audit tests remain mandatory. The principal release audit id is the stable
+operation id, preventing its reuse from committing another transition; the deployment side
+record uses a reserved `:receipt` suffix. Metadata holds only bounded ids, hashes, generations
+reason codes and supported translation locale codes. Review records keep only opaque
+audit operation references and review times; reviewer user ids remain solely in the audit
+ledger and expire with its 400-day retention. There is no foreign key blocking that prune,
+and identity expiry does not revoke a completed approval. The #1873 slice exposes no production receipt adapter or writer.
 
 ### 4.4 The query that makes this log worth having
 

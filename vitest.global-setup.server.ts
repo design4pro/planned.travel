@@ -2,6 +2,7 @@ import {
   generateSQLiteDrizzleJson,
   generateSQLiteMigration,
 } from 'drizzle-kit/api'
+import { releaseVersionTriggers } from './scripts/db/release-version-triggers.mjs'
 import type { TestProject } from 'vitest/node'
 
 /**
@@ -16,7 +17,7 @@ async function schemaDdl(): Promise<Array<string>> {
   const { authSchema, accountSecuritySchema } =
     await import('#/server/db/auth-schema')
   const domainSchema = await import('#/server/db/schema')
-  return generateSQLiteMigration(
+  const statements = await generateSQLiteMigration(
     await generateSQLiteDrizzleJson({}),
     await generateSQLiteDrizzleJson({
       ...authSchema,
@@ -24,6 +25,7 @@ async function schemaDdl(): Promise<Array<string>> {
       ...domainSchema,
     }),
   )
+  return [...statements, ...releaseVersionTriggers]
 }
 
 export default async function setup(project: TestProject) {

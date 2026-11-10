@@ -830,7 +830,12 @@ member nor an FU-3 resolver. Its exact table constraints, unique `(production, h
 whitelisted approved/non-withdrawn published projection, fresh admin-only guard, single audit
 writer and fail-closed atomic batch are binding. Existing tenant, account-auth and catalog
 boundaries remain intact. This is a contract amendment only; no runtime implementation or
-production-write approval follows from it.
+production-write approval follows from it. The separately reviewed #1873 persistence slice
+implements these tables and repositories without a production mutation caller or Settings route.
+`pnpm db:generate` runs drizzle-kit plus the deterministic immutable-version trigger supplement;
+existing migrations are verified rather than silently rewritten. Review attribution stays in the
+existing platform audit ledger; content keeps an opaque audit operation reference and review
+time, never a duplicate reviewer user id or a foreign key that blocks the 400-day audit prune.
 
 ## 6. Repo conventions
 
