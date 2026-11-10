@@ -1,5 +1,7 @@
 # Code review
 
+For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
+
 Review rules for this repository, read by `om-code-review` (and therefore by `om-auto-review-pr`
 and `om-review-prs`) on top of its built-in checklist. The binding standards are docs/SPEC.md §6
 and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklist` in

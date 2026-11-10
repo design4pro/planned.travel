@@ -3,6 +3,21 @@ name: om-code-review
 description: planned.travel extension of the installed om-code-review skill. Adds the repo's blocker floor (suppressions, skipped tests, generated files, dependencies, tenant isolation, locale parity).
 ---
 
+## Enrolled Paperclip pilot: independent assigned review
+
+For an explicitly enrolled task, read `docs/agents/paperclip-delivery-pilot.md` and
+use the existing code-review rubric on the full frozen head/base/policy packet in
+your PM-assigned independent reviewer context. Return your attributed verdict,
+findings and coverage directly to the PM. Start no additional persona panel,
+implementation or publication chain. The two assigned reviewers supply the
+policy's complete coverage; missing coverage blocks acceptance and is routed to
+the PM. All other review and safety requirements remain mandatory.
+
+## Outside the pilot
+
+The workflow below, including its persona routing, applies unchanged to tasks
+that are not enrolled.
+
 Extends the installed skill: read `.claude/skills/om-code-review/SKILL.md` and follow it. `CODE_REVIEW.md` at the repo root is the full rule set; these are the mechanical blockers to check first, on the diff alone:
 
 - Added `@ts-ignore`, `@ts-expect-error`, `eslint-disable*` → blocker.
