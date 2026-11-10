@@ -1,7 +1,41 @@
+import { createRequire } from 'node:module'
 import { expect, test } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { useSession } from './helpers/session'
 import { callsServerFn } from './helpers/server-fn'
+import type { DashboardPayload } from '../src/routes/_app/-server/overview'
+
+const { fromCrossJSON, toCrossJSONAsync } = createRequire(
+  import.meta.resolve('@tanstack/react-start'),
+)('seroval') as {
+  fromCrossJSON: (
+    value: unknown,
+    options: { refs: Map<number, unknown> },
+  ) => { result: DashboardPayload }
+  toCrossJSONAsync: (value: unknown) => Promise<unknown>
+}
+
+async function emptyDashboardResponse(page: Page) {
+  await page.route('**/_serverFn/**', async (route) => {
+    const url = new URL(route.request().url())
+    if (
+      !callsServerFn(url, 'loadDashboard') ||
+      callsServerFn(url, 'loadDashboardMascot')
+    )
+      return route.continue()
+    const response = await route.fetch()
+    const body = fromCrossJSON(await response.json(), { refs: new Map() })
+    await route.fulfill({
+      response,
+      body: JSON.stringify(
+        await toCrossJSONAsync({
+          ...body,
+          result: { ...body.result, upNext: null, elapsed: null, upcoming: [] },
+        }),
+      ),
+    })
+  })
+}
 
 async function expectUnobscured(control: Locator) {
   await expect(control).toBeFocused()
@@ -266,8 +300,9 @@ test('an empty featured-trip slot has no mascot stage or controls', async ({
   baseURL,
 }) => {
   await useSession(context, page, baseURL)
-  await context.setExtraHTTPHeaders({ 'x-pt-server-today': '2099-01-01' })
-  await page.goto('/dashboard')
+  await page.goto('/settings/appearance')
+  await emptyDashboardResponse(page)
+  await page.getByRole('link', { name: 'planned.travel dashboard' }).click()
   await expect(
     page.getByRole('link', { name: 'Plan a trip', exact: true }),
   ).toBeVisible()
@@ -292,7 +327,7 @@ test('losing the last featured trip removes its panel and recovers keyboard focu
   await page.keyboard.press('Enter')
   await expect(page.getByText('Travel chat is unavailable')).toBeVisible()
   await page.getByRole('button', { name: 'Close', exact: true }).focus()
-  await context.setExtraHTTPHeaders({ 'x-pt-server-today': '2099-01-01' })
+  await emptyDashboardResponse(page)
   await page.evaluate(() =>
     document.dispatchEvent(new Event('visibilitychange')),
   )
