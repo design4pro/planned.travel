@@ -14,6 +14,29 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired': '此預覽已過期。請在確認前重新產生預覽。',
+  'gallery.publish.title': '圖庫預覽',
+  'gallery.publish.publicTitle': '公開標題',
+  'gallery.publish.attribution': '顯示名稱',
+  'gallery.publish.showDates': '包含旅行日期',
+  'gallery.publish.preview': '預覽將分享的內容',
+  'gallery.publish.confirm': '確認此預覽',
+  'gallery.publish.captureFailed': '無法準備預覽。請檢查填寫內容後重試。',
+  'gallery.publish.tooLarge': '此行程太大，無法預覽。',
+  'gallery.publish.empty': '空白',
+  'gallery.publish.version': '版本',
+  'gallery.publish.countries': '國家代碼',
+  'gallery.publish.days': '行程日',
+  'gallery.publish.places': '地點',
+  'gallery.publish.order': '順序',
+  'gallery.publish.yes': '是',
+  'gallery.publish.no': '否',
+  'gallery.publish.publicFields':
+    '標題、摘要、顯示名稱、國家代碼、每日標題、地點名稱和類別及其座標可能會公開。只有您選擇包含日期時，日期才會公開。',
+  'gallery.publish.privateFields': '不包含旅行者、筆記、檔案、費用和預訂。',
+  'gallery.publish.freeTextWarning':
+    '確認前，請檢查標題、摘要、顯示名稱、每日標題和地點名稱中是否含有個人資訊。',
+
   'plan.photo.edit': '編輯圖片',
   'plan.photo.unavailable': '暫時無法上傳和編輯圖片。目前的圖片將被保留。',
   'collab.readOnly.archived': '此旅行已封存。協作內容僅供閱讀。',

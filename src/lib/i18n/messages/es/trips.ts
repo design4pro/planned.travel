@@ -14,6 +14,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Esta vista previa ha caducado. Genera una nueva antes de confirmar.',
+  'gallery.publish.title': 'Vista previa de la galería',
+  'gallery.publish.publicTitle': 'Título público',
+  'gallery.publish.attribution': 'Nombre visible',
+  'gallery.publish.showDates': 'Incluir las fechas del viaje',
+  'gallery.publish.preview': 'Ver lo que se compartirá',
+  'gallery.publish.confirm': 'Confirmar esta vista previa',
+  'gallery.publish.captureFailed':
+    'No pudimos preparar la vista previa. Revisa los campos e inténtalo de nuevo.',
+  'gallery.publish.tooLarge':
+    'Este viaje es demasiado grande para la vista previa.',
+  'gallery.publish.empty': 'Vacío',
+  'gallery.publish.version': 'Versión',
+  'gallery.publish.countries': 'Códigos de país',
+  'gallery.publish.days': 'Días',
+  'gallery.publish.places': 'Lugares',
+  'gallery.publish.order': 'Orden',
+  'gallery.publish.yes': 'Sí',
+  'gallery.publish.no': 'No',
+  'gallery.publish.publicFields':
+    'El título, el resumen, el nombre visible, los códigos de país, los títulos de los días, los nombres y categorías de los lugares y sus coordenadas pueden ser públicos. Las fechas solo se incluyen si lo eliges.',
+  'gallery.publish.privateFields':
+    'No se incluyen viajeros, notas, archivos, gastos ni reservas.',
+  'gallery.publish.freeTextWarning':
+    'Antes de confirmar, comprueba si el título, el resumen, el nombre visible, los títulos de los días y los nombres de los lugares contienen información personal.',
+
   'plan.photo.edit': 'Editar imagen',
   'plan.photo.unavailable':
     'La carga y la edición de imágenes no están disponibles. Se conserva la imagen actual.',

@@ -14,6 +14,29 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired': '此预览已过期。请在确认前重新生成预览。',
+  'gallery.publish.title': '图库预览',
+  'gallery.publish.publicTitle': '公开标题',
+  'gallery.publish.attribution': '显示名称',
+  'gallery.publish.showDates': '包含旅行日期',
+  'gallery.publish.preview': '预览将分享的内容',
+  'gallery.publish.confirm': '确认此预览',
+  'gallery.publish.captureFailed': '无法准备预览。请检查填写内容后重试。',
+  'gallery.publish.tooLarge': '此行程太大，无法预览。',
+  'gallery.publish.empty': '空',
+  'gallery.publish.version': '版本',
+  'gallery.publish.countries': '国家代码',
+  'gallery.publish.days': '行程日',
+  'gallery.publish.places': '地点',
+  'gallery.publish.order': '顺序',
+  'gallery.publish.yes': '是',
+  'gallery.publish.no': '否',
+  'gallery.publish.publicFields':
+    '标题、摘要、显示名称、国家代码、每日标题、地点名称和类别及其坐标可能会公开。只有您选择包含日期时，日期才会公开。',
+  'gallery.publish.privateFields': '不包含旅行者、笔记、文件、费用和预订。',
+  'gallery.publish.freeTextWarning':
+    '确认前，请检查标题、摘要、显示名称、每日标题和地点名称中是否含有个人信息。',
+
   'plan.photo.edit': '编辑图片',
   'plan.photo.unavailable': '暂时无法上传和编辑图片。当前图片将被保留。',
   'collab.readOnly.archived': '此旅行已归档。协作内容仅供阅读。',

@@ -443,8 +443,10 @@ step-up and an impersonation veto, or the independently authorized erasure job, 
 No production writer ships in the ledger prerequisite slice. The platform-actor permission and
 per-mutation audit clauses are inapplicable to recovery checkpoints; the eventual driver audits
 the deletion itself. Importer tests pin rare readers: auth organization hooks, direct membership
-and invitation creation, atomic invitation acceptance, and the billing store used by checkout and
-plan changes. Ordinary requests and webhooks gain no ledger lookup. Repository inserts bind the
+and invitation creation, atomic invitation acceptance, the billing store used by checkout and
+plan changes, and `repos/community.ts` for private gallery-preview capture and actor-bound preview
+reads only. The gallery repository may import only `workspaceDeletionAbsent`, returning no ledger
+projection and adding no writer. All other request paths and webhooks gain no ledger lookup. Repository inserts bind the
 shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate
 is the narrow exception to a tenant statement reaching a global table: it returns no ledger
 projection and never registers the ledger with the tenant repository factory. Better Auth hooks and external billing

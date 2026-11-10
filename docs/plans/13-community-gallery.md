@@ -1,5 +1,9 @@
 # 13 — Community gallery
 
+> Private preview implementation (#1884): the scoped preview document, expiring consent records
+> and unmounted preview view now exist. Submission, curation and public gallery stages remain
+> separate work; the inventory below records the original planning baseline.
+
 > Storage contract update (#1784, ADR 0050): historical R2-first/check-then-insert descriptions
 > below are superseded for workspace quota-bearing writes by atomic reservation before a
 > create-only put, followed by settlement. Failed cleanup remains charged. Future tenant writers
