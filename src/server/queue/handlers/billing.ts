@@ -29,6 +29,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { planById } from '#/lib/plans'
 import { dispatchQuietly } from '#/server/notifications/dispatch'
 import { createScope, getOrganization, listMembers } from '#/server/repos'
+import { NotFoundError } from '#/server/repos/context'
 import { TaskConfigurationError, TaskPermanentError } from '../types'
 
 import type { SubscriptionStatus } from '#/lib/plans'
@@ -59,8 +60,8 @@ const BILLING_ACTION_URL = '/settings/billing'
 
 /**
  * The user a probe read acts as before a real member is known — the same fabricated value, and the
- * same bound on it, as `src/server/queue/reminders.ts` uses. The one read made through the probe,
- * `listMembers`, is `tenantFilter()`-bound on `organization_id` and compares no user id at all, so
+ * same bound on it, as `src/server/queue/reminders.ts` uses. Its reads,
+ * `getOrganization` and `listMembers`, are tenant-bound and compare no user id at all, so
  * the probe sees exactly the rows the organization already owns. It is never used to write.
  */
 const PROBE_USER_ID = 'system'
@@ -104,7 +105,7 @@ const FAILED_PAYMENT_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
 async function scopeForWorkspace(
   db: Database,
   organizationId: string,
-): Promise<TenantScope> {
+): Promise<{ scope: TenantScope; organizationName: string } | null> {
   const probe = createScope(db, {
     userId: PROBE_USER_ID,
     organizationId,
@@ -112,6 +113,14 @@ async function scopeForWorkspace(
     impersonatedBy: null,
   })
 
+  let organization
+  try {
+    organization = await getOrganization(probe)
+  } catch (error) {
+    // A queued billing follow-up may outlive the workspace cascade. Read failures still retry.
+    if (error instanceof NotFoundError) return null
+    throw error
+  }
   const owner = (await listMembers(probe)).find((row) => row.role === 'owner')
   if (owner === undefined) {
     throw new TaskPermanentError(
@@ -119,12 +128,15 @@ async function scopeForWorkspace(
     )
   }
 
-  return createScope(db, {
-    userId: owner.userId,
-    organizationId,
-    role: 'owner',
-    impersonatedBy: null,
-  })
+  return {
+    scope: createScope(db, {
+      userId: owner.userId,
+      organizationId,
+      role: 'owner',
+      impersonatedBy: null,
+    }),
+    organizationName: organization.name,
+  }
 }
 
 /** One billing follow-up, in the vocabulary `dispatch()` takes. */
@@ -156,9 +168,10 @@ async function announce(
     )
   }
 
-  const scope = await scopeForWorkspace(databaseFor(binding), context.orgId)
-  const organization = await getOrganization(scope)
-  const notification = build(organization.name)
+  const workspace = await scopeForWorkspace(databaseFor(binding), context.orgId)
+  if (workspace === null) return { outcome: 'organization-deleted' }
+  const { scope, organizationName } = workspace
+  const notification = build(organizationName)
 
   const deps: DispatchDeps = {
     queue: context.env.TASKS,

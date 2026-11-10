@@ -1516,6 +1516,42 @@ sandbox dashboard (**Products → Discounts**), and do it at the latest when the
 
 ### 9.13 Workspace deletion billing consumer (#1740)
 
+Older destructive Workers lack the statement-time ledger EXISTS fence. Before activating any
+workspace-deletion producer, retire every older Worker and all its in-flight destructive executions;
+a mixed old/new window does not establish lease safety. After activation do not roll back to an
+unfenced destructive Worker: use a forward fix. This is a rollout prerequisite, not activation
+permission; staged AC6/AC8 contract acceptance and the existing consumer-first/provider gates remain separate requirements.
+
+The `workspace-deletion` consumer and production quarter-hour recovery share
+`workspace-deletion/runtime.ts`. The additive `refusal_reason` column is generated before deployment;
+old Workers tolerate its nullable default. Catalog validation and lease/state CAS freeze a refusal
+before fallible delivery. Failed owner notice retains PII and the deletion fence; a later change
+in membership/billing cannot restart destructive work on that ledger row. Only accepted notice,
+verified single-outcome audit and terminal CAS clear refusal PII and lift the fence. The default
+notice adapter throws until activation. Runtime emits bounded refusal events at error level and
+replaces raw errors before the shared consumer can log/retry/dead-letter them.
+AC9 stages erasure and refusal delivery through immutable requests with explicit matching-id
+acceptance before CAS. Canonical erasure resumes use opaque ids only, stable
+`person-erasure:<erasureId>:<deletionId>` and 30-second delay; nonterminal canonical deliveries
+throw retryable-not-ready, while original deliveries park without consuming. Cron reissues the
+same id after audit/CAS failure and retry exhaustion; accepted admission cannot suppress future
+admissions forever. Refusal notices use `workspace-deletion:<id>:refused`. Local recording sinks
+are contract evidence, not deployed adapters or independent acceptance. Production erasure wake
+remains blocked on the separately owned #1060 consumer and reviewed adapter; erasure inserts
+remain forbidden, and owner delivery remains a separate activation.
+Each invocation advances one leased step; cron selects at most
+five unfinished rows strictly older than fifteen minutes and advances them directly, independently
+of reminder and account-security failures. Owner rooms close before their trip rows are removed;
+erasure rooms reset first, and a failed room operation leaves that selected batch intact. Owner
+room storage retains the existing idle-alarm residual. Staging still has no quarter-hour cron.
+
+This release does not activate request/webhook producers, receipt/refusal email or the erasure engine.
+Receipt, owner-refusal notice and erasure-resume delivery are explicit runtime ports. Owner delivery
+awaits #1742 activation; erasure wake first requires the functioning #1060 handler. An
+unsupplied port throws, preserves the durable step and receipt fields, and cannot report delivery
+success. Activation must supply real idempotent adapters before creating rows requiring them;
+consumer registration or a local test is not deployment or producer-activation evidence.
+
 The `workspace-late-subscription` handler ships inert, without a webhook or driver producer. It
 uses the same `POLAR_ACCESS_TOKEN` and `POLAR_SERVER` secrets as request billing, now declared on
 `TaskSecrets`/`TaskBindings`; the Worker's existing environment bridge passes them to the consumer.
@@ -1705,11 +1741,14 @@ export, `17 4 * * 1` weekly prune — and exactly one on staging, `0 3 * * *`. T
 catalogue scrape joins both in phase D and must **not** appear before then (§15.3).
 
 The existing weekly slot also runs tenant `audit_log` retention alongside the platform audit
-prune, provider usage rollup and dead-letter retention, using `Promise.allSettled`: each job
+prune, provider usage rollup, completed workspace deletion ledger retention and dead-letter retention,
+using `Promise.allSettled`: each job
 runs even if another rejects, and the first rejection is rethrown. Tenant retention is the named
 constant `TENANT_AUDIT_RETENTION_DAYS = 400` (owner confirms), with 200 ids per delete and one
 250-batch cap across workspaces. Watch `deleted`, `batches`, `organizations`, `drained`;
-`drained: false` is an error requiring investigation. Backup/export artifact retention remains
+`drained: false` is an error requiring investigation. Workspace deletion retention removes at most
+100 `done`/`refused` rows older than 30 days per tick; unfinished rows remain recoverable. Staging
+has neither this weekly slot nor the quarter-hour recovery slot. Backup/export artifact retention remains
 unimplemented and still emits its warning. For a finished trip export that means the "kept for 7
 days" wording holds for the reader, not for the bytes: after seven days the export is neither
 listed nor downloadable and its KV pointer is gone, but the object stays under
@@ -1780,7 +1819,7 @@ or both, when one change is both:
 | `0003_calm_daredevil`       | reader-unsafe                 | Renamed `stripe_customer_id` → `provider_customer_id`, `stripe_subscription_id` → `provider_subscription_id`, `stripe_price_id` → `provider_product_id`, and swapped the two indexes over them (§9.10).                                                                                                                                                                                                                                                                                                                                                | **Not safe on code alone.** A Worker from before the phase-A release selects the three old names. Move the schema back first, or do not roll back past it.                                                                                                                                                                                                                                                                                                                                                                                       |
 | `0010_basemap_default`      | table recreate                | Rebuilt `organization_settings` to move the `map_style` default from `'planned-light'` to `'auto'`, the same idiom and the same carried-over columns and `CHECK` constraints as `0002_locale_normalisation`; `settings-map-style.test.ts` re-derives the DDL. A hand-written half then cleared each `user_settings.map_style` equal to its workspace value, and remapped workspace rows holding `'planned-light'` to `'auto'`.                                                                                                                         | Rollback is safe for the reader: the column set is unchanged and `auto` was already a catalogue id before this migration, so the older Worker reads every remapped row. The remap is one-way; nothing needs it reversed.                                                                                                                                                                                                                                                                                                                         |
 | `0011_red_cassandra_nova`   | reader-unsafe, table recreate | Ships in the first release cut after PR #450. Rebuilt `trip_favourites` onto the composite `PRIMARY KEY(trip_id, user_id)` it should have carried from `0009`, dropping the surrogate `id` column and the `trip_favourites_trip_user_unq` index that had been re-imposing the same pair. `trip_favourites_org_user_idx` is recreated unchanged. No other table references it, so the recreate copies rows under `PRAGMA foreign_keys=OFF/ON` that D1 ignores (§5) without an inbound cascade to strand, and the table carries no hand-written `CHECK`. | **Not safe on code alone, in either direction — read the deploy note below before applying it.** The old reader is `createTenantRepository`, whose `select()` and `insert()` name every column of _its own_ schema, `id` included. Prefer rolling forward. If the rollback is unavoidable, the cheap path is the one this section already names for `0003`: this table holds one row per person per starred trip and nothing else depends on it, so re-create it from the `0009` schema and accept the lost stars rather than reversing the key. |
-| `0026_chief_phalanx` | table recreate, reader-safe | Ships with the shared taxonomy quota prerequisite (#1842). Expands `usage_records_metric_chk` to accept `taxonomy`. The generated copy preserves every old column, usage row, index and FK, including the non-negative value CHECK; no table references `usage_records`. The quota counts live categories and tags instead of maintaining a taxonomy counter. | Apply before the new Worker. Migrations-built local D1 tests preserve populated usage history, indexes and FKs, accept every old metric write and reject invalid metrics/FKs/duplicates. Wrangler also applied it to the populated local demo database. Code rollback is reader-safe because all previous columns and metric values remain valid; leave the expanded CHECK and stored data in place. Rolling code back also removes taxonomy enforcement. |
+| `0026_chief_phalanx`        | table recreate, reader-safe   | Ships with the shared taxonomy quota prerequisite (#1842). Expands `usage_records_metric_chk` to accept `taxonomy`. The generated copy preserves every old column, usage row, index and FK, including the non-negative value CHECK; no table references `usage_records`. The quota counts live categories and tags instead of maintaining a taxonomy counter.                                                                                                                                                                                          | Apply before the new Worker. Migrations-built local D1 tests preserve populated usage history, indexes and FKs, accept every old metric write and reject invalid metrics/FKs/duplicates. Wrangler also applied it to the populated local demo database. Code rollback is reader-safe because all previous columns and metric values remain valid; leave the expanded CHECK and stored data in place. Rolling code back also removes taxonomy enforcement.                                                                                        |
 
 **Crossing `0003`, if it is ever necessary.** In order, and only with the billing screen expected
 to be down for the duration:
@@ -2140,7 +2179,7 @@ When phase D lands, the entry goes in **two** places, and both must be complete:
 "env": {
   "staging": {
     "triggers": { "crons": ["0 3 * * *", "0 4 * * 1"] }
-  }
+}
 }
 ```
 
