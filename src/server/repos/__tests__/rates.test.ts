@@ -245,7 +245,14 @@ describe('the rate lookup', () => {
       ).toEqual({ rate: 1.17, source: 'recent', observedOn: '2026-04-12' })
     })
 
-    it('reads a payment as well as an expense, and the later of the two wins', async () => {
+    it('reads a payment as well as an expense, and the later of the two wins', async ({
+      onTestFinished,
+    }) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      onTestFinished(() => {
+        vi.useRealTimers()
+      })
+      vi.setSystemTime(new Date('2026-04-13T10:00:00.000Z'))
       await expenseAt(tripId, '2026-04-10', 1.15)
       await paymentAt(tripId, '2026-04-13', 1.2)
 
@@ -253,6 +260,7 @@ describe('the rate lookup', () => {
         await findLatestFrozenRate(tenant.scope, { tripId, ...pair }),
       ).toEqual({ rate: 1.2, source: 'recent', observedOn: '2026-04-13' })
 
+      vi.setSystemTime(new Date('2026-04-13T10:00:00.001Z'))
       await expenseAt(tripId, '2026-04-13', 1.21)
       // Same day: the row written last is the more recent observation.
       expect(

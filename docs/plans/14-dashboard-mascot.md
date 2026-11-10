@@ -62,7 +62,8 @@ decision, recorded here for the auditor and the executing run alike:
   slower loop, no loop at all.
 - The individual keyframe _segments_ inside a loop (a hop's rise, a head turn) still land in the
   150–260ms envelope; only the loop's period exceeds it, and the loop is what conditions 2–4
-  govern.
+  govern. Card travel uses approximately 200ms segments in each 16s/12s/8s band loop,
+  with rest intervals between outward and returning travel.
 
 #### What is on disk today, measured at HEAD, not recalled
 
@@ -236,17 +237,13 @@ enqueued and nothing touches the Durable Object protocol.
   `settled → eager → countdown` — so the character visibly builds anticipation as departure
   nears. The module exports the band constants so the tests and the spec pin the same numbers.
 
-- **Placement and zero layout shift, by construction.** The character occupies a fixed-size,
-  absolutely-positioned stage inside the hero card (logical `inset-block-start` /
-  `inset-inline-end`, inside the card's existing `overflow-hidden` at `dashboard.tsx:183`),
-  clear of the badge row (`:202-219`) and the open-plan button (`:221-227`). It inserts no flow
-  content: the hero's flow layout is byte-identical with and without it, which is what makes
-  "zero layout shift" a property rather than a hope. One fixed size at `< sm` (small enough to
-  clear the title at 360px) and one at `≥ sm`; the walk is a `translateX` excursion inside the
-  stage's own box. Under `dir="rtl"` the stage positions itself with logical properties and the
-  art mirrors via the `rtl:` scale utility (which compiles to the standalone `scale` property, so
-  the reduced-motion `transform` reset cannot un-mirror it); the flap tile's digit sits in an
-  inner span so no bidi isolation ever lands on the positioned box itself.
+- **Placement and layout stability (#1855).** The interactive Nomi spec supersedes the
+  original overlay: reserve a separate lane below TripHeroStrip on populated cards only,
+  at most 320px wide with an 88px illustration. The bird travels within that lane using
+  transform-only motion; the native chat hit target, label, pause button and prompt controls
+  stay stationary. Idle intervals and activation feedback keep the bird visible throughout.
+  Logical positioning and mirrored art preserve RTL; title, dates and actions occupy separate
+  flow rows. Without `upNext`, mount no mascot-owned controls, prompt row, panel or stage.
 
 - **SSR and hydration safety, the concrete mechanism.** Three rules, together sufficient:
   (1) the state is a pure function of `data.today` and the trip's dates — both server-computed,
@@ -291,7 +288,7 @@ enqueued and nothing touches the Durable Object protocol.
 
 - **Accessibility.** The figure and the flap tile are `aria-hidden`: the day figure duplicates
   the hero's own "Starts in" stat (`dashboard.tsx:263-271`), so no information exists only in the
-  decoration. The pause control is the one interactive element: keyboard reachable in the hero's
+  decoration. The later interactive Nomi spec adds the stationary chat trigger and sibling prompt controls. The pause control remains keyboard reachable in the hero's
   existing order, accessible name from the catalogue, `aria-pressed` state, WCAG 2.2 AA contrast
   on the inverse surface in both themes.
 

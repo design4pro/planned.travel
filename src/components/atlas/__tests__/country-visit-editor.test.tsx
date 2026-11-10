@@ -27,7 +27,20 @@ const mount = () =>
   )
 async function open() {
   await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
-  return screen.findByLabelText('First visit')
+  const field = await screen.findByLabelText('First visit')
+  // Opening schedules focus in the next frame; let it settle before typing.
+  await waitFor(() => expect(document.activeElement).toBe(field))
+  return field
+}
+async function refreshRetry() {
+  const retry = await screen.findByRole('button', { name: /Reload/ })
+  // Closing also restores focus in the next frame, before another keyboard action.
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Edit visit' }),
+    ),
+  )
+  return retry
 }
 beforeEach(() => {
   vi.clearAllMocks()
@@ -205,12 +218,7 @@ it('restores focus after retrying a failed post-save refresh without saving agai
   mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
-  const retry = await screen.findByRole('button', { name: /Reload/ })
-  await waitFor(() =>
-    expect(document.activeElement).toBe(
-      screen.getByRole('button', { name: 'Edit visit' }),
-    ),
-  )
+  const retry = await refreshRetry()
   await userEvent.tab()
   expect(document.activeElement).toBe(retry)
   await userEvent.keyboard('{Enter}')
@@ -239,7 +247,7 @@ it('preserves focus moved away while a refresh retry is pending', async () => {
   mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
-  await userEvent.click(await screen.findByRole('button', { name: /Reload/ }))
+  await userEvent.click(await refreshRetry())
   const edit = screen.getByRole('button', { name: 'Edit visit' })
   edit.focus()
   await userEvent.keyboard('{Enter}')
@@ -258,7 +266,7 @@ it('returns a focused refresh retry to the first field of a reopened draft', asy
   mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
-  await screen.findByRole('button', { name: /Reload/ })
+  await refreshRetry()
   const first = await open()
   await waitFor(() => expect(document.activeElement).toBe(first))
   const retry = screen.getByRole('button', { name: /Reload/ })
@@ -276,7 +284,7 @@ it('disables refresh retry while reopening or saving the editor', async () => {
   mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
-  const retry = await screen.findByRole('button', { name: /Reload/ })
+  const retry = await refreshRetry()
   let finishLoad: (value: unknown) => void = () => {}
   api.load.mockReturnValueOnce(
     new Promise((resolve) => {
@@ -311,7 +319,7 @@ it('blocks refresh retry during an external action and permits it after unlockin
   const ui = mount()
   await open()
   await userEvent.click(screen.getByRole('button', { name: 'Save visit' }))
-  const retry = await screen.findByRole('button', { name: /Reload/ })
+  const retry = await refreshRetry()
   ui.rerender(
     <CountryVisitEditor
       countryCode="FR"

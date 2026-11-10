@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Tento náhled vypršel. Před potvrzením vytvořte nový náhled.',
+  'gallery.publish.title': 'Náhled galerie',
+  'gallery.publish.publicTitle': 'Veřejný název',
+  'gallery.publish.attribution': 'Zobrazované jméno',
+  'gallery.publish.showDates': 'Zahrnout data cesty',
+  'gallery.publish.preview': 'Zobrazit sdílený obsah',
+  'gallery.publish.confirm': 'Potvrdit tento náhled',
+  'gallery.publish.captureFailed':
+    'Náhled se nepodařilo připravit. Zkontrolujte pole a zkuste to znovu.',
+  'gallery.publish.tooLarge': 'Tato cesta je pro náhled příliš velká.',
+  'gallery.publish.empty': 'Prázdné',
+  'gallery.publish.version': 'Verze',
+  'gallery.publish.countries': 'Kódy zemí',
+  'gallery.publish.days': 'Dny',
+  'gallery.publish.places': 'Místa',
+  'gallery.publish.order': 'Pořadí',
+  'gallery.publish.yes': 'Ano',
+  'gallery.publish.no': 'Ne',
+  'gallery.publish.publicFields':
+    'Název, shrnutí, zobrazované jméno, kódy zemí, názvy dnů, názvy a kategorie míst a jejich souřadnice mohou být veřejné. Data budou zahrnuta jen podle vaší volby.',
+  'gallery.publish.privateFields':
+    'Cestující, poznámky, soubory, náklady a rezervace nejsou zahrnuty.',
+  'gallery.publish.freeTextWarning':
+    'Před potvrzením zkontrolujte osobní údaje v názvu, shrnutí, zobrazovaném jménu, názvech dnů a míst.',
+
   'plan.photo.edit': 'Upravit obrázek',
   'plan.photo.unavailable':
     'Nahrávání a úpravy obrázků nejsou dostupné. Aktuální obrázek zůstane zachován.',

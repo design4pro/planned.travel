@@ -152,6 +152,13 @@ function embedded(
 }
 
 export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
+  userRef(
+    'gallery_previews',
+    'actor_user_id',
+    'src/server/repos/trips-erasure.ts',
+    'remove',
+    'Private consent documents expire and are removed when their actor is erased.',
+  ),
   /* ------------------------------------------------------------------ trips and money -- */
   userRef(
     'trips',

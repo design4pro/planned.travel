@@ -158,8 +158,10 @@ describe('saving', () => {
     })
     expect(router.invalidate).toHaveBeenCalledTimes(1)
     expect(document.activeElement).toBe(opener())
-    expect(screen.getByRole('status').textContent).toBe(
-      'Leave plan settings saved.',
+    await waitFor(() =>
+      expect(screen.getByRole('status').textContent).toBe(
+        'Leave plan settings saved.',
+      ),
     )
   })
 

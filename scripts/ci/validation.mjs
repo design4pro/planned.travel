@@ -11,6 +11,7 @@ import {
   existsSync,
   unlinkSync,
   rmdirSync,
+  rmSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -121,11 +122,20 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
   return new Promise((done) => {
     const started = Date.now()
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -186,7 +196,7 @@ export function runValidationCommand(
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
-  })
+  }).finally(() => rmSync(temporary, { recursive: true, force: true }))
 }
 
 export async function runGate({

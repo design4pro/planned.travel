@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Αυτή η προεπισκόπηση έληξε. Δημιουργήστε νέα πριν την επιβεβαίωση.',
+  'gallery.publish.title': 'Προεπισκόπηση συλλογής',
+  'gallery.publish.publicTitle': 'Δημόσιος τίτλος',
+  'gallery.publish.attribution': 'Εμφανιζόμενο όνομα',
+  'gallery.publish.showDates': 'Συμπερίληψη ημερομηνιών ταξιδιού',
+  'gallery.publish.preview': 'Προεπισκόπηση κοινοποίησης',
+  'gallery.publish.confirm': 'Επιβεβαίωση προεπισκόπησης',
+  'gallery.publish.captureFailed':
+    'Δεν ήταν δυνατή η προετοιμασία. Ελέγξτε τα πεδία και δοκιμάστε ξανά.',
+  'gallery.publish.tooLarge': 'Το ταξίδι είναι πολύ μεγάλο για προεπισκόπηση.',
+  'gallery.publish.empty': 'Κενό',
+  'gallery.publish.version': 'Έκδοση',
+  'gallery.publish.countries': 'Κωδικοί χωρών',
+  'gallery.publish.days': 'Ημέρες',
+  'gallery.publish.places': 'Μέρη',
+  'gallery.publish.order': 'Σειρά',
+  'gallery.publish.yes': 'Ναι',
+  'gallery.publish.no': 'Όχι',
+  'gallery.publish.publicFields':
+    'Ο τίτλος, η σύνοψη, το εμφανιζόμενο όνομα, οι κωδικοί χωρών, οι τίτλοι ημερών, τα ονόματα και οι κατηγορίες μερών και οι συντεταγμένες τους μπορεί να είναι δημόσια. Οι ημερομηνίες περιλαμβάνονται μόνο αν το επιλέξετε.',
+  'gallery.publish.privateFields':
+    'Δεν περιλαμβάνονται ταξιδιώτες, σημειώσεις, αρχεία, έξοδα και κρατήσεις.',
+  'gallery.publish.freeTextWarning':
+    'Πριν την επιβεβαίωση, ελέγξτε τον τίτλο, τη σύνοψη, το εμφανιζόμενο όνομα, τους τίτλους ημερών και τα ονόματα μερών για προσωπικές πληροφορίες.',
+
   'plan.photo.edit': 'Επεξεργασία εικόνας',
   'plan.photo.unavailable':
     'Η μεταφόρτωση και η επεξεργασία εικόνων δεν είναι διαθέσιμες. Η τρέχουσα εικόνα διατηρείται.',

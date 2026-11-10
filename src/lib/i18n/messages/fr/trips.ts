@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Cet aperçu a expiré. Créez un nouvel aperçu avant de confirmer.',
+  'gallery.publish.title': 'Aperçu de la galerie',
+  'gallery.publish.publicTitle': 'Titre public',
+  'gallery.publish.attribution': 'Nom affiché',
+  'gallery.publish.showDates': 'Inclure les dates du voyage',
+  'gallery.publish.preview': 'Voir le contenu à partager',
+  'gallery.publish.confirm': 'Confirmer cet aperçu',
+  'gallery.publish.captureFailed':
+    'Impossible de préparer cet aperçu. Vérifiez les champs et réessayez.',
+  'gallery.publish.tooLarge': 'Ce voyage est trop volumineux pour un aperçu.',
+  'gallery.publish.empty': 'Vide',
+  'gallery.publish.version': 'Version',
+  'gallery.publish.countries': 'Codes des pays',
+  'gallery.publish.days': 'Jours',
+  'gallery.publish.places': 'Lieux',
+  'gallery.publish.order': 'Ordre',
+  'gallery.publish.yes': 'Oui',
+  'gallery.publish.no': 'Non',
+  'gallery.publish.publicFields':
+    'Le titre, le résumé, le nom affiché, les codes des pays, les titres des jours, les noms et catégories des lieux ainsi que leurs coordonnées peuvent être publics. Les dates ne sont incluses que si vous le choisissez.',
+  'gallery.publish.privateFields':
+    'Les voyageurs, notes, fichiers, coûts et réservations ne sont pas inclus.',
+  'gallery.publish.freeTextWarning':
+    'Avant de confirmer, vérifiez que le titre, le résumé, le nom affiché, les titres des jours et les noms des lieux ne contiennent pas de données personnelles.',
+
   'plan.photo.edit': 'Modifier l’image',
   'plan.photo.unavailable':
     'L’importation et la modification d’images sont indisponibles. L’image actuelle est conservée.',

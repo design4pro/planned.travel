@@ -41,6 +41,7 @@ import {
   getPlace,
   getTripItinerary,
   listCategories,
+  ensureDefaultCategories,
   listDayAssignments,
   listTripAssignments,
   listTripPlaces,
@@ -245,6 +246,7 @@ export async function readPlanBoard(
   tripId: string,
 ): Promise<PlanBoardPayload> {
   const trip = await requireTrip(scope, tripId)
+  await ensureDefaultCategories(scope)
 
   const [role, itinerary, inventory, unscheduled, categories, photos] =
     await Promise.all([

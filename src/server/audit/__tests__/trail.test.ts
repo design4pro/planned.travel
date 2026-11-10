@@ -373,6 +373,10 @@ describe('trail', () => {
   it('names every action entity-first, in the shape the repository accepts', () => {
     const actions = Object.values(AUDIT_ACTIONS)
     expect(actions).toEqual([
+      'category.created',
+      'category.updated',
+      'category.moved',
+      'category.deleted',
       'file.uploaded',
       'file.deleted',
       'reservation.created',

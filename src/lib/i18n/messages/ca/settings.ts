@@ -159,6 +159,10 @@ const messages = {
     'Les condicions i l’avís de privadesa es publiquen només en anglès. Tota la resta del producte està traduïda.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Disposició',
+  'appearance.layout.label': 'Disposició ampla',
+  'appearance.layout.hint':
+    'Utilitza tota l’amplada de l’aplicació i alinea els ginys del tauler amb el proper viatge. Es desa només en aquest navegador.',
   'appearance.error': 'L’aparença no s’ha carregat',
   'appearance.theme.title': 'Tema',
   'appearance.theme.description':

@@ -163,10 +163,11 @@ flowchart LR
 The deployment-to-entry relation proves exactly which immutable prose revision shipped;
 entries and translations remain reusable shared Content Studio data.
 
-### Explicit contract amendment required before implementation
+### Contract amendment before runtime implementation
 
-This paragraph is a proposed amendment, not permission to bypass today's closed contract.
-The first implementation slice must land an ADR and matching edits to SPEC §§5/6/9,
+[ADR 0051](../../docs/adr/0051-bounded-release-content-contract.md) records the #1872
+contract-only amendment. Runtime implementation still needs fresh security and tenancy approval.
+The amendment and matching edits cover SPEC §§5/6/9,
 `docs/ARCHITECTURE.md`, `docs/ACCESS.md`, `CODE_REVIEW.md`, AGENTS and all duplicate policy
 statements found by grep. No runtime content SQL may precede that amendment.
 
@@ -194,8 +195,8 @@ or use sequential fallback. Test audit validation/insert failure, unsupported-dr
 and whole-batch rollback, alongside regression tests for existing non-throwing audit callers.
 
 SPEC §9 also needs a bounded editorial-content exception: release prose is reviewed content,
-separate from interface messages, with the fallback policy below. Until that amendment lands,
-English fallback on this signed-in surface would violate §9 rules 2/6/8. Future Studio roles,
+separate from interface messages, with the fallback policy below. SPEC §9 rule 11 and ADR 0051 bound this exception;
+interface messages still obey rules 2/6/8 without fallback. Future Studio roles,
 additional collections/tables and anonymous publication remain separate amendments.
 
 ## Collection, approval and publication lifecycle

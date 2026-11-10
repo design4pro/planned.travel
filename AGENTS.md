@@ -17,9 +17,18 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 
 Pipeline helpers: run `node scripts/ci/validation.mjs` for the ordered configured gate (`--resume` is local interruption recovery, never CI evidence). Use `node .ai/scripts/pr-state.mjs <pr> [--wait]` for compact, paginated PR/CI evidence; unknown checks never pass and existing merge/QA/security gates still apply. See SDLC.md and docs/agents/cezar.md.
 
+
+Release-content contract only: [ADR 0051](docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
+
 ## Rules
 
-- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are four, and closed (SPEC §6, ADR 0049): the bounded `repos/account-security.ts` account-auth capability, `server/catalog` (including the driver-only workspace deletion ledger, ADR 0048), the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
+- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are five, and closed (SPEC §6, ADR 0049, ADR 0051): the bounded `repos/account-security.ts` account-auth capability, `server/catalog` (including the driver-only workspace deletion ledger, ADR 0048), the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. The fifth is the bounded seven-table content/release repository exception in SPEC §5 and ADR 0051, owned only by `repos/content.ts` and `repos/releases.ts` with a plain `Database`; it does not expand catalog or FU-3. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
 - `components/ui` never fetches data and never imports from `server/`.
 - Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception; raw SQL against them stays limited to the provisioning module and the closed account-auth repository (SPEC §6, ADR 0049).
 - Validate every server-function input with Zod. Named exports only (route modules excepted).

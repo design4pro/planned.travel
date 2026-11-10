@@ -23,3 +23,12 @@ The product ships in 23 locales; `en` is the source. The full contract is docs/S
 ## Verification
 
 `pnpm test` (parity + source rules) is the law here. `pnpm e2e` additionally runs the runtime parity spec when the change touches negotiation or the shell.
+
+## Reviewed release editorial content
+
+[ADR 0051](../../../docs/adr/0051-bounded-release-content-contract.md) and SPEC §9 rule 11 separate
+reviewed release prose from interface copy. The future shared content resolver selects the
+exact-version reviewed translation or the whole English entry, with entry `lang="en"`,
+`dir="ltr"` and a localized catalogue notice. No mixed or stale paragraphs. This does not
+permit interface fallback, literal UI strings or missing catalogue keys. This documentation
+amendment grants no runtime implementation or production-write approval.
