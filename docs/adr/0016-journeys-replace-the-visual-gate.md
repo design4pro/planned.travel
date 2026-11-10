@@ -56,6 +56,12 @@ was 2590 lines and the five modules that replaced it are 1242.
 **2. The blind A/B critic is the whole of the visual judgement.** `scripts/visual/capture.mjs` was
 already the mechanism SPEC §8.814 names. It is now the only one.
 
+Amended by the owner-approved base-absent unmounted-screen exception in SPEC §7:
+only its complete, explicitly non-comparative head-fixture package and unanimous independent
+manual, accessibility and security/tenancy panel may replace the base/head pair. Capture
+restrictions remain; existing and mounted screens and later mounted integration retain
+comparative evidence.
+
 **3. Playwright keeps nineteen declarations, and the bar for one is explicit:** a test earns its place
 in `e2e/` only if its failure mode cannot be produced in a lower layer. What survives is routing,
 sessions, hydration, WebGL, real hit-testing, sequential focus and the request pipeline. Fifty

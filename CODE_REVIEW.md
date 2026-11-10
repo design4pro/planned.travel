@@ -236,6 +236,9 @@ The reviewer confirms the PR body's checklist against the diff:
 4. UI changes are visually verified light and dark, desktop and mobile, by the blind A/B pair
    from `scripts/visual/capture.mjs`; both frames are attached to the PR (`om-auto-qa-pr`
    produces them). A UI diff without the pair carries `needs-qa` and cannot merge without it.
+   The explicit base-absent unmounted-screen exception in SPEC is the sole alternative here:
+   require its complete non-comparative evidence and unanimous panel approval; otherwise the
+   missing-pair block remains.
 5. No TODOs, placeholder copy, `console.log`, or commented-out code.
 6. Files outside the ticket's ownership are untouched; anything noticed elsewhere goes under
    "Noticed but not touching" in the PR body.

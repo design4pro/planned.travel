@@ -947,6 +947,8 @@ Rules:
 4. The feature is visually verified in a real browser, light and dark, desktop and mobile — by
    the blind A/B pair (`scripts/visual/capture.mjs`, §8.814), which is the whole of the visual
    judgement since ADR 0016. "Looked at it" is not a mechanism; the pair is.
+   The bounded base-absent unmounted-screen exception in “Who owns the visual judgement”
+   may instead use its explicitly non-comparative evidence package.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
 6. You did not touch files outside your assigned ownership. Work you discover elsewhere is
    reported, never edited — and if that work is a _concept_ rather than a file, §8 governs how
@@ -1197,6 +1199,46 @@ still captured and the item is judged on our frames plus code, tests and accessi
 mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
 capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then
 has to be defensible with no foil beside it.
+
+A new, prop-only screen composition that its work item explicitly requires to remain unmounted
+may have no implementation at the reviewed base. When both absence at base and absence of
+production callers are verified, source-faithful head-only browser evidence from a temporary QA
+fixture may satisfy this item's visual gate. This is explicitly non-comparative evidence, never
+a fabricated A/B pair; no application route may be introduced for it. Require real head source,
+styles and locale messages; light/dark desktop/mobile and applicable RTL/breakpoint/state
+coverage; configured validation and independent code review; and unanimous independent manual,
+accessibility and security/tenancy panel approval. Preserve capture restrictions and SPEC §2.
+Record exact head, base, policy and base-absence evidence, with fixture limitations. Any missing
+applicable evidence or panel approval leaves QA partial. Mounted integration and its real
+comparisons remain the later mounting item's responsibility. This exception does not apply to
+an existing or mounted screen and grants no general waiver of QA or security.
+
+The exception's evidence package retains these conditions:
+
+- Re-evaluate absence at base, production callers and evidence on every changed head, base or
+  policy; a blank, 404, unrelated screen or head copied into base is not a comparison.
+- Render the actual head component in a temporary `.ai/qa/` fixture with real CSS, tokens,
+  fonts, house primitives, TripArt where used and locale catalogues. Mock only the work item's
+  declared public-chrome seam and disclose its unverified integration. No copied HTML,
+  fake translations, generated route changes or registered application route. An environment,
+  provider or capture refusal is a blocker, never permission to bypass its restrictions.
+- Restart the environment on the reviewed head and verify source freshness. Use unmodified
+  `scripts/visual/capture.mjs` at 1440x900 and 360x800 in light/dark, plus actual Arabic messages
+  and RTL direction. Check applicable intermediate and 2xl breakpoints. Attach head frames,
+  capture metadata and state/viewport coverage, explicitly labelled non-comparative, with base
+  absence recorded separately. Preserve §2 and all capture refusals.
+- Exercise every applicable state and interaction, including populated hero/grid without
+  duplicates, search including hero and localized country names, no results, clear/focus,
+  long copy, empty, loading, unavailable with/without retry, rate-limited, announcements,
+  keyboard, touch targets, contrast, SSR/no-JS search behavior and reduced motion. Include
+  non-empty multi-day art where used and verify zero search requests after initialization.
+  Fixture links do not prove destinations, app routing, Worker behavior or publication authority;
+  existing acceptance-criteria findings remain unresolved until fixed.
+- Complete configured validation and independent code review, including any non-visual
+  configuration changes. Give the exact diff and evidence to independent manual, accessibility
+  and security/tenancy reviewers without sharing their verdicts with each other. Every role must
+  approve and every applicable scenario pass. Retain SDLC's QA gate, failure/fix loop, blocking
+  labels and revision checks; screenshots cannot clear security/configuration behavior.
 
 ### Numbers inside messages
 
