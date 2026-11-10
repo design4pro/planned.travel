@@ -37,10 +37,21 @@ beforeEach(async () => {
   vi.mocked(spawn).mockReset().mockImplementation(actual.spawn)
   for (const name of Object.keys(inheritedGitEnv)) delete process.env[name]
 })
-afterEach(() => {
+const cleanupFixtureDirectories = () => {
   for (const dir of dirs.splice(0)) {
     if (!retainedDirs.has(dir)) rmSync(dir, { recursive: true, force: true })
   }
+}
+const retainUnverifiedFixture = (cwd, result) => {
+  if (!result.terminationError) return
+  retainedDirs.add(cwd)
+  const { terminationError, pid, pgid, priorResult, temporary } = result
+  process.stdout.write(
+    `${JSON.stringify({ event: 'retained-fixture', terminationError, pid, pgid, priorResult, temporary })}\n`,
+  )
+}
+afterEach(() => {
+  cleanupFixtureDirectories()
   Object.assign(process.env, inheritedGitEnv)
 })
 const fixture = () => {
@@ -507,6 +518,65 @@ describe('configured validation execution', () => {
     },
   )
 
+  it('retains real-fixture diagnostics through assertion failure and teardown after synthetic denial', async () => {
+    process.stdout.write(
+      `${JSON.stringify({ event: 'fixture-runtime', pid: process.pid, ppid: process.ppid, binary: process.execPath, node: process.version, icu: process.versions.icu })}\n`,
+    )
+    const cwd = fixture()
+    const child = new EventEmitter()
+    child.pid = 987654323
+    const foreignPgid = -987654324
+    const kill = vi.spyOn(process, 'kill').mockImplementation((pid) => {
+      if (pid !== -child.pid) throw new Error('Foreign process group targeted')
+      throw Object.assign(new Error('injected fixture EPERM'), {
+        code: 'EPERM',
+      })
+    })
+    vi.mocked(spawn).mockReturnValueOnce(child)
+    vi.useFakeTimers()
+    try {
+      const pending = runValidationCommand('synthetic real-fixture command', {
+        cwd,
+        logPath: join(cwd, 'command.log'),
+        timeoutMs: 500,
+      })
+      const temporary = vi.mocked(spawn).mock.calls.at(-1)[2].env.TMPDIR
+      const marker = join(temporary, 'diagnostic')
+      writeFileSync(marker, 'retained fixture evidence')
+      await vi.advanceTimersByTimeAsync(500)
+      const result = await pending
+      retainUnverifiedFixture(cwd, result)
+      try {
+        expect(() => {
+          expect(result.result).toBe('timeout')
+        }).toThrow()
+      } finally {
+        // The same teardown runs even when a real fixture assertion throws.
+        cleanupFixtureDirectories()
+      }
+      expect(existsSync(cwd)).toBe(true)
+      expect(readFileSync(marker, 'utf8')).toBe('retained fixture evidence')
+      expect(result.result).toBe('infrastructure')
+      expect(result.exitCode).toBe(1)
+      expect(result.priorResult).toBe('timeout')
+      expect(result.terminationError.code).toBe('EPERM')
+      expect(result.temporary).toBe(temporary)
+      expect(result.pgid).toBe(-child.pid)
+      expect(kill.mock.calls).toEqual([
+        [-child.pid, 'SIGTERM'],
+        [-child.pid, 'SIGKILL'],
+      ])
+      expect(kill.mock.calls.map(([pid]) => pid)).not.toContain(foreignPgid)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+      kill.mockRestore()
+      // Synthetic only: no real process was spawned or left unverified.
+      retainedDirs.delete(cwd)
+      if (existsSync(cwd)) dirs.push(cwd)
+    }
+  })
+
   it('terminates real owned descendants and excludes a foreign process group', async () => {
     const cwd = fixture()
     const foreign = spawn(
@@ -540,6 +610,7 @@ describe('configured validation execution', () => {
         logPath,
         timeoutMs: 500,
       })
+      retainUnverifiedFixture(cwd, result)
       const owned = JSON.parse(readFileSync(logPath, 'utf8'))
       process.stdout.write(
         `${JSON.stringify({ event: 'owned-fixture', ...owned, foreign: foreign.pid, result })}\n`,
