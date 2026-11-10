@@ -821,6 +821,7 @@ const messages = {
     'Använda platser för kategorier och taggar: {used}. Ingen gräns.',
   'taxonomy.limitReached':
     'Gränsen för kategorier och taggar har nåtts. Ta bort en oanvänd post innan du lägger till en ny.',
+  'taxonomy.moved': '{name} har flyttats.',
   'taxonomy.saved': 'Kategorin sparades.',
   'taxonomy.deleted': 'Kategorin togs bort. Platserna behölls.',
   'taxonomy.reload': 'Ladda om',

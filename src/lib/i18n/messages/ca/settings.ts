@@ -843,6 +843,7 @@ const messages = {
     'Espais de categories i etiquetes utilitzats: {used}. Sense límit.',
   'taxonomy.limitReached':
     'S’ha assolit el límit de categories i etiquetes. Suprimeix una entrada sense ús abans d’afegir-ne una altra.',
+  'taxonomy.moved': 'S’ha mogut {name}.',
   'taxonomy.saved': 'Categoria desada.',
   'taxonomy.deleted': 'Categoria suprimida. Els llocs s’han conservat.',
   'taxonomy.reload': 'Recarrega',

@@ -837,6 +837,7 @@ const messages = {
     'Gebruikte plaatsen voor categorieën en tags: {used}. Onbeperkt.',
   'taxonomy.limitReached':
     'De limiet voor categorieën en tags is bereikt. Verwijder eerst een ongebruikte vermelding.',
+  'taxonomy.moved': '{name} is verplaatst.',
   'taxonomy.saved': 'Categorie opgeslagen.',
   'taxonomy.deleted': 'Categorie verwijderd. De plaatsen zijn behouden.',
   'taxonomy.reload': 'Opnieuw laden',

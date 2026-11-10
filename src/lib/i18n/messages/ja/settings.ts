@@ -786,6 +786,7 @@ const messages = {
   'taxonomy.unlimited': 'カテゴリとタグの使用枠：{used}。上限なし。',
   'taxonomy.limitReached':
     'カテゴリとタグの上限に達しました。不要な項目を削除してから追加してください。',
+  'taxonomy.moved': '{name}を移動しました。',
   'taxonomy.saved': 'カテゴリを保存しました。',
   'taxonomy.deleted': 'カテゴリを削除しました。場所は保持されました。',
   'taxonomy.reload': '再読み込み',

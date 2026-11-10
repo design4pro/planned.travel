@@ -815,6 +815,7 @@ const messages = {
     'Slot kategori dan tag yang digunakan: {used}. Tanpa batas.',
   'taxonomy.limitReached':
     'Batas kategori dan tag tercapai. Hapus entri yang tidak digunakan sebelum menambah yang baru.',
+  'taxonomy.moved': '{name} dipindahkan.',
   'taxonomy.saved': 'Kategori disimpan.',
   'taxonomy.deleted': 'Kategori dihapus. Tempat tetap disimpan.',
   'taxonomy.reload': 'Muat ulang',

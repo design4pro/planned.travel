@@ -854,6 +854,7 @@ const messages = {
     'Wykorzystane miejsca na kategorie i tagi: {used}. Bez limitu.',
   'taxonomy.limitReached':
     'Osiągnięto limit kategorii i tagów. Usuń nieużywany wpis przed dodaniem kolejnego.',
+  'taxonomy.moved': 'Przeniesiono {name}.',
   'taxonomy.saved': 'Kategoria zapisana.',
   'taxonomy.deleted': 'Kategoria usunięta. Miejsca zostały zachowane.',
   'taxonomy.reload': 'Wczytaj ponownie',

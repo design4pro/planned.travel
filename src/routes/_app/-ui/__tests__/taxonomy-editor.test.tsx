@@ -45,6 +45,17 @@ beforeEach(() => {
   reload.mockResolvedValue(data)
 })
 describe('category settings', () => {
+  it('announces the category moved through the polite status', async () => {
+    api.moveCategoryFn.mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByRole('button', { name: 'Move Museums down' }))
+    await screen.findByText('Moved Museums.')
+    expect(screen.getByText('Moved Museums.').getAttribute('aria-live')).toBe(
+      'polite',
+    )
+  })
+
   it('shows intentional emptiness and keeps editing available at quota', async () => {
     const view = mount(true, { categories: [], meter: { used: 2, limit: 2 } })
     expect(
@@ -269,5 +280,60 @@ describe('category settings', () => {
     expect(
       (screen.getAllByLabelText(/^Name/)[0] as HTMLInputElement).value,
     ).toBe('Art museums')
+  })
+})
+
+describe('independent review reproductions', () => {
+  it('preserves the active draft after repeated Rename and an independent row operation', async () => {
+    const user = userEvent.setup()
+    mount()
+    await user.click(screen.getByRole('button', { name: 'Rename Museums' }))
+    await user.clear(screen.getAllByLabelText(/^Name/)[0])
+    await user.type(screen.getAllByLabelText(/^Name/)[0], 'Unsaved draft')
+    await user.click(screen.getByRole('button', { name: 'Rename Museums' }))
+    api.moveCategoryFn.mockReturnValueOnce(new Promise(() => {}))
+    await user.click(screen.getByRole('button', { name: 'Move Parks up' }))
+    expect(
+      (screen.getAllByLabelText(/^Name/)[0] as HTMLInputElement).value,
+    ).toBe('Unsaved draft')
+  })
+  it('keeps uncertain create blocked when manual reload is superseded by another row write', async () => {
+    const user = userEvent.setup()
+    api.createCategoryFn.mockRejectedValue(new Error('lost response'))
+    reload.mockRejectedValueOnce(new Error('offline'))
+    mount()
+    await user.type(screen.getByLabelText(/^Name/), 'Gardens')
+    await user.click(screen.getByRole('button', { name: 'Add category' }))
+    await screen.findByText(
+      'Could not confirm the saved state. Reload before trying again.',
+    )
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole('button', { name: 'Add category' })
+          .hasAttribute('disabled'),
+      ).toBe(true),
+    )
+    let finishRead!: (value: typeof data) => void
+    reload.mockReturnValueOnce(
+      new Promise<typeof data>((resolve) => {
+        finishRead = resolve
+      }),
+    )
+    const move = deferred()
+    api.moveCategoryFn.mockReturnValueOnce(move.promise)
+    await user.click(screen.getByRole('button', { name: 'Reload' }))
+    await user.click(screen.getByRole('button', { name: 'Move Museums down' }))
+    finishRead(data)
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Reload' }).hasAttribute('disabled'),
+      ).toBe(false),
+    )
+    expect(
+      screen
+        .getByRole('button', { name: 'Add category' })
+        .hasAttribute('disabled'),
+    ).toBe(true)
   })
 })

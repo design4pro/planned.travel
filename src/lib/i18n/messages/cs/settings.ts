@@ -834,6 +834,7 @@ const messages = {
     'Využitá místa pro kategorie a štítky: {used}. Bez omezení.',
   'taxonomy.limitReached':
     'Byl dosažen limit kategorií a štítků. Před přidáním další položky odstraňte nepoužívanou.',
+  'taxonomy.moved': 'Kategorie {name} byla přesunuta.',
   'taxonomy.saved': 'Kategorie uložena.',
   'taxonomy.deleted': 'Kategorie smazána. Místa byla zachována.',
   'taxonomy.reload': 'Načíst znovu',

@@ -815,6 +815,7 @@ const messages = {
     'Chỗ đã dùng cho danh mục và thẻ: {used}. Không giới hạn.',
   'taxonomy.limitReached':
     'Đã đạt giới hạn danh mục và thẻ. Xóa mục không dùng trước khi thêm mục mới.',
+  'taxonomy.moved': 'Đã di chuyển {name}.',
   'taxonomy.saved': 'Đã lưu danh mục.',
   'taxonomy.deleted': 'Đã xóa danh mục. Các địa điểm được giữ lại.',
   'taxonomy.reload': 'Tải lại',

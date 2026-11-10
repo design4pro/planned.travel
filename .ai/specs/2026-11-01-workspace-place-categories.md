@@ -278,6 +278,7 @@ every new key with matching placeholders/plurals to all 23 locales in the same c
 | taxonomy.permissionChanged     | Your workspace permission changed. You can still view categories.                                                                 |
 | taxonomy.usage                 | {used} of {limit} category and tag slots used                                                                                     |
 | taxonomy.limitReached          | Category and tag limit reached. Remove an unused entry before adding another.                                                     |
+| taxonomy.moved                 | Moved {name}.                                                                                                                     |
 | taxonomy.saved                 | Category saved.                                                                                                                   |
 | taxonomy.deleted               | Category deleted. Places were kept.                                                                                               |
 | taxonomy.categoryRemoved       | This category was removed. Choose another category or leave the place uncategorized.                                              |

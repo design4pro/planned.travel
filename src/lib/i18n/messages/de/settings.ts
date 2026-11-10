@@ -842,6 +842,7 @@ const messages = {
     'Belegte Plätze für Kategorien und Tags: {used}. Unbegrenzt.',
   'taxonomy.limitReached':
     'Das Limit für Kategorien und Tags ist erreicht. Entferne zuerst einen ungenutzten Eintrag.',
+  'taxonomy.moved': '{name} wurde verschoben.',
   'taxonomy.saved': 'Kategorie gespeichert.',
   'taxonomy.deleted': 'Kategorie gelöscht. Die Orte bleiben erhalten.',
   'taxonomy.reload': 'Neu laden',

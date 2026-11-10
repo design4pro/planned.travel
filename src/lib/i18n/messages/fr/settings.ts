@@ -846,6 +846,7 @@ const messages = {
     'Emplacements de catégories et d’étiquettes utilisés : {used}. Sans limite.',
   'taxonomy.limitReached':
     'Limite de catégories et d’étiquettes atteinte. Supprimez une entrée inutilisée avant d’en ajouter une.',
+  'taxonomy.moved': '{name} a été déplacé.',
   'taxonomy.saved': 'Catégorie enregistrée.',
   'taxonomy.deleted': 'Catégorie supprimée. Les lieux ont été conservés.',
   'taxonomy.reload': 'Recharger',

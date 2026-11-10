@@ -844,6 +844,7 @@ const messages = {
     'Espacios de categorías y etiquetas usados: {used}. Sin límite.',
   'taxonomy.limitReached':
     'Se alcanzó el límite de categorías y etiquetas. Elimina una entrada sin usar antes de añadir otra.',
+  'taxonomy.moved': 'Se ha movido {name}.',
   'taxonomy.saved': 'Categoría guardada.',
   'taxonomy.deleted': 'Categoría eliminada. Los lugares se conservaron.',
   'taxonomy.reload': 'Recargar',

@@ -838,6 +838,7 @@ const messages = {
     'Spazi per categorie e tag utilizzati: {used}. Nessun limite.',
   'taxonomy.limitReached':
     'Limite di categorie e tag raggiunto. Rimuovi una voce inutilizzata prima di aggiungerne un’altra.',
+  'taxonomy.moved': '{name} è stato spostato.',
   'taxonomy.saved': 'Categoria salvata.',
   'taxonomy.deleted': 'Categoria eliminata. I luoghi sono stati conservati.',
   'taxonomy.reload': 'Ricarica',

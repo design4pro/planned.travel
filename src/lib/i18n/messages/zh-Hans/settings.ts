@@ -696,6 +696,7 @@ const messages = {
   'taxonomy.usage': '分类和标签名额已使用{used}，共{limit}',
   'taxonomy.unlimited': '分类和标签已用名额：{used}。无限制。',
   'taxonomy.limitReached': '已达到分类和标签上限。请先删除不使用的条目再添加。',
+  'taxonomy.moved': '已移动{name}。',
   'taxonomy.saved': '分类已保存。',
   'taxonomy.deleted': '分类已删除。地点已保留。',
   'taxonomy.reload': '重新加载',

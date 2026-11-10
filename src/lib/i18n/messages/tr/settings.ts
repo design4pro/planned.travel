@@ -818,6 +818,7 @@ const messages = {
     'Kullanılan kategori ve etiket yuvaları: {used}. Sınırsız.',
   'taxonomy.limitReached':
     'Kategori ve etiket sınırına ulaşıldı. Yenisini eklemeden önce kullanılmayan bir kaydı kaldırın.',
+  'taxonomy.moved': '{name} taşındı.',
   'taxonomy.saved': 'Kategori kaydedildi.',
   'taxonomy.deleted': 'Kategori silindi. Yerler korundu.',
   'taxonomy.reload': 'Yeniden yükle',

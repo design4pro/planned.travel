@@ -172,11 +172,15 @@ export function TaxonomyEditor({
         }))
       success()
       setNotice(
-        t(
-          id === 'delete'
-            ? 'settings.taxonomy.deleted'
-            : 'settings.taxonomy.saved',
-        ),
+        id !== 'create' && id !== 'delete' && !expected
+          ? t('settings.taxonomy.moved', {
+              name: data.categories.find((row) => row.id === id)?.name ?? '',
+            })
+          : t(
+              id === 'delete'
+                ? 'settings.taxonomy.deleted'
+                : 'settings.taxonomy.saved',
+            ),
       )
       await reconcile()
     } catch (cause) {
@@ -287,8 +291,8 @@ export function TaxonomyEditor({
                   setChecking(true)
                   status.current?.focus()
                   void reconcile()
-                    .then(() => {
-                      if (alive.current) {
+                    .then((current) => {
+                      if (alive.current && current) {
                         setNotice(t('settings.taxonomy.review'))
                         setBlocked(new Set())
                       }
@@ -510,6 +514,7 @@ function TaxonomyRow({
               label={t('settings.taxonomy.rename', { name: category.name })}
               disabled={pending}
               onClick={() => {
+                if (editing) return
                 session.current++
                 setEditing(true)
               }}

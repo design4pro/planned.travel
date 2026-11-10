@@ -827,6 +827,7 @@ const messages = {
     'Felhasznált kategória- és címkehelyek: {used}. Nincs korlát.',
   'taxonomy.limitReached':
     'Elérted a kategóriák és címkék korlátját. Új hozzáadása előtt távolíts el egy nem használt elemet.',
+  'taxonomy.moved': '{name} áthelyezve.',
   'taxonomy.saved': 'Kategória mentve.',
   'taxonomy.deleted': 'Kategória törölve. A helyek megmaradtak.',
   'taxonomy.reload': 'Újratöltés',

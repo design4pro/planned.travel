@@ -758,6 +758,7 @@ const messages = {
   'taxonomy.unlimited': '사용 중인 카테고리 및 태그 슬롯: {used}. 제한 없음.',
   'taxonomy.limitReached':
     '카테고리 및 태그 한도에 도달했습니다. 새 항목을 추가하기 전에 사용하지 않는 항목을 삭제하세요.',
+  'taxonomy.moved': '{name} 항목을 이동했습니다.',
   'taxonomy.saved': '카테고리가 저장되었습니다.',
   'taxonomy.deleted': '카테고리가 삭제되었습니다. 장소는 유지됩니다.',
   'taxonomy.reload': '새로고침',

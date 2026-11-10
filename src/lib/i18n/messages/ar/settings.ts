@@ -816,6 +816,7 @@ const messages = {
   'taxonomy.unlimited': 'خانات الفئات والوسوم المستخدمة: {used}. بلا حد.',
   'taxonomy.limitReached':
     'تم بلوغ حد الفئات والوسوم. أزل إدخالًا غير مستخدم قبل إضافة آخر.',
+  'taxonomy.moved': 'تم نقل {name}.',
   'taxonomy.saved': 'تم حفظ الفئة.',
   'taxonomy.deleted': 'تم حذف الفئة. تم الاحتفاظ بالأماكن.',
   'taxonomy.reload': 'إعادة التحميل',
