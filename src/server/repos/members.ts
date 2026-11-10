@@ -12,10 +12,24 @@
 
 import {
   workspaceDeletionAbsent,
+  workspaceDeletionAuthorityPresent,
+  workspaceDeletionAuthorityCurrent,
   assertWorkspaceNotDeleting,
 } from '#/server/catalog/workspace-deletions'
-import { and, asc, count, eq, exists, inArray, ne, notExists, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  count,
+  eq,
+  exists,
+  inArray,
+  ne,
+  notExists,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { z } from 'zod'
+import type { WorkspaceDeletionAuthority } from '#/server/catalog/workspace-deletions'
 import {
   INVITATION_STATUSES,
   ORGANIZATION_ROLES,
@@ -52,18 +66,37 @@ import {
   assertCanAdminister,
   assertRole,
 } from './context'
-import { anotherOwner, hasStoredRole, memberAuthority, removalPredicate } from './member-guards'
+import {
+  anotherOwner,
+  hasStoredRole,
+  memberAuthority,
+  removalPredicate,
+} from './member-guards'
 import type { BatchStatement } from './batch'
 import { auditLogRepository } from './audit'
 import { recordParticipant } from './participants'
-import { definedOnly, idSchema, instantSchema, shortTextSchema, titleSchema } from './validation'
-import type { Invitation, Member, Organization, OrganizationRole } from '#/server/db/types'
+import {
+  definedOnly,
+  idSchema,
+  instantSchema,
+  shortTextSchema,
+  titleSchema,
+} from './validation'
+import type {
+  Invitation,
+  Member,
+  Organization,
+  OrganizationRole,
+} from '#/server/db/types'
 import type { SQL } from 'drizzle-orm'
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core'
 import type { TenantScope } from './base'
 
 export const membersRepository = createTenantRepository(member, 'member')
-export const invitationsRepository = createTenantRepository(invitation, 'invitation')
+export const invitationsRepository = createTenantRepository(
+  invitation,
+  'invitation',
+)
 
 /* -------------------------------------------------------------------------------------------------
  * Inputs
@@ -95,7 +128,9 @@ export type CreateInvitationInput = z.infer<typeof createInvitationInput>
  * The workspace
  * ---------------------------------------------------------------------------------------------- */
 
-export async function getOrganization(scope: TenantScope): Promise<Organization> {
+export async function getOrganization(
+  scope: TenantScope,
+): Promise<Organization> {
   const rows = await scope.db
     .select()
     .from(organization)
@@ -151,6 +186,54 @@ export class WorkspaceHasLiveSubscriptionError extends RepositoryError {
   }
 }
 
+/** A stale driver must never classify a denied write as missing/deleted or business refusal. */
+export class WorkspaceDeletionAuthorityLostError extends Error {
+  constructor() {
+    super('Workspace deletion authority lost')
+    this.name = 'WorkspaceDeletionAuthorityLostError'
+  }
+}
+
+function deletionAuthorityGuard(
+  scope: TenantScope,
+  departingUserId: string | undefined,
+  authority: WorkspaceDeletionAuthority | undefined,
+  operation: 'drain' | 'delete',
+): SQL {
+  return scope.ctx.userId === 'system:workspace-deletion' ||
+    authority !== undefined
+    ? workspaceDeletionAuthorityPresent(
+        scope.ctx.organizationId,
+        departingUserId,
+        authority,
+        operation,
+      )
+    : sql`1`
+}
+
+async function assertDeletionAuthority(
+  scope: TenantScope,
+  departingUserId: string | undefined,
+  authority: WorkspaceDeletionAuthority | undefined,
+  operation: 'drain' | 'delete',
+) {
+  if (
+    scope.ctx.userId !== 'system:workspace-deletion' &&
+    authority === undefined
+  )
+    return
+  if (
+    !(await workspaceDeletionAuthorityCurrent(
+      scope.db,
+      scope.ctx.organizationId,
+      departingUserId,
+      authority,
+      operation,
+    ))
+  )
+    throw new WorkspaceDeletionAuthorityLostError()
+}
+
 export const deleteWorkspaceInput = z.object({
   /**
    * The one member who may still be in the workspace: the person being erased, whose `member` row
@@ -179,13 +262,18 @@ export type DeleteWorkspaceInput = z.infer<typeof deleteWorkspaceInput>
 export async function deleteWorkspace(
   scope: TenantScope,
   input: DeleteWorkspaceInput = {},
+  authority?: WorkspaceDeletionAuthority,
 ): Promise<void> {
   assertRole(scope.ctx, 'workspace.delete', 'owner')
   const { departingUserId } = deleteWorkspaceInput.parse(input)
+  await assertDeletionAuthority(scope, departingUserId, authority, 'delete')
   const organizationName = (await getOrganization(scope)).name
 
   const refuseIfBlocked = async (): Promise<void> => {
-    const others = await membersRepository.count(scope, anyoneBut(departingUserId))
+    const others = await membersRepository.count(
+      scope,
+      anyoneBut(departingUserId),
+    )
     if (others > 0) {
       throw new WorkspaceNotEmptyError(organizationName)
     }
@@ -202,13 +290,21 @@ export async function deleteWorkspace(
         // The tenant discriminator of this table is its primary key.
         eq(organization.id, scope.ctx.organizationId),
         workspaceDeletionEligible(scope, departingUserId),
+        deletionAuthorityGuard(scope, departingUserId, authority, 'delete'),
       ),
     )
     .returning({ id: organization.id })
 
   if (deleted.length === 0) {
+    await assertDeletionAuthority(scope, departingUserId, authority, 'delete')
     // Either the check lost a race (re-read: it throws the reason) or the workspace is already gone.
     await refuseIfBlocked()
+    const [remaining] = await scope.db
+      .select({ id: organization.id })
+      .from(organization)
+      .where(eq(organization.id, scope.ctx.organizationId))
+      .limit(1)
+    if (remaining) throw new WorkspaceDeletionAuthorityLostError()
     throw new NotFoundError('organization', scope.ctx.organizationId)
   }
 }
@@ -252,9 +348,11 @@ export async function drainWorkspace(
   scope: TenantScope,
   input: DeleteWorkspaceInput,
   closeRooms: (tripIds: ReadonlyArray<string>) => Promise<void>,
+  authority?: WorkspaceDeletionAuthority,
 ): Promise<{ drained: boolean; steps: number; deleted: number }> {
   assertRole(scope.ctx, 'workspace.delete', 'owner')
   const { departingUserId } = deleteWorkspaceInput.parse(input)
+  await assertDeletionAuthority(scope, departingUserId, authority, 'drain')
   const [workspace] = await scope.db
     .select({ name: organization.name })
     .from(organization)
@@ -280,12 +378,26 @@ export async function drainWorkspace(
           tenantFilter(
             scope,
             table,
-            workspaceDeletionEligible(scope, departingUserId),
+            allOf(
+              workspaceDeletionEligible(scope, departingUserId),
+              deletionAuthorityGuard(
+                scope,
+                departingUserId,
+                authority,
+                'drain',
+              ),
+            ),
           ),
         )
         .orderBy(asc(table.id))
         .limit(WORKSPACE_DRAIN_BATCH_SIZE)
       if (rows.length === 0) {
+        await assertDeletionAuthority(
+          scope,
+          departingUserId,
+          authority,
+          'drain',
+        )
         await refuseIfBlocked()
         break
       }
@@ -300,10 +412,20 @@ export async function drainWorkspace(
           tenantFilter(
             scope,
             table,
-            allOf(selected, workspaceDeletionEligible(scope, departingUserId)),
+            allOf(
+              selected,
+              workspaceDeletionEligible(scope, departingUserId),
+              deletionAuthorityGuard(
+                scope,
+                departingUserId,
+                authority,
+                'drain',
+              ),
+            ),
           ),
         )
         .returning({ id: table.id })
+      await assertDeletionAuthority(scope, departingUserId, authority, 'drain')
       steps += 1
       deleted += removed.length
       await refuseIfBlocked()
@@ -340,7 +462,9 @@ export interface MemberProfile {
  * the tenant predicate is applied to `member`, and the join can therefore only reach users who are in
  * this workspace.
  */
-export async function listMemberProfiles(scope: TenantScope): Promise<Array<MemberProfile>> {
+export async function listMemberProfiles(
+  scope: TenantScope,
+): Promise<Array<MemberProfile>> {
   const rows = await scope.db
     .select({
       memberId: member.id,
@@ -388,11 +512,17 @@ export async function getMembership(
   scope: TenantScope,
   userId: string,
 ): Promise<Member | null> {
-  return membersRepository.findOne(scope, eq(member.userId, idSchema.parse(userId)))
+  return membersRepository.findOne(
+    scope,
+    eq(member.userId, idSchema.parse(userId)),
+  )
 }
 
 /** Adds someone straight to the workspace — used by the invitation-accept flow and by admins. */
-export async function addMember(scope: TenantScope, input: AddMemberInput): Promise<Member> {
+export async function addMember(
+  scope: TenantScope,
+  input: AddMemberInput,
+): Promise<Member> {
   assertCanAdminister(scope.ctx, 'add a member')
   const values = addMemberInput.parse(input)
   assertGrantRole(scope, values.role ?? 'member')
@@ -630,7 +760,12 @@ export async function listUserProfiles(
   scope: TenantScope,
   userIds: ReadonlyArray<string>,
 ): Promise<Array<MemberProfile>> {
-  const wanted = new Set(z.array(idSchema).max(200).parse([...userIds]))
+  const wanted = new Set(
+    z
+      .array(idSchema)
+      .max(200)
+      .parse([...userIds]),
+  )
   if (wanted.size === 0) {
     return []
   }
@@ -648,7 +783,10 @@ export async function listUserProfiles(
     .innerJoin(user, eq(user.id, member.userId))
     .where(tenantFilter(scope, member, inArray(member.userId, [...wanted])))
 
-  return rows.map((row) => ({ ...row, role: roleSchema.catch('member').parse(row.role) }))
+  return rows.map((row) => ({
+    ...row,
+    role: roleSchema.catch('member').parse(row.role),
+  }))
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -665,7 +803,9 @@ export async function listInvitations(
   })
 }
 
-export async function listPendingInvitations(scope: TenantScope): Promise<Array<Invitation>> {
+export async function listPendingInvitations(
+  scope: TenantScope,
+): Promise<Array<Invitation>> {
   return listInvitations(scope, { status: 'pending' })
 }
 
@@ -853,7 +993,9 @@ export async function cancelInvitation(
 }
 
 /** Expired pending invitations, for the retention cron to mark. */
-export async function countPendingInvitations(scope: TenantScope): Promise<number> {
+export async function countPendingInvitations(
+  scope: TenantScope,
+): Promise<number> {
   const rows = await scope.db
     .select({ value: count() })
     .from(invitation)

@@ -37,6 +37,11 @@ Pipeline helpers: run `node scripts/ci/validation.mjs` for the ordered configure
 - A server module that reaches `cloudflare:workers` (billing runtime, `transit/bindings`, a route importing the binding) cannot be loaded by the Node `server` test project. Put the logic in a `-lib/` handler or a wire-validator module that takes the binding as an argument, or `vi.mock` both bindings in the handler test (#1049, #966, #1043).
 - A `ui` test has two traps of the same kind. A component that gains an import chain reaching `cloudflare:workers` (`#/components/modules/files/upload`, `#/components/layout/visitor-language-switcher`) breaks every jsdom suite that renders it, and each needs `vi.mock` of that module (#1230, #1491). The project has no jest-dom matchers: assert with `getAttribute`, `textContent` and `document.activeElement`, not `toBeDisabled` or `toHaveFocus` (#1381, #1522).
 
+- Workspace deletion's reserved driver passes trusted catalog authority beside scope. Every drain
+  and final organization DELETE binds `workspaceDeletionAuthorityPresent` at SQLite execution;
+  `workspaceDeletionAuthorityCurrent` is diagnostic only. These named catalog fragments expose no
+  ledger projection and do not expand request inputs or the tenant factory (SPEC §§5–6, ADR 0048).
+
 ## Domain
 
 Domain vocabulary lives in CONTEXT.md — a glossary and nothing else. Architecture decisions live in docs/adr/.

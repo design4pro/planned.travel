@@ -80,6 +80,13 @@ floor guard script; the review now does.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
   See BACKWARD_COMPATIBILITY.md.
 
+- **Workspace deletion authority is checked inside each destructive SQL statement** (SPEC §§5–6,
+  ADR 0048): only the named catalog EXISTS sibling and boolean diagnostic accompany the admission
+  anti-exists. Keep tenant/member/subscription checks, closed operation-state mapping and SQLite
+  statement-time expiry. Empty SELECT/zero-row DELETE must distinguish lost lease from business
+  refusal and real missing organization. Never add authority fields to request input. Require real
+  SQLite deferred-room and post-construction final-DELETE races and retirement of old Workers.
+
 ## Mutation recovery (should fix)
 
 - **A failed response or follow-up does not prove the write failed.** Distinguish a committed write,
