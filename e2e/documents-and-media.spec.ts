@@ -1650,7 +1650,20 @@ test.describe('Files date layout', () => {
                     const name = cells[0].querySelector('button')!
                     const action = cells[5].querySelector('button')!
                     const actionBox = action.getBoundingClientRect()
+                    const author = cells[3].firstElementChild ?? cells[3]
+                    const authorRange = document.createRange()
+                    authorRange.setStart(author.firstChild!, 0)
+                    authorRange.setEnd(
+                      author.firstChild!,
+                      Math.min(2, author.textContent!.length),
+                    )
+                    const authorPrefix = authorRange.getBoundingClientRect()
+                    const authorBox = author.getBoundingClientRect()
                     return {
+                      authorPrefixVisible:
+                        authorPrefix.width > 0 &&
+                        authorPrefix.left >= authorBox.left &&
+                        authorPrefix.right <= authorBox.right,
                       text: cell.textContent,
                       lines: new Set(rects.map((rect) => Math.round(rect.top)))
                         .size,
@@ -1677,7 +1690,46 @@ test.describe('Files date layout', () => {
                   ).toBe(1)
                   expect(row.contained).toBe(true)
                   expect(row.filenameWidth).toBeGreaterThan(30)
+                  if (locale === 'ar' && width === 640) {
+                    expect(row.authorPrefixVisible).toBe(true)
+                  }
                   expect(row.actionVisible).toBe(true)
+                }
+                if (locale === 'ar' && width === 640) {
+                  const prefix = await rows
+                    .getByRole('button', {
+                      name: 'Travel insurance policy 2026.pdf',
+                      exact: true,
+                    })
+                    .evaluate((control) => {
+                      const label = control.querySelector('span')!
+                      const text = label.firstChild!
+                      const range = document.createRange()
+                      range.setStart(text, 0)
+                      range.setEnd(text, 'Trav'.length)
+                      const prefixBox = range.getBoundingClientRect()
+                      const labelBox = label.getBoundingClientRect()
+                      const controlBox = control.getBoundingClientRect()
+                      // Leave room for the ellipsis: clipped glyphs still have Range rects.
+                      const ellipsisSpace = parseFloat(
+                        getComputedStyle(label).fontSize,
+                      )
+                      return {
+                        text: text.textContent?.slice(0, 'Trav'.length),
+                        visible:
+                          prefixBox.width > 0 &&
+                          prefixBox.left >=
+                            Math.max(labelBox.left, controlBox.left) &&
+                          prefixBox.right <=
+                            Math.min(labelBox.right, controlBox.right) -
+                              ellipsisSpace,
+                      }
+                    })
+                  expect(prefix.text).toBe('Trav')
+                  expect(
+                    prefix.visible,
+                    JSON.stringify({ colorScheme, javaScriptEnabled, prefix }),
+                  ).toBe(true)
                 }
                 expect(
                   await screen.evaluate(

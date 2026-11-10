@@ -460,7 +460,10 @@ export function FileLibrary({
         }}
         className="min-h-11 min-w-0 flex-1 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        <span className="block font-medium text-ink [overflow-wrap:anywhere] sm:truncate">
+        <span
+          dir="auto"
+          className="block font-medium text-ink [overflow-wrap:anywhere] sm:truncate"
+        >
           {file.filename}
         </span>
         {file.description === null ? null : (
@@ -911,7 +914,9 @@ export function FileLibrary({
                       {formatStorage(file.sizeBytes)}
                     </TableCell>
                     <TableCell truncate muted className="hidden sm:table-cell">
-                      {nameFor(people, file.uploadedBy, t)}
+                      <span dir="auto" className="block truncate">
+                        {nameFor(people, file.uploadedBy, t)}
+                      </span>
                     </TableCell>
                     <TableCell
                       muted
