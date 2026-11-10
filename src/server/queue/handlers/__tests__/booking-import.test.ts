@@ -12,7 +12,8 @@ import { createLogger, createMemorySink } from '#/server/observability'
 import { rateMeterKey } from '#/server/metering/rate'
 import { createBookingImportHandler, stagedImportKey } from '../booking-import'
 
-import { consumeTaskBatch } from '../../consumer'
+import { consumeTaskBatch, createTaskHandlers } from '../../consumer'
+import { createHarness } from '#/server/repos/__tests__/harness'
 import { taskDeadKey, taskDoneKey } from '../../jobs'
 import { bookingImportPayloadSchema } from '../../types'
 import type { StagedImport } from '../booking-import'
@@ -506,47 +507,55 @@ describe('optional room notification', () => {
   it.each([false, true])(
     'settles the consumer according to staging success (write fails: %s)',
     async (stagingFails) => {
-      const world = harness({ source: CALENDAR })
-      world.context.env.TRIP_ROOM = room('fetch')
-      if (stagingFails) {
-        world.context.env.KV.put = async () => {
-          throw new Error('KV unavailable')
+      const db = await createHarness()
+      try {
+        const tenant = await db.seedTenant('import')
+        const world = harness({ source: CALENDAR })
+        world.context.orgId = tenant.organizationId
+        world.context.env.DB = {} as D1Database
+        world.context.env.TRIP_ROOM = room('fetch')
+        if (stagingFails) {
+          world.context.env.KV.put = async () => {
+            throw new Error('KV unavailable')
+          }
+          await expect(
+            world.handler(payload({ format: 'ics' }), world.context),
+          ).rejects.toThrow('KV unavailable')
         }
-        await expect(
-          world.handler(payload({ format: 'ics' }), world.context),
-        ).rejects.toThrow('KV unavailable')
-      }
-      const ack = vi.fn()
-      const retry = vi.fn()
-      const result = await consumeTaskBatch(
-        {
-          messages: [
-            {
-              id: 'message-1',
-              body: {
-                id: TASK_ID,
-                orgId: ORG,
-                kind: 'booking-import',
-                enqueuedAt: NOW,
-                payload: payload({ format: 'ics' }),
+        const ack = vi.fn()
+        const retry = vi.fn()
+        const result = await consumeTaskBatch(
+          {
+            messages: [
+              {
+                id: 'message-1',
+                body: {
+                  id: TASK_ID,
+                  orgId: tenant.organizationId,
+                  kind: 'booking-import',
+                  enqueuedAt: NOW,
+                  payload: payload({ format: 'ics' }),
+                },
+                attempts: 1,
+                ack,
+                retry,
               },
-              attempts: 1,
-              ack,
-              retry,
-            },
-          ],
-        },
-        world.context.env,
-        world.context.logger,
-        { now: () => NOW },
-      )
+            ],
+          },
+          world.context.env,
+          world.context.logger,
+          { now: () => NOW, registry: createTaskHandlers(() => db.db) },
+        )
 
-      expect(ack).toHaveBeenCalledTimes(stagingFails ? 0 : 1)
-      expect(retry).toHaveBeenCalledTimes(stagingFails ? 1 : 0)
-      expect(result.deadLettered).toBe(0)
-      expect(world.store.has(taskDoneKey(TASK_ID))).toBe(!stagingFails)
-      expect(world.store.has(taskDeadKey(TASK_ID))).toBe(false)
-      expect(world.staged()?.count).toBe(stagingFails ? undefined : 1)
+        expect(ack).toHaveBeenCalledTimes(stagingFails ? 0 : 1)
+        expect(retry).toHaveBeenCalledTimes(stagingFails ? 1 : 0)
+        expect(result.deadLettered).toBe(0)
+        expect(world.store.has(taskDoneKey(TASK_ID))).toBe(!stagingFails)
+        expect(world.store.has(taskDeadKey(TASK_ID))).toBe(false)
+        expect(world.staged()?.count).toBe(stagingFails ? undefined : 1)
+      } finally {
+        db.close()
+      }
     },
   )
 })

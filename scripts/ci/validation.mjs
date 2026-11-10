@@ -122,16 +122,20 @@ export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
-  const temporaryRoot = join(cwd, '.ai/tmp/validation')
-  mkdirSync(temporaryRoot, { recursive: true, mode: 0o700 })
-  const temporaryDirectory = mkdtempSync(join(temporaryRoot, 'tmp-'))
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
   return new Promise((done) => {
     const started = Date.now()
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
-      // Isolate even an inherited TMPDIR: shared /tmp can exhaust inodes between gates.
-      env: { ...process.env, TMPDIR: temporaryDirectory },
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -173,7 +177,6 @@ export function runValidationCommand(
       clearTimeout(force)
       process.removeListener('SIGINT', interrupt)
       process.removeListener('SIGTERM', interrupt)
-      rmSync(temporaryDirectory, { recursive: true, force: true })
       let result = code === 0 ? 'passed' : 'failed'
       let exitCode = code ?? 1
       if (code === 126 || code === 127) result = 'infrastructure'
@@ -193,7 +196,7 @@ export function runValidationCommand(
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
-  })
+  }).finally(() => rmSync(temporary, { recursive: true, force: true }))
 }
 
 export async function runGate({

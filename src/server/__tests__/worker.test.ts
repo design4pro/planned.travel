@@ -43,6 +43,9 @@ const harness = vi.hoisted(() => {
       .mockResolvedValue({ listed: 0, deleted: 0, drained: true }),
     sweep: vi.fn(),
     securitySweep: vi.fn(),
+    deletionPrune: vi.fn().mockResolvedValue(0),
+    deletionRecover: vi.fn().mockResolvedValue([]),
+    gallerySweep: vi.fn(),
   }
 })
 
@@ -67,8 +70,19 @@ vi.mock('../audit/retention', () => ({
 }))
 
 vi.mock('../queue/reminders', () => ({ sweepReminders: harness.sweep }))
+vi.mock('../community/expiry', () => ({
+  sweepGalleryPreviews: harness.gallerySweep,
+}))
 vi.mock('../auth/account-security-scheduled', () => ({
   sweepScheduledAccountSecurity: harness.securitySweep,
+}))
+
+vi.mock('../workspace-deletion/runtime', () => ({
+  createWorkspaceDeletionRuntime: () => ({ recover: harness.deletionRecover }),
+}))
+
+vi.mock('../workspace-deletion/ledger', () => ({
+  pruneCompletedWorkspaceDeletions: harness.deletionPrune,
 }))
 
 vi.mock('../catalog/audit', async (importOriginal) => {
@@ -157,6 +171,37 @@ function pendingWarnings(): Array<LogRecord> {
 }
 
 describe('the weekly retention slot', () => {
+  it('reports a workspace deletion prune failure after sibling retention jobs run', async () => {
+    harness.deletionPrune.mockRejectedValueOnce(
+      new Error('deletion prune unavailable'),
+    )
+    harness.prune
+      .mockReset()
+      .mockResolvedValue({ deleted: 0, batches: 0, drained: true })
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 0, batches: 0, drained: true })
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('deletion prune unavailable')
+    expect(harness.prune).toHaveBeenCalledTimes(1)
+    expect(harness.rollUp).toHaveBeenCalledTimes(1)
+  })
+
+  it('prunes completed workspace deletions even if a sibling retention job fails', async () => {
+    harness.deletionPrune.mockClear()
+    harness.prune.mockReset().mockRejectedValue(new Error('audit unavailable'))
+    harness.rollUp
+      .mockReset()
+      .mockResolvedValue({ folded: 0, batches: 0, drained: true })
+    await expect(
+      worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+    ).rejects.toThrow('audit unavailable')
+    expect(harness.deletionPrune.mock.calls).toEqual([
+      [{ name: 'platform-db' }, new Date(SCHEDULED_AT)],
+    ])
+  })
+
   it('runs the audit prune as the platform itself, at the tick it was scheduled for', async () => {
     harness.records.length = 0
     harness.prune
@@ -358,11 +403,16 @@ describe('the weekly retention slot', () => {
     harness.prune.mockReset()
     harness.rollUp.mockReset()
     harness.sweep.mockReset().mockResolvedValue(undefined)
+    harness.gallerySweep.mockReset().mockResolvedValue(undefined)
 
     await worker.scheduled(controller('*/15 * * * *'), env, executionContext())
     await worker.scheduled(controller('0 0 31 2 *'), env, executionContext())
 
     expect(harness.sweep).toHaveBeenCalledTimes(1)
+    expect(harness.gallerySweep).toHaveBeenCalledExactlyOnceWith(
+      { name: 'platform-db' },
+      SCHEDULED_AT,
+    )
     expect(harness.prune).not.toHaveBeenCalled()
     expect(harness.rollUp).not.toHaveBeenCalled()
     expect(pendingWarnings()).toEqual([])
@@ -403,4 +453,28 @@ describe('tenant audit weekly retention', () => {
     expect(harness.rollUp).toHaveBeenCalledTimes(1)
     expect(harness.deadLetters).toHaveBeenCalledTimes(1)
   })
+})
+
+it('runs deletion recovery in the quarter-hour slot even when reminders fail', async () => {
+  const failure = new Error('reminders unavailable')
+  harness.sweep.mockReset().mockRejectedValue(failure)
+  harness.securitySweep.mockReset().mockResolvedValue(undefined)
+  harness.deletionRecover.mockReset().mockResolvedValue([])
+  await expect(
+    worker.scheduled(controller('*/15 * * * *'), env, executionContext()),
+  ).rejects.toThrow(failure)
+  expect(harness.deletionRecover).toHaveBeenCalledTimes(1)
+  expect(harness.securitySweep).toHaveBeenCalledTimes(1)
+})
+
+it('keeps gallery preview cleanup retryable when its scheduled deletion fails', async () => {
+  const failure = new Error('preview cleanup failed')
+  harness.gallerySweep.mockReset().mockRejectedValueOnce(failure)
+  harness.sweep.mockReset().mockResolvedValue(undefined)
+  harness.securitySweep.mockReset().mockResolvedValue(undefined)
+  await expect(
+    worker.scheduled(controller('*/15 * * * *'), env, executionContext()),
+  ).rejects.toBe(failure)
+  expect(harness.sweep).toHaveBeenCalledTimes(1)
+  expect(harness.securitySweep).toHaveBeenCalledTimes(1)
 })

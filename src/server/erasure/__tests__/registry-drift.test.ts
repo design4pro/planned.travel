@@ -23,8 +23,8 @@ import {
   findRegistryDrift,
 } from './schema-user-columns'
 
-// Independently counted from the 51 userRef column declarations in schema.ts.
-const EXPECTED_USER_REF_COLUMNS = 51
+// Independently counted from the 52 userRef column declarations in schema.ts.
+const EXPECTED_USER_REF_COLUMNS = 52
 
 function assertUserRefBaseline(source: string): void {
   expect(extractUserRefColumns(source)).toHaveLength(EXPECTED_USER_REF_COLUMNS)

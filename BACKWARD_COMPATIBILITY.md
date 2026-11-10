@@ -28,6 +28,13 @@ working against the new schema.
 - Tenant scoping is part of the contract: every tenant table keeps its `organization_id` and every
   query passes through the tenant-scoped base repository (docs/SPEC.md §5, §6).
 
+Workspace-deletion Phase 6 adds nullable `refusal_reason` through a generated `ADD COLUMN` migration.
+Existing rows read null and previous Workers tolerate the column. Validation and lease/state CAS
+live in the catalog; no new CHECK tightens previous writes. Existing erasure attribution/receipt
+CHECKs remain intact. Consumer-first rollout still forbids erasure-initiated inserts until the
+functioning #1060 handler and driver wake adapter exist; adding the refusal column does not
+activate any producer or establish independent staged-contract acceptance.
+
 ### 2. Server-function inputs and outputs (`src/server/fns/`)
 
 Server functions are called by the client bundle. During a deployment, a browser that loaded the
@@ -147,3 +154,20 @@ After cutover the existing native `/api/auth/revoke-other-sessions` path remains
 Migration `0025_harsh_molecule_man.sql` adds proposal, shared proof-budget and matched-step replay tables plus optional operation metadata. Deploy it before the lifecycle-aware Worker. Retire every Worker that can still execute native factor mutations before admitting management traffic. The D1 cutover remains irreversible: forward fixes only, never roll back to password-only management or a writer that ignores account/trust revisions. Existing unversioned requests gain no required input fields; after cutover the recognized native enable/disable/generate-backup-codes/get-totp-uri/send-otp/verify-otp paths, signed-in TOTP/backup verification and server-only backup redisplay refuse with `CLIENT_UPGRADE_REQUIRED` before mutation. The updated client displays localized refresh guidance. A tab running the predeployment bundle does not recognize the new code and shows its existing generic failure; refreshing is required before it can manage the factor. The refusal still precedes every mutation. Sessionless TOTP/backup sign-in remains revision-bound; Google, Apple and passkeys retain their exemptions.
 
 The replacement `/account-security/` flow registers a kind/session-bound receipt before preparing or committing. Activation, replacement, disable and backup replacement rotate the current session and revoke all prior session/trust authority together. Old setup keys cannot be exported using password alone; authenticated replacement is the supported flow. This intentionally supersedes the #1154 active-key disclosure contract. Lost commit responses reconcile status only, never reissue a session or redisplay backup codes. There is no deferred schema contraction or compatibility fallback for the unsafe native paths.
+
+## Workspace deletion write-time authority (#1741, ADR 0048)
+
+Older destructive Workers lack the statement-time ledger EXISTS fence. Before activating any
+workspace-deletion producer, retire every older Worker and all its in-flight destructive executions;
+a mixed old/new window does not establish lease safety. After activation do not roll back to an
+unfenced destructive Worker: use a forward fix. This is a rollout prerequisite, not activation
+permission; staged AC6/AC8 acceptance and activation remain distinct gates. Internal tested ports
+now require immutable descriptors and explicit matching-id acceptance before CAS. Erasure wake
+uses stable `person-erasure:<erasureId>:<deletionId>`, opaque ids and 30-second delay; owner refusal
+uses `workspace-deletion:<id>:refused`. Canonical nonterminal wake throws retryable-not-ready;
+original delivery parks without consuming. Reissue after exhausted attempts must admit the same
+id again, without a successful done marker. These are inert internal contracts, not new deployed
+queue shapes: no person-erasure kind/handler, producer or engine is registered. Production
+adapters and #1060 activation remain separately gated.
+
+No request input, queue envelope, physical schema or locale shape changes for this fence.

@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Ez az előnézet lejárt. Megerősítés előtt készíts új előnézetet.',
+  'gallery.publish.title': 'Galéria előnézete',
+  'gallery.publish.publicTitle': 'Nyilvános cím',
+  'gallery.publish.attribution': 'Megjelenített név',
+  'gallery.publish.showDates': 'Utazási dátumok megjelenítése',
+  'gallery.publish.preview': 'Megosztandó tartalom előnézete',
+  'gallery.publish.confirm': 'Előnézet megerősítése',
+  'gallery.publish.captureFailed':
+    'Nem sikerült elkészíteni az előnézetet. Ellenőrizd a mezőket, és próbáld újra.',
+  'gallery.publish.tooLarge': 'Ez az utazás túl nagy az előnézethez.',
+  'gallery.publish.empty': 'Üres',
+  'gallery.publish.version': 'Verzió',
+  'gallery.publish.countries': 'Országkódok',
+  'gallery.publish.days': 'Napok',
+  'gallery.publish.places': 'Helyek',
+  'gallery.publish.order': 'Sorrend',
+  'gallery.publish.yes': 'Igen',
+  'gallery.publish.no': 'Nem',
+  'gallery.publish.publicFields':
+    'A cím, az összefoglaló, a megjelenített név, az országkódok, a napok címei, a helyek nevei, kategóriái és koordinátái nyilvánosak lehetnek. A dátumok csak a választásod alapján kerülnek bele.',
+  'gallery.publish.privateFields':
+    'Az utazók, jegyzetek, fájlok, költségek és foglalások nem szerepelnek benne.',
+  'gallery.publish.freeTextWarning':
+    'Megerősítés előtt ellenőrizd a címet, az összefoglalót, a megjelenített nevet, a napok címeit és a helyneveket személyes adatok szempontjából.',
+
   'plan.photo.edit': 'Kép szerkesztése',
   'plan.photo.unavailable':
     'A képek feltöltése és szerkesztése nem érhető el. A jelenlegi kép megmarad.',

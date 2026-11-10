@@ -18,6 +18,14 @@ and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklis
 A red required check or a conflicted head is reported as a blocker together with the full code
 review, never instead of it.
 
+Release-content contract only: [ADR 0051](docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
+
 ## Blockers: the floor
 
 These are mechanical and admit no judgement. The pre-migration pipeline enforced them with a
@@ -39,9 +47,9 @@ floor guard script; the review now does.
 ## Layering contract (blockers)
 
 - **SQL only in `src/server/repos`**, through the tenant-scoped base repository; the tenant filter
-  must not be removable. The stated exceptions are four, and closed (SPEC §6, ADR 0049): the bounded `repos/account-security.ts` account-auth capability, `src/server/auth/provisioning.ts` (Better Auth identity tables `user`, `organization`, `member` only, never imported from the tenant schema, with the participation anchor written through `auth/participation.ts`; a fourth table is a blocker), the `…Unscoped` shape below and `src/server/catalog` (global tables including the driver-only workspace deletion ledger, one
+  must not be removable. The stated exceptions are five, and closed (SPEC §6, ADR 0049, ADR 0051): the bounded `repos/account-security.ts` account-auth capability, `src/server/auth/provisioning.ts` (Better Auth identity tables `user`, `organization`, `member` only, never imported from the tenant schema, with the participation anchor written through `auth/participation.ts`; a fourth table is a blocker), the `…Unscoped` shape below and `src/server/catalog` (global tables including the driver-only workspace deletion ledger, one
   reminder discovery read, the erasure catalog with ids-only discovery and system-actor cleanup and one ids-only tenant audit retention
-  discovery read, docs/SPEC.md §5 and §6). The one other writer is `src/server/auth/participation.ts`, the auth layer's write-only `INSERT OR IGNORE` into `workspace_participants` (SPEC §5, ADR 0043): it is no precedent for any other table. SQL anywhere else is a blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+  discovery read, docs/SPEC.md §5 and §6). The one other writer is `src/server/auth/participation.ts`, the auth layer's write-only `INSERT OR IGNORE` into `workspace_participants` (SPEC §5, ADR 0043): it is no precedent for any other table. SQL anywhere else is a blocker. The fifth is the bounded seven-table content/release repository exception in SPEC §5 and ADR 0051, owned only by `repos/content.ts` and `repos/releases.ts` with a plain `Database`; it does not expand catalog or FU-3. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - **The account-auth exception is closed** (ADR 0049, SPEC §5/§6): only `repos/account-security.ts`,
   with branded account capabilities from `auth/account-authority.ts`, the named callers and bounded
   scheduled-cleanup capability. No tenant content, organization/member access, client account selector,
@@ -79,6 +87,13 @@ floor guard script; the review now does.
   union; `src/server/queue/handlers/email.ts` delivers.
 - **D1 migrations are additive** - a running Worker must survive the migrate-then-deploy window.
   See BACKWARD_COMPATIBILITY.md.
+
+- **Workspace deletion authority is checked inside each destructive SQL statement** (SPEC §§5–6,
+  ADR 0048): only the named catalog EXISTS sibling and boolean diagnostic accompany the admission
+  anti-exists. Keep tenant/member/subscription checks, closed operation-state mapping and SQLite
+  statement-time expiry. Empty SELECT/zero-row DELETE must distinguish lost lease from business
+  refusal and real missing organization. Never add authority fields to request input. Require real
+  SQLite deferred-room and post-construction final-DELETE races and retirement of old Workers.
 
 ## Mutation recovery (should fix)
 

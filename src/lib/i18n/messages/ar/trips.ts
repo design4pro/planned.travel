@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'انتهت صلاحية هذه المعاينة. أنشئ معاينة جديدة قبل التأكيد.',
+  'gallery.publish.title': 'معاينة المعرض',
+  'gallery.publish.publicTitle': 'العنوان العام',
+  'gallery.publish.attribution': 'اسم العرض',
+  'gallery.publish.showDates': 'تضمين تواريخ الرحلة',
+  'gallery.publish.preview': 'معاينة ما ستتم مشاركته',
+  'gallery.publish.confirm': 'تأكيد هذه المعاينة',
+  'gallery.publish.captureFailed':
+    'تعذر إعداد المعاينة. تحقق من الحقول وحاول مجددًا.',
+  'gallery.publish.tooLarge': 'هذه الرحلة كبيرة جدًا للمعاينة.',
+  'gallery.publish.empty': 'فارغ',
+  'gallery.publish.version': 'الإصدار',
+  'gallery.publish.countries': 'رموز البلدان',
+  'gallery.publish.days': 'الأيام',
+  'gallery.publish.places': 'الأماكن',
+  'gallery.publish.order': 'الترتيب',
+  'gallery.publish.yes': 'نعم',
+  'gallery.publish.no': 'لا',
+  'gallery.publish.publicFields':
+    'قد يكون العنوان والملخص واسم العرض ورموز البلدان وعناوين الأيام وأسماء الأماكن وفئاتها وإحداثياتها عامة. تُضمَّن التواريخ فقط إذا اخترت ذلك.',
+  'gallery.publish.privateFields':
+    'لا يتم تضمين المسافرين والملاحظات والملفات والتكاليف والحجوزات.',
+  'gallery.publish.freeTextWarning':
+    'قبل التأكيد، تحقق من خلو العنوان والملخص واسم العرض وعناوين الأيام وأسماء الأماكن من المعلومات الشخصية.',
+
   'plan.photo.edit': 'تعديل الصورة',
   'plan.photo.unavailable':
     'رفع الصور وتعديلها غير متاحين. يتم الاحتفاظ بالصورة الحالية.',

@@ -1231,17 +1231,55 @@ html[dir='rtl'] #sentry-feedback {
   }
 }
 
-@keyframes pt-mascot-sway {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-3deg); }
+/* The hit target stays still; only the illustration travels inside its lane. */
+.pt-mascot-launcher { container-type: inline-size; --pt-mascot-direction: 1; }
+.pt-mascot-launcher:dir(rtl) { --pt-mascot-direction: -1; }
+.pt-mascot-pose, .pt-mascot-reaction { transform-origin: 54px 72px; }
+
+@keyframes pt-mascot-travel {
+  0%, 25%, 100% { transform: translateX(0); }
+  26.25%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  71.25% { transform: translateX(0); }
+}
+
+@keyframes pt-mascot-travel-eager {
+  0%, 25%, 100% { transform: translateX(0); }
+  26.6667%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  71.6667% { transform: translateX(0); }
+}
+
+@keyframes pt-mascot-travel-countdown {
+  0%, 25%, 100% { transform: translateX(0); }
+  27.5%, 70% { transform: translateX(calc((100cqw - 88px) * var(--pt-mascot-direction))); }
+  72.5% { transform: translateX(0); }
+}
+
+@keyframes pt-mascot-rest {
+  0%, 80%, 100% { transform: translateY(0) rotate(0deg); }
+  90% { transform: translateY(-3px) rotate(-3deg); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-band][data-moving='true'] { animation: pt-mascot-sway 3s ease-in-out infinite; transform-origin: bottom center; }
-  [data-band][data-paused='true'], [data-band][data-hidden='true'] { animation-play-state: paused; }
-  [data-band][data-reduced='true'] { animation: none; }
-  [data-band='eager'][data-moving='true'] { animation-duration: 2s; }
-  [data-band='countdown'][data-moving='true'] { animation-duration: 1s; }
+  .pt-mascot-bird:where([data-moving='true']:not([data-reduced])) {
+    animation: pt-mascot-travel 16s var(--ease-out-quint) infinite;
+  }
+  .pt-mascot-bird:where([data-moving='true']:not([data-reduced])) .pt-mascot-pose {
+    animation: pt-mascot-rest 2s ease-in-out infinite;
+  }
+  .pt-mascot-bird[data-band='eager'][data-moving='true']:not([data-reduced]) { animation-name: pt-mascot-travel-eager; animation-duration: 12s; }
+  .pt-mascot-bird[data-band='countdown'][data-moving='true']:not([data-reduced]) { animation-name: pt-mascot-travel-countdown; animation-duration: 8s; }
+  .pt-mascot-bird[data-paused], .pt-mascot-bird[data-hidden],
+  .pt-mascot-bird[data-paused] .pt-mascot-pose, .pt-mascot-bird[data-hidden] .pt-mascot-pose,
+  .pt-mascot-launcher:is(:hover, :focus-visible, [aria-expanded='true'], [aria-busy='true']) .pt-mascot-bird,
+  .pt-mascot-launcher:is(:hover, :focus-visible, [aria-expanded='true'], [aria-busy='true']) .pt-mascot-pose {
+    animation-play-state: paused;
+  }
+  .pt-mascot-bird:not([data-reduced]) .pt-mascot-reaction {
+    transition: transform 200ms var(--ease-out-quint);
+  }
+  .pt-mascot-launcher:is(:hover, :focus-visible, [aria-expanded='true'], [aria-busy='true']) .pt-mascot-bird:not([data-reduced]) .pt-mascot-reaction {
+    transform: translateY(-4px) rotate(-8deg);
+  }
 }
 
 /* ==========================================================================

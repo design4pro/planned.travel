@@ -14,6 +14,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'このプレビューの有効期限が切れました。確認する前に新しいプレビューを作成してください。',
+  'gallery.publish.title': 'ギャラリーのプレビュー',
+  'gallery.publish.publicTitle': '公開タイトル',
+  'gallery.publish.attribution': '表示名',
+  'gallery.publish.showDates': '旅行の日付を含める',
+  'gallery.publish.preview': '共有する内容を確認',
+  'gallery.publish.confirm': 'このプレビューを確認',
+  'gallery.publish.captureFailed':
+    'プレビューを準備できませんでした。入力内容を確認して再試行してください。',
+  'gallery.publish.tooLarge': 'この旅行は大きすぎるためプレビューできません。',
+  'gallery.publish.empty': '空欄',
+  'gallery.publish.version': 'バージョン',
+  'gallery.publish.countries': '国コード',
+  'gallery.publish.days': '日程',
+  'gallery.publish.places': '場所',
+  'gallery.publish.order': '順序',
+  'gallery.publish.yes': 'はい',
+  'gallery.publish.no': 'いいえ',
+  'gallery.publish.publicFields':
+    'タイトル、概要、表示名、国コード、日程のタイトル、場所の名前とカテゴリ、および座標が公開される場合があります。日付は選択した場合のみ含まれます。',
+  'gallery.publish.privateFields':
+    '旅行者、メモ、ファイル、費用、予約は含まれません。',
+  'gallery.publish.freeTextWarning':
+    '確認する前に、タイトル、概要、表示名、日程のタイトル、場所の名前に個人情報が含まれていないか確認してください。',
+
   'plan.photo.edit': '画像を編集',
   'plan.photo.unavailable':
     '画像のアップロードと編集は利用できません。現在の画像は保持されます。',

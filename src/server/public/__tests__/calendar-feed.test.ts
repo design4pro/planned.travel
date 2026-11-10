@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { member, user } from '#/server/db/auth-schema'
+import { organization, member, user } from '#/server/db/auth-schema'
 import { createTrip } from '#/server/repos/trips'
 import { calendarFeeds, tripMembers, trips } from '#/server/db/schema'
 import * as secrets from '#/server/calendar/secret'
@@ -210,6 +210,7 @@ describe('session-less calendar feed', () => {
 
   it.each([
     'revoked',
+    'deleted workspace',
     'rotated',
     'removed owner',
     'readded owner',
@@ -227,6 +228,11 @@ describe('session-less calendar feed', () => {
     store.clear()
     const stamp = new Date(Date.now() + 1000)
     switch (failure) {
+      case 'deleted workspace':
+        await runtime.db
+          .delete(organization)
+          .where(eq(organization.id, a.organizationId))
+        break
       case 'revoked':
         await revokeFeed(a.scope, feedId)
         break
