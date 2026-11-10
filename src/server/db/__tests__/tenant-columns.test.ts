@@ -54,6 +54,14 @@ const GLOBAL_TABLES: ReadonlyArray<string> = [
   'platform_audit_log',
   'provider_registry',
   'staff_api_tokens',
+  // ADR 0051 shared release content; not a catalog member or tenant content.
+  'content_entries',
+  'content_versions',
+  'content_translations',
+  'release_publications',
+  'release_deployments',
+  'release_deployment_entries',
+  'release_production_state',
   // Catalogue content, served by `src/server/catalog`.
   'airports',
 ]

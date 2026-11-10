@@ -37,6 +37,7 @@
 
 import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { LOCALE_TAGS } from '#/lib/i18n/locales'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import {
@@ -106,7 +107,7 @@ export type PlatformActionName =
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
  * beside it, so §4.4's timeline query never has to guess which prefix belongs to which table.
  *
- * Ten rows, and the reason there are ten rather than thirty-six is that the mapping is a
+ * Eleven rows, and the reason there are eleven rather than forty-two is that the mapping is a
  * property of the *prefix*: `catalog_place.published` and `catalog_place.retired` are the same
  * entity seen twice. Callers never pass an `entity_type` — {@link entityTypeForAction} derives it,
  * which is what makes "the prefix names the entity" true of the rows and not only of the document.
@@ -122,6 +123,7 @@ export const PLATFORM_AUDIT_ENTITY_BY_PREFIX = Object.freeze({
   'platform.share': 'share_link',
   'platform.workspace': 'workspace',
   provider: 'provider',
+  release: 'release',
 } as const satisfies Readonly<Record<string, PlatformAuditEntityType>>)
 
 /**
@@ -651,6 +653,47 @@ export type PlatformAuditEntryInput = Omit<
   readonly action: PlatformActionName
 }
 
+/** Closed release actions; existing after-commit callers retain their non-throwing contract. */
+export const RELEASE_ACTIONS = [
+  'release.imported', 'release.reviewed', 'release.translation_reviewed',
+  'release.deployment_recorded', 'release.published', 'release.withdrawn',
+] as const satisfies ReadonlyArray<PlatformAuditAction>
+
+const releaseAuditSchema = z.strictObject({
+  action: z.enum(RELEASE_ACTIONS),
+  entityId: identifierSchema,
+  operationId: identifierSchema,
+  versionId: identifierSchema.optional(),
+  locale: z.enum(LOCALE_TAGS).optional(),
+  sourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  generation: z.number().int().nonnegative().safe().optional(),
+  reason: z.enum(['sensitive', 'inaccurate', 'other']).optional(),
+}).refine((entry) => entry.action === 'release.translation_reviewed'
+  ? entry.locale !== undefined && entry.versionId !== undefined && entry.sourceHash !== undefined
+  : entry.locale === undefined)
+
+/** Validate and construct only; the bounded repositories execute this with their mutations. */
+export function preparePlatformAudit(
+  db: Database,
+  actor: PlatformActor,
+  entry: z.input<typeof releaseAuditSchema>,
+) {
+  const parsedActor = platformActorSchema.parse(actor)
+  if (parsedActor.actorKind !== 'human' || resolvePlatformRole(parsedActor.role) !== 'admin') {
+    throw new Error('Release audit requires a platform admin.')
+  }
+  const parsed = releaseAuditSchema.parse(entry)
+  const { action, entityId, ...metadata } = parsed
+  return db.insert(platformAuditLog).values({
+    // The principal audit row is the durable operation claim; retries cannot reapply an old id.
+    id: action === 'release.deployment_recorded' ? `${parsed.operationId}:receipt` : parsed.operationId,
+    actorUserId: parsedActor.userId, actorKind: parsedActor.actorKind,
+    actorRole: resolvePlatformRole(parsedActor.role), tokenId: null,
+    action, entityId, entityType: entityTypeForAction(action),
+    changes: { before: null, after: metadata },
+  })
+}
+
 /* -------------------------------------------------------------------------------------------------
  * The append
  * ---------------------------------------------------------------------------------------------- */
@@ -967,7 +1010,7 @@ const auditEntityQuerySchema = z.object({
  * between renders of the same page.
  *
  * **It decides no authorisation and writes no row.** `requirePermission` has answered before the
- * caller reached this (SPEC §5), and §4.2 closes the audit vocabulary at thirty-six *mutations* —
+ * caller reached this (SPEC §5), and §4.2 closes the audit vocabulary at forty-two *mutations* —
  * reads are not among them, so reading the ledger does not append to it.
  */
 export async function readPlatformAuditByEntity(
