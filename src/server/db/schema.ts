@@ -489,7 +489,7 @@ export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
 export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
 
 /**
- * The ten entities a platform action can touch (docs/ACCESS.md §4.2).
+ * The eleven entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
  * column table, so an eleventh entity costs an amendment to §4.2's mapping rather than a recreate of
@@ -506,15 +506,16 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'share_link',
   'provider',
   'release',
+  'workspace',
 ] as const
 
 /**
- * The forty actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * The forty-two actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
  * tables them. The list is closed there and closed here: a new action is an amendment to that
  * table, made in the commit that adds the code writing it.
  *
 
- * Twenty-four take the two-segment `<entity_type>.<verb>` form, and sixteen take the three-segment
+ * Twenty-four take the two-segment `<entity_type>.<verb>` form, and eighteen take the three-segment
  * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
  * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
  * view spanning both tables would be attributable to neither. The two `provider.*` actions take the
@@ -558,6 +559,8 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'platform.workspace.deleted',
+  'platform.workspace.deletion_refused',
   'provider.limit_changed',
   'provider.policy_changed',
   'release.imported',
@@ -901,7 +904,9 @@ export const categoryInitializations = sqliteTable(
   {
     id: pk(),
     organizationId: orgRef(),
-    initializedAt: integer('initialized_at', { mode: 'timestamp_ms' }).notNull(),
+    initializedAt: integer('initialized_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
   },
   (t) => [uniqueIndex('category_initializations_org_unq').on(t.organizationId)],
 )
@@ -3424,6 +3429,11 @@ export const WORKSPACE_DELETION_STATES = [
   'done',
   'refused',
 ] as const
+export const WORKSPACE_DELETION_REFUSALS = [
+  'billing-unavailable',
+  'live-subscription',
+  'has-other-members',
+] as const
 export const WORKSPACE_DELETION_INITIATORS = ['owner', 'erasure'] as const
 export const workspaceDeletions = sqliteTable(
   'workspace_deletions',
@@ -3443,6 +3453,9 @@ export const workspaceDeletions = sqliteTable(
     leaseToken: text('lease_token'),
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
+    refusalReason: text('refusal_reason', {
+      enum: WORKSPACE_DELETION_REFUSALS,
+    }),
     snapshot: text('snapshot', { mode: 'json' })
       .$type<{
         plan?: string
@@ -3482,6 +3495,9 @@ export const workspaceDeletions = sqliteTable(
     index('workspace_deletions_stale_idx').on(t.state, t.updatedAt),
   ],
 )
+
+/** Row contract available to the driver without exposing the ledger table outside catalog. */
+export type WorkspaceDeletion = typeof workspaceDeletions.$inferSelect
 
 /** Private, short-lived consent documents; never a public projection. */
 export const galleryPreviews = sqliteTable(
