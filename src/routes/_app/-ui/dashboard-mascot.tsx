@@ -33,6 +33,11 @@ type Props = {
 }
 
 export function DashboardMascot(props: Props) {
+  if (!props.trip) return null
+  return <ActiveDashboardMascot {...props} />
+}
+
+function ActiveDashboardMascot(props: Props) {
   const [snapshot, setSnapshot] = useState<{
     now: number
     scope: { userId: string; workspaceId: string }

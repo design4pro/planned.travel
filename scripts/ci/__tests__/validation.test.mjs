@@ -177,6 +177,48 @@ describe('configured validation execution', () => {
     expect(timeout.exitCode).toBe(124)
   })
 
+  it.each([
+    ['success', 'process.exit(0)', 0],
+    ['failure', 'process.exit(1)', 1],
+    ['timeout', 'setInterval(() => {}, 1000)', 124],
+  ])(
+    'isolates writable command temp files and cleans up after %s',
+    async (_, ending, exitCode) => {
+      const cwd = fixture()
+      const logPath = join(cwd, 'command.log')
+      const parentTemp = [process.env.TMPDIR, process.env.TMP, process.env.TEMP]
+      const foreign = join(cwd, 'foreign-temp')
+      mkdirSync(foreign)
+      writeFileSync(join(foreign, 'keep'), 'unrelated')
+      const script = `
+      const fs = require("node:fs");
+      const os = require("node:os");
+      const path = require("node:path");
+      fs.writeFileSync(path.join(os.tmpdir(), "probe"), "writable");
+      process.stdout.write(JSON.stringify({ temp: os.tmpdir(), tmp: process.env.TMP, windowsTemp: process.env.TEMP, mode: fs.statSync(os.tmpdir()).mode & 0o777, home: process.env.HOME }));
+      ${ending};
+    `
+      const result = await runValidationCommand(`node -e '${script}'`, {
+        cwd,
+        logPath,
+        timeoutMs: 1000,
+      })
+      expect(result.exitCode).toBe(exitCode)
+      const evidence = JSON.parse(readFileSync(logPath, 'utf8'))
+      expect(evidence.home).toBe(process.env.HOME)
+      expect([process.env.TMPDIR, process.env.TMP, process.env.TEMP]).toEqual(
+        parentTemp,
+      )
+      expect(evidence.tmp).toBe(evidence.temp)
+      expect(evidence.windowsTemp).toBe(evidence.temp)
+      expect(evidence.mode).toBe(0o700)
+      expect(readFileSync(join(foreign, 'keep'), 'utf8')).toBe('unrelated')
+      expect(evidence.temp.startsWith(join(cwd, '.ai/tmp/validation/'))).toBe(
+        true,
+      )
+      expect(existsSync(evidence.temp)).toBe(false)
+    },
+  )
   it('isolates concurrent command temp files from the inherited host directory and cleans every outcome', async () => {
     const cwd = fixture()
     const inherited = process.env.TMPDIR

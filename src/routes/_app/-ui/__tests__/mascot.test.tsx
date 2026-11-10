@@ -289,4 +289,42 @@ describe('dashboard mascot', () => {
     )
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
+
+  it.each([
+    { initial: 'playing', stored: 'paused', pressed: 'true' },
+    { initial: 'paused', stored: 'playing', pressed: 'false' },
+  ])(
+    'restores a toggled $stored preference in a new component instance',
+    ({ initial, stored, pressed }) => {
+      localStorage.setItem('planned.mascot', initial)
+      const view = (
+        <I18nProvider
+          locale="en"
+          messages={{
+            ...namespaceCatalogue('shell', Shell),
+            ...namespaceCatalogue('ui', Ui),
+          }}
+        >
+          <Mascot trip={tripCard()} today="2026-03-30" />
+        </I18nProvider>
+      )
+      try {
+        const first = render(view)
+        fireEvent.click(screen.getByRole('button', { name: 'Pause animation' }))
+        expect(localStorage.getItem('planned.mascot')).toBe(stored)
+        first.unmount()
+        const next = render(view)
+        expect(
+          screen
+            .getByRole('button', { name: 'Pause animation' })
+            .getAttribute('aria-pressed'),
+        ).toBe(pressed)
+        const bird = next.container.querySelector('svg[data-band]')
+        expect(bird?.getAttribute('data-moving')).toBe('true')
+        expect(bird?.hasAttribute('data-paused')).toBe(stored === 'paused')
+      } finally {
+        localStorage.clear()
+      }
+    },
+  )
 })

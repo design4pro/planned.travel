@@ -335,7 +335,7 @@ describe('dashboard mascot', () => {
     expect(screen.queryByRole('link', { name: 'View reservations' })).toBeNull()
     visibility.mockRestore()
   })
-  it('cancels chat on refresh failure even when there is no current trip', async () => {
+  it('cancels chat on refresh failure with a featured trip', async () => {
     let signal: AbortSignal | undefined
     const adapter = {
       open: ({ signal: current }: { signal: AbortSignal }) => {
@@ -355,7 +355,7 @@ describe('dashboard mascot', () => {
         }}
       >
         <DashboardMascot
-          trip={null}
+          trip={tripCard()}
           trips={[]}
           reservations={[]}
           today="2026-04-01"
@@ -435,7 +435,7 @@ it('keeps a working notification visible and retries a failed source', async () 
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         today="2026-01-08"
@@ -471,7 +471,7 @@ it('removes a suggestion when retry loses access', async () => {
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         today="2026-01-08"
@@ -510,7 +510,7 @@ it('offers retry when a previously healthy refresh fails', async () => {
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         today="2026-01-08"
@@ -547,7 +547,7 @@ it('shares a pending refresh between retry and visibility changes', async () => 
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         today="2026-01-08"
@@ -620,7 +620,7 @@ it('retains the authoritative server snapshot after visibility refresh on a skew
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[
@@ -660,7 +660,7 @@ it('uses a fixed server snapshot until revalidation, even if local time advances
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[
@@ -697,7 +697,7 @@ it('retains dismissal across dashboard entries when the device clock is behind t
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[
@@ -737,7 +737,7 @@ it.each(['2026-01-05T12:00:00Z', '2026-01-10T12:00:00Z'])(
         }}
       >
         <DashboardMascot
-          trip={null}
+          trip={tripCard()}
           trips={[]}
           reservations={[]}
           candidates={[
@@ -772,7 +772,7 @@ it('uses the mascot snapshot date when independent requests cross midnight', () 
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[
@@ -802,7 +802,7 @@ it('revalidates once on hydration when the snapshot may have crossed midnight', 
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -835,7 +835,7 @@ it.each([true, false])(
         }}
       >
         <DashboardMascot
-          trip={null}
+          trip={tripCard()}
           trips={[]}
           reservations={[]}
           candidates={[]}
@@ -867,7 +867,7 @@ it('keeps the same rollover deadline when the same snapshot is rendered again', 
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -907,7 +907,7 @@ it('revalidates the boundary after an in-flight hydration refresh completes', as
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -944,7 +944,7 @@ it('cancels the boundary timer when hydration refresh fails', async () => {
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -976,7 +976,7 @@ it('schedules the next boundary when an authoritative snapshot changes', async (
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -1017,7 +1017,7 @@ it('does not retry a pending boundary when its in-flight refresh fails', async (
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -1055,7 +1055,7 @@ it('does not start a parallel boundary refresh when props change during a failed
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -1098,7 +1098,7 @@ it('runs one deferred boundary refresh after a same-scope rerender and a success
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -1139,7 +1139,7 @@ it('preserves a pending live-clock boundary across a rerender after midnight', a
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         today="2026-01-08"
@@ -1174,7 +1174,7 @@ it('restores keyboard focus after a successful retry and announces changed statu
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[]}
@@ -1210,7 +1210,7 @@ it('keeps an unchanged failure status separate from changing prompt content', as
       }}
     >
       <DashboardMascot
-        trip={null}
+        trip={tripCard()}
         trips={[]}
         reservations={[]}
         candidates={[
@@ -1250,4 +1250,85 @@ it('keeps an unchanged failure status separate from changing prompt content', as
   expect(retry.className).toContain('min-h-11')
   expect(retry.className).toContain('min-w-11')
   expect(retry.className).toContain('focus-visible:outline')
+})
+
+it('removes every mascot surface initially and after the featured trip disappears', async () => {
+  const view = (trip: ReturnType<typeof tripCard> | null) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      {trip ? null : (
+        <a href="/trips" data-dashboard-create-trip="">
+          Create trip
+        </a>
+      )}
+      <DashboardMascot
+        trip={trip}
+        trips={trip ? [trip] : []}
+        reservations={[]}
+        candidates={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(null))
+  expect(page.container.querySelector('[data-mascot-stage]')).toBeNull()
+  page.rerender(view(tripCard()))
+  fireEvent.click(screen.getByRole('button', { name: 'Open travel chat' }))
+  expect(await screen.findByText('Travel chat is unavailable')).not.toBeNull()
+  screen.getByRole('button', { name: 'Close' }).focus()
+  page.rerender(view(null))
+  await act(async () => {
+    await Promise.resolve()
+  })
+  expect(document.activeElement).toBe(
+    screen.getByRole('link', { name: 'Create trip' }),
+  )
+  expect(page.container.querySelector('[data-mascot-stage]')).toBeNull()
+  page.rerender(view(tripCard()))
+  expect(
+    screen.getByRole('button', { name: 'Open travel chat' }),
+  ).not.toBeNull()
+})
+
+it('cancels a pending chat attempt when the last featured trip is removed', () => {
+  let signal: AbortSignal | undefined
+  const adapter = {
+    open: ({ signal: current }: { signal: AbortSignal }) => {
+      signal = current
+      return new Promise<void>(() => {})
+    },
+  }
+  const view = (trip: ReturnType<typeof tripCard> | null) => (
+    <I18nProvider
+      locale="en"
+      messages={{
+        ...namespaceCatalogue('shell', Shell),
+        ...namespaceCatalogue('ui', Ui),
+      }}
+    >
+      <DashboardMascot
+        trip={trip}
+        trips={[]}
+        reservations={[]}
+        today="2026-01-08"
+        userId="user"
+        workspaceId="workspace"
+        onRefresh={refresh}
+        adapter={adapter}
+      />
+    </I18nProvider>
+  )
+  const page = render(view(tripCard()))
+  fireEvent.click(screen.getByRole('button', { name: 'Open travel chat' }))
+  page.rerender(view(null))
+  expect(signal?.aborted).toBe(true)
+  expect(page.container.childElementCount).toBe(0)
 })
