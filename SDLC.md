@@ -183,8 +183,11 @@ command into the same three Vitest projects (UI starts as four complete shards a
 host's nine-minute budget), bounds each job to nine minutes and retries a timed-out
 or killed project as all four shards. It emits a compact JSON result with full log paths under
 `.ai/tmp/validation/`. Each command receives a private temporary directory there through
-`TMPDIR`, `TMP` and `TEMP`, removed after exit or timeout, so a full host temporary filesystem
-cannot break transformation caches. `--resume` reuses successful local jobs only when the tracked content, command
+`TMPDIR`, `TMP` and `TEMP`, isolating transformation caches from the host temporary filesystem.
+After exit or verified timeout termination it is removed. An unverified termination instead fails
+closed as infrastructure/exit 1 without shard retry, retaining caller-owned diagnostics and group
+metadata in the receipt; see [retained diagnostic ownership](docs/agents/cezar.md).
+`--resume` reuses successful local jobs only when the tracked content, command
 list, runtime, environment and installed manifest digest match; stage untracked inputs first.
 Ignored fixtures, services and changes inside installed packages are outside that digest, so resume
 is a local interruption-recovery convenience, never trusted CI evidence. After those inputs change,

@@ -1,3 +1,5 @@
+import { eq } from 'drizzle-orm'
+import { organization } from '#/server/db/auth-schema'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -60,6 +62,21 @@ describe('loadTripInvite', () => {
     secret =
       (await createTripInvite(a.scope, tripId, { role: 'viewer', key: KEY }))
         .secret ?? ''
+  })
+
+  it('refuses an existing share token after its workspace cascade while another token remains live', async () => {
+    const b = await h.seedTenant('survivor')
+    const trip = await createTrip(b.scope, {
+      title: 'Surviving trip',
+      currency: 'EUR',
+    })
+    const other = await createTripInvite(b.scope, trip.id, {
+      role: 'viewer',
+      key: KEY,
+    })
+    await h.db.delete(organization).where(eq(organization.id, a.organizationId))
+    expect(await open()).toEqual({ status: 404 })
+    expect((await open(other.secret ?? '')).status).toBe(200)
   })
 
   it('answers 200 with the anonymous whitelist for a live link', async () => {

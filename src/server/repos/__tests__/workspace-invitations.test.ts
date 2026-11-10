@@ -1,3 +1,4 @@
+import { prepareWorkspaceDeletionRefusal } from '#/server/catalog/__tests__/workspace-deletion-fixture'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInvitation, listPendingInvitations, addMember } from '../members'
 import { createHarness, subscribeTenant } from './harness'
@@ -209,6 +210,7 @@ it('fences direct members and invitations for this workspace and recovers after 
   ).rejects.toThrow('WORKSPACE_DELETION_PENDING')
   const token = await acquireDeletionLease(h.db, row.id)
   if (!token) throw new Error('Missing lease')
+  await prepareWorkspaceDeletionRefusal(h.db, row.id, token)
   await transitionWorkspaceDeletion(h.db, row.id, token, 'requested', 'refused')
   await addMember(a.scope, { userId: b.ownerUserId })
   await createInvitation(a.scope, { email: 'after@example.com', expiresAt })
@@ -247,19 +249,34 @@ it('keeps deletion recovery across the migrated workspace cascade without affect
   }
 })
 
-
-it.each(['member', 'invitation'] as const)('keeps the %s fence atomic when deletion starts after the early check', async (surface) => {
-  const catalog = await import('#/server/catalog/workspace-deletions')
-  const check = catalog.assertWorkspaceNotDeleting
-  const newcomer = await h.seedTenant('concurrent-newcomer')
-  vi.spyOn(catalog, 'assertWorkspaceNotDeleting').mockImplementationOnce(async (db, organizationId) => {
-    await check(db, organizationId)
-    await catalog.insertWorkspaceDeletion(db, { organizationId, initiator: 'owner', requestedBy: a.ownerUserId })
-  })
-  const writing = surface === 'member'
-    ? addMember(a.scope, { userId: newcomer.ownerUserId })
-    : createInvitation(a.scope, { email: 'racing@example.com', expiresAt })
-  await expect(writing).rejects.toThrow('WORKSPACE_DELETION_PENDING')
-  expect(h.sqlite.prepare('select count(*) as n from member where organization_id = ? and user_id = ?').get(a.organizationId, newcomer.ownerUserId)).toEqual({ n: 0 })
-  expect(await listPendingInvitations(a.scope)).toHaveLength(0)
-})
+it.each(['member', 'invitation'] as const)(
+  'keeps the %s fence atomic when deletion starts after the early check',
+  async (surface) => {
+    const catalog = await import('#/server/catalog/workspace-deletions')
+    const check = catalog.assertWorkspaceNotDeleting
+    const newcomer = await h.seedTenant('concurrent-newcomer')
+    vi.spyOn(catalog, 'assertWorkspaceNotDeleting').mockImplementationOnce(
+      async (db, organizationId) => {
+        await check(db, organizationId)
+        await catalog.insertWorkspaceDeletion(db, {
+          organizationId,
+          initiator: 'owner',
+          requestedBy: a.ownerUserId,
+        })
+      },
+    )
+    const writing =
+      surface === 'member'
+        ? addMember(a.scope, { userId: newcomer.ownerUserId })
+        : createInvitation(a.scope, { email: 'racing@example.com', expiresAt })
+    await expect(writing).rejects.toThrow('WORKSPACE_DELETION_PENDING')
+    expect(
+      h.sqlite
+        .prepare(
+          'select count(*) as n from member where organization_id = ? and user_id = ?',
+        )
+        .get(a.organizationId, newcomer.ownerUserId),
+    ).toEqual({ n: 0 })
+    expect(await listPendingInvitations(a.scope)).toHaveLength(0)
+  },
+)

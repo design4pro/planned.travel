@@ -18,6 +18,8 @@ import {
 } from '#/server/do/protocol'
 import {
   addTripMember,
+  deleteWorkspace,
+  drainWorkspace,
   archiveTrip,
   createTrip,
   getTrip,
@@ -236,6 +238,22 @@ describe('the trip room connection role', () => {
       visibility: 'organization',
     })
     tripId = trip.id
+  })
+
+  it('refuses a reconnect after the workspace cascade before addressing a room', async () => {
+    const recorded = recordingNamespace()
+    actAs(alpha.ownerUserId)
+    await subscribeTenant(alpha.scope, 'free', 1)
+    const departure = { departingUserId: alpha.ownerUserId }
+    await drainWorkspace(alpha.scope, departure, async () => undefined)
+    await deleteWorkspace(alpha.scope, departure)
+    const response = await serveTripRoom(
+      recorded.namespace,
+      upgrade(tripId),
+      tripId,
+    )
+    expect(response.status).toBe(404)
+    expect(recorded.reached()).toBe(0)
   })
 
   it('admits the trip owner as an editor', async () => {

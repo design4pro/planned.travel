@@ -34,6 +34,9 @@ import {
 import { sweepScheduledAccountSecurity } from './auth/account-security-scheduled'
 import { sweepGalleryPreviews } from './community/expiry'
 import { sweepReminders } from './queue/reminders'
+import { createWorkspaceDeletionRuntime } from './workspace-deletion/runtime'
+import { callProvider } from './metering/outbound'
+import { pruneCompletedWorkspaceDeletions } from './workspace-deletion/ledger'
 import { sentryOptions, workerLogger } from './observability/sentry'
 
 // Type-only, so nothing resolves `cloudflare:workers` at runtime - the node test project cannot.
@@ -92,9 +95,9 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
 /**
  * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
  * (docs/DEPLOY.md §11). The weekly retention slot now carries the 400-day `platform_audit_log`
- * and tenant `audit_log` prunes, the usage rollup and dead-letter retention alongside the backup
- * and export retention it was registered for; a fourth expression for them would falsify that count, so they join the
- * existing one rather than adding one.
+ * and tenant `audit_log` prunes, the usage rollup, completed workspace deletion records and
+ * dead-letter retention alongside the backup and export retention it was registered for; a fourth
+ * expression for them would falsify that count, so they join the existing one rather than adding one.
  */
 const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
@@ -154,7 +157,24 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
 
     switch (controller.cron) {
       case REMINDER_CRON: {
+        const db = createDb(env.DB)
+        const now = () => new Date()
+        const deletion = createWorkspaceDeletionRuntime(db, bindings, {
+          now,
+          logger,
+          send: (url, init) =>
+            callProvider(
+              { db, now, logger, waitUntil: _ctx.waitUntil.bind(_ctx) },
+              {
+                provider: 'polar',
+                operation: 'api.request',
+                organizationId: null,
+              },
+              () => fetch(url, init),
+            ),
+        })
         const results = await Promise.allSettled([
+          deletion.recover(),
           sweepReminders(bindings, logger, controller.scheduledTime),
           sweepGalleryPreviews(createDb(env.DB), controller.scheduledTime),
           sweepScheduledAccountSecurity(env, controller.scheduledTime),
@@ -164,7 +184,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         return
       }
       case RETENTION_CRON:
-        // This slot has five jobs, and one half of it is still not written.
+        // This slot shares retention jobs; backup and export retention are still not written.
         //
         // Not written: the backup and export artifact half this expression was registered for.
         // `wrangler.jsonc` documents `17 4 * * 1` as the weekly retention prune of expired backups
@@ -183,9 +203,9 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         })
         // Written: the 400-day prunes of `platform_audit_log` and tenant `audit_log`
         // (docs/ACCESS.md §4.3/§4.5), the weekly fold
-        // of hourly `provider_usage` rows into their month rows, and the retention of `dead-letter/`
-        // objects (`DEAD_LETTER_RETENTION_DAYS`, 14 by default). Each logs its own counts, so there
-        // is nothing to report here that the writers have not already emitted.
+        // of hourly `provider_usage` rows into their month rows, the 30-day terminal workspace
+        // deletion ledger prune, and retention of `dead-letter/` objects (`DEAD_LETTER_RETENTION_DAYS`,
+        // 14 by default). The existing audit, rollup and dead-letter jobs log their own counts.
         //
         // They run together rather than in sequence, and that is not a micro-optimisation. The
         // audit prune is documented as able to reject, so an `await` chain would silently skip
@@ -200,6 +220,7 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
           const db = createDb(env.DB)
           const now = new Date(controller.scheduledTime)
           const outcomes = await Promise.allSettled([
+            pruneCompletedWorkspaceDeletions(db, now),
             prunePlatformAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
             rollUpProviderUsage(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
             pruneTenantAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
