@@ -811,6 +811,47 @@ const messages = {
     'Actualitza aquesta pàgina per utilitzar les comprovacions de seguretat noves.',
   'twoFactor.security.unavailable':
     'Els canvis de seguretat no estan disponibles. Torna a carregar per comprovar-ho.',
+
+  'taxonomy.title': 'Categories de llocs',
+  'taxonomy.description': 'Organitza els llocs d’aquest espai de treball.',
+  'taxonomy.addCategory': 'Afegeix una categoria',
+  'taxonomy.readOnly':
+    'Els propietaris i administradors de l’espai poden gestionar les categories.',
+  'taxonomy.empty':
+    'Encara no hi ha categories. Els llocs poden quedar sense categoria.',
+  'taxonomy.placeCount': 'Llocs: {count}',
+  'taxonomy.moveUp': 'Mou {name} amunt',
+  'taxonomy.moveDown': 'Mou {name} avall',
+  'taxonomy.rename': 'Canvia el nom de {name}',
+  'taxonomy.delete': 'Suprimeix {name}',
+  'taxonomy.deleteTitle': 'Vols suprimir la categoria {name}?',
+  'taxonomy.deleteImpact': 'Llocs que quedaran sense categoria: {count}.',
+  'taxonomy.deletePreserves':
+    'Els llocs es conservaran. La quantitat pot canviar mentre altres persones editen. Els llocs desats amb aquesta categoria també quedaran sense categoria.',
+  'taxonomy.loadFailed':
+    'No s’han pogut carregar les categories. Torna-ho a provar.',
+  'taxonomy.unknownOutcome': 'S’està comprovant si s’ha desat el canvi.',
+  'taxonomy.reconcileFailed':
+    'No s’ha pogut confirmar l’estat desat. Recarrega abans de tornar-ho a provar.',
+  'taxonomy.stale':
+    'Les categories han canviat mentre editaves. Revisa la llista actual.',
+  'taxonomy.permissionChanged':
+    'Els teus permisos a l’espai han canviat. Encara pots veure les categories.',
+  'taxonomy.usage':
+    '{used} de {limit} espais de categories i etiquetes utilitzats',
+  'taxonomy.unlimited':
+    'Espais de categories i etiquetes utilitzats: {used}. Sense límit.',
+  'taxonomy.limitReached':
+    'S’ha assolit el límit de categories i etiquetes. Suprimeix una entrada sense ús abans d’afegir-ne una altra.',
+  'taxonomy.moved': 'S’ha mogut {name}.',
+  'taxonomy.saved': 'Categoria desada.',
+  'taxonomy.deleted': 'Categoria suprimida. Els llocs s’han conservat.',
+  'taxonomy.reload': 'Recarrega',
+  'taxonomy.review':
+    'Revisa la llista actual abans de tornar-ho a provar. Es conserva l’esborrany.',
+  'taxonomy.colourInvalid': 'Introdueix un color hexadecimal, com ara #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Aquesta categoria s’ha suprimit. Tria’n una altra o deixa el lloc sense categoria.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -183,6 +183,58 @@ beforeEach(() => {
 })
 
 describe('planner write callers', () => {
+  it('reloads a rejected category selection without replacing unrelated place draft fields', async () => {
+    const categorized = {
+      ...payload,
+      categories: [
+        {
+          id: 'c1',
+          name: 'Museums',
+          colour: '#123456',
+          icon: 'landmark',
+          slug: 'museums',
+        },
+      ],
+      places: payload.places.map((place) => ({ ...place, categoryId: 'c1' })),
+    }
+    mocks.write.mockRejectedValue(failedWith('unexpected'))
+    const view = await mount(categorized)
+    mocks.invalidate.mockImplementation(async () =>
+      view.rerender(
+        <I18nProvider locale="en" messages={messages}>
+          <PlanScreen
+            payload={{
+              ...categorized,
+              categories: [],
+              places: categorized.places.map((place) => ({
+                ...place,
+                categoryId: null,
+              })),
+            }}
+            notes={notes([note('n1', 'd1', 2)])}
+            transports={transports()}
+            tripTitle="Trip"
+          />
+        </I18nProvider>,
+      ),
+    )
+    await menu('Edit place')
+    await userEvent.clear(screen.getByLabelText(/^Name/))
+    await userEvent.type(screen.getByLabelText(/^Name/), 'My unsaved draft')
+    submit()
+    await act(async () => {})
+    expect(mocks.invalidate).toHaveBeenCalledTimes(1)
+    expect((screen.getByLabelText(/^Name/) as HTMLInputElement).value).toBe(
+      'My unsaved draft',
+    )
+    expect(
+      screen.getAllByText(
+        'This category was removed. Choose another category or leave the place uncategorized.',
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(submitButton().disabled).toBe(true)
+  })
+
   it('toasts a late place-save failure in Polish', async () => {
     const pending = deferred()
     mocks.write.mockReturnValue(pending.promise)
@@ -712,7 +764,7 @@ describe('a write the server refused', () => {
   })
 
   it.each(['validation', 'unexpected'] as const)(
-    'does not re-read after a %s failure of a write or a move',
+    'does not re-read after a %s failure of an uncategorized place or a move',
     async (kind) => {
       mocks.write.mockRejectedValue(failedWith(kind))
       await mount()

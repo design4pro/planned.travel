@@ -810,6 +810,47 @@ const messages = {
     'Aktualisiere diese Seite, um die neuen Sicherheitsprüfungen zu verwenden.',
   'twoFactor.security.unavailable':
     'Sicherheitsänderungen sind nicht verfügbar. Lade die Seite zur erneuten Prüfung neu.',
+
+  'taxonomy.title': 'Ortskategorien',
+  'taxonomy.description': 'Ordne die Orte in diesem Arbeitsbereich.',
+  'taxonomy.addCategory': 'Kategorie hinzufügen',
+  'taxonomy.readOnly':
+    'Eigentümer und Administratoren des Arbeitsbereichs können Kategorien verwalten.',
+  'taxonomy.empty':
+    'Noch keine Kategorien. Orte können ohne Kategorie bleiben.',
+  'taxonomy.placeCount': 'Orte: {count}',
+  'taxonomy.moveUp': '{name} nach oben verschieben',
+  'taxonomy.moveDown': '{name} nach unten verschieben',
+  'taxonomy.rename': '{name} umbenennen',
+  'taxonomy.delete': '{name} löschen',
+  'taxonomy.deleteTitle': 'Kategorie {name} löschen?',
+  'taxonomy.deleteImpact': 'Orte, die ohne Kategorie bleiben: {count}.',
+  'taxonomy.deletePreserves':
+    'Die Orte bleiben erhalten. Die Anzahl kann sich durch andere Bearbeitungen ändern. Gespeicherte Orte dieser Kategorie werden ebenfalls keiner Kategorie mehr zugeordnet.',
+  'taxonomy.loadFailed':
+    'Kategorien konnten nicht geladen werden. Versuche es erneut.',
+  'taxonomy.unknownOutcome':
+    'Es wird geprüft, ob deine Änderung gespeichert wurde.',
+  'taxonomy.reconcileFailed':
+    'Der gespeicherte Stand konnte nicht bestätigt werden. Lade vor einem neuen Versuch neu.',
+  'taxonomy.stale':
+    'Kategorien wurden während der Bearbeitung geändert. Prüfe die aktuelle Liste.',
+  'taxonomy.permissionChanged':
+    'Deine Berechtigung im Arbeitsbereich hat sich geändert. Du kannst Kategorien weiterhin ansehen.',
+  'taxonomy.usage': '{used} von {limit} Plätzen für Kategorien und Tags belegt',
+  'taxonomy.unlimited':
+    'Belegte Plätze für Kategorien und Tags: {used}. Unbegrenzt.',
+  'taxonomy.limitReached':
+    'Das Limit für Kategorien und Tags ist erreicht. Entferne zuerst einen ungenutzten Eintrag.',
+  'taxonomy.moved': '{name} wurde verschoben.',
+  'taxonomy.saved': 'Kategorie gespeichert.',
+  'taxonomy.deleted': 'Kategorie gelöscht. Die Orte bleiben erhalten.',
+  'taxonomy.reload': 'Neu laden',
+  'taxonomy.review':
+    'Prüfe vor einem neuen Versuch die aktuelle Liste. Dein Entwurf bleibt erhalten.',
+  'taxonomy.colourInvalid': 'Gib eine Hex-Farbe ein, etwa #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Diese Kategorie wurde entfernt. Wähle eine andere oder lasse den Ort ohne Kategorie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

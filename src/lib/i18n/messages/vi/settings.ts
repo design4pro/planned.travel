@@ -786,6 +786,44 @@ const messages = {
     'Làm mới trang để sử dụng các bước kiểm tra bảo mật mới.',
   'twoFactor.security.unavailable':
     'Hiện không thể thay đổi bảo mật. Tải lại để kiểm tra lần nữa.',
+
+  'taxonomy.title': 'Danh mục địa điểm',
+  'taxonomy.description': 'Sắp xếp các địa điểm trong không gian làm việc này.',
+  'taxonomy.addCategory': 'Thêm danh mục',
+  'taxonomy.readOnly':
+    'Chủ sở hữu và quản trị viên không gian có thể quản lý danh mục.',
+  'taxonomy.empty': 'Chưa có danh mục. Địa điểm có thể để chưa phân loại.',
+  'taxonomy.placeCount': 'Địa điểm: {count}',
+  'taxonomy.moveUp': 'Di chuyển {name} lên',
+  'taxonomy.moveDown': 'Di chuyển {name} xuống',
+  'taxonomy.rename': 'Đổi tên {name}',
+  'taxonomy.delete': 'Xóa {name}',
+  'taxonomy.deleteTitle': 'Xóa danh mục {name}?',
+  'taxonomy.deleteImpact': 'Địa điểm sẽ không còn danh mục: {count}.',
+  'taxonomy.deletePreserves':
+    'Các địa điểm sẽ được giữ lại. Số lượng có thể thay đổi khi người khác chỉnh sửa. Các địa điểm đã lưu dùng danh mục này cũng sẽ chưa được phân loại.',
+  'taxonomy.loadFailed': 'Không thể tải danh mục. Hãy thử lại.',
+  'taxonomy.unknownOutcome': 'Đang kiểm tra xem thay đổi đã được lưu chưa.',
+  'taxonomy.reconcileFailed':
+    'Không thể xác nhận trạng thái đã lưu. Tải lại trước khi thử lại.',
+  'taxonomy.stale':
+    'Danh mục đã thay đổi khi bạn chỉnh sửa. Kiểm tra danh sách mới nhất.',
+  'taxonomy.permissionChanged':
+    'Quyền trong không gian của bạn đã thay đổi. Bạn vẫn có thể xem danh mục.',
+  'taxonomy.usage': 'Đã dùng {used} trên {limit} chỗ cho danh mục và thẻ',
+  'taxonomy.unlimited':
+    'Chỗ đã dùng cho danh mục và thẻ: {used}. Không giới hạn.',
+  'taxonomy.limitReached':
+    'Đã đạt giới hạn danh mục và thẻ. Xóa mục không dùng trước khi thêm mục mới.',
+  'taxonomy.moved': 'Đã di chuyển {name}.',
+  'taxonomy.saved': 'Đã lưu danh mục.',
+  'taxonomy.deleted': 'Đã xóa danh mục. Các địa điểm được giữ lại.',
+  'taxonomy.reload': 'Tải lại',
+  'taxonomy.review':
+    'Kiểm tra danh sách mới nhất trước khi thử lại. Bản nháp được giữ lại.',
+  'taxonomy.colourInvalid': 'Nhập màu thập lục phân, chẳng hạn #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Danh mục này đã bị xóa. Chọn danh mục khác hoặc để địa điểm chưa phân loại.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

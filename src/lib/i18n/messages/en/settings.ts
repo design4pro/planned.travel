@@ -7,7 +7,7 @@
  * file — so a typo here is a compile error at the call site rather than English
  * leaking onto a Polish screen (§8.2 bans the silent fallback outright).
  *
- * **What is here.** Every word the seven settings routes and the settings
+ * **What is here.** Every word the settings routes and the settings
  * section index put on the screen: headings, hints, option labels, badge text,
  * toast copy and the accessible names that only a screen reader hears. Nothing
  * in `src/routes/_app/settings/**` may hold an English literal, which is what
@@ -871,6 +871,42 @@ const messages = {
     'Refresh this page to use the updated security checks.',
   'twoFactor.security.unavailable':
     'Security changes are unavailable. Reload to check again.',
+
+  'taxonomy.title': 'Place categories',
+  'taxonomy.description': 'Organize the places in this workspace.',
+  'taxonomy.addCategory': 'Add category',
+  'taxonomy.readOnly': 'Workspace owners and admins can manage categories.',
+  'taxonomy.empty': 'No categories yet. Places can stay uncategorized.',
+  'taxonomy.placeCount': 'Places: {count}',
+  'taxonomy.moveUp': 'Move {name} up',
+  'taxonomy.moveDown': 'Move {name} down',
+  'taxonomy.rename': 'Rename {name}',
+  'taxonomy.delete': 'Delete {name}',
+  'taxonomy.deleteTitle': 'Delete category {name}?',
+  'taxonomy.deleteImpact': 'Places becoming uncategorized: {count}.',
+  'taxonomy.deletePreserves':
+    'Places will be kept. The affected count may change while others edit. Saved places using this category also become uncategorized.',
+  'taxonomy.loadFailed': 'Categories could not be loaded. Try again.',
+  'taxonomy.unknownOutcome': 'Checking whether your change was saved.',
+  'taxonomy.reconcileFailed':
+    'Could not confirm the saved state. Reload before trying again.',
+  'taxonomy.stale':
+    'Categories changed while you were editing. Review the latest list.',
+  'taxonomy.permissionChanged':
+    'Your workspace permission changed. You can still view categories.',
+  'taxonomy.usage': '{used} of {limit} category and tag slots used',
+  'taxonomy.unlimited': 'Category and tag slots used: {used}. No limit.',
+  'taxonomy.limitReached':
+    'Category and tag limit reached. Remove an unused entry before adding another.',
+  'taxonomy.moved': 'Moved {name}.',
+  'taxonomy.saved': 'Category saved.',
+  'taxonomy.deleted': 'Category deleted. Places were kept.',
+  'taxonomy.reload': 'Reload',
+  'taxonomy.review':
+    'Review the latest list before trying again. Your draft is kept.',
+  'taxonomy.colourInvalid': 'Enter a hex color, such as #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'This category was removed. Choose another category or leave the place uncategorized.',
 } as const satisfies NamespaceMessages
 
 export default messages

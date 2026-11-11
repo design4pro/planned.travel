@@ -113,6 +113,11 @@ export const APP_ROUTES: ReadonlyArray<RouteCase> = [
     path: '/settings/two-factor',
     ready: 'main',
   },
+  {
+    name: 'settings-places',
+    path: '/settings/places',
+    ready: '[data-part=taxonomy-row]',
+  },
   { name: 'settings-language', path: '/settings/language', ready: 'main' },
 ]
 

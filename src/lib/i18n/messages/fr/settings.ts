@@ -814,6 +814,48 @@ const messages = {
     'Actualisez cette page pour utiliser les nouveaux contrôles de sécurité.',
   'twoFactor.security.unavailable':
     'Les changements de sécurité sont indisponibles. Rechargez pour vérifier à nouveau.',
+
+  'taxonomy.title': 'Catégories de lieux',
+  'taxonomy.description': 'Organisez les lieux de cet espace de travail.',
+  'taxonomy.addCategory': 'Ajouter une catégorie',
+  'taxonomy.readOnly':
+    'Les propriétaires et administrateurs de l’espace peuvent gérer les catégories.',
+  'taxonomy.empty':
+    'Aucune catégorie pour le moment. Les lieux peuvent rester sans catégorie.',
+  'taxonomy.placeCount': 'Lieux : {count}',
+  'taxonomy.moveUp': 'Monter {name}',
+  'taxonomy.moveDown': 'Descendre {name}',
+  'taxonomy.rename': 'Renommer {name}',
+  'taxonomy.delete': 'Supprimer {name}',
+  'taxonomy.deleteTitle': 'Supprimer la catégorie {name} ?',
+  'taxonomy.deleteImpact': 'Lieux qui seront sans catégorie : {count}.',
+  'taxonomy.deletePreserves':
+    'Les lieux seront conservés. Le nombre peut changer pendant les modifications des autres. Les lieux enregistrés dans cette catégorie seront aussi sans catégorie.',
+  'taxonomy.loadFailed': 'Impossible de charger les catégories. Réessayez.',
+  'taxonomy.unknownOutcome':
+    'Vérification de l’enregistrement de votre modification.',
+  'taxonomy.reconcileFailed':
+    'Impossible de confirmer l’état enregistré. Rechargez avant de réessayer.',
+  'taxonomy.stale':
+    'Les catégories ont changé pendant la modification. Consultez la liste actuelle.',
+  'taxonomy.permissionChanged':
+    'Vos droits dans l’espace ont changé. Vous pouvez toujours consulter les catégories.',
+  'taxonomy.usage':
+    '{used} emplacements de catégories et d’étiquettes utilisés sur {limit}',
+  'taxonomy.unlimited':
+    'Emplacements de catégories et d’étiquettes utilisés : {used}. Sans limite.',
+  'taxonomy.limitReached':
+    'Limite de catégories et d’étiquettes atteinte. Supprimez une entrée inutilisée avant d’en ajouter une.',
+  'taxonomy.moved': '{name} a été déplacé.',
+  'taxonomy.saved': 'Catégorie enregistrée.',
+  'taxonomy.deleted': 'Catégorie supprimée. Les lieux ont été conservés.',
+  'taxonomy.reload': 'Recharger',
+  'taxonomy.review':
+    'Consultez la liste actuelle avant de réessayer. Votre brouillon est conservé.',
+  'taxonomy.colourInvalid':
+    'Saisissez une couleur hexadécimale, par exemple #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Cette catégorie a été supprimée. Choisissez-en une autre ou laissez le lieu sans catégorie.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -790,6 +790,41 @@ const messages = {
   'twoFactor.security.upgrade': 'حدّث الصفحة لاستخدام فحوص الأمان الجديدة.',
   'twoFactor.security.unavailable':
     'تغييرات الأمان غير متاحة. أعد التحميل للتحقق مجددًا.',
+
+  'taxonomy.title': 'فئات الأماكن',
+  'taxonomy.description': 'نظّم الأماكن في مساحة العمل هذه.',
+  'taxonomy.addCategory': 'إضافة فئة',
+  'taxonomy.readOnly': 'يمكن لمالكي مساحة العمل ومسؤوليها إدارة الفئات.',
+  'taxonomy.empty': 'لا توجد فئات بعد. يمكن أن تبقى الأماكن بلا فئة.',
+  'taxonomy.placeCount': 'الأماكن: {count}',
+  'taxonomy.moveUp': 'نقل {name} إلى أعلى',
+  'taxonomy.moveDown': 'نقل {name} إلى أسفل',
+  'taxonomy.rename': 'إعادة تسمية {name}',
+  'taxonomy.delete': 'حذف {name}',
+  'taxonomy.deleteTitle': 'حذف الفئة {name}؟',
+  'taxonomy.deleteImpact': 'الأماكن التي ستصبح بلا فئة: {count}.',
+  'taxonomy.deletePreserves':
+    'ستُحفظ الأماكن. قد يتغير العدد أثناء تعديل الآخرين. ستصبح الأماكن المحفوظة التي تستخدم هذه الفئة بلا فئة أيضًا.',
+  'taxonomy.loadFailed': 'تعذر تحميل الفئات. حاول مرة أخرى.',
+  'taxonomy.unknownOutcome': 'جارٍ التحقق من حفظ التغيير.',
+  'taxonomy.reconcileFailed':
+    'تعذر تأكيد الحالة المحفوظة. أعد التحميل قبل المحاولة مجددًا.',
+  'taxonomy.stale': 'تغيرت الفئات أثناء التعديل. راجع القائمة الحالية.',
+  'taxonomy.permissionChanged':
+    'تغير إذنك في مساحة العمل. لا يزال بإمكانك عرض الفئات.',
+  'taxonomy.usage': 'تم استخدام {used} من {limit} خانة للفئات والوسوم',
+  'taxonomy.unlimited': 'خانات الفئات والوسوم المستخدمة: {used}. بلا حد.',
+  'taxonomy.limitReached':
+    'تم بلوغ حد الفئات والوسوم. أزل إدخالًا غير مستخدم قبل إضافة آخر.',
+  'taxonomy.moved': 'تم نقل {name}.',
+  'taxonomy.saved': 'تم حفظ الفئة.',
+  'taxonomy.deleted': 'تم حذف الفئة. تم الاحتفاظ بالأماكن.',
+  'taxonomy.reload': 'إعادة التحميل',
+  'taxonomy.review':
+    'راجع القائمة الحالية قبل المحاولة مجددًا. تم الاحتفاظ بالمسودة.',
+  'taxonomy.colourInvalid': 'أدخل لونًا سداسيًا عشريًا، مثل #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'تمت إزالة هذه الفئة. اختر فئة أخرى أو اترك المكان بلا فئة.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

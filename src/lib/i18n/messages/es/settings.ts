@@ -812,6 +812,47 @@ const messages = {
     'Actualiza la página para usar las nuevas comprobaciones de seguridad.',
   'twoFactor.security.unavailable':
     'Los cambios de seguridad no están disponibles. Vuelve a cargar para comprobarlo.',
+
+  'taxonomy.title': 'Categorías de lugares',
+  'taxonomy.description': 'Organiza los lugares de este espacio de trabajo.',
+  'taxonomy.addCategory': 'Añadir categoría',
+  'taxonomy.readOnly':
+    'Los propietarios y administradores del espacio pueden gestionar las categorías.',
+  'taxonomy.empty':
+    'Aún no hay categorías. Los lugares pueden quedarse sin categoría.',
+  'taxonomy.placeCount': 'Lugares: {count}',
+  'taxonomy.moveUp': 'Subir {name}',
+  'taxonomy.moveDown': 'Bajar {name}',
+  'taxonomy.rename': 'Renombrar {name}',
+  'taxonomy.delete': 'Eliminar {name}',
+  'taxonomy.deleteTitle': '¿Eliminar la categoría {name}?',
+  'taxonomy.deleteImpact': 'Lugares que quedarán sin categoría: {count}.',
+  'taxonomy.deletePreserves':
+    'Los lugares se conservarán. La cantidad puede cambiar mientras otros editan. Los lugares guardados con esta categoría también quedarán sin categoría.',
+  'taxonomy.loadFailed':
+    'No se pudieron cargar las categorías. Inténtalo de nuevo.',
+  'taxonomy.unknownOutcome': 'Comprobando si se guardó el cambio.',
+  'taxonomy.reconcileFailed':
+    'No se pudo confirmar el estado guardado. Recarga antes de volver a intentarlo.',
+  'taxonomy.stale':
+    'Las categorías cambiaron mientras editabas. Revisa la lista actual.',
+  'taxonomy.permissionChanged':
+    'Tus permisos en el espacio cambiaron. Puedes seguir viendo las categorías.',
+  'taxonomy.usage':
+    '{used} de {limit} espacios de categorías y etiquetas usados',
+  'taxonomy.unlimited':
+    'Espacios de categorías y etiquetas usados: {used}. Sin límite.',
+  'taxonomy.limitReached':
+    'Se alcanzó el límite de categorías y etiquetas. Elimina una entrada sin usar antes de añadir otra.',
+  'taxonomy.moved': 'Se ha movido {name}.',
+  'taxonomy.saved': 'Categoría guardada.',
+  'taxonomy.deleted': 'Categoría eliminada. Los lugares se conservaron.',
+  'taxonomy.reload': 'Recargar',
+  'taxonomy.review':
+    'Revisa la lista actual antes de volver a intentarlo. Se conserva tu borrador.',
+  'taxonomy.colourInvalid': 'Introduce un color hexadecimal, como #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Esta categoría se eliminó. Elige otra o deja el lugar sin categoría.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

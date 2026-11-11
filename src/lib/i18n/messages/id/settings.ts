@@ -786,6 +786,44 @@ const messages = {
     'Segarkan halaman ini untuk menggunakan pemeriksaan keamanan terbaru.',
   'twoFactor.security.unavailable':
     'Perubahan keamanan tidak tersedia. Muat ulang untuk memeriksa lagi.',
+
+  'taxonomy.title': 'Kategori tempat',
+  'taxonomy.description': 'Atur tempat di ruang kerja ini.',
+  'taxonomy.addCategory': 'Tambah kategori',
+  'taxonomy.readOnly':
+    'Pemilik dan admin ruang kerja dapat mengelola kategori.',
+  'taxonomy.empty': 'Belum ada kategori. Tempat dapat tetap tanpa kategori.',
+  'taxonomy.placeCount': 'Tempat: {count}',
+  'taxonomy.moveUp': 'Pindahkan {name} ke atas',
+  'taxonomy.moveDown': 'Pindahkan {name} ke bawah',
+  'taxonomy.rename': 'Ganti nama {name}',
+  'taxonomy.delete': 'Hapus {name}',
+  'taxonomy.deleteTitle': 'Hapus kategori {name}?',
+  'taxonomy.deleteImpact': 'Tempat yang menjadi tanpa kategori: {count}.',
+  'taxonomy.deletePreserves':
+    'Tempat akan tetap disimpan. Jumlahnya dapat berubah saat orang lain mengedit. Tempat tersimpan yang memakai kategori ini juga menjadi tanpa kategori.',
+  'taxonomy.loadFailed': 'Kategori tidak dapat dimuat. Coba lagi.',
+  'taxonomy.unknownOutcome': 'Memeriksa apakah perubahan Anda tersimpan.',
+  'taxonomy.reconcileFailed':
+    'Status tersimpan tidak dapat dikonfirmasi. Muat ulang sebelum mencoba lagi.',
+  'taxonomy.stale':
+    'Kategori berubah saat Anda mengedit. Periksa daftar terbaru.',
+  'taxonomy.permissionChanged':
+    'Izin ruang kerja Anda berubah. Anda masih dapat melihat kategori.',
+  'taxonomy.usage': '{used} dari {limit} slot kategori dan tag digunakan',
+  'taxonomy.unlimited':
+    'Slot kategori dan tag yang digunakan: {used}. Tanpa batas.',
+  'taxonomy.limitReached':
+    'Batas kategori dan tag tercapai. Hapus entri yang tidak digunakan sebelum menambah yang baru.',
+  'taxonomy.moved': '{name} dipindahkan.',
+  'taxonomy.saved': 'Kategori disimpan.',
+  'taxonomy.deleted': 'Kategori dihapus. Tempat tetap disimpan.',
+  'taxonomy.reload': 'Muat ulang',
+  'taxonomy.review':
+    'Periksa daftar terbaru sebelum mencoba lagi. Draf Anda tetap disimpan.',
+  'taxonomy.colourInvalid': 'Masukkan warna heksadesimal, misalnya #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Kategori ini telah dihapus. Pilih kategori lain atau biarkan tempat tanpa kategori.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

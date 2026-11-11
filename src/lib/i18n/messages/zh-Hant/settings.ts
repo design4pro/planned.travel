@@ -679,6 +679,37 @@ const messages = {
   'twoFactor.security.stale': '安全狀態已變更。開始另一項變更前請重新載入。',
   'twoFactor.security.upgrade': '請重新整理頁面以使用更新後的安全檢查。',
   'twoFactor.security.unavailable': '暫時無法變更安全設定。請重新載入後再試。',
+
+  'taxonomy.title': '地點分類',
+  'taxonomy.description': '整理此工作區中的地點。',
+  'taxonomy.addCategory': '新增分類',
+  'taxonomy.readOnly': '工作區擁有者和管理員可以管理分類。',
+  'taxonomy.empty': '尚無分類。地點可以保持未分類。',
+  'taxonomy.placeCount': '地點數：{count}',
+  'taxonomy.moveUp': '將{name}上移',
+  'taxonomy.moveDown': '將{name}下移',
+  'taxonomy.rename': '重新命名{name}',
+  'taxonomy.delete': '刪除{name}',
+  'taxonomy.deleteTitle': '刪除分類「{name}」？',
+  'taxonomy.deleteImpact': '將變為未分類的地點數：{count}。',
+  'taxonomy.deletePreserves':
+    '地點將被保留。其他人編輯時數量可能改變。使用此分類的已儲存地點也將變為未分類。',
+  'taxonomy.loadFailed': '無法載入分類。請重試。',
+  'taxonomy.unknownOutcome': '正在檢查變更是否已儲存。',
+  'taxonomy.reconcileFailed': '無法確認儲存狀態。請重新載入後再試。',
+  'taxonomy.stale': '編輯期間分類已變更。請查看最新清單。',
+  'taxonomy.permissionChanged': '你的工作區權限已變更。你仍可查看分類。',
+  'taxonomy.usage': '分類和標籤名額已使用{used}，共{limit}',
+  'taxonomy.unlimited': '分類和標籤已用名額：{used}。無限制。',
+  'taxonomy.limitReached': '已達到分類和標籤上限。請先刪除不使用的項目再新增。',
+  'taxonomy.moved': '已移動{name}。',
+  'taxonomy.saved': '分類已儲存。',
+  'taxonomy.deleted': '分類已刪除。地點已保留。',
+  'taxonomy.reload': '重新載入',
+  'taxonomy.review': '請查看最新清單後再試。草稿已保留。',
+  'taxonomy.colourInvalid': '請輸入十六進位色彩，例如#3b82f6。',
+  'taxonomy.categoryRemoved':
+    '此分類已刪除。請選擇其他分類或將地點保持未分類。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

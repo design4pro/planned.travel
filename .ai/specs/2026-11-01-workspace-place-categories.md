@@ -5,7 +5,7 @@
 | **Status**         | ready |
 | **Issue**          | #1369 |
 | **Spec PR**        | #1694 |
-| **Implementation** | none  |
+| **Implementation** | #1918 |
 
 ## TLDR
 
@@ -25,7 +25,10 @@ handlers that await the same initializer, allow member reads, enforce owner/admi
 impersonated tenant actions. Category moves use one materialized, tenant-filtered UPDATE with
 adjacency/stale-state checks and deterministic `(sortOrder, name, id)` ordering. Category deletion
 keeps both trip and saved places uncategorized and retains `Promise<void>`. The settings editor
-and consumer-refresh work remain Phase 3.
+and consumer-refresh work are delivered by #1845 in Phase 3: `/settings/places` uses the existing
+category operations, resolved shared meter, row-local pending controls and explicit reconciliation.
+The planner drops deleted filter IDs and preserves unrelated place drafts while reloading category
+options after a failed save. Tags and restoring defaults remain outside this slice.
 The current base has no implemented carry overlay; this slice preserves the existing limits resolver
 and does not implement the separate carry spec.
 
@@ -275,6 +278,7 @@ every new key with matching placeholders/plurals to all 23 locales in the same c
 | taxonomy.permissionChanged     | Your workspace permission changed. You can still view categories.                                                                 |
 | taxonomy.usage                 | {used} of {limit} category and tag slots used                                                                                     |
 | taxonomy.limitReached          | Category and tag limit reached. Remove an unused entry before adding another.                                                     |
+| taxonomy.moved                 | Moved {name}.                                                                                                                     |
 | taxonomy.saved                 | Category saved.                                                                                                                   |
 | taxonomy.deleted               | Category deleted. Places were kept.                                                                                               |
 | taxonomy.categoryRemoved       | This category was removed. Choose another category or leave the place uncategorized.                                              |

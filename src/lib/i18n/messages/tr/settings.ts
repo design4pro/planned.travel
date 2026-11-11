@@ -787,6 +787,46 @@ const messages = {
     'Güncel güvenlik kontrollerini kullanmak için bu sayfayı yenileyin.',
   'twoFactor.security.unavailable':
     'Güvenlik değişiklikleri kullanılamıyor. Tekrar kontrol etmek için yeniden yükleyin.',
+
+  'taxonomy.title': 'Yer kategorileri',
+  'taxonomy.description': 'Bu çalışma alanındaki yerleri düzenleyin.',
+  'taxonomy.addCategory': 'Kategori ekle',
+  'taxonomy.readOnly':
+    'Çalışma alanı sahipleri ve yöneticileri kategorileri yönetebilir.',
+  'taxonomy.empty': 'Henüz kategori yok. Yerler kategorisiz kalabilir.',
+  'taxonomy.placeCount': 'Yerler: {count}',
+  'taxonomy.moveUp': '{name} yukarı taşınsın',
+  'taxonomy.moveDown': '{name} aşağı taşınsın',
+  'taxonomy.rename': '{name} adını değiştir',
+  'taxonomy.delete': '{name} silinsin',
+  'taxonomy.deleteTitle': '{name} kategorisi silinsin mi?',
+  'taxonomy.deleteImpact': 'Kategorisiz kalacak yerler: {count}.',
+  'taxonomy.deletePreserves':
+    'Yerler korunur. Diğerleri düzenlerken sayı değişebilir. Bu kategoriyi kullanan kaydedilmiş yerler de kategorisiz kalır.',
+  'taxonomy.loadFailed': 'Kategoriler yüklenemedi. Tekrar deneyin.',
+  'taxonomy.unknownOutcome':
+    'Değişikliğinizin kaydedilip kaydedilmediği kontrol ediliyor.',
+  'taxonomy.reconcileFailed':
+    'Kayıt durumu doğrulanamadı. Tekrar denemeden önce yeniden yükleyin.',
+  'taxonomy.stale':
+    'Siz düzenlerken kategoriler değişti. Güncel listeyi inceleyin.',
+  'taxonomy.permissionChanged':
+    'Çalışma alanı izniniz değişti. Kategorileri hâlâ görebilirsiniz.',
+  'taxonomy.usage':
+    'Kategori ve etiket yuvaları: {limit} üzerinden {used} kullanıldı',
+  'taxonomy.unlimited':
+    'Kullanılan kategori ve etiket yuvaları: {used}. Sınırsız.',
+  'taxonomy.limitReached':
+    'Kategori ve etiket sınırına ulaşıldı. Yenisini eklemeden önce kullanılmayan bir kaydı kaldırın.',
+  'taxonomy.moved': '{name} taşındı.',
+  'taxonomy.saved': 'Kategori kaydedildi.',
+  'taxonomy.deleted': 'Kategori silindi. Yerler korundu.',
+  'taxonomy.reload': 'Yeniden yükle',
+  'taxonomy.review':
+    'Tekrar denemeden önce güncel listeyi inceleyin. Taslağınız korunur.',
+  'taxonomy.colourInvalid': '#3b82f6 gibi onaltılık bir renk girin.',
+  'taxonomy.categoryRemoved':
+    'Bu kategori kaldırıldı. Başka bir kategori seçin veya yeri kategorisiz bırakın.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

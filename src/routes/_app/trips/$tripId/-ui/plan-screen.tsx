@@ -1045,6 +1045,7 @@ export function PlanScreen({
         readonly fallback: string
         readonly success?: string
         readonly closeOnLanded?: boolean
+        readonly refreshCategoriesOnFailure?: boolean
       },
     ): Promise<boolean> => {
       // A refused write re-read `editable`; a form that outlived the permission must not write with it.
@@ -1075,9 +1076,11 @@ export function PlanScreen({
         } else {
           reportLateWriteFailure(report, toast, openInNewTab)
         }
-        // A refusal may mean the reader's role changed under this screen: read the board again so
-        // `editable` and `canWrite` follow. Any other failure keeps the board it has.
-        if (readPublicFailure(cause).kind === 'refusal') {
+        // Reload roles and category options after a refused place save without replacing its draft.
+        if (
+          readPublicFailure(cause).kind === 'refusal' ||
+          options.refreshCategoriesOnFailure === true
+        ) {
           try {
             await router.invalidate()
           } catch {
@@ -1128,6 +1131,7 @@ export function PlanScreen({
               ? t('trips.plan.place.toast.created')
               : t('trips.plan.place.toast.updated'),
           closeOnLanded: true,
+          refreshCategoriesOnFailure: values.categoryId !== '',
         },
       )
     },
@@ -1699,6 +1703,9 @@ export function PlanScreen({
         saving={saving}
         error={formError}
         errorAction={formErrorAction}
+        onReloadCategories={async () => {
+          await router.invalidate()
+        }}
         onSubmit={submitPlace}
       />
 

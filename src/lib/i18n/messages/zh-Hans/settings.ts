@@ -673,6 +673,37 @@ const messages = {
   'twoFactor.security.stale': '安全状态已更改。开始另一项更改前请重新加载。',
   'twoFactor.security.upgrade': '请刷新页面以使用更新后的安全检查。',
   'twoFactor.security.unavailable': '暂时无法更改安全设置。请重新加载后再试。',
+
+  'taxonomy.title': '地点分类',
+  'taxonomy.description': '整理此工作区中的地点。',
+  'taxonomy.addCategory': '添加分类',
+  'taxonomy.readOnly': '工作区所有者和管理员可以管理分类。',
+  'taxonomy.empty': '暂无分类。地点可以保持未分类。',
+  'taxonomy.placeCount': '地点数：{count}',
+  'taxonomy.moveUp': '将{name}上移',
+  'taxonomy.moveDown': '将{name}下移',
+  'taxonomy.rename': '重命名{name}',
+  'taxonomy.delete': '删除{name}',
+  'taxonomy.deleteTitle': '删除分类“{name}”？',
+  'taxonomy.deleteImpact': '将变为未分类的地点数：{count}。',
+  'taxonomy.deletePreserves':
+    '地点将被保留。其他人编辑时数量可能变化。使用此分类的已保存地点也将变为未分类。',
+  'taxonomy.loadFailed': '无法加载分类。请重试。',
+  'taxonomy.unknownOutcome': '正在检查更改是否已保存。',
+  'taxonomy.reconcileFailed': '无法确认保存状态。请重新加载后再试。',
+  'taxonomy.stale': '编辑期间分类已更改。请查看最新列表。',
+  'taxonomy.permissionChanged': '你的工作区权限已更改。你仍可查看分类。',
+  'taxonomy.usage': '分类和标签名额已使用{used}，共{limit}',
+  'taxonomy.unlimited': '分类和标签已用名额：{used}。无限制。',
+  'taxonomy.limitReached': '已达到分类和标签上限。请先删除不使用的条目再添加。',
+  'taxonomy.moved': '已移动{name}。',
+  'taxonomy.saved': '分类已保存。',
+  'taxonomy.deleted': '分类已删除。地点已保留。',
+  'taxonomy.reload': '重新加载',
+  'taxonomy.review': '请查看最新列表后再试。草稿已保留。',
+  'taxonomy.colourInvalid': '请输入十六进制颜色，例如#3b82f6。',
+  'taxonomy.categoryRemoved':
+    '此分类已删除。请选择其他分类或将地点保持未分类。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

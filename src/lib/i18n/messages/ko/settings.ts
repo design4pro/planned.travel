@@ -730,6 +730,43 @@ const messages = {
     '페이지를 새로 고쳐 업데이트된 보안 검사를 사용하세요.',
   'twoFactor.security.unavailable':
     '보안 변경을 사용할 수 없습니다. 새로 고쳐 다시 확인하세요.',
+
+  'taxonomy.title': '장소 카테고리',
+  'taxonomy.description': '이 작업 공간의 장소를 정리하세요.',
+  'taxonomy.addCategory': '카테고리 추가',
+  'taxonomy.readOnly':
+    '작업 공간 소유자와 관리자가 카테고리를 관리할 수 있습니다.',
+  'taxonomy.empty': '아직 카테고리가 없습니다. 장소는 미분류로 둘 수 있습니다.',
+  'taxonomy.placeCount': '장소 수: {count}',
+  'taxonomy.moveUp': '{name} 위로 이동',
+  'taxonomy.moveDown': '{name} 아래로 이동',
+  'taxonomy.rename': '{name} 이름 변경',
+  'taxonomy.delete': '{name} 삭제',
+  'taxonomy.deleteTitle': '{name} 카테고리를 삭제할까요?',
+  'taxonomy.deleteImpact': '미분류가 될 장소 수: {count}.',
+  'taxonomy.deletePreserves':
+    '장소는 유지됩니다. 다른 사람이 편집하는 동안 개수가 달라질 수 있습니다. 이 카테고리를 사용하는 저장된 장소도 미분류가 됩니다.',
+  'taxonomy.loadFailed': '카테고리를 불러오지 못했습니다. 다시 시도하세요.',
+  'taxonomy.unknownOutcome': '변경 사항의 저장 여부를 확인하고 있습니다.',
+  'taxonomy.reconcileFailed':
+    '저장 상태를 확인하지 못했습니다. 다시 시도하기 전에 새로고침하세요.',
+  'taxonomy.stale':
+    '편집 중 카테고리가 변경되었습니다. 최신 목록을 확인하세요.',
+  'taxonomy.permissionChanged':
+    '작업 공간 권한이 변경되었습니다. 카테고리는 계속 볼 수 있습니다.',
+  'taxonomy.usage': '카테고리 및 태그 슬롯 {limit}개 중 {used}개 사용',
+  'taxonomy.unlimited': '사용 중인 카테고리 및 태그 슬롯: {used}. 제한 없음.',
+  'taxonomy.limitReached':
+    '카테고리 및 태그 한도에 도달했습니다. 새 항목을 추가하기 전에 사용하지 않는 항목을 삭제하세요.',
+  'taxonomy.moved': '{name} 항목을 이동했습니다.',
+  'taxonomy.saved': '카테고리가 저장되었습니다.',
+  'taxonomy.deleted': '카테고리가 삭제되었습니다. 장소는 유지됩니다.',
+  'taxonomy.reload': '새로고침',
+  'taxonomy.review':
+    '다시 시도하기 전에 최신 목록을 확인하세요. 초안은 유지됩니다.',
+  'taxonomy.colourInvalid': '#3b82f6과 같은 16진수 색상을 입력하세요.',
+  'taxonomy.categoryRemoved':
+    '이 카테고리가 삭제되었습니다. 다른 카테고리를 선택하거나 장소를 미분류로 두세요.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

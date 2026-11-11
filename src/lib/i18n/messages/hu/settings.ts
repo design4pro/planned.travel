@@ -797,6 +797,45 @@ const messages = {
     'Frissítse az oldalt az új biztonsági ellenőrzések használatához.',
   'twoFactor.security.unavailable':
     'A biztonsági módosítások nem érhetők el. Töltse be újra az oldalt.',
+
+  'taxonomy.title': 'Helykategóriák',
+  'taxonomy.description': 'Rendezd a munkaterület helyeit.',
+  'taxonomy.addCategory': 'Kategória hozzáadása',
+  'taxonomy.readOnly':
+    'A kategóriákat a munkaterület tulajdonosai és rendszergazdái kezelhetik.',
+  'taxonomy.empty':
+    'Még nincsenek kategóriák. A helyek kategória nélkül is maradhatnak.',
+  'taxonomy.placeCount': 'Helyek: {count}',
+  'taxonomy.moveUp': '{name} feljebb mozgatása',
+  'taxonomy.moveDown': '{name} lejjebb mozgatása',
+  'taxonomy.rename': '{name} átnevezése',
+  'taxonomy.delete': '{name} törlése',
+  'taxonomy.deleteTitle': 'Törlöd a(z) {name} kategóriát?',
+  'taxonomy.deleteImpact': 'Kategória nélkül maradó helyek: {count}.',
+  'taxonomy.deletePreserves':
+    'A helyek megmaradnak. A szám mások szerkesztése közben változhat. A kategóriához tartozó mentett helyek is kategória nélkül maradnak.',
+  'taxonomy.loadFailed': 'A kategóriák nem tölthetők be. Próbáld újra.',
+  'taxonomy.unknownOutcome': 'A módosítás mentésének ellenőrzése.',
+  'taxonomy.reconcileFailed':
+    'A mentett állapot nem erősíthető meg. Újabb próbálkozás előtt töltsd újra.',
+  'taxonomy.stale':
+    'A kategóriák szerkesztés közben megváltoztak. Nézd át az aktuális listát.',
+  'taxonomy.permissionChanged':
+    'A munkaterületi jogosultságod megváltozott. A kategóriákat továbbra is láthatod.',
+  'taxonomy.usage': 'Felhasznált kategória- és címkehelyek: {used}/{limit}',
+  'taxonomy.unlimited':
+    'Felhasznált kategória- és címkehelyek: {used}. Nincs korlát.',
+  'taxonomy.limitReached':
+    'Elérted a kategóriák és címkék korlátját. Új hozzáadása előtt távolíts el egy nem használt elemet.',
+  'taxonomy.moved': '{name} áthelyezve.',
+  'taxonomy.saved': 'Kategória mentve.',
+  'taxonomy.deleted': 'Kategória törölve. A helyek megmaradtak.',
+  'taxonomy.reload': 'Újratöltés',
+  'taxonomy.review':
+    'Újabb próbálkozás előtt nézd át az aktuális listát. A piszkozat megmarad.',
+  'taxonomy.colourInvalid': 'Adj meg egy hexadecimális színt, például #3b82f6.',
+  'taxonomy.categoryRemoved':
+    'Ezt a kategóriát eltávolították. Válassz másikat, vagy hagyd a helyet kategória nélkül.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
