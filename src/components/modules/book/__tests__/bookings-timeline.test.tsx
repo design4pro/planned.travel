@@ -88,6 +88,30 @@ function mount(bookings: ReadonlyArray<BookingRow>, canWrite: boolean): void {
 }
 
 describe('BookingsTimeline', () => {
+  it('keeps both dated lines, the heading year and the undated group', () => {
+    mount(
+      [
+        HOTEL,
+        {
+          ...HOTEL,
+          id: 'undated',
+          title: 'Undated booking',
+          startDate: null,
+          endDate: null,
+        },
+      ],
+      false,
+    )
+
+    expect(screen.getByText('10 Apr')).not.toBeNull()
+    expect(screen.getByText('Fri')).not.toBeNull()
+    expect(
+      screen.getByRole('heading', { name: /Fri 10 Apr\s*2026/ }),
+    ).not.toBeNull()
+    expect(screen.getByRole('heading', { name: /No date yet/ })).not.toBeNull()
+    expect(screen.getByText('Undated booking')).not.toBeNull()
+  })
+
   it('draws the status and the actions of a booking for a reader who may write', () => {
     mount([HOTEL], true)
 

@@ -719,7 +719,7 @@ function TimelineGroup({
             <CalendarOff aria-hidden className="size-5" />
           </span>
         ) : (
-          <span className="grid size-14 place-items-center rounded-full border border-edge-faint bg-surface text-center shadow-card sm:size-20">
+          <span className="grid size-14 content-center place-items-center rounded-full border border-edge-faint bg-surface text-center shadow-card sm:size-20">
             <span className="font-display text-label leading-none font-bold tabular-nums text-ink sm:text-subtitle">
               {stamp.dayMonth}
             </span>
