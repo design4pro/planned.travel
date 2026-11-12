@@ -295,6 +295,33 @@ const messages = {
   'footer.link.createAccount': '계정 만들기',
   'footer.link.terms': '서비스 약관',
   'footer.link.privacy': '개인정보 처리 고지',
+
+  /* Gallery browse */
+  'gallery.eyebrow': '둘러볼 만한 여행',
+  'gallery.heading': '다음 여행의 아이디어를 찾아보세요',
+  'gallery.intro': '다른 여행자가 공유한 여행 일정을 둘러보세요.',
+  'gallery.read': '일정 읽기',
+  'gallery.by': '공유한 사람: {name}',
+  'gallery.published': '게시일: {date}',
+  'gallery.searchLabel': '갤러리 검색',
+  'gallery.searchPlaceholder': '제목, 여행자 또는 국가',
+  'gallery.clearSearch': '검색 지우기',
+  'gallery.emptyTitle': '갤러리가 첫 여행을 기다리고 있어요',
+  'gallery.emptyBody':
+    '여행에 접근할 수 있는 워크스페이스 관리자는 해당 여행의 Collab 탭에서 검토를 요청할 수 있습니다.',
+  'gallery.noResults':
+    '“{query}”에 맞는 여행이 없습니다. 다른 검색어를 사용해 보세요.',
+  'gallery.errorTitle': '갤러리를 불러오지 못했습니다',
+  'gallery.errorBody': '잠시 후 다시 시도해 주세요.',
+  'gallery.loading': '갤러리 불러오는 중',
+  'gallery.searchNoscript': 'JavaScript를 활성화하면 검색할 수 있습니다.',
+  'gallery.noTripsFound': '여행을 찾지 못했습니다',
+  'gallery.days': { other: '{value}일' },
+  'gallery.places': { other: '장소 {value}곳' },
+  'gallery.results': { other: '여행 {value}개를 찾았습니다' },
+  'gallery.rateLimited': {
+    other: '요청이 너무 많습니다. {seconds}초 후에 다시 시도해 주세요.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

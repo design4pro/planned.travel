@@ -303,6 +303,34 @@ const messages = {
   'footer.link.createAccount': 'Tạo tài khoản',
   'footer.link.terms': 'Điều khoản dịch vụ',
   'footer.link.privacy': 'Thông báo về quyền riêng tư',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Những chuyến đi đáng khám phá',
+  'gallery.heading': 'Tìm ý tưởng tiếp theo của bạn',
+  'gallery.intro':
+    'Khám phá lịch trình được những người cùng đam mê du lịch chia sẻ.',
+  'gallery.read': 'Đọc lịch trình',
+  'gallery.by': 'Được chia sẻ bởi {name}',
+  'gallery.published': 'Đăng ngày {date}',
+  'gallery.searchLabel': 'Tìm trong thư viện',
+  'gallery.searchPlaceholder': 'Tiêu đề, người đi hoặc quốc gia',
+  'gallery.clearSearch': 'Xóa tìm kiếm',
+  'gallery.emptyTitle': 'Thư viện đang chờ chuyến đi đầu tiên',
+  'gallery.emptyBody':
+    'Quản trị viên không gian làm việc có quyền truy cập chuyến đi có thể gửi chuyến đi để xét duyệt từ thẻ Collab.',
+  'gallery.noResults':
+    'Không có chuyến đi phù hợp với “{query}”. Hãy thử tìm kiếm khác.',
+  'gallery.errorTitle': 'Không thể tải thư viện',
+  'gallery.errorBody': 'Vui lòng thử lại sau giây lát.',
+  'gallery.loading': 'Đang tải thư viện',
+  'gallery.searchNoscript': 'Có thể tìm kiếm khi JavaScript được bật.',
+  'gallery.noTripsFound': 'Không tìm thấy chuyến đi',
+  'gallery.days': { other: '{value} ngày' },
+  'gallery.places': { other: '{value} địa điểm' },
+  'gallery.results': { other: 'Tìm thấy {value} chuyến đi' },
+  'gallery.rateLimited': {
+    other: 'Quá nhiều yêu cầu. Vui lòng thử lại sau {seconds} giây.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

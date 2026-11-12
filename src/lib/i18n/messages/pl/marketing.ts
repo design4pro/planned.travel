@@ -331,6 +331,53 @@ const messages = {
   'footer.link.createAccount': 'Utwórz konto',
   'footer.link.terms': 'Regulamin',
   'footer.link.privacy': 'Informacja o prywatności',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Podróże warte odkrycia',
+  'gallery.heading': 'Znajdź pomysł na kolejną podróż',
+  'gallery.intro':
+    'Odkrywaj plany podróży udostępnione przez innych podróżników.',
+  'gallery.read': 'Przeczytaj plan podróży',
+  'gallery.by': 'Udostępnia {name}',
+  'gallery.published': 'Opublikowano {date}',
+  'gallery.searchLabel': 'Szukaj w galerii',
+  'gallery.searchPlaceholder': 'Tytuł, podróżnik lub kraj',
+  'gallery.clearSearch': 'Wyczyść wyszukiwanie',
+  'gallery.emptyTitle': 'Galeria czeka na pierwszą podróż',
+  'gallery.emptyBody':
+    'Administrator przestrzeni roboczej z dostępem do podróży może zgłosić ją do oceny na karcie Collab.',
+  'gallery.noResults':
+    'Brak podróży pasujących do „{query}”. Spróbuj innego wyszukiwania.',
+  'gallery.errorTitle': 'Nie udało się wczytać galerii',
+  'gallery.errorBody': 'Spróbuj ponownie za chwilę.',
+  'gallery.loading': 'Wczytywanie galerii',
+  'gallery.searchNoscript':
+    'Wyszukiwanie jest dostępne po włączeniu JavaScript.',
+  'gallery.noTripsFound': 'Nie znaleziono podróży',
+  'gallery.days': {
+    one: '{value} dzień',
+    few: '{value} dni',
+    many: '{value} dni',
+    other: '{value} dnia',
+  },
+  'gallery.places': {
+    one: '{value} miejsce',
+    few: '{value} miejsca',
+    many: '{value} miejsc',
+    other: '{value} miejsca',
+  },
+  'gallery.results': {
+    one: 'Znaleziono {value} podróż',
+    few: 'Znaleziono {value} podróże',
+    many: 'Znaleziono {value} podróży',
+    other: 'Znaleziono {value} podróży',
+  },
+  'gallery.rateLimited': {
+    one: 'Za dużo żądań. Spróbuj ponownie za {seconds} sekundę.',
+    few: 'Za dużo żądań. Spróbuj ponownie za {seconds} sekundy.',
+    many: 'Za dużo żądań. Spróbuj ponownie za {seconds} sekund.',
+    other: 'Za dużo żądań. Spróbuj ponownie za {seconds} sekundy.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

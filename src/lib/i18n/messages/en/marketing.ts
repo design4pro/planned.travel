@@ -338,6 +338,36 @@ const messages = {
   'footer.link.createAccount': 'Create an account',
   'footer.link.terms': 'Terms of service',
   'footer.link.privacy': 'Privacy notice',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Trips worth exploring',
+  'gallery.heading': 'Find your next idea',
+  'gallery.intro': 'Explore itineraries shared by fellow travellers.',
+  'gallery.read': 'Read the itinerary',
+  'gallery.by': 'Shared by {name}',
+  'gallery.published': 'Published {date}',
+  'gallery.searchLabel': 'Search the Gallery',
+  'gallery.searchPlaceholder': 'Title, traveller or country',
+  'gallery.clearSearch': 'Clear search',
+  'gallery.emptyTitle': 'The Gallery is waiting for its first trip',
+  'gallery.emptyBody':
+    'A workspace admin with access to a trip can submit it for review from its Collab tab.',
+  'gallery.noResults': 'No trips match “{query}”. Try another search.',
+  'gallery.errorTitle': 'The Gallery could not load',
+  'gallery.errorBody': 'Try again in a moment.',
+  'gallery.loading': 'Loading the Gallery',
+  'gallery.searchNoscript': 'Search is available when JavaScript is enabled.',
+  'gallery.noTripsFound': 'No trips found',
+  'gallery.days': { one: '{value} day', other: '{value} days' },
+  'gallery.places': { one: '{value} place', other: '{value} places' },
+  'gallery.results': {
+    one: '{value} trip found',
+    other: '{value} trips found',
+  },
+  'gallery.rateLimited': {
+    one: 'Too many requests. Try again in {seconds} second.',
+    other: 'Too many requests. Try again in {seconds} seconds.',
+  },
 } as const satisfies NamespaceMessages
 
 export default messages

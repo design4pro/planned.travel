@@ -321,6 +321,51 @@ const messages = {
   'footer.link.createAccount': 'Vytvořit účet',
   'footer.link.terms': 'Podmínky služby',
   'footer.link.privacy': 'Oznámení o soukromí',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Cesty, které stojí za objevování',
+  'gallery.heading': 'Najděte další inspiraci',
+  'gallery.intro': 'Prozkoumejte itineráře sdílené ostatními cestovateli.',
+  'gallery.read': 'Přečíst itinerář',
+  'gallery.by': 'Sdílí {name}',
+  'gallery.published': 'Zveřejněno {date}',
+  'gallery.searchLabel': 'Hledat v galerii',
+  'gallery.searchPlaceholder': 'Název, cestovatel nebo země',
+  'gallery.clearSearch': 'Vymazat hledání',
+  'gallery.emptyTitle': 'Galerie čeká na první cestu',
+  'gallery.emptyBody':
+    'Správce pracovního prostoru s přístupem k cestě ji může odeslat ke kontrole na kartě Collab.',
+  'gallery.noResults':
+    'Dotazu „{query}“ neodpovídá žádná cesta. Zkuste hledat jinak.',
+  'gallery.errorTitle': 'Galerii se nepodařilo načíst',
+  'gallery.errorBody': 'Zkuste to znovu za chvíli.',
+  'gallery.loading': 'Načítání galerie',
+  'gallery.searchNoscript': 'Hledání je dostupné se zapnutým JavaScriptem.',
+  'gallery.noTripsFound': 'Nebyly nalezeny žádné cesty',
+  'gallery.days': {
+    one: '{value} den',
+    few: '{value} dny',
+    many: '{value} dne',
+    other: '{value} dní',
+  },
+  'gallery.places': {
+    one: '{value} místo',
+    few: '{value} místa',
+    many: '{value} místa',
+    other: '{value} míst',
+  },
+  'gallery.results': {
+    one: 'Nalezena {value} cesta',
+    few: 'Nalezeny {value} cesty',
+    many: 'Nalezeno {value} cesty',
+    other: 'Nalezeno {value} cest',
+  },
+  'gallery.rateLimited': {
+    one: 'Příliš mnoho požadavků. Zkuste to znovu za {seconds} sekundu.',
+    few: 'Příliš mnoho požadavků. Zkuste to znovu za {seconds} sekundy.',
+    many: 'Příliš mnoho požadavků. Zkuste to znovu za {seconds} sekundy.',
+    other: 'Příliš mnoho požadavků. Zkuste to znovu za {seconds} sekund.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
