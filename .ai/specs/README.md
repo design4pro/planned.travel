@@ -6,17 +6,17 @@ One document per designed change. The directory a spec sits in is its state, the
 its `H1` names the issue and the pull requests behind it, and both are held together by
 `scripts/specs/__tests__/spec-registry.test.ts`. The rules are in [AGENTS.md](AGENTS.md).
 
-## Draft — being written (2)
+## Draft — being written (1)
 
-| Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                           | Implementation |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
-| [Content Studio staff plane](2026-11-09-content-studio-staff-plane.md)                                                                   | 2026-11-09 | —                                                               | [#1904](https://github.com/design4pro/planned.travel/issues/1904) | —              |
-| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627)   | —              |
+| Spec                                                                                                                                     | Date       | Issue                                                           | Spec PR                                                         | Implementation |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------- | --------------------------------------------------------------- | -------------- |
+| [One binding-parity rule for wrangler.jsonc, and a shared JSONC reader for the tests that ask it](2026-09-19-wrangler-binding-parity.md) | 2026-09-19 | [#203](https://github.com/design4pro/planned.travel/issues/203) | [#627](https://github.com/design4pro/planned.travel/issues/627) | —              |
 
-## Ready — merged, waiting for a build (31)
+## Ready — merged, waiting for a build (32)
 
 | Spec                                                                                                                                                     | Date       | Issue                                                             | Spec PR                                                           | Implementation |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------- | ----------------------------------------------------------------- | -------------- |
+| [Content Studio staff plane](2026-11-09-content-studio-staff-plane.md)                                                                                   | 2026-11-09 | —                                                                 | [#1904](https://github.com/design4pro/planned.travel/issues/1904) | —              |
 | [Public Gallery: browse and detail](2026-11-06-public-gallery-browse-and-detail.md)                                                                      | 2026-11-06 | —                                                                 | [#1866](https://github.com/design4pro/planned.travel/issues/1866) | —              |
 | [Curation: review, verdicts and release to KV](2026-11-06-curation-review-and-release.md)                                                                | 2026-11-06 | —                                                                 | [#1865](https://github.com/design4pro/planned.travel/issues/1865) | —              |
 | [The publication pipeline](2026-11-04-the-publication-pipeline.md)                                                                                       | 2026-11-04 | —                                                                 | [#1846](https://github.com/design4pro/planned.travel/issues/1846) | —              |
