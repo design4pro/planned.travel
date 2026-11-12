@@ -14,10 +14,9 @@ import {
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
-import { setTimeout as sleep } from 'node:timers/promises'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 // Not kill(pid, 0) alone: a killed child nobody reaps stays a zombie, and that still succeeds on it.
-import { live } from '../dev-server-process.mjs'
+import { live, processInfo } from '../dev-server-process.mjs'
 
 // Each case boots real child processes; bounded CLI waits must finish before Vitest times out.
 vi.setConfig({ testTimeout: 15_000 })
@@ -82,15 +81,138 @@ afterEach(async () => {
   if (existsSync(path)) children.add(Number(readFileSync(path, 'utf8')))
   for (const child of children) {
     try {
+      process.kill(child, 'SIGCONT')
       process.kill(child, 'SIGTERM')
     } catch {}
   }
+  await vi.waitFor(() =>
+    expect([...children].every((child) => !live(child))).toBe(true),
+  )
   children.clear()
-  await sleep(50)
   rmSync(root, { recursive: true, force: true })
 })
 
 describe('test environment lifecycle', () => {
+  it.each(['test environment', 'bootstrap'])(
+    '%s waits for the launched process to exec Vite before recording it',
+    async (caller) => {
+      if (caller === 'bootstrap') {
+        copyFileSync(
+          resolve('scripts/worktree/bootstrap.sh'),
+          join(root, 'scripts/worktree/bootstrap.sh'),
+        )
+        mkdirSync(join(root, 'node_modules/.bin'), { recursive: true })
+        const d1 = join(
+          root,
+          '.wrangler/state/v3/d1/miniflare-D1DatabaseObject',
+        )
+        mkdirSync(d1, { recursive: true })
+        writeFileSync(join(d1, 'local.sqlite'), 'fixture')
+        stub('sqlite3', 'echo 1')
+      }
+      writeFileSync(
+        join(root, 'observe-wait.cjs'),
+        `
+      const timers = require('node:timers/promises');
+      const original = timers.setTimeout;
+      timers.setTimeout = (...args) => { require('node:fs').writeFileSync('record-waiting', ''); return original(...args) };
+      require('node:module').syncBuiltinESMExports();
+    `,
+      )
+      stub(
+        'node',
+        `if [ "$1" = node_modules/vite/bin/vite.js ]; then exec /bin/sh -c 'echo $$ > "$PWD/launch-pid"; kill -STOP $$; exec "$@"' wrapper "${process.execPath}" "$@"; fi
+if [ "$2" = record ]; then NODE_OPTIONS="--require $PWD/observe-wait.cjs"; export NODE_OPTIONS; fi
+exec "${process.execPath}" "$@"`,
+      )
+      let failure
+      const result = (
+        caller === 'bootstrap'
+          ? exec(
+              'bash',
+              [join(root, 'scripts/worktree/bootstrap.sh'), '--port', '0'],
+              {
+                cwd: root,
+                env: env(),
+                timeout: 15000,
+              },
+            )
+          : run()
+      ).catch((error) => {
+        failure = error
+      })
+      await vi.waitFor(() => {
+        expect(existsSync(join(root, 'launch-pid'))).toBe(true)
+      })
+      const launched = Number(readFileSync(join(root, 'launch-pid'), 'utf8'))
+      children.add(launched)
+      try {
+        await vi.waitFor(() => {
+          if (failure) throw failure
+          expect(existsSync(join(root, 'record-waiting'))).toBe(true)
+        })
+        process.kill(launched, 'SIGCONT')
+        await result
+        if (failure) throw failure
+        expect(pid()).toBe(launched)
+      } finally {
+        process.kill(launched, 'SIGCONT')
+      }
+    },
+  )
+
+  it('rejects a launched process that never becomes identifiable without signalling it', async () => {
+    stub(
+      'node',
+      `if [ "$1" = node_modules/vite/bin/vite.js ]; then exec "${process.execPath}" -e 'setInterval(() => {}, 1000)' /tmp/vite.js dev; fi
+exec "${process.execPath}" "$@"`,
+    )
+    await expect(run()).rejects.toThrow('Cannot identify started Vite pid')
+    const launched = pid()
+    children.add(launched)
+    expect(live(launched)).toBe(true)
+    expect(existsSync(join(root, '.ai/qa/dev-server-process.json'))).toBe(false)
+  })
+
+  it('records and stops a Vite process whose script path contains spaces', async () => {
+    const directory = join(root, 'path with spaces')
+    mkdirSync(directory)
+    const script = join(directory, 'vite.js')
+    writeFileSync(script, 'setInterval(() => {}, 1000)')
+    const child = spawn(process.execPath, [script, 'dev'], {
+      cwd: root,
+      stdio: 'ignore',
+    })
+    children.add(child.pid)
+    await vi.waitFor(() =>
+      expect(processInfo(child.pid).command).toContain('vite.js dev'),
+    )
+    const record = exec(
+      process.execPath,
+      [
+        join(root, '.ai/scripts/dev-server-process.mjs'),
+        'record',
+        String(child.pid),
+        '3030',
+      ],
+      { cwd: root },
+    )
+    if (process.platform !== 'linux') {
+      await expect(record).rejects.toThrow('Cannot identify started Vite pid')
+      expect(live(child.pid)).toBe(true)
+      expect(existsSync(join(root, '.ai/qa/dev-server-process.json'))).toBe(
+        false,
+      )
+      return
+    }
+    await record
+    await exec(
+      process.execPath,
+      [join(root, '.ai/scripts/dev-server-process.mjs'), 'stop'],
+      { cwd: root },
+    )
+    expect(live(child.pid)).toBe(false)
+  })
   it.each([0, 1])(
     'aligns the selected origin before boot when provisioning check returns %s',
     async (checkStatus) => {
@@ -201,27 +323,82 @@ printf 'http://%s:%s' "$host" "$port" > fixture-origin
     expect(pid()).toBe(previous)
   })
 
-  it('retires the verified Vite child of a legacy pnpm PID', async () => {
-    const wrapperPath = join(root, 'bin/pnpm-wrapper.mjs')
+  it('refuses a legacy pnpm PID and leaves its Vite child alive', async () => {
+    mkdirSync(join(root, 'node_modules/.bin'))
+    writeFileSync(join(root, 'package.json'), '{}')
+    const executable = join(root, 'node_modules/.bin/vite')
     writeFileSync(
-      wrapperPath,
-      `import { spawn } from 'node:child_process';
-      const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'dev'], { stdio: 'ignore' });
-      console.log(child.pid); child.on('exit', () => process.exit(0));`,
+      executable,
+      '#!/bin/sh\nexec node node_modules/vite/bin/vite.js "$@"\n',
     )
+    chmodSync(executable, 0o755)
+    writeFileSync(
+      join(root, 'node_modules/vite/bin/vite.js'),
+      'console.log(process.pid); setInterval(() => {}, 1000)',
+    )
+    const wrapper = spawn('pnpm', ['exec', 'vite', 'dev'], {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    children.add(wrapper.pid)
+    const [data] = await once(wrapper.stdout, 'data')
+    const child = Number(data.toString().trim())
+    children.add(child)
+    writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${wrapper.pid}\n`)
+    await expect(run('--force')).rejects.toThrow(
+      'Refusing to signal unverified pid',
+    )
+    expect(live(wrapper.pid)).toBe(true)
+    expect(live(child)).toBe(true)
+  })
+
+  it('refuses a legacy PID matching Vite in this checkout', async () => {
+    const child = spawn(
+      process.execPath,
+      ['node_modules/vite/bin/vite.js', 'dev'],
+      { cwd: root, stdio: 'ignore' },
+    )
+    children.add(child.pid)
+    await vi.waitFor(() =>
+      expect(processInfo(child.pid).command).toContain('vite.js dev'),
+    )
+    writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${child.pid}\n`)
+    await expect(run('--force')).rejects.toThrow(
+      'Refusing to signal unverified pid',
+    )
+    expect(live(child.pid)).toBe(true)
+  })
+
+  it('does not signal a foreign process that imitates a pnpm wrapper and its Vite child', async () => {
     const wrapper = spawn(
       process.execPath,
-      [wrapperPath, 'exec', 'vite', 'dev'],
+      [
+        '-e',
+        `
+      const { spawn } = require('node:child_process');
+      const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'dev'], { stdio: 'ignore' });
+      console.log(child.pid); child.on('exit', () => process.exit(0));
+    `,
+        'pnpm',
+        'exec',
+        'vite',
+        'dev',
+      ],
       { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] },
     )
     children.add(wrapper.pid)
     const [data] = await once(wrapper.stdout, 'data')
     const child = Number(data.toString().trim())
     children.add(child)
+    await vi.waitFor(() =>
+      expect(processInfo(child).command).toContain('vite.js dev'),
+    )
     writeFileSync(join(root, '.ai/qa/dev-server.pid'), `${wrapper.pid}\n`)
-    await run('--force')
-    expect(live(wrapper.pid)).toBe(false)
-    expect(live(child)).toBe(false)
+    await expect(run('--force')).rejects.toThrow(
+      'Refusing to signal unverified pid',
+    )
+    expect(live(wrapper.pid)).toBe(true)
+    expect(live(child)).toBe(true)
   })
 
   it('does not start a second server when its predecessor refuses SIGTERM', async () => {

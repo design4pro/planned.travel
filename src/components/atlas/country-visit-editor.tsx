@@ -70,6 +70,7 @@ export function CountryVisitEditor({
   }
   async function open() {
     if (opening.current || disabled || pending) return
+    const focused = document.activeElement
     opening.current = true
     setLoading(true)
     setError('')
@@ -95,7 +96,13 @@ export function CountryVisitEditor({
       opening.current = false
       if (alive.current) {
         setLoading(false)
-        requestAnimationFrame(() => (first.current ?? trigger.current)?.focus())
+        requestAnimationFrame(() => {
+          if (
+            document.activeElement === focused ||
+            (!focused?.isConnected && document.activeElement === document.body)
+          )
+            (first.current ?? trigger.current)?.focus()
+        })
       }
     }
   }

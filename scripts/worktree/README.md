@@ -73,6 +73,10 @@ Bootstrap and the test environment share `.ai/qa/dev-server-process.json`; a fre
 only the verified predecessor from this checkout. PID reuse, another cwd or an unverifiable
 identity blocks replacement. Busy ports report their holders and cwd, including orphan markers;
 foreign processes are never terminated automatically.
+An older PID-only record cannot prove ownership: stop that process manually, then retry startup.
+On Linux, process arguments and the Node executable are verified separately, including paths with
+spaces. On other platforms, ambiguous script paths containing spaces cannot be verified and block
+recording or replacement; use a checkout path without spaces.
 
 The port is written into `APP_URL` in the `.dev.vars` this script owns, because every auth URL is
 built from that value. A `.dev.vars` written by a person carries no marker of ours: it is left
