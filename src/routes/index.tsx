@@ -213,6 +213,7 @@ function PricingSummary() {
           variant="ghost"
           size="md"
           shape="pill"
+          className="h-auto min-h-10 max-w-full shrink whitespace-normal py-2 text-center"
           iconAfter={<ArrowRight aria-hidden className="size-4" />}
         >
           <Link to="/pricing">{t('marketing.landing.plans.compare')}</Link>
