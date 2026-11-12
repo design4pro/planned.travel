@@ -460,7 +460,10 @@ export function FileLibrary({
         }}
         className="min-h-11 min-w-0 flex-1 rounded-sm text-start outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
-        <span className="block font-medium text-ink [overflow-wrap:anywhere] sm:truncate">
+        <span
+          dir="auto"
+          className="block font-medium text-ink [overflow-wrap:anywhere] sm:truncate"
+        >
           {file.filename}
         </span>
         {file.description === null ? null : (
@@ -873,10 +876,10 @@ export function FileLibrary({
                 <TableHead className="w-24" numeric>
                   {t('modules.files.column.size')}
                 </TableHead>
-                <TableHead className="hidden w-36 sm:table-cell">
+                <TableHead className="hidden w-16 truncate sm:table-cell md:w-36">
                   {t('modules.files.column.addedBy')}
                 </TableHead>
-                <TableHead className="hidden w-24 sm:table-cell">
+                <TableHead className="hidden w-32 sm:table-cell">
                   {t('modules.files.column.when')}
                 </TableHead>
                 <TableHead className="w-12">
@@ -911,9 +914,14 @@ export function FileLibrary({
                       {formatStorage(file.sizeBytes)}
                     </TableCell>
                     <TableCell truncate muted className="hidden sm:table-cell">
-                      {nameFor(people, file.uploadedBy, t)}
+                      <span dir="auto" className="block truncate">
+                        {nameFor(people, file.uploadedBy, t)}
+                      </span>
                     </TableCell>
-                    <TableCell muted className="hidden sm:table-cell">
+                    <TableCell
+                      muted
+                      className="hidden whitespace-nowrap sm:table-cell"
+                    >
                       {/* Relative time can cross a minute between SSR and hydration. */}
                       {(hintMounted
                         ? formatRelative(file.createdAt, now, locale)
