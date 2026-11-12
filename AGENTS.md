@@ -1,5 +1,7 @@
 # planned.travel
 
+For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
+
 Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 19, D1/Drizzle, KV, R2, Durable Objects, Queues). Package manager: pnpm. Stack is pinned — see docs/SPEC.md §3 before adding or changing any dependency.
 
 ## Commands
@@ -17,9 +19,17 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 
 Pipeline helpers: run `node scripts/ci/validation.mjs` for the ordered configured gate (`--resume` is local interruption recovery, never CI evidence). Use `node .ai/scripts/pr-state.mjs <pr> [--wait]` for compact, paginated PR/CI evidence; unknown checks never pass and existing merge/QA/security gates still apply. See SDLC.md and docs/agents/cezar.md.
 
+Release-content contract only: [ADR 0051](docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
+
 ## Rules
 
-- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are four, and closed (SPEC §6, ADR 0049): the bounded `repos/account-security.ts` account-auth capability, `server/catalog` (including the driver-only workspace deletion ledger, ADR 0048), the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
+- All SQL lives in `server/repos` and goes through the tenant-scoped base repository; the stated exceptions are five, and closed (SPEC §6, ADR 0049, ADR 0051): the bounded `repos/account-security.ts` account-auth capability, `server/catalog` (including the driver-only workspace deletion ledger, ADR 0048), the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`; adding one is a contract change) and the `…Unscoped` shape. The fifth is the bounded seven-table content/release repository exception in SPEC §5 and ADR 0051, owned only by `repos/content.ts` and `repos/releases.ts` with a plain `Database`; it does not expand catalog or FU-3. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Full contract: docs/SPEC.md §5/§6.
 - `components/ui` never fetches data and never imports from `server/`.
 - Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception; raw SQL against them stays limited to the provisioning module and the closed account-auth repository (SPEC §6, ADR 0049).
 - Validate every server-function input with Zod. Named exports only (route modules excepted).
@@ -36,6 +46,11 @@ Pipeline helpers: run `node scripts/ci/validation.mjs` for the ordered configure
 - A push cancels the queued CI run (`concurrency` with `cancel-in-progress` in `.github/workflows/ci.yml`) and sends the PR to the back of the runner queue, which has stalled 35-85 minutes (#1037, #935, #789, #986, #922). When a required check is `queued`, fold every pending review, QA and base-merge fix into one push, and do not cancel and re-run a queued run. Check the org-level pool first (the VPS runners are not repository runners, so `repos/design4pro/planned.travel/actions/runners` always answers `total_count: 0`): `gh api orgs/design4pro/actions/runners -q '.runners[] | {name,status,busy,labels:[.labels[].name]}'`. Every `ci` runner busy means the queue is just waiting, so batch the push; no `ci` runner online means no push helps and it is the host's `RUNNER_CI` call (ADR 0027). A token that cannot read the org runners: report the queued check and stop, do not conclude there are none.
 - A server module that reaches `cloudflare:workers` (billing runtime, `transit/bindings`, a route importing the binding) cannot be loaded by the Node `server` test project. Put the logic in a `-lib/` handler or a wire-validator module that takes the binding as an argument, or `vi.mock` both bindings in the handler test (#1049, #966, #1043).
 - A `ui` test has two traps of the same kind. A component that gains an import chain reaching `cloudflare:workers` (`#/components/modules/files/upload`, `#/components/layout/visitor-language-switcher`) breaks every jsdom suite that renders it, and each needs `vi.mock` of that module (#1230, #1491). The project has no jest-dom matchers: assert with `getAttribute`, `textContent` and `document.activeElement`, not `toBeDisabled` or `toHaveFocus` (#1381, #1522).
+
+- Workspace deletion's reserved driver passes trusted catalog authority beside scope. Every drain
+  and final organization DELETE binds `workspaceDeletionAuthorityPresent` at SQLite execution;
+  `workspaceDeletionAuthorityCurrent` is diagnostic only. These named catalog fragments expose no
+  ledger projection and do not expand request inputs or the tenant factory (SPEC §§5–6, ADR 0048).
 
 ## Domain
 

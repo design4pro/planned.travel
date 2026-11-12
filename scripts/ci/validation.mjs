@@ -11,6 +11,7 @@ import {
   existsSync,
   unlinkSync,
   rmdirSync,
+  rmSync,
 } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -116,16 +117,30 @@ export function gateFingerprint(cwd, commands) {
   return hash.digest('hex')
 }
 
-/** Own the process group so the timeout also stops child workers. */
+/**
+ * Own the process group for timeout termination. A non-ESRCH termination error
+ * settles as infrastructure failure, retaining temp and group ownership metadata;
+ * settlement does not establish that child workers stopped.
+ */
 export function runValidationCommand(
   command,
   { cwd, logPath, timeoutMs = 540_000 },
 ) {
+  const state = join(cwd, '.ai/tmp/validation')
+  mkdirSync(state, { recursive: true, mode: 0o700 })
+  const temporary = mkdtempSync(join(state, 'tmp-'))
+  let terminationUnverified = false
   return new Promise((done) => {
     const started = Date.now()
     const fd = openSync(logPath, 'w', 0o600)
     const child = spawn('bash', ['-o', 'pipefail', '-c', command], {
       cwd,
+      env: {
+        ...process.env,
+        TMPDIR: temporary,
+        TMP: temporary,
+        TEMP: temporary,
+      },
       detached: process.platform !== 'win32',
       stdio: ['ignore', fd, fd],
     })
@@ -134,20 +149,35 @@ export function runValidationCommand(
     let interrupted = false
     let force
     let finished = false
-    const stop = (signal) => {
-      if (!child.pid) return
+    let terminationError
+    const pgid = process.platform === 'win32' ? child.pid : -child.pid
+    const stop = (signal, phase) => {
+      if (!child.pid) return true
       try {
-        process.kill(
-          process.platform === 'win32' ? child.pid : -child.pid,
-          signal,
-        )
+        process.kill(pgid, signal)
       } catch (error) {
-        if (error.code !== 'ESRCH') throw error
+        if (error.code !== 'ESRCH') {
+          terminationUnverified = true
+          terminationError ??= {
+            code: error.code,
+            message: error.message,
+            signal,
+            phase,
+          }
+          return false
+        }
       }
+      return true
     }
     const terminate = () => {
-      stop('SIGTERM')
-      force = setTimeout(() => stop('SIGKILL'), 5000)
+      if (!stop('SIGTERM', 'initial')) {
+        finish(1, null)
+        return
+      }
+      clearTimeout(force)
+      force = setTimeout(() => {
+        if (!stop('SIGKILL', 'force')) finish(1, null)
+      }, 5000)
     }
     const interrupt = () => {
       interrupted = true
@@ -162,7 +192,7 @@ export function runValidationCommand(
     const finish = (code, signal) => {
       if (finished) return
       finished = true
-      if (timedOut || interrupted) stop('SIGKILL')
+      if (timedOut || interrupted) stop('SIGKILL', 'close')
       clearTimeout(timer)
       clearTimeout(force)
       process.removeListener('SIGINT', interrupt)
@@ -182,10 +212,26 @@ export function runValidationCommand(
         result = 'interrupted'
         exitCode = 130
       }
-      done({ exitCode, result, durationMs: Date.now() - started, logPath })
+      const priorResult = result
+      if (terminationError) {
+        result = 'infrastructure'
+        exitCode = 1
+      }
+      done({
+        exitCode,
+        result,
+        durationMs: Date.now() - started,
+        logPath,
+        ...(terminationError
+          ? { terminationError, pgid, pid: child.pid, priorResult, temporary }
+          : {}),
+      })
     }
     child.once('error', () => finish(127, null))
     child.once('close', finish)
+  }).finally(() => {
+    if (!terminationUnverified)
+      rmSync(temporary, { recursive: true, force: true })
   })
 }
 

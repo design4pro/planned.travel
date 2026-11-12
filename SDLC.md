@@ -1,5 +1,7 @@
 # Software delivery process
 
+For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
+
 ## Purpose
 
 This file documents how work flows from ticket to merged PR in this repository. The agent skills configured in `.ai/agentic.config.json` enforce the process; humans read it here. Issues and PRs live in GitHub, with every tracker operation the skills run defined in `.ai/trackers/github.md` (edit that file to extend or override tracker behavior).
@@ -182,7 +184,12 @@ Use `node scripts/ci/validation.mjs` to execute that list in order. It expands t
 command into the same three Vitest projects (UI starts as four complete shards after exceeding this
 host's nine-minute budget), bounds each job to nine minutes and retries a timed-out
 or killed project as all four shards. It emits a compact JSON result with full log paths under
-`.ai/tmp/validation/`. `--resume` reuses successful local jobs only when the tracked content, command
+`.ai/tmp/validation/`. Each command receives a private temporary directory there through
+`TMPDIR`, `TMP` and `TEMP`, isolating transformation caches from the host temporary filesystem.
+After exit or verified timeout termination it is removed. An unverified termination instead fails
+closed as infrastructure/exit 1 without shard retry, retaining caller-owned diagnostics and group
+metadata in the receipt; see [retained diagnostic ownership](docs/agents/cezar.md).
+`--resume` reuses successful local jobs only when the tracked content, command
 list, runtime, environment and installed manifest digest match; stage untracked inputs first.
 Ignored fixtures, services and changes inside installed packages are outside that digest, so resume
 is a local interruption-recovery convenience, never trusted CI evidence. After those inputs change,
@@ -272,6 +279,9 @@ Two amendment rules are specific to this document's shape:
   `src/server/email` or a locale file carries `needs-qa`; everything else carries `skip-qa`. The
   visual judgement is the blind pair of ADR 0016, and critical journeys replace the old visual gate;
   `om-auto-qa-pr` evidence complements that and never replaces it.
+  The sole base/head-pair alternative is SPEC §7’s bounded base-absent unmounted-screen
+  exception, with its complete non-comparative evidence and unanimous independent panel;
+  existing and mounted screens retain comparisons.
 - **What a ticket contains** beyond the Definition of Ready: `docs/agents/issue-tracker.md`. The
   label page is `docs/agents/triage-labels.md`, and the live automation definitions are
   `docs/agents/cezar-automations.json` (see `docs/agents/cezar.md`).
@@ -394,6 +404,8 @@ more (ADR 0030), so this is a rule the skills follow, not one a hook enforces.
 One further exception is not ours: `.claude/skills/` is pinned by `skills-lock.json` to
 `open-mercato/skills`, to which we have no push rights. A repo-specific rule belongs in an
 `.ai/skills/<name>/SKILL.md` extension instead; an extension can never relax a skill's safety rules, except the unattended QA sign-off decided in ADR 0031 (the QA gate).
+The explicitly owner-approved base-absent unmounted-screen evidence exception in SPEC §7
+is also permitted within its exact conditions; it grants no general QA or security waiver.
 
 `money-tracker.online` carries an agent layer that started as a copy of this one. Nothing keeps the
 two in step, and nothing is meant to: each repository tunes its own. A fix that genuinely belongs in

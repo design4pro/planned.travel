@@ -233,8 +233,18 @@ decides** (end of this spec). The default is the most reversible one: the produc
 The ledger row is written first (after the authentication checks and before the checks that read mutable state, § The
 confirmation) and every later step is read from it, so a crash at any point resumes. A step is idempotent and moves the row to
 the next state with a compare-and-set that also takes a **lease** (`lease_until`, five minutes) and clears it on the
-transition, so the request, the queue handler and the cron never run the same step together. A run that outlasts its lease
-cannot corrupt anything: every step is safe to run twice and the audit append is one `INSERT … WHERE NOT EXISTS`.
+transition. A worker can outlast its lease, so every destructive SQL statement must atomically
+require the catalog-owned live authority EXISTS as well as tenant/member/subscription eligibility.
+The predicate matches deletion/organization/token/initiator/requester, no refusal intent, and only
+`requested` for each of the seven drain tables or `drained` for the final organization cascade.
+Expiry is strict at SQL execution (including after room closure); equality/null time or expiry denies.
+The authority is internal and passed beside scope, never request input. Empty SELECT/zero-row
+DELETE uses a catalog boolean diagnostic: lost authority returns `lost-lease` with no replacement
+mutation or false drained/deleted/business-refusal result; genuine absent organization recovery
+and empty-table completion require current authority. The audit insert separately binds persisted
+outcome and live lease. Before producer activation every older unfenced Worker and its in-flight
+destructive execution must retire; rollback to that writer is unsafe. This establishes the lease fence only; staged AC6/AC8 contract acceptance remains an independent gate,
+with no partial landing, erasure engine or delivery activation.
 
 | State          | Work, in order                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Next state     |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
@@ -244,6 +254,35 @@ cannot corrupt anything: every step is safe to run twice and the audit append is
 | `audited`      | Sweep `WORKSPACE_R2_PREFIXES` for `<org>/`: list, delete 1,000 keys, repeat (at most 20 batches a run); when a pass finds nothing, record `swept_at`                                                                                                                                                                                                                                                                                                                                                                                                                 | `swept`        |
 | `swept`        | Only when `swept_at` is at least 15 minutes old, sweep again and confirm nothing is left (an upload that raced the cascade, put before its row, is caught here); a run before that returns without work. Then `done_at`                                                                                                                                                                                                                                                                                                                                              | `done`         |
 | `refused`      | Terminal. Another member, a live subscription or an unreadable Polar answer found after the fence went up, or (a window of a few milliseconds, between a hook's ledger read and the library's member write) a member who joined during the drain. Fence lifted, logged at `error`; the owner is emailed and `platform.workspace.deletion_refused` is appended when anything had been drained; an `erasure` row wakes its erasure job instead (§ The erasure resume)                                                                                                  | none           |
+
+**Phase 6 refusal durability clarification (#1741, candidate only).** Before refusal follow-up,
+the catalog CAS records nullable `refusal_reason` (the three refusal codes) under the live lease
+while state remains `requested`/`drained`. That first intent is immutable for this row: retries
+never recheck eligibility to resume destructive work. The owner path awaits idempotent refusal
+notice acceptance; erasure awaits its resume port and never sends an owner notice. Then the
+throwing audit insert predicates on persisted intent/state/live lease, confirms the single
+`workspace-deletion:<id>` outcome, and terminal CAS clears receipt PII and lifts the fence. A
+failed delivery/audit/CAS retains nonterminal intent and PII for recovery. A fresh owner attempt
+after terminal refusal uses a new row. The additive column is catalog-validated rather than a
+new database CHECK that would rebuild the deployed table.
+
+**Phase 6 staged delivery contract (#1741, candidate only).** AC9 stages external queue/email
+operations as tested ports. The driver derives strict readonly requests from trusted leased rows:
+`person-erasure:<erasureId>:<deletionId>`, kind `person-erasure`, `delaySeconds: 30`, and a payload
+containing only opaque erasure/deletion ids. Refusal notice identity is
+`workspace-deletion:<deletionId>:refused`; recipient/name and immutable reason come from the row.
+Both require explicit `{ accepted: true, id }` matching the request before terminal/audited CAS.
+The original erasure delivery parks without consuming; the canonical resume on a nonterminal
+row throws retryable-not-ready (30 seconds), never successful park or done-marker permission.
+Driver recovery reissues the SAME id after audit/CAS failure and after five-attempt exhaustion;
+adapter acceptance must not permanently deduplicate delivery admission. Terminal-only catalog
+consume still admits one envelope and its redeliveries; refusal returns `workspace-refused:<deletionId>`.
+Recording-sink/migration-backed SQLite evidence tests this inert protocol; independent exact-candidate
+acceptance and the full gate remain required. Production defaults still throw: no live delivery,
+erasure ledger insert, engine, queue kind, handler or producer is activated. The functioning #1060
+consumer and reviewed adapters remain later activation prerequisites, not prerequisites to testing
+this staged contract. Preserve #1060 HUMAN-ONLY and #811 closing hold. Runtime emits bounded refusal events at error level
+and replaces raw errors before queue/cron diagnostics, preserving retry classification/delay.
 
 Why **this order**: the guard and the cascade are one statement, so nothing is deleted outside the checks; the audit row is
 written after the cascade (docs/ACCESS.md §4.3: "after the mutation commits") but the ledger holds every fact it needs until
@@ -443,8 +482,8 @@ One new global table, additive (one `CREATE TABLE`; no existing table changes; `
 `workspace_deletions` - `id` (pk), `organization_id` (text, not null, **no foreign key**: attribution only, as
 `provider_usage.organization_id` is, so the cascade cannot reach it), `requested_by` (`userRef`, nullable: null for an
 erasure), `initiator` (`owner` or `erasure`, `enumCheck`), `erasure_id` (nullable, set only for an erasure: the erasure spec's opaque id, no person data, so the driver can resume the erasure job), `state` (`requested`, `drained`, `rows_deleted`, `audited`,
-`swept`, `done`, `refused`, `enumCheck`), `lease_until`, `attempts`, `last_error` (a short code), `erasure_consumer` (nullable, set only for an erasure: the envelope id of the one job that consumed the row, § The erasure resume), `snapshot` (JSON: plan,
-subscription status, counts, objects deleted), `receipt_to` and `receipt_name` (nullable, cleared when the receipt is queued),
+`swept`, `done`, `refused`, `enumCheck`), `lease_until`, `attempts`, `last_error` (a short code), `refusal_reason` (nullable validated refusal code, added by the Phase 6 migration), `erasure_consumer` (nullable, set only for an erasure: the envelope id of the one job that consumed the row, § The erasure resume), `snapshot` (JSON: plan,
+subscription status, counts, objects deleted), `receipt_to` and `receipt_name` (nullable, cleared when receipt delivery is accepted or after accepted refusal notice, confirmed audit and terminal CAS),
 `requested_at`, `updated_at`, `swept_at`, `done_at`. Indexes: a **partial
 unique index** on `organization_id` where `state <> 'refused'` (one live deletion per workspace, and an idempotent re-request
 returns the existing row), and `(state, updated_at)` for the cron. The `CHECK`s are in the `CREATE TABLE` (adding one later is
@@ -751,7 +790,6 @@ that lists and removes the memberless workspaces of #1062 through the same `dele
 
 Two rounds ran (the limit of `afk-plan-to-spec` §5); the round 2 changes were applied by the author and not re-reviewed by the
 same specialists, which the spec PR says plainly.
-
 
 ## Amendment - authenticated departure recovery (#1431)
 

@@ -20,7 +20,7 @@ product itself. This document is about platform roles only.
 
 The dictionary lives in `src/server/auth/access.ts` - isomorphic, no server imports, so the
 console, the guard and the MCP server all read the same object. It is Better Auth's
-`defaultStatements` from the pinned `better-auth@1.7.1` `admin` plugin, extended with five
+`defaultStatements` from the pinned `better-auth@1.7.1` `admin` plugin, extended with six
 resources of ours.
 
 ### 1.1 Printed in full
@@ -37,6 +37,7 @@ export const statement = {
   source: ['read', 'run'],
   share: ['read', 'revoke'],
   sandcastle: ['read'],
+  provider: ['read', 'configure'],
 } as const
 
 export const ac = createAccessControl(statement)
@@ -63,7 +64,7 @@ user: [
 session: ['list', 'revoke', 'delete']
 ```
 
-Together with our five resources, the complete dictionary is:
+Together with our seven application resources, the current runtime dictionary is:
 
 | Resource     | Actions                                                                                                                                    |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -73,9 +74,13 @@ Together with our five resources, the complete dictionary is:
 | `pack`       | `read` · `write` · `publish`                                                                                                               |
 | `source`     | `read` · `run`                                                                                                                             |
 | `share`      | `read` · `revoke`                                                                                                                          |
+| `provider`   | `read` · `configure`                                                                                                                       |
 | `sandcastle` | `read`                                                                                                                                     |
+| `release` | `review` · `publish` |
 
-**The dictionary is closed at seven resources.** An eighth resource, or a new action on an existing
+**The current runtime dictionary is closed at nine resources.** ADR 0051's `release` resource
+(`review`, `publish`) is implemented by the bounded local/preview persistence slice (#1873).
+Any other resource, or a new action on an existing
 one, is an edit to this document and to the grid in §2 in the same commit. Authority that has no
 statement of its own is expressed with the statements above - see §2.4 for MCP tokens.
 
@@ -86,7 +91,7 @@ whichever roles enumerate `user` actions by spread. So a unit test deep-equals
 changes the upstream dictionary fails that test and forces a decision here, rather than shipping a
 statement nobody in this document has ruled on.
 
-### 1.2 What our five resources cover
+### 1.2 What our seven application resources cover
 
 | Resource     | Tables it governs                                                    | `read`                                                                                                                              | `write`                                                                      | `publish` / `run` / `revoke`                                    |
 | ------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
@@ -94,7 +99,9 @@ statement nobody in this document has ruled on.
 | `pack`       | `place_packs`, `place_pack_places`                                   | See packs that are not `published`                                                                                                  | Create and update a pack, set its places and their order                     | `publish`: publish or retire a pack                             |
 | `source`     | `catalog_sources`, `catalog_runs`                                    | See sources and their run history                                                                                                   | -                                                                            | `run`: enable or disable a source, and start a run now          |
 | `share`      | `share_links` (every tenant's), through the moderation surface only  | The moderation list defined in §3.4, reached the one legal way §2.4 specifies                                                       | -                                                                            | `revoke`: stamp `revoked_at` on a share link                    |
+| `provider`   | `provider_registry`, `provider_usage`                                | Inspect provider controls and usage                                                                                                 | `configure`: change provider limits/policy                                   | -                                                               |
 | `sandcastle` | No table at all - the `SandcastleRegistry` Durable Object (ADR 0009) | The run registry as `/console/sandcastle` shows it: live runs, the issues each holds, orphaned WIP branches, recently finished runs | -                                                                            | -                                                               |
+| `release` | The seven shared content/release tables (ADR 0051) | Authenticated published whitelist; no separate read permission | `review`: import and approve exact source revisions or translations | `publish`: receipt, pointer and withdrawal transitions; no production caller in #1873 |
 
 A `published` catalogue or pack row needs **no** statement: it is readable by an entitled tenant
 through `src/server/catalog`, and readable without a session only through the whitelisted
@@ -282,6 +289,37 @@ the page renders "this deployment is not the coordinator" rather than an empty f
 availability are different questions, and answering the second with a permission error would tell an
 admin they lack a statement they hold.
 
+### 2.3b Provider controls
+
+The existing `provider:read` and `provider:configure` statements belong to platform admin
+only (`auth/access.ts`, SPEC §5). Curator and user have neither; workspace roles confer no
+platform authority. Existing ban and impersonation vetoes apply.
+
+### 2.3c Release history - bounded persistence
+
+[ADR 0051](adr/0051-bounded-release-content-contract.md) defines `release:review` and
+`release:publish` in the existing dictionary. `auth/release-authority.ts` refreshes primary
+authority through the trusted Better Auth adapter and calls the same pure guard. The #1873
+repositories have no production mutation caller; deployment evidence seeding accepts only
+local/preview fixtures. Production adapters and writes still require separate approval.
+
+| Actor                                                                                           | `release:review` | `release:publish` |
+| ----------------------------------------------------------------------------------------------- | ---------------- | ----------------- |
+| Platform admin, current non-banned primary identity, no impersonation                           | Allowed          | Allowed           |
+| curator                                                                                         | Denied           | Denied            |
+| user                                                                                            | Denied           | Denied            |
+| Every workspace role, including owner/admin/member/guest                                        | Denied           | Denied            |
+| Banned account, including platform admin                                                        | Denied           | Denied            |
+| Impersonated session, including platform admin                                                  | Denied           | Denied            |
+| Unauthenticated, tenant token, MCP bearer or system actor without separately approved authority | Denied           | Denied            |
+
+Re-read primary role and ban state immediately before calling the existing pure
+`requirePermission`; unavailable authority refuses. Keep `resolvePlatformRole` as the sole
+resolver. Import and source/translation review require `release:review`; receipt, pointer,
+publication and withdrawal mutations require `release:publish`. No workspace membership or
+owner capability confers either permission. All seven-table mutations require atomic audit
+as §4.3 states. These permissions grant no production-write or main-promotion approval.
+
 ### 2.4 The cases the plan left open, closed by name
 
 **A `curator` may revoke another user's share link - yes.** `share:revoke` is in the curator
@@ -326,8 +364,8 @@ closed catalog list was unchanged by FU-3 (ADR 0041). It now has exactly four me
 global tables, reminder discovery, the erasure catalog (ids-only discovery and system-actor cleanup, ADR 0043) and tenant audit retention
 discovery (§4.5); both discovery reads return ids only.
 
-**A `curator` may not issue or revoke MCP tokens - admin-only.** The dictionary is closed at six
-resources (§1.1), so token authority is expressed with existing statements rather than a seventh:
+**A `curator` may not issue or revoke MCP tokens - admin-only.** Token authority uses the
+existing statements in §1.1, not a separate token resource:
 
 - issuing a token into `staff_api_tokens` requires `user:create`, because minting a bearer that
   carries a platform role is materially the act of creating a platform credential;
@@ -539,7 +577,12 @@ and the participation anchor. This tenant action keeps central impersonator attr
 `deleteWorkspace` (`src/server/repos/members.ts`, #1057, #1739) is that repository-SQL deletion.
 It and the bounded `drainWorkspace` require `assertRole(ctx, 'workspace.delete', 'owner')`;
 admins and members are refused. Every destructive statement atomically retains the tenant,
-departing-member and live-subscription guards. This preparation exposes no public deletion action.
+departing-member and live-subscription guards. The driver stages refusal notice acceptance with immutable
+`workspace-deletion:<deletionId>:refused` identity and recipient/reason from its leased row.
+Matching-id acceptance plus verified audit and terminal CAS precede PII clearing; failed notice,
+audit or lease replacement retains recovery state and remaining tenant rows. These are tested
+AC9 ports; production delivery defaults throw until separately reviewed activation. This preparation
+exposes no public deletion action.
 `src/server/auth/__tests__/auth-handler-closure.test.ts` pins the closure against the real handler.
 
 ### 2.7 Creating a workspace
@@ -651,8 +694,8 @@ read: `findLiveFeedByDigestUnscoped` in `src/server/repos/calendar-feeds.ts`, ca
 `src/server/public/calendar-feed.ts`. Its projection is coordinates only; `ResolvedFeed` is branded
 next to repo `openFeedScope`, which alone constructs the scope. The handler holds no SQL.
 
-| Visible | Never visible |
-| --- | --- |
+| Visible                                                                                                                                                                                                                                                        | Never visible                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Trip title and dates; stop names, addresses, times and notes; day titles and notes; stay names and addresses; reservation and transport titles; leg endpoints and service numbers; event ids and edit timestamps; the app address of the trip (login required) | Confirmation numbers, booking references, seats, prices, provider URLs, participants, emails, user ids, workspace identity, files, other trips' data |
 
 Only a person on the trip may create its feed, even when the trip is organization-visible.
@@ -705,9 +748,9 @@ merge prerequisite, not a change to general workflow policy.
   `robots.txt`, because a crawler must fetch the header.
 
 - `/join/$token` (§3.8) is **`noindex`** the same two ways as `/share/$token`: `<meta name="robots"
-  content="noindex, nofollow">` from the route's `head`, and `X-Robots-Tag: noindex, nofollow` from
+content="noindex, nofollow">` from the route's `head`, and `X-Robots-Tag: noindex, nofollow` from
   its `headers`, together with `Cache-Control: private, no-store` and `Referrer-Policy:
-  no-referrer`, on every response, found or not. Its title and description are generic (no trip, no
+no-referrer`, on every response, found or not. Its title and description are generic (no trip, no
   inviter) and the route writes no trip-specific Open Graph or Twitter tag. Do not disallow it in
   `robots.txt`.
 
@@ -719,7 +762,7 @@ the client IP:
 | Budget                           | Limit                                    | Key                                 |
 | -------------------------------- | ---------------------------------------- | ----------------------------------- |
 | Per share token                  | 60 requests / minute                     | `public:rl:<v>:tok:<sha256(token)>` |
-| Per IP, share public routes        | 120 requests / minute                    | `public:rl:<v>:ip:<ip>`             |
+| Per IP, share public routes      | 120 requests / minute                    | `public:rl:<v>:ip:<ip>`             |
 | Per IP, failed token resolutions | 20 / minute, then the IP budget is spent | `public:rl:<v>:miss:<ip>`           |
 
 Over budget is `429` with `Retry-After`. An unknown, revoked or expired token returns exactly the
@@ -734,11 +777,11 @@ write per request.
 The trip invite link (§3.8) spends three of these, in this order, and a dead link of any kind
 spends the miss budget:
 
-| Budget                                      | Limit          | Key                                           |
-| ------------------------------------------- | -------------- | --------------------------------------------- |
-| Per IP, all public routes                   | 120 / minute   | `public:rl:v1:ip:<ip>:<minute>`               |
-| Per IP, failed resolutions ("misses")       | 20 / minute    | `public:rl:v1:invite-miss:<ip>:<minute>`      |
-| Per resolved link                           | 60 / minute    | `public:rl:v1:invite:<sha256(secret)>:<minute>` |
+| Budget                                | Limit        | Key                                             |
+| ------------------------------------- | ------------ | ----------------------------------------------- |
+| Per IP, all public routes             | 120 / minute | `public:rl:v1:ip:<ip>:<minute>`                 |
+| Per IP, failed resolutions ("misses") | 20 / minute  | `public:rl:v1:invite-miss:<ip>:<minute>`        |
+| Per resolved link                     | 60 / minute  | `public:rl:v1:invite:<sha256(secret)>:<minute>` |
 
 Over budget is `429` with `Retry-After` on the **document** (the page renders the neutral
 `join.error.busy` card: a shared NAT or hotel wifi can spend the miss budget, and the copy blames
@@ -748,10 +791,10 @@ has rendered (`src/routes/join/-lib/busy.ts`). Every `/join` request costs one t
 The authenticated join submit (`joinTripFn`) has its own two rows, spent before the secret is
 looked at, so a user or an address guessing secrets through the submit is bounded the same way:
 
-| Budget                              | Limit        | Key                                |
-| ----------------------------------- | ------------ | ---------------------------------- |
-| Join submit, per user               | 10 / minute  | `public:rl:v1:join-user:<id>:<minute>` |
-| Join submit, per IP                 | 30 / minute  | `public:rl:v1:join-ip:<ip>:<minute>`   |
+| Budget                | Limit       | Key                                    |
+| --------------------- | ----------- | -------------------------------------- |
+| Join submit, per user | 10 / minute | `public:rl:v1:join-user:<id>:<minute>` |
+| Join submit, per IP   | 30 / minute | `public:rl:v1:join-ip:<ip>:<minute>`   |
 
 Over either budget the submit answers `busy` (a 200 answer of the server function, not a 429) and the
 card shows the neutral `join.error.busy` line beside the Join button; nothing is written. A dead
@@ -817,12 +860,12 @@ handed in as data (`{ id, banned }`). **`src/server/public/**` stays read-only h
 write that puts a person on a trip is a separate authenticated server function, `joinTripFn`,
 and it is the **single write** on this surface (below).
 
-| Visitor                                             | Visible                                                                                              | Never visible                                                                                                             |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| Anonymous                                           | Trip title, the inviter's display name and avatar, the role the link offers                          | Dates, destination, cover, the workspace's name, slug, id or logo, the inviter's email or user id, every id               |
-| Signed in, member of the link's workspace           | The above, plus the trip's dates and destination; or "already on this trip" with a link to the trip  | `use_count`, `created_by`, the digest, the secret; the trip and workspace ids unless the viewer is already on the trip    |
-| Signed in, **not** a member of the link's workspace | Trip title, the inviter's display name, and the visitor's own signed-in email                        | Dates, destination, the workspace in any form                                                                             |
-| Anything else (all dead links, a banned viewer)     | One identical 404 page                                                                               | Which of unknown, switched off, replaced, archived or creator-gone killed it                                              |
+| Visitor                                             | Visible                                                                                             | Never visible                                                                                                          |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Anonymous                                           | Trip title, the inviter's display name and avatar, the role the link offers                         | Dates, destination, cover, the workspace's name, slug, id or logo, the inviter's email or user id, every id            |
+| Signed in, member of the link's workspace           | The above, plus the trip's dates and destination; or "already on this trip" with a link to the trip | `use_count`, `created_by`, the digest, the secret; the trip and workspace ids unless the viewer is already on the trip |
+| Signed in, **not** a member of the link's workspace | Trip title, the inviter's display name, and the visitor's own signed-in email                       | Dates, destination, the workspace in any form                                                                          |
+| Anything else (all dead links, a banned viewer)     | One identical 404 page                                                                              | Which of unknown, switched off, replaced, archived or creator-gone killed it                                           |
 
 The projections are whitelists: a field in neither column is never selected. A signed-in visitor
 who is a member of the link's workspace is the only one shown dates and destination, because a
@@ -880,20 +923,20 @@ Twelve columns, and this is the whole list. `docs/CATALOG.md` §2.12 depends on 
 not own it, and deliberately reproduces none of it: it points here for the columns, the indexes and
 the retention rather than restating them, so there is one list and it is this one.
 
-| Column          | Type                                                   | Null | Notes                                                                                                                                                            |
-| --------------- | ------------------------------------------------------ | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`            | `pk()`                                                 | no   | nanoid, house convention                                                                                                                                         |
-| `actor_user_id` | `userRef('actor_user_id')`                             | yes  | The human, or the owner of the MCP token. `NULL` only when `actor_kind = 'system'`                                                                               |
-| `actor_kind`    | text, `enumCheck()`                                    | no   | `human` · `agent` · `system`                                                                                                                                     |
-| `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                   |
-| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                              |
-| `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                               |
-| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider`. The mapping to `action` is in §4.2 |
-| `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                          |
-| `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                       |
-| `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                             |
-| `user_agent`    | text                                                   | yes  | The request's `User-Agent` header and nothing else, bounded (§4.1a). `NULL` when the request sent none                                                           |
-| `created_at`    | `createdAt()`                                          | no   | Append time                                                                                                                                                      |
+| Column          | Type                                                   | Null | Notes                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------ | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | `pk()`                                                 | no   | nanoid, house convention; deletion evidence uses `workspace-deletion:<deletionId>` to make retries unique                                                                                   |
+| `actor_user_id` | `userRef('actor_user_id')`                             | yes  | The human, or the owner of the MCP token. `NULL` only when `actor_kind = 'system'`                                                                                                          |
+| `actor_kind`    | text, `enumCheck()`                                    | no   | `human` · `agent` · `system`                                                                                                                                                                |
+| `actor_role`    | text                                                   | yes  | The platform role held **at the moment of the action**: `admin`, `curator` or `user`. `NULL` only when `actor_kind = 'system'`                                                              |
+| `token_id`      | text, FK → `staff_api_tokens.id`, `on delete restrict` | yes  | The credential the call arrived on. Non-`NULL` exactly when `actor_kind = 'agent'`, and `NULL` for every other kind                                                                         |
+| `action`        | text                                                   | no   | Lowercase dotted verb from the closed list in §4.2                                                                                                                                          |
+| `entity_type`   | text                                                   | no   | `catalog_place` · `catalog_ingest` · `place_pack` · `catalog_source` · `user` · `session` · `staff_api_token` · `share_link` · `provider` · `workspace` · `release`. The mapping to `action` is in §4.2 |
+| `entity_id`     | text                                                   | yes  | The row the action touched. `NULL` only for an action whose entity does not exist yet or no longer does                                                                                     |
+| `changes`       | text, JSON                                             | yes  | `{ before, after }` - the fields that moved, on both sides                                                                                                                                  |
+| `ip`            | text                                                   | yes  | The request IP, bounded (§4.1a). `NULL` for `system`                                                                                                                                        |
+| `user_agent`    | text                                                   | yes  | The request's `User-Agent` header and nothing else, bounded (§4.1a). `NULL` when the request sent none                                                                                      |
+| `created_at`    | `createdAt()`                                          | no   | Append time                                                                                                                                                                                 |
 
 This shape adopts the change `docs/CATALOG.md` files as its §13.9 and sketches in its §2.12 - a
 real `token_id` foreign key in place of a token identity smuggled through `user_agent`. That
@@ -950,7 +993,7 @@ Two consequences worth stating, because both were found by measurement:
 above says plain `text` for it while marking `actor_kind` as `text, enumCheck()`, and the
 distinction is the point: §4.2's entity list grows by amendment in the commit that adds the code
 writing it, and a `CHECK` would price each of those amendments at a table recreate. The narrowing
-that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the nine
+that does exist is `$type<PlatformAuditEntityType>()` on the column, so a value outside the eleven
 fails `pnpm typecheck`. The same reasoning governs `action`, whose vocabulary in §4.2 is closed and
 grows the same way. A schema that drops the `CHECK` without adding the `$type` has narrowed the
 column nowhere at all, which is what the first attempt did.
@@ -1036,7 +1079,7 @@ prefix-equals-`entity_type` rule is declared by the table below rather than inhe
 An action on a user, a session, a credential or a share takes the three-segment
 `platform.<entity>.<verb>`, because those entities are named identically in the tenant log of §4.5
 and a bare `user.created` read out of an operational view spanning both tables would be
-attributable to neither. Eighteen of the thirty-four actions below take the first form and sixteen
+attributable to neither. Twenty-four of the forty-two actions below take the first form and eighteen
 take the second; no third form exists.
 
 Everything before the verb fixes the `entity_type` written beside it, so §4.4's query never has to
@@ -1052,7 +1095,9 @@ guess which prefix belongs to which table:
 | `platform.session.*` | `session`         |
 | `platform.token.*`   | `staff_api_token` |
 | `platform.share.*`   | `share_link`      |
+| `platform.workspace.*` | `workspace` |
 | `provider.*`         | `provider`        |
+| `release.*`          | `release`         |
 
 **The list is closed.** Every action this platform can ever write is below. A new action is an
 edit to this table, in the commit that adds the code that writes it.
@@ -1070,44 +1115,46 @@ are reachable only from the console, no MCP tool can produce them, and they are 
 here and are legal here. Those three and every `platform.*` action are what this section owns, and
 they are marked "here" in the last column.
 
-| Action                                | Written when                                                                                                          | Declared in                        |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `catalog_place.created`               | A catalogue record is created                                                                                         | `docs/CATALOG.md` §8.4             |
-| `catalog_place.updated`               | A catalogue record's fields change                                                                                    | `docs/CATALOG.md` §8.4             |
-| `catalog_place.published`             | A record moves to `published`                                                                                         | `docs/CATALOG.md` §8.4             |
-| `catalog_place.retired`               | A record moves to `retired`                                                                                           | `docs/CATALOG.md` §8.4, §7.2       |
-| `catalog_place.status_changed`        | Any other status transition                                                                                           | `docs/CATALOG.md` §8.4, §7.2       |
-| `catalog_place.licence_escalated`     | A new source forces a stricter licence and unpublishes the record                                                     | `docs/CATALOG.md` §5.4 rule 3      |
-| `catalog_ingest.promoted`             | An ingest row becomes a new catalogue record                                                                          | `docs/CATALOG.md` §8.4             |
-| `catalog_ingest.merged`               | An ingest row is merged into an existing record                                                                       | `docs/CATALOG.md` §8.4             |
-| `catalog_ingest.rejected`             | An ingest row is rejected with a reason                                                                               | `docs/CATALOG.md` §8.4             |
-| `place_pack.created`                  | A pack is created                                                                                                     | `docs/CATALOG.md` §8.4             |
-| `place_pack.places_set`               | A pack's member places or their order change                                                                          | `docs/CATALOG.md` §8.4             |
-| `place_pack.published`                | A pack moves to `published`                                                                                           | `docs/CATALOG.md` §8.4             |
-| `catalog_source.run_started`          | A source run is started, by a curator or by the weekly cron                                                           | `docs/CATALOG.md` §8.4             |
-| `place_pack.retired`                  | A pack moves to `retired` - console-only; no MCP tool retires a pack                                                  | here (`pack:publish`, §1.2)        |
-| `catalog_source.enabled`              | A source is enabled - console-only                                                                                    | here (`source:run`, §1.2)          |
-| `catalog_source.disabled`             | A source is disabled - console-only                                                                                   | here (`source:run`, §1.2)          |
-| `platform.user.created`               | An account is created from the console                                                                                | here (`user:create`)               |
-| `platform.user.updated`               | An account's profile fields are changed from the console                                                              | here (`user:update`)               |
-| `platform.user.role_changed`          | A platform role is set; `changes` carries before and after                                                            | here (`user:set-role`)             |
-| `platform.user.banned`                | An account is banned; `changes` carries reason and expiry                                                             | here (`user:ban`)                  |
-| `platform.user.unbanned`              | A ban is lifted                                                                                                       | here (`user:ban`)                  |
-| `platform.user.deleted`               | An account is deleted; refused for the only owner of a workspace other people belong to (`target-sole-owner`, no row) | here (`user:delete`)               |
-| `platform.user.password_set`          | An administrator sets a password; the value is never in `changes`                                                     | here (`user:set-password`)         |
-| `platform.user.email_set`             | An administrator changes an address                                                                                   | here (`user:set-email`)            |
-| `platform.user.impersonation_started` | Impersonation begins; `entity_id` is the target; `changes.after.organizationId` is the workspace the session starts in (§6.4) | here (§6)                          |
-| `platform.user.impersonation_ended`   | Impersonation ends by the **End impersonation** action                                                                | here (§6)                          |
-| `platform.user.impersonation_workspace_changed` | An impersonated session changes its active workspace, from `databaseHooks.session.update` (§6.4); `entity_id` is the target, the actor is the operator | here (§6.4) |
-| `platform.session.revoked`            | One session of one account is revoked                                                                                 | here (`session:revoke`)            |
-| `platform.session.revoked_all`        | Every session of one account is revoked                                                                               | here (`session:revoke`)            |
-| `platform.token.issued`               | An MCP token is minted; the token itself is never in `changes`                                                        | here (§5)                          |
-| `platform.token.revoked`              | An MCP token is revoked, by hand or by a role change                                                                  | here (§5)                          |
-| `platform.share.revoked`              | A moderator revokes a share link                                                                                      | here (`share:revoke`, §2.4)        |
-| `provider.limit_changed`              | A third-party call ceiling or its window is set; `changes` carries before and after                                   | here (`provider:configure`, §2.3b) |
-| `provider.policy_changed`             | A provider's over-ceiling policy moves between `allow` and `block`                                                    | here (`provider:configure`, §2.3b) |
+| Action                                          | Written when                                                                                                                                           | Declared in                        |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| `catalog_place.created`                         | A catalogue record is created                                                                                                                          | `docs/CATALOG.md` §8.4             |
+| `catalog_place.updated`                         | A catalogue record's fields change                                                                                                                     | `docs/CATALOG.md` §8.4             |
+| `catalog_place.published`                       | A record moves to `published`                                                                                                                          | `docs/CATALOG.md` §8.4             |
+| `catalog_place.retired`                         | A record moves to `retired`                                                                                                                            | `docs/CATALOG.md` §8.4, §7.2       |
+| `catalog_place.status_changed`                  | Any other status transition                                                                                                                            | `docs/CATALOG.md` §8.4, §7.2       |
+| `catalog_place.licence_escalated`               | A new source forces a stricter licence and unpublishes the record                                                                                      | `docs/CATALOG.md` §5.4 rule 3      |
+| `catalog_ingest.promoted`                       | An ingest row becomes a new catalogue record                                                                                                           | `docs/CATALOG.md` §8.4             |
+| `catalog_ingest.merged`                         | An ingest row is merged into an existing record                                                                                                        | `docs/CATALOG.md` §8.4             |
+| `catalog_ingest.rejected`                       | An ingest row is rejected with a reason                                                                                                                | `docs/CATALOG.md` §8.4             |
+| `place_pack.created`                            | A pack is created                                                                                                                                      | `docs/CATALOG.md` §8.4             |
+| `place_pack.places_set`                         | A pack's member places or their order change                                                                                                           | `docs/CATALOG.md` §8.4             |
+| `place_pack.published`                          | A pack moves to `published`                                                                                                                            | `docs/CATALOG.md` §8.4             |
+| `catalog_source.run_started`                    | A source run is started, by a curator or by the weekly cron                                                                                            | `docs/CATALOG.md` §8.4             |
+| `place_pack.retired`                            | A pack moves to `retired` - console-only; no MCP tool retires a pack                                                                                   | here (`pack:publish`, §1.2)        |
+| `catalog_source.enabled`                        | A source is enabled - console-only                                                                                                                     | here (`source:run`, §1.2)          |
+| `catalog_source.disabled`                       | A source is disabled - console-only                                                                                                                    | here (`source:run`, §1.2)          |
+| `platform.user.created`                         | An account is created from the console                                                                                                                 | here (`user:create`)               |
+| `platform.user.updated`                         | An account's profile fields are changed from the console                                                                                               | here (`user:update`)               |
+| `platform.user.role_changed`                    | A platform role is set; `changes` carries before and after                                                                                             | here (`user:set-role`)             |
+| `platform.user.banned`                          | An account is banned; `changes` carries reason and expiry                                                                                              | here (`user:ban`)                  |
+| `platform.user.unbanned`                        | A ban is lifted                                                                                                                                        | here (`user:ban`)                  |
+| `platform.user.deleted`                         | An account is deleted; refused for the only owner of a workspace other people belong to (`target-sole-owner`, no row)                                  | here (`user:delete`)               |
+| `platform.user.password_set`                    | An administrator sets a password; the value is never in `changes`                                                                                      | here (`user:set-password`)         |
+| `platform.user.email_set`                       | An administrator changes an address                                                                                                                    | here (`user:set-email`)            |
+| `platform.user.impersonation_started`           | Impersonation begins; `entity_id` is the target; `changes.after.organizationId` is the workspace the session starts in (§6.4)                          | here (§6)                          |
+| `platform.user.impersonation_ended`             | Impersonation ends by the **End impersonation** action                                                                                                 | here (§6)                          |
+| `platform.user.impersonation_workspace_changed` | An impersonated session changes its active workspace, from `databaseHooks.session.update` (§6.4); `entity_id` is the target, the actor is the operator | here (§6.4)                        |
+| `platform.session.revoked`                      | One session of one account is revoked                                                                                                                  | here (`session:revoke`)            |
+| `platform.session.revoked_all`                  | Every session of one account is revoked                                                                                                                | here (`session:revoke`)            |
+| `platform.token.issued`                         | An MCP token is minted; the token itself is never in `changes`                                                                                         | here (§5)                          |
+| `platform.token.revoked`                        | An MCP token is revoked, by hand or by a role change                                                                                                   | here (§5)                          |
+| `platform.share.revoked`                        | A moderator revokes a share link                                                                                                                       | here (`share:revoke`, §2.4)        |
+| `platform.workspace.deleted`                    | The deletion driver confirms the guarded organization deletion; ids, plan/status and counts only                                                       | §2.6, workspace deletion driver    |
+| `platform.workspace.deletion_refused`           | The deletion driver records a refusal after draining workspace data; no name, email or content                                                         | §2.6, workspace deletion driver    |
+| `provider.limit_changed`                        | A third-party call ceiling or its window is set; `changes` carries before and after                                                                    | here (`provider:configure`, §2.3b) |
+| `provider.policy_changed`                       | A provider's over-ceiling policy moves between `allow` and `block`                                                                                     | here (`provider:configure`, §2.3b) |
 
-Thirty-four actions. Five notes so the list cannot be miscounted or misread:
+Thirty-six actions. Five notes so the list cannot be miscounted or misread:
 
 - `catalog.run.poll` appears in `docs/CATALOG.md` §2.4 and is **not** in this list on purpose. It is
   the name of a queue task on `TASKS`, not an audit action, and nothing writes a
@@ -1137,6 +1184,12 @@ regex, and that every one of them begins with a prefix listed in the prefix tabl
 the machine-checkable half of the shape, and the half §4.4's query depends on. A name that exists
 in code and not in this table fails it; so does a name in this table that nothing writes.
 
+The release-only vocabulary includes the closed actions `release.imported`, `release.reviewed`,
+`release.translation_reviewed`, `release.deployment_recorded`, `release.published` and
+`release.withdrawn`, each with entity type `release`. They are implemented by the
+bounded local/preview persistence slice (#1873). Metadata is bounded ids, hashes, outcomes and reason
+codes only, never prose, credentials, raw payloads or tenant content (ADR 0051).
+
 ### 4.3 Append-only, and never a reason to fail
 
 The tenant log now shares the 400-day weekly window, with tenant-scoped bounded writes (§4.5).
@@ -1153,6 +1206,14 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   row change commits, then the entry is appended, and a rejected append is a logging incident
   raised through `src/server/observability` - never a `500` handed to the caller, and never a
   rollback of work that already succeeded.
+- **Workspace deletion waits for durable evidence.** The resumable driver uses the throwing
+  `appendWorkspaceDeletionAudit` variant after the guarded organization delete. It inserts only
+  when the deletion id has no evidence, reads the row back, and advances only after confirmation;
+  a failure leaves the ledger recoverable. Retries, including an expired lease holder, cannot
+  append a second row. Evidence contains ids, plan/status and counts, never a workspace name,
+  receipt address or content. Erasure evidence requires a `system` actor with no user id. Ordinary
+  callers retain the non-throwing audit contract above. Both workspace actions retain the existing
+  400-day audit window; terminal deletion ledger rows retain their separate 30-day window.
 - **Ban and impersonation are always audited.** `platform.user.banned`, `platform.user.unbanned`,
   `platform.user.impersonation_started`, `platform.user.impersonation_ended` and
   `platform.user.impersonation_workspace_changed` are audited subject to the stated gaps below. For the first
@@ -1184,7 +1245,7 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   a wrapper misses a direct `POST /api/auth/organization/set-active`. Removing the target from a
   workspace is not one of them: the plugin clears only the session of the member who makes the call,
   so the worn session keeps its workspace and the §6.4 fallback applies on the next request. The
-  workspace the session *starts* in is not this row's business: `platform.user.impersonation_started`
+  workspace the session _starts_ in is not this row's business: `platform.user.impersonation_started`
   carries it as `changes.after.organizationId` (§6.4), so start, switches and end read as one timeline.
   It appends only when the update payload names `activeOrganizationId` and the session's `impersonatedBy`
   is set, so a session refresh costs nothing. It is retried once and raised at `error` like the other
@@ -1201,6 +1262,32 @@ The tenant log now shares the 400-day weekly window, with tenant-scoped bounded 
   `platform.token.issued`, `platform.token.revoked`, and every `catalog_place.*` /
   `catalog_ingest.*` / `place_pack.*` / `catalog_source.*` / `platform.share.*` mutation in §4.2's
   table.
+
+#### Release-publication atomic exception
+
+[ADR 0051](adr/0051-bounded-release-content-contract.md) makes one bounded exception to the
+best-effort rule above: every write in the two seven-table content/release repositories must
+commit its audit row in the same fail-closed atomic batch. Invalid audit input, failed audit
+insert or unsupported atomic driver refuses without any partial mutation. Existing
+`appendPlatformAudit` callers remain after-commit and non-throwing, with unchanged retry and
+logging behavior; none migrates to this exception implicitly.
+
+`catalog/audit.ts` alone owns validation, bounded metadata and statement construction through
+`preparePlatformAudit(db, actor, entry)` unexecuted-statement seam. Its errors
+propagate before commit. The release repository composes it with the mutation; no second audit
+writer and no catalog-to-repos import.
+`runAtomicDatabaseBatch(db, statements)` lives in the existing `repos/batch.ts` owner, reusing
+its atomic implementation. The scoped `runAtomicBatch` continues to require
+`TenantScope`; the plain-`Database` seam accepts only the known D1 driver and refuses others before executing any
+statement. No fabricated tenant scope or sequential fallback is allowed. Existing `runBatch`
+and scoped atomic callers retain their contracts. Real D1 tests prove validation, insert-failure, lost-CAS and whole-batch rollback; existing
+non-throwing audit tests remain mandatory. The principal release audit id is the stable
+operation id, preventing its reuse from committing another transition; the deployment side
+record uses a reserved `:receipt` suffix. Metadata holds only bounded ids, hashes, generations
+reason codes and supported translation locale codes. Review records keep only opaque
+audit operation references and review times; reviewer user ids remain solely in the audit
+ledger and expire with its 400-day retention. There is no foreign key blocking that prune,
+and identity expiry does not revoke a completed approval. The #1873 slice exposes no production receipt adapter or writer.
 
 ### 4.4 The query that makes this log worth having
 

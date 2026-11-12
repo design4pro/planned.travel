@@ -360,9 +360,8 @@ async function writeSeed(
   /* --------------------------------------------------------------------- taxonomy and mood palette */
 
   fixture.section('taxonomy')
-  await ensureDefaultCategories(owner)
   const knownSlugs = new Set(
-    (await listCategories(owner)).map((row) => row.slug),
+    (await ensureDefaultCategories(owner)).map((row) => row.slug),
   )
   for (const category of extraCategories) {
     if (!knownSlugs.has(category.slug)) {

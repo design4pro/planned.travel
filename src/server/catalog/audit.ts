@@ -10,9 +10,9 @@
  * mutation has committed and {@link appendPlatformAudit} swallows every failure it can raise — the
  * insert's, the validator's, and its own logging: a rejected append is a logging incident raised
  * through `src/server/observability`, never a `500` handed to the caller and never a rollback of
- * work that already succeeded. The prune is the one function here that may reject, because it runs
- * on a cron rather than behind a user's request: a weekly job that fails is meant to be visible and
- * retried, and there is no completed work of anyone's to protect.
+ * work that already succeeded. The prune and the deletion driver's durable append may reject:
+ * scheduled retention retries failures, while a deletion preserves its ledger checkpoint until
+ * the evidence is confirmed. Neither turns an ordinary audit failure into a failed user mutation.
  *
  * Two things this file deliberately does not do, both of them SPEC §5's carve-out in practice:
  *
@@ -35,14 +35,16 @@
  *   request changed nothing, and a log of attempts is a different table from a log of changes.
  */
 
-import { and, desc, eq, inArray, lt } from 'drizzle-orm'
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm'
 import { z } from 'zod'
+import { LOCALE_TAGS } from '#/lib/i18n/locales'
 import { resolvePlatformRole } from '#/server/auth/access'
 import { AUDIT_ACTION_PATTERN } from '#/server/db/audit-action'
 import {
   PLATFORM_AUDIT_ACTIONS,
   PLATFORM_AUDIT_ENTITY_TYPES,
   platformAuditLog,
+  workspaceDeletions,
 } from '#/server/db/schema'
 import { serializeError } from '#/server/observability'
 import type { PlatformActor } from '#/server/auth/guard'
@@ -53,6 +55,7 @@ import type {
   PlatformAuditChanges,
   PlatformAuditEntityType,
   PlatformAuditLogEntry,
+  WorkspaceDeletion,
 } from '#/server/db/types'
 import type { LogFields, Logger } from '#/server/observability'
 
@@ -61,10 +64,10 @@ import type { LogFields, Logger } from '#/server/observability'
  * ---------------------------------------------------------------------------------------------- */
 
 /**
- * The console's own actions of docs/ACCESS.md §4.2, frozen: the sixteen three-segment
+ * The platform-owned actions of docs/ACCESS.md §4.2, frozen: the eighteen three-segment
  * `platform.<entity>.<verb>` names, and the two `provider.*` names the metering screen writes.
  *
- * The list is closed: a nineteenth action here is an amendment to §4.2's table, made in the
+ * The list is closed: a twenty-first action here is an amendment to §4.2's table, made in the
  * commit that adds the code writing it. `platform.share.revoked` is here now even though the
  * moderation screen that writes it is Faza F, because the §1.1 statement dictionary is closed in
  * this phase and a name that arrives later cannot be added without amending the document.
@@ -90,11 +93,13 @@ export const PLATFORM_ACTIONS = Object.freeze({
   TOKEN_ISSUED: 'platform.token.issued',
   TOKEN_REVOKED: 'platform.token.revoked',
   SHARE_REVOKED: 'platform.share.revoked',
+  WORKSPACE_DELETED: 'platform.workspace.deleted',
+  WORKSPACE_DELETION_REFUSED: 'platform.workspace.deletion_refused',
   PROVIDER_LIMIT_CHANGED: 'provider.limit_changed',
   PROVIDER_POLICY_CHANGED: 'provider.policy_changed',
 } as const satisfies Readonly<Record<string, PlatformAuditAction>>)
 
-/** One of the eighteen names in {@link PLATFORM_ACTIONS}. */
+/** One of the twenty names in {@link PLATFORM_ACTIONS}. */
 export type PlatformActionName =
   (typeof PLATFORM_ACTIONS)[keyof typeof PLATFORM_ACTIONS]
 
@@ -102,7 +107,7 @@ export type PlatformActionName =
  * docs/ACCESS.md §4.2's prefix table: everything before the verb fixes the `entity_type` written
  * beside it, so §4.4's timeline query never has to guess which prefix belongs to which table.
  *
- * Nine rows, and the reason there are nine rather than thirty-four is that the mapping is a
+ * Eleven rows, and the reason there are eleven rather than forty-two is that the mapping is a
  * property of the *prefix*: `catalog_place.published` and `catalog_place.retired` are the same
  * entity seen twice. Callers never pass an `entity_type` — {@link entityTypeForAction} derives it,
  * which is what makes "the prefix names the entity" true of the rows and not only of the document.
@@ -116,7 +121,9 @@ export const PLATFORM_AUDIT_ENTITY_BY_PREFIX = Object.freeze({
   'platform.session': 'session',
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
+  'platform.workspace': 'workspace',
   provider: 'provider',
+  release: 'release',
 } as const satisfies Readonly<Record<string, PlatformAuditEntityType>>)
 
 /**
@@ -592,7 +599,7 @@ const platformActorSchema = z.discriminatedUnion('actorKind', [
  * §4.1's column bound, and the enum is the *closed list*. A name that is well-shaped and undeclared
  * is exactly the failure the vocabulary exists to prevent.
  *
- * The enum is the whole table's vocabulary rather than this phase's eighteen, because this module is
+ * The enum is the whole table's vocabulary rather than the twenty platform-owned actions, because this module is
  * `platform_audit_log`'s single writer for the life of the product and the runtime rule guards the
  * *table*. The narrower rule — which names this phase's callers may spell — is a property of the
  * boundary type below, where a compiler can enforce it.
@@ -629,7 +636,7 @@ const platformAuditEntrySchema = z.object({
  * What a caller hands {@link appendPlatformAudit}.
  *
  * Every field is derived from {@link platformAuditEntrySchema} so the two cannot drift — except
- * `action`, which is narrowed from the schema's `string` input to the eighteen frozen names. That
+ * `action`, which is narrowed from the schema's `string` input to the twenty frozen names. That
  * narrowing is the point: a runtime enum is the wrong layer to catch a mistyped verb *here*, because
  * §4.3 requires this writer to swallow its own failures. Spell `platform.user.bannd` and the schema
  * rejects it, the rejection is reported to the logger, and the caller — whose ban has already
@@ -644,6 +651,47 @@ export type PlatformAuditEntryInput = Omit<
   'action'
 > & {
   readonly action: PlatformActionName
+}
+
+/** Closed release actions; existing after-commit callers retain their non-throwing contract. */
+export const RELEASE_ACTIONS = [
+  'release.imported', 'release.reviewed', 'release.translation_reviewed',
+  'release.deployment_recorded', 'release.published', 'release.withdrawn',
+] as const satisfies ReadonlyArray<PlatformAuditAction>
+
+const releaseAuditSchema = z.strictObject({
+  action: z.enum(RELEASE_ACTIONS),
+  entityId: identifierSchema,
+  operationId: identifierSchema,
+  versionId: identifierSchema.optional(),
+  locale: z.enum(LOCALE_TAGS).optional(),
+  sourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  generation: z.number().int().nonnegative().safe().optional(),
+  reason: z.enum(['sensitive', 'inaccurate', 'other']).optional(),
+}).refine((entry) => entry.action === 'release.translation_reviewed'
+  ? entry.locale !== undefined && entry.versionId !== undefined && entry.sourceHash !== undefined
+  : entry.locale === undefined)
+
+/** Validate and construct only; the bounded repositories execute this with their mutations. */
+export function preparePlatformAudit(
+  db: Database,
+  actor: PlatformActor,
+  entry: z.input<typeof releaseAuditSchema>,
+) {
+  const parsedActor = platformActorSchema.parse(actor)
+  if (parsedActor.actorKind !== 'human' || resolvePlatformRole(parsedActor.role) !== 'admin') {
+    throw new Error('Release audit requires a platform admin.')
+  }
+  const parsed = releaseAuditSchema.parse(entry)
+  const { action, entityId, ...metadata } = parsed
+  return db.insert(platformAuditLog).values({
+    // The principal audit row is the durable operation claim; retries cannot reapply an old id.
+    id: action === 'release.deployment_recorded' ? `${parsed.operationId}:receipt` : parsed.operationId,
+    actorUserId: parsedActor.userId, actorKind: parsedActor.actorKind,
+    actorRole: resolvePlatformRole(parsedActor.role), tokenId: null,
+    action, entityId, entityType: entityTypeForAction(action),
+    changes: { before: null, after: metadata },
+  })
 }
 
 /* -------------------------------------------------------------------------------------------------
@@ -729,6 +777,78 @@ function failureFields(
     actorUserId: actor.userId,
     actorRole: actor.role,
     tokenId: actor.tokenId,
+  }
+}
+
+/**
+ * The deletion driver must observe durable evidence before advancing its state.
+ * A deterministic id plus INSERT WHERE NOT EXISTS makes expired-lease retries unique.
+ * This deliberately throws; ordinary post-mutation callers retain appendPlatformAudit.
+ */
+export async function appendWorkspaceDeletionAudit(
+  db: Database,
+  deletion: WorkspaceDeletion,
+  actor: PlatformActor,
+  outcome: 'deleted' | 'deletion_refused',
+  now = new Date(),
+) {
+  z.enum(['deleted', 'deletion_refused']).parse(outcome)
+  if (deletion.initiator === 'erasure') {
+    if (actor.actorKind !== 'system')
+      throw new Error('Erasure audit requires a system actor')
+  } else if (
+    actor.actorKind !== 'human' ||
+    actor.userId !== deletion.requestedBy
+  ) {
+    throw new Error('Workspace deletion audit actor must match its requester')
+  }
+  const action =
+    outcome === 'deleted'
+      ? PLATFORM_ACTIONS.WORKSPACE_DELETED
+      : PLATFORM_ACTIONS.WORKSPACE_DELETION_REFUSED
+  const { plan, subscriptionStatus, trips, fileRows, r2ObjectsDeleted } =
+    deletion.snapshot
+  const built = buildRow(actor, {
+    action,
+    entityId: deletion.organizationId,
+    changes: {
+      before: { plan, subscriptionStatus, trips, fileRows },
+      after: {
+        r2ObjectsDeleted: r2ObjectsDeleted ?? 0,
+        initiator: deletion.initiator,
+        deletionId: deletion.id,
+      },
+    },
+  }).row
+  const id = `workspace-deletion:${deletion.id}`
+  await db.run(sql`insert into ${platformAuditLog}
+    (id, actor_user_id, actor_kind, actor_role, token_id, action, entity_type, entity_id, changes, ip, user_agent, created_at)
+    select ${id}, ${built.actorUserId ?? null}, ${built.actorKind}, ${built.actorRole ?? null}, null,
+      ${action}, 'workspace', ${deletion.organizationId}, ${JSON.stringify(built.changes)}, null, null, ${now.getTime()}
+    where exists (select 1 from ${workspaceDeletions} where ${workspaceDeletions.id} = ${deletion.id}
+      and ${workspaceDeletions.organizationId} = ${deletion.organizationId}
+      and ${workspaceDeletions.leaseToken} = ${deletion.leaseToken}
+      and ${workspaceDeletions.leaseUntil} > ${now.getTime()}
+      and ${
+        outcome === 'deleted'
+          ? sql`${workspaceDeletions.state} = 'rows_deleted' and ${workspaceDeletions.refusalReason} is null`
+          : sql`${workspaceDeletions.state} in ('requested', 'drained') and ${workspaceDeletions.refusalReason} = ${deletion.refusalReason}`
+      })
+    and not exists (select 1 from ${platformAuditLog} where ${platformAuditLog.id} = ${id})`)
+  const [stored] = await db
+    .select({
+      action: platformAuditLog.action,
+      entityId: platformAuditLog.entityId,
+    })
+    .from(platformAuditLog)
+    .where(eq(platformAuditLog.id, id))
+    .limit(1)
+  if (
+    !stored ||
+    stored.action !== action ||
+    stored.entityId !== deletion.organizationId
+  ) {
+    throw new Error('Workspace deletion audit was not confirmed')
   }
 }
 
@@ -890,7 +1010,7 @@ const auditEntityQuerySchema = z.object({
  * between renders of the same page.
  *
  * **It decides no authorisation and writes no row.** `requirePermission` has answered before the
- * caller reached this (SPEC §5), and §4.2 closes the audit vocabulary at thirty-one *mutations* —
+ * caller reached this (SPEC §5), and §4.2 closes the audit vocabulary at forty-two *mutations* —
  * reads are not among them, so reading the ledger does not append to it.
  */
 export async function readPlatformAuditByEntity(

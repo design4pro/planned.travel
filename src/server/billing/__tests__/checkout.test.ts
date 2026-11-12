@@ -10,6 +10,7 @@
  */
 
 // Must come first: it configures the product ids `#/lib/plans` reads at import.
+import { prepareWorkspaceDeletionRefusal } from '#/server/catalog/__tests__/workspace-deletion-fixture'
 import { TEST_PRODUCT_IDS } from './prices.fixture'
 
 import { describe, expect, it } from 'vitest'
@@ -2115,6 +2116,7 @@ it('refuses checkout and plan changes through the real deletion ledger, recoveri
     )
     const token = await acquireDeletionLease(db.db, row.id)
     if (!token) throw new Error('Missing lease')
+    await prepareWorkspaceDeletionRefusal(db.db, row.id, token)
     await transitionWorkspaceDeletion(
       db.db,
       row.id,

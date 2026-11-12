@@ -164,6 +164,10 @@ const messages = {
   'language.legal':
     'Điều khoản và thông báo quyền riêng tư chỉ đăng bằng tiếng Anh. Mọi phần còn lại của sản phẩm đều được dịch.',
 
+  'appearance.layout.title': 'Bố cục',
+  'appearance.layout.label': 'Bố cục rộng',
+  'appearance.layout.hint':
+    'Dùng toàn bộ chiều rộng ứng dụng và căn các tiện ích bảng điều khiển với chuyến đi sắp tới. Chỉ lưu trong trình duyệt này.',
   'appearance.error': 'Giao diện chưa tải được',
   'appearance.theme.title': 'Chủ đề',
   'appearance.theme.description':

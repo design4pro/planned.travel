@@ -126,6 +126,10 @@ const messages = {
   'language.sample.money': '一笔金额',
   'language.legal':
     '服务条款与隐私声明只以英文发布，产品里的其他内容都已翻译。',
+  'appearance.layout.title': '布局',
+  'appearance.layout.label': '宽屏布局',
+  'appearance.layout.hint':
+    '使用应用的完整宽度，并将仪表板小组件与即将开始的旅行顶部对齐。仅保存在此浏览器中。',
   'appearance.error': '外观设置没能加载出来',
   'appearance.theme.title': '主题',
   'appearance.theme.description':

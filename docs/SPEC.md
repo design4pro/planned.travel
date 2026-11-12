@@ -113,7 +113,7 @@ Specifically:
 | Background work   | Queues + Cron Triggers                                                                                                                                                                                                                                                       |
 | Auth              | Better Auth on D1 (email+password, social, passkeys, TOTP)                                                                                                                                                                                                                   |
 | Billing           | Polar.sh (Checkout + Customer Portal + webhooks)                                                                                                                                                                                                                             |
-| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Ten React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                  |
+| Email             | Resend-compatible REST: `EMAIL_API_URL` var + `EMAIL_API_KEY` secret. Ten React Email templates in `src/server/email/templates/**`, the message contract and subject lines in `src/server/auth/email.ts`, delivery in `src/server/queue/handlers/email.ts`                   |
 | Maps              | MapLibre GL + Protomaps `.pmtiles` from R2                                                                                                                                                                                                                                   |
 | Server state      | TanStack Query + Start server functions                                                                                                                                                                                                                                      |
 | Forms             | TanStack Form + Zod v4                                                                                                                                                                                                                                                       |
@@ -346,7 +346,7 @@ Every domain row is scoped by `organization_id`. A user belongs to one or more o
 through `member`. **Every** query goes through a scoped repository in `src/server/repos/**`
 that takes an explicit tenant context — never a raw `db.select()` from a route or component.
 Tenant isolation is enforced in the repository layer and covered by tests. The bounded
-`…Unscoped` shape below, the four closed catalog exceptions and the identity-table SQL of the auth provisioning module (§6) are the explicit exceptions to the tenant-context argument.
+`…Unscoped` shape below, four closed catalog members, identity-table provisioning, bounded account-auth capability and seven-table content/release repositories (§6, ADR 0051) are the explicit exceptions to the tenant-context argument.
 
 Erasure repository primitives use `createErasureScope` (`server/erasure/scope.ts`), the single
 factory for the reserved `system:erasure` owner actor. It binds one organization and no session;
@@ -437,33 +437,73 @@ That list is closed. A fourteenth global table is a change to this contract, not
 a builder makes on the way past.
 
 `workspace_deletions` joins the existing global-table member (ADR 0048), not a fifth catalog
-exception. Only `catalog/workspace-deletions.ts` writes its platform recovery state. The eventual
-`workspace-deletion` driver is its sole production writer, authorized by an owner request with
+exception. Only `catalog/workspace-deletions.ts` writes its platform recovery state. The
+`workspace-deletion` driver is its sole production state writer, authorized by an owner request with
 step-up and an impersonation veto, or the independently authorized erasure job, queue or cron.
-No production writer ships in the ledger prerequisite slice. The platform-actor permission and
-per-mutation audit clauses are inapplicable to recovery checkpoints; the eventual driver audits
+No production writer ships in the ledger prerequisite slice. The Phase 6 driver ledger adapter
+owns lease acquisition, durable refusal intent, checkpoints and the bounded weekly terminal-row prune. Its erasure handshake
+reads a state-only catalog projection and atomically consumes ready/refused work by envelope id;
+original-delivery parking writes nothing and the winning redelivery may resume. A canonical
+`person-erasure:<erasureId>:<deletionId>` resume on nonterminal state throws retryable-not-ready;
+it cannot acknowledge successful parking or authorize a done marker. Public producers remain a separate activation slice.
+The platform-actor permission and
+per-mutation audit clauses are inapplicable to recovery checkpoints; the driver audits
 the deletion itself. Importer tests pin rare readers: auth organization hooks, direct membership
-and invitation creation, atomic invitation acceptance, and the billing store used by checkout and
-plan changes. Ordinary requests and webhooks gain no ledger lookup. Repository inserts bind the
-shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate
-is the narrow exception to a tenant statement reaching a global table: it returns no ledger
+and invitation creation, atomic invitation acceptance, the billing store used by checkout and
+plan changes, and `repos/community.ts` for private gallery-preview capture and actor-bound preview
+reads only. The gallery repository may import only `workspaceDeletionAbsent`, returning no ledger
+projection and adding no writer. All other request paths and webhooks gain no ledger lookup. Repository inserts bind the
+shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate and its named sibling
+`workspaceDeletionAuthorityPresent` are the closed exception to a tenant statement reaching this global table: it returns no ledger
 projection and never registers the ledger with the tenant repository factory. Better Auth hooks and external billing
 calls have a check/write window; the downstream guarded deletion and late-subscription handling
 must close its destructive consequences. `done` still fences; only `refused` lifts the fence.
+The sibling EXISTS authorizes every reserved-driver drain DELETE (all seven batch tables) and
+final organization DELETE, retaining the tenant/member/subscription predicates. Its internal
+catalog authority is passed beside scope, never through `deleteWorkspaceInput` or a request.
+It matches organization, deletion id, token, initiator and requester; drain permits only `requested`,
+final deletion only `drained`, both without refusal intent. Strict lease expiry uses the later of
+trusted invocation time and SQLite statement-execution time; equality or null clock/expiry denies.
+The catalog boolean diagnostic `workspaceDeletionAuthorityCurrent` classifies empty SELECT/zero-row
+DELETE only; it cannot replace the atomic predicate. Authority loss yields `lost-lease` without
+checkpointing a replacement, clearing PII or manufacturing business refusal/deleted success.
+A truly absent organization with current authority remains crash recovery; empty tables with
+current authority may finish drain. Neither fragment registers the ledger with the tenant factory.
 
 The row contains ids, state, a token-bound expiring lease, attempts, a bounded error code and a
-closed snapshot of plan/status/counts. Temporary receipt email/name are cleared when queued or
-refused; erasure rows never carry them. No organization foreign key may cascade into this table.
+closed snapshot of plan/status/counts. Nullable `refusal_reason` freezes the first validated
+`billing-unavailable`, `live-subscription` or `has-other-members` outcome under the winning live
+lease while state stays `requested`/`drained`. Recovery resumes refusal follow-up only. Catalog
+transitions forbid destructive progress with that intent; audit insertion predicates on live
+lease and matching persisted outcome, retaining one audit id per deletion. Temporary receipt
+email/name are cleared after receipt acceptance, or after refusal-notice acceptance, confirmed
+refusal audit and terminal CAS; erasure rows never carry them. No organization foreign key may cascade into this table.
 Terminal rows alone are pruned after 30 days (`done_at` for done, `updated_at` for refused), in
 bounded batches. Unfinished recovery is never pruned. A lease token prevents an expired holder
 from advancing or releasing a replacement holder's lease. Requesters and temporary receipts are
 explicit retention exceptions in the erasure registry.
 
-Reserved for the later driver only: a `system:workspace-deletion` owner scope, bound to the
+A driver-only `system:workspace-deletion` owner scope, bound to the
 organization read from a leased ledger row, may drive deletion repositories without a session.
 This is an exception to the scope argument, not permission for requests to fabricate tenant
-contexts. No factory or executable driver ships with this reservation; the eventual factory must
-have a transitive importer guard excluding routes and server functions.
+contexts. `workspace-deletion/scope.ts` requires an unexpired token matching the leased row;
+its transitive importer guard excludes routes and server functions. Owner departures use only
+the recorded requester; erasure and memberless work omit a departing member id. Recovery selects
+at most five unfinished rows strictly older than fifteen minutes. Same-state checkpoints preserve
+the first sweep's timestamp so they cannot restart its fifteen-minute second-sweep wait.
+Queue and quarter-hour recovery share `workspace-deletion/runtime.ts`; recovery calls the driver
+directly rather than publishing work to the queue. Receipt, owner-refusal notice and erasure-resume
+delivery remain explicit ports: missing adapters fail the step without clearing receipt data or
+advancing its checkpoint. AC9 stages strict immutable requests and explicit matching-id acceptance:
+erasure resumes have opaque erasure/deletion ids only, canonical per-deletion id and 30-second delay;
+owner refusal notices have `workspace-deletion:<id>:refused` identity. Accepted resume followed by
+failed audit/CAS remains retryable; cron reissues the same id even after five-attempt exhaustion.
+Original deliveries park without consuming; canonical nonterminal resumes must not produce success
+or a done marker. Contract acceptance needs independent review and final validation. Production
+erasure delivery still requires the separately owned #1060 consumer and reviewed adapters; owner
+delivery awaits activation. No erasure-initiated ledger inserts are enabled. Runtime replaces outgoing errors with constant messages before consumer
+logging/dead-letter sinks while retaining permanent/retry classification and validated retry delay.
+No request or webhook producer is enabled by consumer registration.
 
 `platform_audit_log` joined the list in Faza B, by amendment rather than on the way past. The
 eight-name form of this sentence contradicted this same section's mandate to write that table on
@@ -546,7 +586,7 @@ expressible, and handing it a fabricated, empty, or placeholder tenant context i
 global rows destroys the single guarantee it was built to give. Reaching for
 `createTenantRepository()` here is a defect, not a shortcut.
 
-Their isolation invariant is different and equally mandatory. `workspace_deletions` is owned only by its recovery catalog module as described above.
+Their isolation invariant is different and equally mandatory. `workspace_deletions` is owned only by its recovery catalog module as described above. Its closed tenant-statement fragments are admission anti-exists and destructive-authority EXISTS, with the catalog-owned boolean diagnostic; they expose no ledger projection or general tenant/global join.
 `platform_audit_log` is another member of the list that `repo.ts` does not own: `repo.ts` appends to it, so it cannot also be
 reached through it. Its single writer is `src/server/catalog/audit.ts`, and every other clause
 below binds it unchanged - never `createTenantRepository()`, never `base.ts`, always an explicit
@@ -780,6 +820,23 @@ The account-owned `account_security_room_cleanup.organization_id` is a routing t
 content: it deliberately survives workspace deletion until queue acknowledgement, and cascades
 only with its account operation. Workspace deletion must not erase pending account cleanup.
 
+### Bounded release-content repositories (ADR 0051)
+
+[ADR 0051](adr/0051-bounded-release-content-contract.md) admits exactly `content_entries`, `content_versions`, `content_translations`,
+`release_publications`, `release_deployments`, `release_deployment_entries` and
+`release_production_state`, only in `src/server/repos/content.ts` and
+`src/server/repos/releases.ts` taking `Database`. This fifth exception adds neither a catalog
+member nor an FU-3 resolver. Its exact table constraints, unique `(production, headingVersion)`,
+whitelisted approved/non-withdrawn published projection, fresh admin-only guard, single audit
+writer and fail-closed atomic batch are binding. Existing tenant, account-auth and catalog
+boundaries remain intact. This is a contract amendment only; no runtime implementation or
+production-write approval follows from it. The separately reviewed #1873 persistence slice
+implements these tables and repositories without a production mutation caller or Settings route.
+`pnpm db:generate` runs drizzle-kit plus the deterministic immutable-version trigger supplement;
+existing migrations are verified rather than silently rewritten. Review attribution stays in the
+existing platform audit ledger; content keeps an opaque audit operation reference and review
+time, never a duplicate reviewer user id or a foreign key that blocks the 400-day audit prune.
+
 ## 6. Repo conventions
 
 ```
@@ -819,8 +876,8 @@ Rules:
 - `routeTree.gen.ts` is **generated**. Never hand-edit. Run `pnpm generate-routes`.
 - Components in `components/ui` never fetch data and never import from `server/`.
 - All SQL lives in `server/repos`, normally through the tenant-scoped base repository; the closed account-auth boundary above and FU-3
-  permits the bounded `…Unscoped` shape above with a plain `Database`. Routes call server functions; server functions call repos.
-- The account-auth repository is the separately bounded fourth exception above (ADR 0049). The other stated exceptions are three, and closed: the bounded `…Unscoped` shape above, `server/catalog`
+  permits the bounded `…Unscoped` shape above with a plain `Database`; the fifth exception admits only the seven-table content/release boundary (ADR 0051). Routes call server functions; server functions call repos.
+- The account-auth repository is the fourth exception (ADR 0049), and the bounded content/release repositories are the fifth (ADR 0051). The original three remain closed: the bounded `…Unscoped` shape above, `server/catalog`
   and the identity-table access of the auth provisioning module. §5 states `server/catalog` as a closed list of four. The
   first member is thirteen global tables: eleven carry no `organization_id`, while
   `provider_usage` and `workspace_deletions` carry attribution only, so none of them can pass through the tenant
@@ -852,7 +909,7 @@ Rules:
   anchor): the withdrawal is never pointed at an organization that already exists. Adding a table is
   a contract change.
 - Better Auth's own tables, reached through the library's adapter (`ctx.context.adapter`), are
-  not application SQL and sit outside this contract: this is not a fourth exception and not a
+  not application SQL and sit outside this contract: this is not an additional exception and not a
   precedent for SQL. The passkey plugin (`src/server/auth/passkey/plugin.ts`) reads and writes the
   `passkey` table that way; that table is user-keyed and has no `organization_id`, but other
   Better Auth tables do relate to a workspace, so being auth-owned says nothing about tenancy.
@@ -890,6 +947,8 @@ Rules:
 4. The feature is visually verified in a real browser, light and dark, desktop and mobile — by
    the blind A/B pair (`scripts/visual/capture.mjs`, §8.814), which is the whole of the visual
    judgement since ADR 0016. "Looked at it" is not a mechanism; the pair is.
+   The bounded base-absent unmounted-screen exception in “Who owns the visual judgement”
+   may instead use its explicitly non-comparative evidence package.
 5. No TODOs, no placeholder copy, no `console.log`, no commented-out code left behind.
 6. You did not touch files outside your assigned ownership. Work you discover elsewhere is
    reported, never edited — and if that work is a _concept_ rather than a file, §8 governs how
@@ -1015,7 +1074,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 1. **In-house.** §3's dependency freeze holds — there is no i18n package and none is to be added.
    The message layer, the plural rules and the interpolation are ours, built on the platform `Intl`.
 2. **Source locale is `en`.** Every key exists in every locale. A test proves parity — no missing
-   key, no orphan key, no locale silently falling back to English at runtime.
+   key, no orphan key, no interface locale silently falling back to English at runtime. Reviewed release prose follows rule 11 only.
 3. **Negotiation happens on the server, once, before first paint**: user setting → workspace
    setting → visitor cookie → `Accept-Language` → `en`. `<html lang>` and `<html dir>` are
    server-rendered. No locale flash, no hydration mismatch, no second render to correct the language.
@@ -1028,7 +1087,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
    proven identical in workerd and WebKit, or frozen in a table. This is the hardest constraint on
    this task — treat a divergence as a defect, never as a tolerance.
 6. **No untranslated string reaches a screen.** §7.5's ban on placeholder copy covers an
-   English string sitting in a non-English catalogue.
+   English string sitting in a non-English catalogue. Rule 11 separates reviewed release prose from interface messages.
 7. **One language picker** lists every locale in its native name and script, shows the active one,
    and persists through a reload. Settings saves a personal override (or follows the workspace);
    signed-out controls reuse this picker and save only the visitor cookie. Each visitor write checks
@@ -1042,7 +1101,7 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
 8. **Scope.** In: `src/routes/(auth)`, `src/routes/_app`, the marketing landing and pricing pages,
    and every component they render. Out, for now: `src/routes/legal/**` long-form terms and privacy
    prose, which stays English and says so on the page — translated legal text needs review this
-   build cannot give it.
+   build cannot give it. Reviewed release editorial content on signed-in surfaces follows rule 11.
 9. **Copy is authored, not copied.** §1's clean-room rule governs every catalogue file. Our English
    copy is our own, and each translation is made from _our_ English — never from the reference's
    catalogues, which are AGPL-licensed source.
@@ -1065,6 +1124,16 @@ canonical BCP-47; the reference's non-standard `br` and `gr` are not what we shi
     an error's own `code`, and `AUTHORED_ERROR_NAMES` stays as it is. Generalising client-side key resolution to the whole
     `refusal` channel, with the existing sentences moved into the catalogue, is the work that
     retires this exception.
+
+11. **Reviewed release prose is editorial content, separate from interface messages.**
+    [ADR 0051](adr/0051-bounded-release-content-contract.md) bounds this exception to release
+    entries and the exact approved immutable source revision. A missing, unreviewed or stale
+    translation uses whole-entry English fallback, including title and body, with `lang="en"`
+    and `dir="ltr"` on that entry and a localized catalogue notice. Reviewed translations use
+    their own entry language/direction. `server/content/resolve.ts` is the sole planned owner;
+    no mixed paragraphs or stale translated revisions. Rules 2/6/8 continue unchanged for
+    interface messages: interface messages have no fallback and retain all-locale parity.
+    Other collections and future Studio publication need separate amendments.
 
 ### Catalogue layout (fixed — every i18n item builds against this)
 
@@ -1130,6 +1199,46 @@ still captured and the item is judged on our frames plus code, tests and accessi
 mismatched pair, because a pair of two different surfaces sends the critic after an artefact of the
 capture. A missing reference is never grounds to relax §2; it raises the bar, because our side then
 has to be defensible with no foil beside it.
+
+A new, prop-only screen composition that its work item explicitly requires to remain unmounted
+may have no implementation at the reviewed base. When both absence at base and absence of
+production callers are verified, source-faithful head-only browser evidence from a temporary QA
+fixture may satisfy this item's visual gate. This is explicitly non-comparative evidence, never
+a fabricated A/B pair; no application route may be introduced for it. Require real head source,
+styles and locale messages; light/dark desktop/mobile and applicable RTL/breakpoint/state
+coverage; configured validation and independent code review; and unanimous independent manual,
+accessibility and security/tenancy panel approval. Preserve capture restrictions and SPEC §2.
+Record exact head, base, policy and base-absence evidence, with fixture limitations. Any missing
+applicable evidence or panel approval leaves QA partial. Mounted integration and its real
+comparisons remain the later mounting item's responsibility. This exception does not apply to
+an existing or mounted screen and grants no general waiver of QA or security.
+
+The exception's evidence package retains these conditions:
+
+- Re-evaluate absence at base, production callers and evidence on every changed head, base or
+  policy; a blank, 404, unrelated screen or head copied into base is not a comparison.
+- Render the actual head component in a temporary `.ai/qa/` fixture with real CSS, tokens,
+  fonts, house primitives, TripArt where used and locale catalogues. Mock only the work item's
+  declared public-chrome seam and disclose its unverified integration. No copied HTML,
+  fake translations, generated route changes or registered application route. An environment,
+  provider or capture refusal is a blocker, never permission to bypass its restrictions.
+- Restart the environment on the reviewed head and verify source freshness. Use unmodified
+  `scripts/visual/capture.mjs` at 1440x900 and 360x800 in light/dark, plus actual Arabic messages
+  and RTL direction. Check applicable intermediate and 2xl breakpoints. Attach head frames,
+  capture metadata and state/viewport coverage, explicitly labelled non-comparative, with base
+  absence recorded separately. Preserve §2 and all capture refusals.
+- Exercise every applicable state and interaction, including populated hero/grid without
+  duplicates, search including hero and localized country names, no results, clear/focus,
+  long copy, empty, loading, unavailable with/without retry, rate-limited, announcements,
+  keyboard, touch targets, contrast, SSR/no-JS search behavior and reduced motion. Include
+  non-empty multi-day art where used and verify zero search requests after initialization.
+  Fixture links do not prove destinations, app routing, Worker behavior or publication authority;
+  existing acceptance-criteria findings remain unresolved until fixed.
+- Complete configured validation and independent code review, including any non-visual
+  configuration changes. Give the exact diff and evidence to independent manual, accessibility
+  and security/tenancy reviewers without sharing their verdicts with each other. Every role must
+  approve and every applicable scenario pass. Retain SDLC's QA gate, failure/fix loop, blocking
+  labels and revision checks; screenshots cannot clear security/configuration behavior.
 
 ### Numbers inside messages
 

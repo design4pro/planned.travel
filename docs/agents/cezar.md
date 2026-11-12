@@ -1,12 +1,14 @@
 # Cezar on this repository
 
-[open-mercato/cezar](https://github.com/open-mercato/cezar) is the only orchestrator of agent work
-here (ADR 0014); the work itself is done by the vendored `om-*` skills from
-[open-mercato/skills](https://github.com/open-mercato/skills) (ADR 0018). Cezar runs on a developer
-host, checks out one `cez/<id8>` worktree per run under `.ai/cezar/worktrees/`, polls GitHub for
-the events in docs/agents/cezar-automations.json, and runs the workflow the event names. Every
-label, comment and pull request comes from a skill acting through `.ai/trackers/github.md` under
-the rules of `SDLC.md`.
+Historical Cezar operating instructions. The developer confirmed on 2026-11-10 that current execution uses Paperclip only. For the bounded pilot, use [Paperclip delivery pilot](paperclip-delivery-pilot.md); this document is not authority to start or restore a Cezar service.
+
+Historically, [open-mercato/cezar](https://github.com/open-mercato/cezar) orchestrated agent work
+here (ADR 0014), using vendored `om-*` skills from
+[open-mercato/skills](https://github.com/open-mercato/skills) (ADR 0018). The historical setup ran on
+a developer host, checked out `cez/<id8>` worktrees under `.ai/cezar/worktrees/`, polled GitHub for
+the events in docs/agents/cezar-automations.json, and dispatched named workflows. Skills used
+`.ai/trackers/github.md` under `SDLC.md`. Current execution uses Paperclip only; the retained
+commands below describe the former setup and reusable repository helpers, not an active service.
 
 ## Deterministic pipeline helpers
 
@@ -24,7 +26,14 @@ the rules of `SDLC.md`.
   runs. Unknown data is never green. QA freshness, security approval and blocking-label checks
   still belong to the existing merge skills. No model is needed between polling attempts.
 - `node scripts/ci/validation.mjs [--resume]` owns the configured ordered gate, bounded projects,
-  shard fallback and compact reports. Full logs stay in `.ai/tmp/validation/`. Resume is local-only;
+  shard fallback and compact reports. Full logs stay in `.ai/tmp/validation/`; each command uses
+  a private temporary directory there, removed after exit or verified timeout termination.
+  A non-ESRCH termination error fails closed as `infrastructure`/exit 1, without shard retry or
+  subsequent jobs. It retains the private directory and records `terminationError`, `priorResult`,
+  `pid`, signed signal target `pgid` and `temporary` in the command result and
+  `.ai/tmp/validation/receipt.json`. The caller/run owner owns those retained diagnostics and
+  the unverified group boundary; promise settlement or lock release does not prove descendants
+  stopped. There is no automatic deletion or janitor after unverified termination. Resume is local-only;
   `attestation.mjs attest` always runs fresh. Full gate nodes use this executor; the scheduled scan's
   initial diagnostic sweep still gathers independent findings and the plan-to-spec gate remains
   intentionally scoped to spec checks.

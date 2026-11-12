@@ -35,6 +35,7 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 import { mintId } from '#/lib/ids'
+import type { ReleaseBody } from '#/server/content/collections'
 import { organization } from './auth-schema'
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core'
 
@@ -488,10 +489,10 @@ export const PROVIDER_LIMIT_WINDOWS = ['day', 'month'] as const
 export const PLATFORM_ACTOR_ROLES = ['admin', 'curator', 'user'] as const
 
 /**
- * The nine entities a platform action can touch (docs/ACCESS.md §4.2).
+ * The eleven entities a platform action can touch (docs/ACCESS.md §4.2).
  *
  * A TypeScript vocabulary, not a database constraint: `entity_type` is plain `text` in §4.1's
- * column table, so a tenth entity costs an amendment to §4.2's mapping rather than a recreate of
+ * column table, so a twelfth entity costs an amendment to §4.2's mapping rather than a recreate of
  * an append-only log.
  */
 export const PLATFORM_AUDIT_ENTITY_TYPES = [
@@ -504,15 +505,17 @@ export const PLATFORM_AUDIT_ENTITY_TYPES = [
   'staff_api_token',
   'share_link',
   'provider',
+  'release',
+  'workspace',
 ] as const
 
 /**
- * The thirty-four actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
+ * The forty-two actions a `platform_audit_log` row can carry, in the order docs/ACCESS.md §4.2
  * tables them. The list is closed there and closed here: a new action is an amendment to that
  * table, made in the commit that adds the code writing it.
  *
 
- * Eighteen take the two-segment `<entity_type>.<verb>` form, and sixteen take the three-segment
+ * Twenty-four take the two-segment `<entity_type>.<verb>` form, and eighteen take the three-segment
  * `platform.<entity>.<verb>` form because their entities — user, session, credential, share — are
  * named identically in the tenant audit log of §4.5, where a bare `user.created` read out of a
  * view spanning both tables would be attributable to neither. The two `provider.*` actions take the
@@ -556,8 +559,16 @@ export const PLATFORM_AUDIT_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'platform.workspace.deleted',
+  'platform.workspace.deletion_refused',
   'provider.limit_changed',
   'provider.policy_changed',
+  'release.imported',
+  'release.reviewed',
+  'release.translation_reviewed',
+  'release.deployment_recorded',
+  'release.published',
+  'release.withdrawn',
 ] as const
 
 /** JSON payload shapes stored in `text({ mode: 'json' })` columns. */
@@ -886,6 +897,19 @@ export const tripFavourites = sqliteTable(
 /* -------------------------------------------------------------------------------------------------
  * Taxonomy
  * ---------------------------------------------------------------------------------------------- */
+
+/** Durable provenance of the once-only workspace category bootstrap. */
+export const categoryInitializations = sqliteTable(
+  'category_initializations',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    initializedAt: integer('initialized_at', {
+      mode: 'timestamp_ms',
+    }).notNull(),
+  },
+  (t) => [uniqueIndex('category_initializations_org_unq').on(t.organizationId)],
+)
 
 export const categories = sqliteTable(
   'categories',
@@ -3405,6 +3429,11 @@ export const WORKSPACE_DELETION_STATES = [
   'done',
   'refused',
 ] as const
+export const WORKSPACE_DELETION_REFUSALS = [
+  'billing-unavailable',
+  'live-subscription',
+  'has-other-members',
+] as const
 export const WORKSPACE_DELETION_INITIATORS = ['owner', 'erasure'] as const
 export const workspaceDeletions = sqliteTable(
   'workspace_deletions',
@@ -3424,6 +3453,9 @@ export const workspaceDeletions = sqliteTable(
     leaseToken: text('lease_token'),
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
+    refusalReason: text('refusal_reason', {
+      enum: WORKSPACE_DELETION_REFUSALS,
+    }),
     snapshot: text('snapshot', { mode: 'json' })
       .$type<{
         plan?: string
@@ -3463,3 +3495,160 @@ export const workspaceDeletions = sqliteTable(
     index('workspace_deletions_stale_idx').on(t.state, t.updatedAt),
   ],
 )
+
+/** Row contract available to the driver without exposing the ledger table outside catalog. */
+export type WorkspaceDeletion = typeof workspaceDeletions.$inferSelect
+
+/** Private, short-lived consent documents; never a public projection. */
+export const galleryPreviews = sqliteTable(
+  'gallery_previews',
+  {
+    id: pk(),
+    organizationId: orgRef(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    actorUserId: userRef('actor_user_id').notNull(),
+    document: text('document').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('gallery_previews_actor_trip_unq').on(
+      t.organizationId,
+      t.actorUserId,
+      t.tripId,
+    ),
+    index('gallery_previews_expiry_idx').on(t.expiresAt, t.id),
+    index('gallery_previews_org_trip_idx').on(t.organizationId, t.tripId),
+    index('gallery_previews_org_expiry_idx').on(
+      t.organizationId,
+      t.expiresAt,
+      t.id,
+    ),
+    check(
+      'gallery_previews_bytes_chk',
+      sql`length(cast(${t.document} as blob)) <= 524288`,
+    ),
+  ],
+)
+
+
+/** ADR 0051: shared immutable release content, owned only by the two bounded repositories. */
+export const contentEntries = sqliteTable('content_entries', {
+  id: pk(),
+  collection: text('collection').notNull().default('blog'),
+  category: text('category').notNull().default('changelog'),
+  slug: text('slug').notNull(),
+  status: text('status', { enum: ['draft', 'published', 'withdrawn'] }).notNull().default('draft'),
+  publishedVersionId: text('published_version_id').references((): AnySQLiteColumn => contentVersions.id, { onDelete: 'restrict' }),
+  ...timestamps(),
+}, (t) => [
+  uniqueIndex('content_entries_collection_slug_uq').on(t.collection, t.slug),
+  check('content_entries_release_subset', sql`${t.collection} = 'blog' and ${t.category} = 'changelog'`),
+  check('content_entries_status', sql`${t.status} in ('draft', 'published', 'withdrawn')`),
+  index('content_entries_published_version_idx').on(t.publishedVersionId),
+])
+
+export const contentVersions = sqliteTable('content_versions', {
+  id: pk(),
+  entryId: text('entry_id').notNull().references(() => contentEntries.id, { onDelete: 'restrict' }),
+  revision: integer('revision').notNull(),
+  sourceLocale: text('source_locale').notNull().default('en'),
+  body: text('body', { mode: 'json' }).notNull().$type<ReleaseBody>(),
+  sourceCommit: text('source_commit').notNull(),
+  sourceHash: text('source_hash').notNull(),
+  cutoffSha: text('cutoff_sha').notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('content_versions_revision_uq').on(t.entryId, t.revision),
+  uniqueIndex('content_versions_source_uq').on(t.entryId, t.sourceCommit),
+  uniqueIndex('content_versions_hash_uq').on(t.entryId, t.sourceHash),
+  check('content_versions_revision', sql`${t.revision} > 0 and ${t.sourceLocale} = 'en' and json_valid(${t.body})`),
+])
+
+export const contentTranslations = sqliteTable('content_translations', {
+  id: pk(),
+  versionId: text('version_id').notNull().references(() => contentVersions.id, { onDelete: 'restrict' }),
+  locale: text('locale').notNull(),
+  body: text('body', { mode: 'json' }).notNull().$type<ReleaseBody>(),
+  reviewAuditId: text('review_audit_id'),
+  reviewedAt: integer('reviewed_at', { mode: 'timestamp_ms' }),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('content_translations_version_locale_uq').on(t.versionId, t.locale),
+  check('content_translations_review', sql`(${t.reviewAuditId} is null) = (${t.reviewedAt} is null) and ${t.locale} != 'en' and json_valid(${t.body})`),
+])
+
+export const releasePublications = sqliteTable('release_publications', {
+  id: pk(),
+  environment: text('environment').notNull().default('production'),
+  releaseVersion: text('release_version').notNull(),
+  entryId: text('entry_id').notNull().references(() => contentEntries.id, { onDelete: 'restrict' }),
+  headingDate: text('heading_date').notNull(),
+  cutoffSha: text('cutoff_sha').notNull(),
+  currentVersionId: text('current_version_id').notNull().references(() => contentVersions.id, { onDelete: 'restrict' }),
+  approvedVersionId: text('approved_version_id').references(() => contentVersions.id, { onDelete: 'restrict' }),
+  approvedHash: text('approved_hash'),
+  reviewAuditId: text('review_audit_id'),
+  reviewedAt: integer('reviewed_at', { mode: 'timestamp_ms' }),
+  visibleVersionId: text('visible_version_id').references(() => contentVersions.id, { onDelete: 'restrict' }),
+  visibleHash: text('visible_hash'),
+  visibleReviewedAt: integer('visible_reviewed_at', { mode: 'timestamp_ms' }),
+  firstShippedAt: integer('first_shipped_at', { mode: 'timestamp_ms' }),
+  contentUpdatedAt: integer('content_updated_at', { mode: 'timestamp_ms' }),
+  withdrawnAt: integer('withdrawn_at', { mode: 'timestamp_ms' }),
+  withdrawalReason: text('withdrawal_reason', { enum: ['sensitive', 'inaccurate', 'other'] }),
+  generation: integer('generation').notNull().default(0),
+  operationId: text('operation_id').notNull(),
+  claimId: text('claim_id').notNull(),
+  ...timestamps(),
+}, (t) => [
+  uniqueIndex('release_publications_identity_uq').on(t.environment, t.releaseVersion),
+  uniqueIndex('release_publications_entry_uq').on(t.entryId),
+  index('release_publications_listing_idx').on(t.firstShippedAt, t.releaseVersion),
+  index('release_publications_current_idx').on(t.currentVersionId),
+  index('release_publications_approved_idx').on(t.approvedVersionId),
+  index('release_publications_visible_idx').on(t.visibleVersionId),
+  check('release_publications_environment', sql`${t.environment} = 'production' and ${t.generation} >= 0`),
+  check('release_publications_approval', sql`(${t.approvedVersionId} is null and ${t.approvedHash} is null and ${t.reviewAuditId} is null and ${t.reviewedAt} is null) or (${t.approvedVersionId} is not null and ${t.approvedHash} is not null and ${t.reviewAuditId} is not null and ${t.reviewedAt} is not null)`),
+  check('release_publications_visibility', sql`(${t.visibleVersionId} is null and ${t.visibleHash} is null and ${t.visibleReviewedAt} is null and ${t.firstShippedAt} is null) or (${t.visibleVersionId} is not null and ${t.visibleHash} is not null and ${t.visibleReviewedAt} is not null and ${t.firstShippedAt} is not null)`),
+  check('release_publications_withdrawal', sql`(${t.withdrawnAt} is null and ${t.withdrawalReason} is null) or (${t.withdrawnAt} is not null and ${t.withdrawalReason} in ('sensitive', 'inaccurate', 'other'))`),
+])
+
+export const releaseDeployments = sqliteTable('release_deployments', {
+  id: pk(),
+  providerId: text('provider_id').notNull(),
+  runId: text('run_id').notNull(),
+  attempt: integer('attempt').notNull(),
+  mainCommit: text('main_commit').notNull(),
+  treeSha: text('tree_sha').notNull(),
+  target: text('target').notNull(),
+  activatedAt: integer('activated_at', { mode: 'timestamp_ms' }).notNull(),
+  outcome: text('outcome').notNull().default('verified'),
+  receiptDigest: text('receipt_digest').notNull(),
+  createdAt: createdAt(),
+}, (t) => [
+  uniqueIndex('release_deployments_identity_uq').on(t.providerId, t.runId, t.attempt),
+  check('release_deployments_verified', sql`${t.outcome} = 'verified' and ${t.attempt} > 0`),
+])
+
+export const releaseDeploymentEntries = sqliteTable('release_deployment_entries', {
+  deploymentId: text('deployment_id').notNull().references(() => releaseDeployments.id, { onDelete: 'restrict' }),
+  publicationId: text('publication_id').notNull().references(() => releasePublications.id, { onDelete: 'restrict' }),
+  versionId: text('version_id').notNull().references(() => contentVersions.id, { onDelete: 'restrict' }),
+}, (t) => [
+  primaryKey({ columns: [t.deploymentId, t.publicationId] }),
+  index('release_deployment_entries_publication_idx').on(t.publicationId),
+  index('release_deployment_entries_version_idx').on(t.versionId),
+])
+
+export const releaseProductionState = sqliteTable('release_production_state', {
+  id: integer('id').primaryKey().default(1),
+  activeDeploymentId: text('active_deployment_id').notNull().references(() => releaseDeployments.id, { onDelete: 'restrict' }),
+  generation: integer('generation').notNull(),
+  operationId: text('operation_id').notNull(),
+  updatedAt: updatedAt(),
+}, (t) => [
+  check('release_production_state_singleton', sql`${t.id} = 1 and ${t.generation} > 0`),
+  index('release_production_state_active_idx').on(t.activeDeploymentId),
+])

@@ -14,6 +14,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/trips'
 
 const messages = {
+  'gallery.publish.expired':
+    'Ten podgląd wygasł. Przed potwierdzeniem wygeneruj nowy podgląd.',
+  'gallery.publish.title': 'Podgląd galerii',
+  'gallery.publish.publicTitle': 'Publiczny tytuł',
+  'gallery.publish.attribution': 'Nazwa wyświetlana',
+  'gallery.publish.showDates': 'Uwzględnij daty podróży',
+  'gallery.publish.preview': 'Podejrzyj udostępniane dane',
+  'gallery.publish.confirm': 'Potwierdź ten podgląd',
+  'gallery.publish.captureFailed':
+    'Nie udało się przygotować podglądu. Sprawdź pola i spróbuj ponownie.',
+  'gallery.publish.tooLarge':
+    'Ta podróż jest zbyt duża, aby przygotować podgląd.',
+  'gallery.publish.empty': 'Puste',
+  'gallery.publish.version': 'Wersja',
+  'gallery.publish.countries': 'Kody krajów',
+  'gallery.publish.days': 'Dni',
+  'gallery.publish.places': 'Miejsca',
+  'gallery.publish.order': 'Kolejność',
+  'gallery.publish.yes': 'Tak',
+  'gallery.publish.no': 'Nie',
+  'gallery.publish.publicFields':
+    'Tytuł, podsumowanie, nazwa wyświetlana, kody krajów, tytuły dni, nazwy i kategorie miejsc oraz ich współrzędne mogą być publiczne. Daty zostaną uwzględnione tylko wtedy, gdy je wybierzesz.',
+  'gallery.publish.privateFields':
+    'Podróżni, notatki, pliki, koszty i rezerwacje nie są uwzględniane.',
+  'gallery.publish.freeTextWarning':
+    'Przed potwierdzeniem sprawdź, czy tytuł, podsumowanie, nazwa wyświetlana, tytuły dni i nazwy miejsc nie zawierają danych osobowych.',
+
   'plan.photo.edit': 'Edytuj zdjęcie',
   'plan.photo.unavailable':
     'Przesyłanie i edycja zdjęć są niedostępne. Obecne zdjęcie zostaje zachowane.',

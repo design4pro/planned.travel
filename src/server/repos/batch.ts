@@ -10,7 +10,8 @@
  * itinerary belongs in a queue consumer, not in a request path.
  */
 
-import { getTableColumns } from 'drizzle-orm'
+import { getTableColumns, is } from 'drizzle-orm'
+import { DrizzleD1Database } from 'drizzle-orm/d1'
 import type { Database } from '#/server/db/types'
 import type { TenantScope, TenantTable } from './base'
 
@@ -90,8 +91,22 @@ export async function runAtomicBatch<
   scope: TenantScope,
   statements: T,
 ): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
-  if (!supportsBatch(scope.db)) throw new Error('Atomic batch driver required.')
-  return (await scope.db.batch(statements)) as {
+  return executeAtomicBatch(scope.db, statements)
+}
+
+/** Release-only plain-database seam: D1 is the known rollback-capable driver. */
+export async function runAtomicDatabaseBatch<T extends readonly [BatchStatement, ...Array<BatchStatement>]>(
+  db: Database, statements: T,
+): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
+  if (!is(db, DrizzleD1Database)) throw new Error('Known atomic D1 driver required.')
+  return executeAtomicBatch(db, statements)
+}
+
+async function executeAtomicBatch<T extends readonly [BatchStatement, ...Array<BatchStatement>]>(
+  db: Database, statements: T,
+): Promise<{ -readonly [K in keyof T]: Awaited<T[K]> }> {
+  if (!supportsBatch(db)) throw new Error('Atomic batch driver required.')
+  return (await db.batch(statements)) as {
     -readonly [K in keyof T]: Awaited<T[K]>
   }
 }

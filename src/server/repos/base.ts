@@ -134,7 +134,7 @@ export function anyOf(
 export function prepareTenantInsert<TTable extends TenantTable>(
   scope: TenantScope,
   table: TTable,
-  values: Omit<TTable['$inferInsert'], 'organizationId'>,
+  values: Omit<SQLiteInsertValue<TTable>, 'organizationId'>,
   where?: SQL,
 ) {
   if (where === undefined) {

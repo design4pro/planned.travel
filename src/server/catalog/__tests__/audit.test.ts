@@ -68,7 +68,7 @@ import type { PlatformActor } from '#/server/auth/guard'
 import type { LogRecord, LogSink, Logger } from '#/server/observability'
 
 /**
- * docs/ACCESS.md §4.2's sixteen `platform.*` rows, in the order the table lists them.
+ * docs/ACCESS.md §4.2's eighteen `platform.*` rows, in the order the table lists them.
  *
  * The sixteen two-segment catalogue names in the same table — `catalog_place.*`,
  * `catalog_ingest.*`, `place_pack.*`, `catalog_source.*` — belong to `src/server/catalog/repo.ts`
@@ -92,11 +92,13 @@ const ACCESS_PLATFORM_ACTIONS = [
   'platform.token.issued',
   'platform.token.revoked',
   'platform.share.revoked',
+  'platform.workspace.deleted',
+  'platform.workspace.deletion_refused',
   'provider.limit_changed',
   'provider.policy_changed',
 ] as const
 
-/** docs/ACCESS.md §4.2's prefix table, all nine rows, transcribed from the document. */
+/** docs/ACCESS.md §4.2's prefix table, all eleven rows, transcribed from the document. */
 const ACCESS_PREFIX_TABLE: Record<string, string> = {
   catalog_place: 'catalog_place',
   catalog_ingest: 'catalog_ingest',
@@ -106,7 +108,9 @@ const ACCESS_PREFIX_TABLE: Record<string, string> = {
   'platform.session': 'session',
   'platform.token': 'staff_api_token',
   'platform.share': 'share_link',
+  'platform.workspace': 'workspace',
   provider: 'provider',
+  release: 'release',
 }
 
 const OPERATOR: PlatformActor = {
@@ -137,7 +141,7 @@ function throwingLogger(): { logger: Logger; calls: Array<string> } {
 }
 
 describe('the platform action vocabulary', () => {
-  it('exports exactly the eighteen console-written names docs/ACCESS.md §4.2 declares', () => {
+  it('exports exactly the twenty platform-owned names docs/ACCESS.md §4.2 declares', () => {
     // Both halves of §4.2's union test, at the level this phase can close them. A name in code and
     // not in the table fails the first expectation; a name in the table that this module does not
     // export fails the second. The document's stronger form — "a name in this table that nothing
@@ -147,7 +151,7 @@ describe('the platform action vocabulary', () => {
     // docs/ACCESS.md. Widen this to call-site parity when the last of those writers lands.
     const exported = Object.values(PLATFORM_ACTIONS)
     expect([...exported].sort()).toEqual([...ACCESS_PLATFORM_ACTIONS].sort())
-    expect(exported).toHaveLength(18)
+    expect(exported).toHaveLength(20)
   })
 
   it('exports platform.share.revoked now, ahead of the Faza F writer', () => {
@@ -235,11 +239,11 @@ describe('the platform action vocabulary', () => {
 })
 
 describe('the prefix table', () => {
-  it('equals the nine rows of docs/ACCESS.md §4.2 exactly', () => {
+  it('equals the eleven rows of docs/ACCESS.md §4.2 exactly', () => {
     // §4.4's timeline query filters on (entity_type, entity_id), so it never has to guess which
     // prefix belongs to which table — this mapping is the reason it does not have to.
     expect({ ...PLATFORM_AUDIT_ENTITY_BY_PREFIX }).toEqual(ACCESS_PREFIX_TABLE)
-    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(9)
+    expect(Object.keys(PLATFORM_AUDIT_ENTITY_BY_PREFIX)).toHaveLength(11)
   })
 
   it('resolves each action to the entity_type its prefix names', () => {
@@ -275,7 +279,7 @@ describe('the prefix table', () => {
  * block, and they fail at build time rather than at run time.
  */
 describe('the writer boundary', () => {
-  it('narrows action to the eighteen frozen names rather than to the schema string input', () => {
+  it('narrows action to the twenty frozen names rather than to the schema string input', () => {
     // §4.3 makes this writer swallow its own failures, so a mistyped verb cannot be caught at
     // runtime *by this module*: the schema rejects `platform.user.bannd`, the rejection goes to the
     // logger, and the caller — whose ban already committed — returns success with no row behind it.

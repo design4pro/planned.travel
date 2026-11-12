@@ -17,6 +17,32 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'gallery.publish.expired':
+    'This preview expired. Generate a new preview before confirming.',
+  'gallery.publish.title': 'Gallery preview',
+  'gallery.publish.publicTitle': 'Public title',
+  'gallery.publish.attribution': 'Display name',
+  'gallery.publish.showDates': 'Include trip dates',
+  'gallery.publish.preview': 'Preview what will be shared',
+  'gallery.publish.confirm': 'Confirm this preview',
+  'gallery.publish.captureFailed':
+    'We could not prepare this preview. Check the fields and try again.',
+  'gallery.publish.tooLarge': 'This trip is too large to preview.',
+  'gallery.publish.empty': 'Empty',
+  'gallery.publish.version': 'Snapshot version',
+  'gallery.publish.countries': 'Country codes',
+  'gallery.publish.days': 'Days',
+  'gallery.publish.places': 'Places',
+  'gallery.publish.order': 'Order',
+  'gallery.publish.yes': 'Yes, included',
+  'gallery.publish.no': 'No, excluded',
+  'gallery.publish.publicFields':
+    'Your title, summary, display name, country codes, day titles, place names and categories, and any place coordinates may be public. Dates are included only if you choose them.',
+  'gallery.publish.privateFields':
+    'Travellers, notes, files, costs and reservations are not included.',
+  'gallery.publish.freeTextWarning':
+    'Check the title, summary, display name, day titles and place names for personal information before confirming.',
+
   'plan.photo.edit': 'Edit image',
   'plan.photo.unavailable':
     'Image uploads and editing are unavailable. The current image is kept.',

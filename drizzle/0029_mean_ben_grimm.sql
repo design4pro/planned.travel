@@ -1,0 +1,1 @@
+ALTER TABLE `workspace_deletions` ADD `refusal_reason` text;

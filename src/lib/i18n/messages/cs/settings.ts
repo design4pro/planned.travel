@@ -160,6 +160,10 @@ const messages = {
     'Podmínky a zásady ochrany osobních údajů vydáváme jen v angličtině. Všechno ostatní v produktu je přeložené.',
 
   /* ------------------------------------------------------------- appearance */
+  'appearance.layout.title': 'Rozložení',
+  'appearance.layout.label': 'Široké rozložení',
+  'appearance.layout.hint':
+    'Využijte celou šířku aplikace a zarovnejte widgety přehledu s nadcházející cestou. Ukládá se pouze v tomto prohlížeči.',
   'appearance.error': 'Vzhled se nenačetl',
   'appearance.theme.title': 'Téma',
   'appearance.theme.description':

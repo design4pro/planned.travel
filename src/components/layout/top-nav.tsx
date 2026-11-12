@@ -55,7 +55,7 @@ export function TopNav({
           : 'top-0 pt-safe',
       )}
     >
-      <div className="mx-auto flex h-nav max-w-content items-center gap-3 gutter-x">
+      <div className="mx-auto flex h-nav max-w-content app-content-width items-center gap-3 gutter-x">
         <Link
           to="/dashboard"
           aria-label={t('shell.nav.dashboardLink')}

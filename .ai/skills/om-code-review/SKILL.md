@@ -3,6 +3,21 @@ name: om-code-review
 description: planned.travel extension of the installed om-code-review skill. Adds the repo's blocker floor (suppressions, skipped tests, generated files, dependencies, tenant isolation, locale parity).
 ---
 
+## Enrolled Paperclip pilot: independent assigned review
+
+For an explicitly enrolled task, read `docs/agents/paperclip-delivery-pilot.md` and
+use the existing code-review rubric on the full frozen head/base/policy packet in
+your PM-assigned independent reviewer context. Return your attributed verdict,
+findings and coverage directly to the PM. Start no additional persona panel,
+implementation or publication chain. The two assigned reviewers supply the
+policy's complete coverage; missing coverage blocks acceptance and is routed to
+the PM. All other review and safety requirements remain mandatory.
+
+## Outside the pilot
+
+The workflow below, including its persona routing, applies unchanged to tasks
+that are not enrolled.
+
 Extends the installed skill: read `.claude/skills/om-code-review/SKILL.md` and follow it. `CODE_REVIEW.md` at the repo root is the full rule set; these are the mechanical blockers to check first, on the diff alone:
 
 - Added `@ts-ignore`, `@ts-expect-error`, `eslint-disable*` → blocker.
@@ -10,7 +25,7 @@ Extends the installed skill: read `.claude/skills/om-code-review/SKILL.md` and f
 - Deleted `*.test.ts(x)`, `*.spec.ts` or `e2e/**` spec without the tested code being deleted in the same PR → blocker.
 - Diff in `src/routeTree.gen.ts` or `drizzle/` that `bash .ai/scripts/check-generated.sh` does not reproduce → blocker. A hand-written `drizzle/*.sql` → blocker.
 - `package.json` dependency change or unexplained `pnpm-lock.yaml` diff outside a `dependencies`-labelled PR → blocker.
-- New or changed method in `src/server/repos` without a tenant-isolation test → blocker. SQL outside `src/server/repos`, `src/server/catalog` and the identity-table SQL of `src/server/auth/provisioning.ts` (SPEC §6: three closed exceptions; a fourth table there is a blocker) → blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- New or changed method in `src/server/repos` without a tenant-isolation test → blocker. SQL outside `src/server/repos`, `src/server/catalog` and the identity-table SQL of `src/server/auth/provisioning.ts` (SPEC §6: five closed exceptions including account-auth and bounded content/release repositories; a fourth provisioning table is a blocker) → blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
 - New user-facing string not present as a key in every locale under `src/lib/i18n/messages/` → blocker.
 - Server function called from another server function's handler → blocker (`scripts/check-server-fn-manifest.mjs` explains the production failure).
 
@@ -50,3 +65,11 @@ written for will ever read them.
 Skip the panel entirely on a diff that reaches no seat - a dependency bump, a generated file, a
 docs-only change. Consulting nobody is the correct outcome there, and cheaper than five reports
 saying the same.
+
+Release-content contract only: [ADR 0051](../../../docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
