@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -61,13 +61,27 @@ function feedback(): Promise<Feedback> {
   return loading
 }
 
+function canFocus(element: HTMLElement): boolean {
+  const root = element.getRootNode()
+  const host = root instanceof ShadowRoot ? root.host : element
+  return (
+    element.isConnected &&
+    !element.closest('[inert]') &&
+    !host.closest('[inert]') &&
+    (typeof element.checkVisibility !== 'function' ||
+      element.checkVisibility({ visibilityProperty: true }))
+  )
+}
+
 export function FeedbackWidget() {
   const t = useTranslate()
   const locale = useLocale()
+  const replacementFocus = useRef<{ main: HTMLElement; href: string } | null>(
+    null,
+  )
   const { resolved } = useTheme()
-  const offered = !useRouterState({
-    select: ({ location }) => holdsSensitiveLocation(location.href),
-  })
+  const href = useRouterState({ select: ({ location }) => location.href })
+  const offered = !holdsSensitiveLocation(href)
 
   /**
    * `t` is memoised on the locale, so this runs once per language and not once per render. A
@@ -75,14 +89,18 @@ export function FeedbackWidget() {
    * change: the SDK reads them when the widget is constructed and never again.
    */
   useEffect(() => {
-    if (!REPORTING_ENABLED || !offered) return
+    if (!REPORTING_ENABLED || !offered) {
+      replacementFocus.current = null
+      return
+    }
 
     let widget: ReturnType<Feedback['createWidget']> | undefined
     let cancelled = false
+    let cleanup: (() => void) | undefined
 
     void feedback().then((integration) => {
       if (cancelled) return
-      widget = integration.createWidget({
+      const options = {
         tags: { locale },
         // No `triggerAriaLabel`: it defaults to `triggerLabel`, which is exactly what WCAG 2.5.3
         // asks for - the accessible name and the visible one are the same sentence.
@@ -116,14 +134,107 @@ export function FeedbackWidget() {
         errorTimeoutText: t('shell.feedback.errorTimeoutText'),
         errorForbiddenText: t('shell.feedback.errorForbiddenText'),
         errorGenericText: t('shell.feedback.errorGenericText'),
-      })
+      }
+      widget = integration.createWidget(options)
+      const actor = widget
+      if (
+        replacementFocus.current?.main === document.activeElement &&
+        replacementFocus.current.href === href &&
+        canFocus(actor.el)
+      ) {
+        actor.el.focus()
+      }
+      replacementFocus.current = null
+      let form: Awaited<ReturnType<Feedback['createForm']>> | undefined
+      let opening = false
+
+      const ownsFocus = () => {
+        const root = actor.el.getRootNode()
+        const active = document.activeElement
+        return (
+          active === document.body ||
+          active === actor.el ||
+          (root instanceof ShadowRoot && active === root.host)
+        )
+      }
+      const restoreFocus = () => {
+        if (cancelled || !ownsFocus()) return
+        if (canFocus(actor.el)) {
+          actor.el.focus()
+        } else {
+          const main = document.querySelector<HTMLElement>('main')
+          if (main) {
+            main.tabIndex = -1
+            main.focus()
+          }
+        }
+      }
+      const close = (target: typeof form) => {
+        if (!target || form !== target) return
+        form.close()
+        form.removeFromDom()
+        form = undefined
+        actor.show()
+        restoreFocus()
+      }
+      const onKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape' && form && ownsFocus()) {
+          event.preventDefault()
+          event.stopImmediatePropagation()
+          close(form)
+        }
+      }
+      const open = (event: Event) => {
+        event.stopImmediatePropagation()
+        if (opening || form) return
+        opening = true
+        let createdForm: Awaited<ReturnType<Feedback['createForm']>> | undefined
+        void integration
+          .createForm({
+            ...options,
+            onFormClose: () => close(createdForm),
+            onFormSubmitted: () => close(createdForm),
+          })
+          .then((created) => {
+            opening = false
+            if (cancelled) return
+            createdForm = created
+            form = created
+            actor.hide()
+            form.appendToDom()
+            form.open()
+          })
+          .catch(() => {
+            opening = false
+          })
+      }
+      actor.el.addEventListener('click', open, true)
+      document.addEventListener('keydown', onKeyDown, true)
+      cleanup = () => {
+        actor.el.removeEventListener('click', open, true)
+        document.removeEventListener('keydown', onKeyDown, true)
+        if (form || opening) {
+          const shouldRestore = ownsFocus()
+          form?.close()
+          form?.removeFromDom()
+          if (shouldRestore && ownsFocus()) {
+            const main = document.querySelector<HTMLElement>('main')
+            if (main) {
+              main.tabIndex = -1
+              main.focus()
+              replacementFocus.current = { main, href }
+            }
+          }
+        }
+      }
     })
 
     return () => {
       cancelled = true
+      cleanup?.()
       widget?.removeFromDom()
     }
-  }, [locale, t, offered])
+  }, [locale, t, offered, href])
 
   /**
    * Colour comes from our tokens through the custom properties in `styles.css`, which flip with the
