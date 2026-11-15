@@ -1,9 +1,11 @@
 name: housekeeping
-description: Reconcile merged issues and report exceptions with missing evidence.
+description: Report merged-issue candidates and reconcile them under atomic Open Mercato ownership.
 steps:
-  - id: close-fixed
-    name: Reconcile issues fixed by merged PRs
-    command: node scripts/agents/close-fixed-issues.mjs --apply --checkpoint
-  - id: exceptions
-    name: Report unresolved pipeline states
-    command: node .ai/scripts/backlog-status.mjs --json
+  - id: report
+    command: node scripts/agents/close-fixed-issues.mjs
+  - id: reconcile
+    prompt: |
+      Read AGENTS.md and apply om-close-fixed-issues {{task}}.
+      Follow the current atomic ownership protocol and preserve human holds.
+      Never call the legacy deterministic helper with --apply or release claims by age/login.
+      Do not launch implementation, PR review or merge work from this sweep.

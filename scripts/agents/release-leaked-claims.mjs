@@ -119,7 +119,11 @@ function main() {
     console.error(USAGE)
     process.exit(2)
   }
-  const dryRun = process.argv.includes('--dry-run')
+  const dryRun = true
+  if (!process.argv.includes('--dry-run'))
+    throw new Error(
+      'Legacy claim release is retired. Inspect with --dry-run; use the atomic tracker protocol for authorized recovery.',
+    )
   const currentUser = gh(['api', 'user', '--jq', '.login']).trim()
 
   let released = 0
@@ -132,10 +136,7 @@ function main() {
       const plan = planRelease(pr, { currentUser, since })
       if (!plan) continue
       const body = releaseComment(plan)
-      if (!dryRun) {
-        gh(['pr', 'edit', number, '--remove-label', LABEL])
-        gh(['pr', 'comment', number, '--body', body])
-      }
+
       released++
       console.log(`#${number}: ${body}${dryRun ? ' (dry run)' : ''}`)
     } catch (error) {

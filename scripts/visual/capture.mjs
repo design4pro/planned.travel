@@ -1,7 +1,7 @@
 /**
  * Take the frames a blind A/B pair is made of.
  *
- * Anyone checking a change by hand runs this, which the `verifying-changes` skill points here for.
+ * Anyone checking a change by hand runs this, which `.agents/policies/verification.md` points here for.
  * The script exists because the capture procedure used to be two kilobytes of prose in a prompt
  * and every capture agent re-derived it. The bill, measured across two runs: five findings about a
  * theme the capture had switched wrongly, frames photographed with the screen at rest when the item
@@ -61,7 +61,7 @@ const AUTH_STATE = 'e2e/.auth/demo.json'
 const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
 
 /** Where the obligation to quote a `warnings` entry is written down. */
-const WARNINGS_CONTRACT = '.claude/skills/verifying-changes/SKILL.md'
+const WARNINGS_CONTRACT = '.agents/policies/verification.md'
 
 /**
  * Console output that is the toolchain talking, not the application.
@@ -415,7 +415,7 @@ async function main() {
     ),
   )
   // A pointer, not a second copy of the rule: what to do with a warning is one claim, and
-  // `verifying-changes` owns it.
+  // `.agents/policies/verification.md` owns it.
   if (warnings.length) {
     console.error(
       `capture: ${warnings.length} warning(s) — every one is quoted verbatim in whatever reports ` +

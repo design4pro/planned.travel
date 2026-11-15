@@ -3,11 +3,14 @@
 Third-party material vendored into this repository, pinned to the upstream commit it was taken from.
 Refresh by copying the same paths from a newer commit and updating the pin here.
 
-| local path                                                   | upstream                                                                                                 | commit         | licence |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | -------------- | ------- |
-| `.claude/skills/tdd/` (`SKILL.md`, `tests.md`, `mocking.md`) | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/tdd/`                      | `6654f6b60cd9` | MIT     |
-| `.claude/skills/code-review/SKILL.md`                        | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/code-review/SKILL.md`      | `6654f6b60cd9` | MIT     |
-| `docs/agents/definition-of-done.md`                          | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) `references/definition-of-done.md` | `d2c37ef6225d` | MIT     |
+| Local path                          | Upstream                                                              | Pin                                   | License                             |
+| ----------------------------------- | --------------------------------------------------------------------- | ------------------------------------- | ----------------------------------- |
+| `.agents/skills/om-*/`              | [open-mercato/skills](https://github.com/open-mercato/skills)         | `scripts/agents/skills-upstream.json` | MIT; `.agents/LICENSE.open-mercato` |
+| `docs/agents/definition-of-done.md` | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | `d2c37ef6225d`                        | MIT                                 |
+
+The separate TDD and code-review skill installations were removed on 2026-11-15.
+The Matt Pocock notice remains for adapted project workflow/design guidance retained as
+ordinary documents under `.agents/policies/` and `.agents/workflows/`.
 
 ## mattpocock/skills
 

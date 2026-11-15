@@ -16,7 +16,7 @@ documentation), one priority-*, one risk-*, and `needs-qa` when a screen changes
 - [ ] Visually verified in a browser: light and dark, desktop and mobile (UI changes). Nothing in CI photographs a screen (ADR 0016), so for a deliberate visual change run `node scripts/visual/capture.mjs` and look at the pair
 - [ ] No TODOs, placeholder copy, `console.log` or commented-out code
 - [ ] Only files the issue or spec names were touched
-- [ ] User-facing copy landed in all 23 locales (`i18n-messages`)
+- [ ] User-facing copy landed in all 23 locales (`.agents/policies/i18n.md`)
 - [ ] Docs grep run on this head (CODE_REVIEW.md "Docs and CI"): every document that states what this change changes was searched for the old name and count, and fixed. Terms searched: <list them, including the old names of any function, module, constant or rule you changed and the paths searched (`.ai/specs/`, `CONTEXT.md`, `docs/`, comments in `src/`), or `none: no label, workflow, automation, skill, guard, runner variable, gate step, function, module, constant or rule changed`>
 
 ## Noticed but not touching

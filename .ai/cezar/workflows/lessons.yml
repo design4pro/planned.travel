@@ -1,14 +1,9 @@
-# `steps` form rather than the `skills:` shorthand, because the shorthand runs with the default
-# tool list, which has no `Agent`: the skill settles open questions through an independent
-# specialist sub-agent (.ai/skills/afk-decide/SKILL.md, SDLC.md § Delegated decisions).
 name: lessons
-description: Turn mistakes repeated across recent PRs into enforced rules, at most one PR (afk-lessons).
+description: Review repeated delivery failures with Open Mercato and propose at most one repair PR.
 steps:
-  - id: afk-lessons
-    name: afk-lessons
-    skill: afk-lessons
+  - id: retrospective
     prompt: |
-      {{task}}
-      Run /om-pipeline-retro first and use its evidence in afk-lessons. Repeated failures
-      become regression tests or enforced rules. Open at most one PR; no extra prose-only rules.
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
+      Read AGENTS.md, then run om-pipeline-retro for {{task}}.
+      Use concrete evidence from the last fourteen days. A quiet period is a no-op.
+      Repeated failures may become regression tests or a correction to the owning rule.
+      Open at most one draft PR; do not merge it or create a second delivery owner.
