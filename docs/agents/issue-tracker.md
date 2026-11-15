@@ -40,7 +40,7 @@ summary) follows `SDLC.md` and is explained in a comment.
 
 A PR that implements an issue says `Closes #n` in its body (`.github/pull_request_template.md`).
 GitHub does not act on it, because PRs merge into `develop` and the default branch is `main`;
-`om-close-fixed-issues`, in the `housekeeping` run three times a day, does. A spec-only or partial
+`om-close-fixed-issues`, in an explicitly dispatched `housekeeping` run, does. A spec-only or partial
 PR says `Refs #n`. `do-not-close` on the issue wins over both.
 
 ## Specs
@@ -48,7 +48,7 @@ PR says `Refs #n`. `do-not-close` on the issue wins over both.
 A feature is specified before it is built. `om-auto-write-spec` (the `spec` workflow, from the cockpit) writes
 `.ai/specs/<YYYY-MM-DD>-<slug>.md` on a design-only PR (`spec/<slug>`, `documentation`,
 `skip-qa`) that references the issue; the sections a spec must carry here are in
-`.ai/skills/om-auto-write-spec/SKILL.md` ("Visual change expected", "Copy"). That PR says
+`.agents/policies/om-auto-write-spec.md` ("Visual change expected", "Copy"). That PR says
 `Refs #n`, never a closing keyword, so the issue stays open and **is** the implementation ticket -
 no second issue is filed for building what the spec describes (ADR 0018). A human merges the spec
 PR, then starts `issue-autofix` on that same issue from the cockpit, and `om-auto-fix-issue`'s feature route resolves the
@@ -56,6 +56,6 @@ merged spec and hands it to `om-auto-implement-spec`; starting `implement-spec` 
 with the spec path, its issue number or the spec-PR number is that same skill by hand. Either way
 the implementation ships on its own PR with `Closes #n`. Interactive thinking
 before an issue exists is `brainstorm` (`om-brainstorm`), which ends by filing the issue through
-`om-prepare-issue`. A spec that `afk-plan-to-spec` writes for a plan stage of `docs/plans/` is the exception to "a
+`om-prepare-issue`. A spec that `plan-to-spec` writes for a plan stage of `docs/plans/` is the exception to "a
 human merges the spec PR": the pipeline merges it on its specialist panel's verdicts (ADR 0033), and the Reconciler
 slices it. The feature-spec flow above is unchanged, and so is the spec task `implement-ticket` writes: a person merges both of those spec PRs.

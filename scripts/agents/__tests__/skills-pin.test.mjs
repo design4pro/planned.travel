@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, readdirSync, realpathSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync, lstatSync } from 'node:fs'
 import { expect, it } from 'vitest'
 
-it('vendors every upstream file byte-for-byte and keeps complete skill hashes and links', () => {
+it('vendors every upstream file byte-for-byte and keeps complete skill hashes in one installation', () => {
   const manifest = JSON.parse(
     readFileSync('scripts/agents/skills-upstream.json', 'utf8'),
   )
@@ -20,9 +20,18 @@ it('vendors every upstream file byte-for-byte and keeps complete skill hashes an
   }
   const skills = new Set(manifest.files.map((file) => file.path.split('/')[2]))
   expect(skills.size).toBe(74)
+  expect(readdirSync('.agents/skills').sort()).toEqual([...skills].sort())
+  expect(Object.keys(lock.skills).sort()).toEqual([...skills].sort())
+  for (const retired of [
+    '.claude',
+    '.github/skills',
+    '.ai/skills',
+    '.ai/cezar/skills',
+  ])
+    expect(existsSync(retired)).toBe(false)
   for (const name of skills) {
     const root = `.agents/skills/${name}`
-    expect(realpathSync(`.claude/skills/${name}`)).toBe(realpathSync(root))
+    expect(lstatSync(root).isSymbolicLink()).toBe(false)
     const files = readdirSync(root, { recursive: true, withFileTypes: true })
       .filter((file) => file.isFile())
       .map((file) => `${file.parentPath}/${file.name}`.slice(root.length + 1))

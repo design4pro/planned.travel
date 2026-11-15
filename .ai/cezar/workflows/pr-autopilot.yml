@@ -17,11 +17,10 @@ nodes:
     type: agent
     verdicts: [ready, blocked]
     prompt: |
-      Run /om-pr-autopilot {{task}} through review, QA and concrete fixes. Checkout the PR head.
+      Run om-pr-autopilot {{task}} through review, QA and concrete fixes. Checkout the PR head.
       The graph owns CI waiting and final merge. Reuse current-head/policy evidence. Stop before
       CI waiting and emit CEZ:VERDICT ready when review and QA pass, otherwise blocked.
       Keep the existing three-round cap across runs; never remove a hold to finish.
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, Agent, mcp__plugin_playwright_playwright]
   - id: ci
     type: github.wait-ci
     timeoutMs: 2400000
@@ -33,13 +32,25 @@ nodes:
     type: agent
     verdicts: [merged, blocked]
     prompt: |
-      Run /om-approve-merge-pr {{task}} into develop only. Verify the current head and all
+      Run om-approve-merge-pr {{task}} into develop only. Verify the current head and all
       existing QA/security/hold gates. Emit merged only on fresh GitHub confirmation;
       otherwise emit blocked. Do not repeat a valid review just because this is another tick.
-    allowedTools: [Read, Grep, Glob, Bash, Skill, Agent]
   - id: confirm
     type: check
     command: node .ai/scripts/pipeline-control.mjs confirm-merge
+  - id: reconcile-issues
+    type: agent
+    verdicts: [reconciled, blocked]
+    prompt: |
+      Read AGENTS.md and .agents/policies/om-close-fixed-issues.md.
+      From this run's freshly confirmed merged PR, reconcile only its explicit closing issues
+      using om-close-fixed-issues and the atomic issue ownership protocol. Do not scan or mutate
+      unrelated PRs. Use the deterministic helper only to parse/report candidates.
+      Release this run's delivery claim before acquiring the housekeeping claim; never clear a
+      foreign lock or infer ownership from the login. Preserve human holds and spec/epic exclusions.
+      Verify each resulting issue state. Emit CEZ:VERDICT reconciled when all eligible issues
+      are closed or there are no eligible closing links; otherwise emit CEZ:VERDICT blocked
+      with an explicit handoff naming the unresolved issue and owner. A merge alone is not closure.
   - id: done
     type: end
     status: success
@@ -66,5 +77,8 @@ edges:
   - { from: merge.merged, to: confirm }
   - { from: merge.blocked, to: failed }
   - { from: merge.failed, to: failed }
-  - { from: confirm.pass, to: done }
+  - { from: confirm.pass, to: reconcile-issues }
   - { from: confirm.fail, to: failed }
+  - { from: reconcile-issues.reconciled, to: done }
+  - { from: reconcile-issues.blocked, to: failed }
+  - { from: reconcile-issues.failed, to: failed }

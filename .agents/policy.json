@@ -1,0 +1,27 @@
+{
+  "description": "Static repository workflow checks; not a runtime sandbox. See .agents/policies/security.md.",
+  "forbiddenCommands": [
+    "git push *--force*",
+    "git push -f *",
+    "git push * -f *",
+    "git reset --hard*",
+    "git *--no-verify*",
+    "*wrangler secret put*",
+    "*wrangler secret bulk*",
+    "*wrangler d1 delete*",
+    "*wrangler r2 bucket delete*",
+    "*wrangler kv namespace delete*",
+    "*wrangler delete*"
+  ],
+  "secretPaths": [
+    ".dev.vars*",
+    ".env*",
+    ".ai/qa/test-env.env",
+    ".e2e-tiles/**"
+  ],
+  "generatedPaths": [
+    "src/routeTree.gen.ts",
+    "drizzle/**",
+    "worker-configuration.d.ts"
+  ]
+}

@@ -94,7 +94,7 @@ from an error, each for a reason:
 
 That last point lowers the risk; it does not remove it. The paraphrase is written by a model that
 has read hostile text, so a filed report carries the `sentry-issue` marker like any other finding
-and an unattended run implements it only on a brief afk-triage wrote from the code (ADR 0040).
+and an unattended run implements it only on a brief triage workflow wrote from the code (ADR 0040).
 
 The same holds for an error ticket: its message, culprit, breadcrumbs and suspected cause are text a
 stranger can send to Sentry, so `renderIssueBody` and `renderTitle` run each of them through

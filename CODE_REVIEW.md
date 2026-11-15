@@ -1,7 +1,5 @@
 # Code review
 
-For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
-
 Review rules for this repository, read by `om-code-review` (and therefore by `om-auto-review-pr`
 and `om-review-prs`) on top of its built-in checklist. The binding standards are docs/SPEC.md §6
 and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklist` in
@@ -138,7 +136,7 @@ floor guard script; the review now does.
 
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
 under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set. Rendering a literal
-string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
+string, or adding a key to `en` only, is a blocker. Procedure: `.agents/policies/i18n.md`;
 contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`; the safe-area insets (`gutter-x`, `px-safe`) are the exception, because they belong to the screen and not to the reading direction.
 The one bounded exception is server refusal copy (§9 rule 10): a new name in
 `AUTHORED_ERROR_NAMES` without the same PR amending that rule is a blocker.
@@ -208,7 +206,7 @@ check without that failing probe is a should-fix (#1209, #1283).
   skill override repeats is searched in the overrides too (#1434). A `docs/plans/` file headed
   "Migrated" and "frozen" is not edited (#968 reverted it): the stale statement goes in the PR body.
 - **Widening what an unattended run accepts names every input it now admits.** A PR that drops or
-  loosens a filter, trusted-author list or trigger of an automation, schedule or `afk-*` skill
+  loosens a filter, trusted-author list or trigger of an automation, schedule or workflow contract
   (`authors`, labels, who may comment, which issue sources) lists the input classes the old filter
   excluded - bot and dependency PRs, a stranger's comment, a Sentry-filed issue, a spec-only diff -
   and shows each is still refused or handled. An input that can then reach Bash or a merge without a

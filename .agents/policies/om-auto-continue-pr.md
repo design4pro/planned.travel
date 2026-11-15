@@ -1,0 +1,36 @@
+# om-auto-continue-pr repository policy
+
+Always apply `.agents/policies/security.md` and the atomic ownership protocol in `.ai/trackers/github.md`.
+
+Extends the installed skill: read the installed `SKILL.md` of the same name under `.agents/skills/` and follow it. Repo gate steps, applied to every change (they are blockers in `CODE_REVIEW.md`):
+
+1. **Copy**: every new user-facing string is a key in `en` and in every other locale under `src/lib/i18n/messages/` in the same change (procedure: `.agents/policies/i18n.md`; the parity test enforces it). No hardcoded copy, ever.
+2. **SQL**: only in `src/server/repos`, through the tenant-scoped base repository, except the bounded seven-table content/release repositories (SPEC §5/§6, ADR 0051) and the closed account-auth repository of SPEC §5/§6 and ADR 0049, with branded native-account scopes, named callers, primary authority and no tenant-content access; the exceptions outside repos are three, and closed (SPEC §6): `src/server/catalog` (exactly four catalog members; the fourth is the ids-only tenant audit retention discovery read, SPEC §5) and the identity-table SQL of `src/server/auth/provisioning.ts` (tables `user`, `organization`, `member`), besides the `…Unscoped` shape below. Better Auth's own tables reached through its adapter (the passkey plugin's user-keyed `passkey` table) are not application SQL and not an exception (SPEC §6). An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker. Every new or changed repo method ships a tenant-isolation test (rows of another organisation are invisible).
+3. **Layering**: `src/components/ui` never fetches data and never imports from `src/server`; routes call server functions in `src/server/fns`; a server function never calls another server function.
+4. **Inputs**: Zod on every server-function input.
+5. **Generated files**: `src/routeTree.gen.ts` only via `pnpm generate-routes`, `drizzle/` only via `pnpm db:generate`; never edit them by hand. D1 migrations are additive (`BACKWARD_COMPATIBILITY.md`). A server-function input schema only gains optional fields: a required one fails every tab loaded before the deploy (#972, #846).
+6. **Stack**: never `pnpm add|remove|update`; a change that needs a dependency ends as `Status: blocked`.
+7. **Style**: TypeScript strict, no `any`, named exports (route modules excepted), `cn()` for classes, no nested ternaries, no `console.log`/TODO/commented-out code. Conventional Commits in English.
+8. **Vendor facts**: before a constant, fixture or contract relies on what a vendor returns or refuses (what a parameter means, which fields a product carries, the first date a range accepts), make one live request for a place and date whose real value you know (`curl`, once, with the identifying User-Agent) and put the sample in the PR body; a parameter's name and a recorded fixture are not evidence. Runs trusted a name in #1204 (`T2M_MAX` is the hottest hour, not the daily high) and a range in #1192 (NASA refuses 1980 with a 422 and the refusal was cached for every workspace); #1046 learned only by calling it that MET's `compact` product has no chance of rain.
+
+Release-content contract only: [ADR 0051](../../docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
+
+Before touching code read `AGENTS.md`, `CODE_REVIEW.md` and `BACKWARD_COMPATIBILITY.md`; the layout and ownership rules are docs/SPEC.md §6 to §8. The fast loop is `pnpm typecheck && pnpm lint && pnpm test`; the full gate is `validation.commands` in `.ai/agentic.config.json` (the e2e step needs a provisioned checkout: `scripts/worktree/bootstrap.sh --profile worktree --no-seed`).
+
+One addition to every push: the claim step stops on a merged or closed PR only at the start. Immediately before each `git push` to the PR head (every one of them: the adopted plan commit, each Phase, review fixes, and the finalize push, including the one `om-open-pr` makes for this run), run **get-pr** and read `state`, in the same command as the push. Anything other than `OPEN` stops the run: do not push, release the claim, post one comment saying why the run stopped, and report the commits that were not pushed. A push to a merged PR's head recreates the branch GitHub deleted on merge (money-tracker.online #447, 2026-09-24).
+
+**Attest the head you hand over.** After the final push to the PR head (and the OPEN check that precedes it), run `node scripts/ci/attestation.mjs attest --pr <number>` from a clean checkout of that commit: it re-runs the gate and posts the attestation CI reads (SDLC.md § Agent attestation, ADR 0045). A failure stops the run like a failed gate; a later push voids it, so attest last and never edit the head afterwards. Then, if the chain opened the PR as a draft, mark it ready (`gh pr ready <number>`): CI starts only then (SDLC.md § Draft until the last push).
+
+## Shared PR and CI evidence
+
+Use `node .ai/scripts/pr-state.mjs <pr>` for the read-only state snapshot and add `--wait` for
+one bounded CI wait. Reuse its required-check and workflow-run evidence instead of rebuilding
+API/polling loops in the agent. `unknown` is never green; inspect the warning rather than treating
+unreadable external checks as passed. This helper does not replace fresh-head checks before
+mutations, claims, unresolved-thread handling, security verdicts or current-head QA approval.

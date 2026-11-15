@@ -77,8 +77,7 @@ The 23 locales are one contract: every key exists in every locale (docs/SPEC.md 
 
 - **Breaking**: adding a key to `en` without the other locales, removing a key that any component
   still reads, renaming a key, changing an interpolation placeholder's name or a plural form set.
-- **Required path**: a new or renamed key lands in all locales in the same PR (the `i18n-messages`
-  skill; the parity test enforces it). A removed key is removed everywhere in the same PR and only
+- **Required path**: a new or renamed key lands in all locales in the same PR (`.agents/policies/i18n.md`; the parity test enforces it). A removed key is removed everywhere in the same PR and only
   after its last reader is gone.
 
 ### 6. Persisted and queued shapes

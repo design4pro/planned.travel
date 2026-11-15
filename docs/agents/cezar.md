@@ -1,474 +1,121 @@
-# Cezar on this repository
+# Cezar and Codex
 
-Historical Cezar operating instructions. The developer confirmed on 2026-11-10 that current execution uses Paperclip only. For the bounded pilot, use [Paperclip delivery pilot](paperclip-delivery-pilot.md); this document is not authority to start or restore a Cezar service.
+The supported project runtime is the official [open-mercato/cezar](https://github.com/open-mercato/cezar)
+with Codex as the default runner. `.ai/cezar/config.json` keeps `baseBranch: develop`,
+`maxParallel: 2`, `skillsRepos: []` and the chosen Codex model. This migration prepares the
+repository; it neither installs a global CLI nor starts or reconfigures a host service.
+The former fork-specific patches and service instructions are historical, not prerequisites.
 
-Historically, [open-mercato/cezar](https://github.com/open-mercato/cezar) orchestrated agent work
-here (ADR 0014), using vendored `om-*` skills from
-[open-mercato/skills](https://github.com/open-mercato/skills) (ADR 0018). The historical setup ran on
-a developer host, checked out `cez/<id8>` worktrees under `.ai/cezar/worktrees/`, polled GitHub for
-the events in docs/agents/cezar-automations.json, and dispatched named workflows. Skills used
-`.ai/trackers/github.md` under `SDLC.md`. Current execution uses Paperclip only; the retained
-commands below describe the former setup and reusable repository helpers, not an active service.
+For host-installed `codex-project` and per-repository Codex state, see
+[Project-isolated Codex](codex-isolation.md). Cezar selects that launcher through
+`CEZ_CODEX_BIN`; the ordinary personal Codex environment remains separate.
 
-## Deterministic pipeline helpers
+## Instructions and skills
 
-- `implement-ticket` is a native v2 graph. Its first check calls `pipeline-control.mjs preflight`,
-  reusing `backlog-status.mjs --issue N`. Only the current run is excluded from the active-run
-  lookup; every other claim, trust restriction and WIP limit remains. A missing or malformed run
-  context fails closed. `STOP:` branches to an end node before validation, PR or merge, without
-  starting another model. Bounded gate retries still return to implementation.
-- A trusted spec-only brief declares `<!-- agent-deliverable: spec -->`. The resulting ready spec
-  carries the exact brief's SHA256 comment. Only that match on `origin/<baseBranch>` is completed
-  work; metadata alone, a covering spec and `Refs #n` are not. The issue stays open for slicing.
-  Legacy briefs/specs are not inferred or rewritten.
-- `node .ai/scripts/pr-state.mjs N [--wait]` owns paginated PR/CI reads and bounded polling. It
-  includes external check runs, commit statuses, current-head identity and incomplete workflow
-  runs. Unknown data is never green. QA freshness, security approval and blocking-label checks
-  still belong to the existing merge skills. No model is needed between polling attempts.
-- `node scripts/ci/validation.mjs [--resume]` owns the configured ordered gate, bounded projects,
-  shard fallback and compact reports. Full logs stay in `.ai/tmp/validation/`; each command uses
-  a private temporary directory there, removed after exit or verified timeout termination.
-  A non-ESRCH termination error fails closed as `infrastructure`/exit 1, without shard retry or
-  subsequent jobs. It retains the private directory and records `terminationError`, `priorResult`,
-  `pid`, signed signal target `pgid` and `temporary` in the command result and
-  `.ai/tmp/validation/receipt.json`. The caller/run owner owns those retained diagnostics and
-  the unverified group boundary; promise settlement or lock release does not prove descendants
-  stopped. There is no automatic deletion or janitor after unverified termination. Resume is local-only;
-  `attestation.mjs attest` always runs fresh. Full gate nodes use this executor; the scheduled scan's
-  initial diagnostic sweep still gathers independent findings and the plan-to-spec gate remains
-  intentionally scoped to spec checks.
+`AGENTS.md` is the entry point for Cezar and Codex. Only `.agents/skills/om-*` are installed
+project skills. The collection is pinned to
+`open-mercato/skills@a90b091d27141a6cd12f363e94ebd0f5f84ba615`.
+`scripts/agents/skills-upstream.json` records every upstream blob and three reviewed local repairs;
+`skills-lock.json` hashes complete skill directories. Local policies live in `.agents/policies/`,
+workflow contracts in `.agents/workflows/`, and independent reviewer briefs in `.agents/reviewers/`.
+They are ordinary project documentation, not a second skill installation.
 
-## Install and configure
+Before each skill, including nested calls, read its matching policy as routed by `AGENTS.md`.
+An upstream instruction to look for an optional `.ai/skills` override does not replace this router.
+Use fresh generic sub-agents with the relevant reviewer brief instead of Claude-specific types.
+The optional upstream multi-model harness requires a Claude conductor; it remains vendored as
+part of the complete collection but is not configured or used by this Codex delivery pipeline.
 
-- Version: the cockpit runs the [design4pro/cezar](https://github.com/design4pro/cezar/tree/design4pro)
-  fork - its `design4pro` branch is upstream `v0.11.0` plus one commit per fix below - cloned at
-  `~/dev/cloudflare/cezar`, linked onto PATH with `npm run install-as-command` (so
-  `command -v cezar` keeps its path) and started by the cockpit plist as `cezar serve`. Upstream is
-  not a fallback, whether through `npx` or `npm i -g`: it runs without every fix below and reports
-  nothing, so the first symptom is pull requests sitting with unresolved threads. The
-  cockpit plist is host-wide state and lives in the fork's own repository
-  (`design4pro/cezar`, `host/launchd/dev.cezar.cockpit.plist`, with the runbook in its
-  `docs/host/README.md`, "The cockpit runs a fork, not npx" and "Taking an upstream release"), not
-  here - one service serves both projects. The
-  project entry in `~/.cezar/config.json` points at the main checkout; the versioned part is
-  `.ai/cezar/config.json` (`baseBranch: develop`, `worktreeRetention: 10`, `maxParallel: 2`,
-  `reviewGate: false` so a successful non-autonomous run settles at `done` and the automations
-  keep driving themselves, `skillsRepos: []` because the vendored `.agents/skills/om-*` copies are
-  the only source and cezar must not clone the upstream repository at run time).
-  Cezar's own `.ai/cezar/.gitignore` keeps run state, worktrees and its automations store out
-  of git; `config.json` and `workflows/` are tracked.
-- Fork commits: each fix below is one commit on `design4pro`, and a rebase onto an upstream release
-  drops the ones that release carries. They were string patches on an npm install's `dist/` until
-  September 2026 (`.ai/scripts/cezar-host-patch.sh`, since deleted). `GH_CONFIG_DIR` forwarding
-  needs no commit: 0.11.0 forwards it.
-  - In upstream, label-event polls (`issue.labeled`, `issue.unlabeled`) fail as soon as one
-    recently updated issue has a comment or a cross-reference (open-mercato/cezar#914), so
-    **Re-triage when a hold is cleared** (now disabled) would never fire. The fork cherry-picks the fix, upstream PR #916.
-  - On every cockpit start the skills coordinator runs `npx skills check <om-*> -p` in each project
-    root, and that command re-adds the skills from upstream HEAD over the vendored
-    `.agents/skills/om-*`, which shows as modified files in `git status` once upstream has moved
-    past the pin. `skillsAutoUpdate: false` (kept in `~/.cezar/config.json`) gates only the update;
-    the fork makes `CEZ_SKILLS_AUTO_UPDATE=0` skip the check too. Recovery:
-    `git checkout -- .agents/skills .claude/skills skills-lock.json`. Never delete `.agents/`: it
-    is tracked, and `.claude/skills/om-*` are symlinks into it.
-  - Two runs forking their worktree in the same moment lose the `.git/config` lock: `git worktree
-add -b` writes the new branch's upstream into the shared config, git's config lock has no
-    retry, and the fork happens before cezar takes the repository-root lease, so `maxParallel`
-    does not order it. Every loser dies with `worktree creation failed` before its workflow runs -
-    three runs here, two of them 26ms apart. The fork retries onto the reattach form, which
-    writes no shared config.
-  - A label automation pins its poll cursor once the 120s overlap band it re-reads on every poll
-    holds `maxRecords` label events (planned.travel#351, reported upstream as
-    open-mercato/cezar#982): every poll spends its budget on events it has already seen and
-    returns the cursor it was handed. `om-auto-manage-issues` writes three labels per issue in
-    the same second, so two groomed issues saturate a five-record window. The automation stays
-    enabled, polls on schedule and logs `no-match`, so a pinned one looks exactly like a quiet
-    repository. The fork widens the budget of a poll that failed to advance, doubling to the
-    100-record search ceiling within that same check, so a saturated band clears without help.
-    Recognise a pin from the main checkout:
+The enrolled primary checkout automatically installs newer `open-mercato/skills` commits from
+`main` at Cezar startup and every six hours while Cezar runs. The host updater stages and verifies
+the complete collection, waits for idle readers, and publishes skills, manifest, lock and this
+pin together with a recovery journal and retained backup. Other projects and linked worktrees
+are not enrolled implicitly. Details and opt-out: [Project-isolated Codex](codex-isolation.md).
+Automatic installation leaves a local Git diff; it never commits, pushes, changes repository
+policies or runs downloaded code. A changed upstream base for a local repair stops installation
+and appears in Cezar's update status. The `skills-update` workflow reviews the installed diff,
+applies upgrade notes and runs the gate before preparing a draft PR.
+`pnpm install-skills` remains a manual pin-restoration tool; run it only with project readers
+stopped. Explicit manual updates use `pnpm install-skills -- --ref <full-reviewed-SHA>`.
+Never recreate another tool's skill directory as a compatibility alias.
 
-    ```bash
-    jq -r --slurpfile a .ai/cezar/automations.json '$a[0].automations as $d | .states | to_entries[]
-      | . as $e | (first($d[] | select(.id == $e.key) | .name) // "?") as $n
-      | "\($n) \($e.key) cursor=\($e.value.cursor.timestamp) frozen=\($e.value.frozenHighWatermark.timestamp // "-") exhausted=\($e.value.widenExhaustedAt.timestamp // "-")"' \
-      .ai/cezar/automation-state.json
-    ```
+## Local execution
 
-    A `?` name is state left behind by an automation that no longer exists in `automations.json`.
-    A `cursor` that stays behind a label you applied for more than one interval is a pin; `frozen`
-    alone is not, since any truncated poll sets it, including one that advanced. `exhausted` means
-    the ladder reached 100 at that cursor and gave up until the cursor moves: the band is wider
-    than the search API pages. Recovery, in order: confirm the cockpit runs a current build of the
-    fork (`readlink -f "$(command -v cezar)"` lands in `~/dev/cloudflare/cezar`), because an
-    upstream install drops the widening without a word and brings the pin back; if the cursor
-    still does not move, re-baseline the automation with
-    `curl -X POST "${CEZ_API:-http://localhost:4321}/api/v1/p/${CEZ_PROJECT:-planned-travel}/automations/<id>/enable"`, which
-    moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
-    issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
-    label and add it again.
-- Skills: `.agents/skills/om-*` are vendored files based on
-  `open-mercato/skills@75cf3146fd31aa6fa53af0866c076e5b7a3d9179`, and each `.claude/skills/om-*`
-  is a relative symlink to its directory there. Three local helper repairs are retained and
-  hashed with reasons in `scripts/agents/skills-upstream.json`; every other file is byte-identical.
-  This line is the pin, because
-  `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
-  carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
-  the diff is a PR, read with `/om-apply-upgrade-notes`, and the SHA on this line moves in the same
-  commit.
-  Repo specifics live in `.ai/skills/om-<name>/SKILL.md` as extensions of the installed skill.
-- Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
-  appended to the system prompt of every agent step and tells the run to talk to the developer in
-  Polish while everything that leaves the session (code, comments, commits, GitHub) stays English.
-- Service environment: `CEZ_AUTOMATIONS=1`, `CEZ_AUTONOMOUS_DEFAULT=0`, `CEZ_SKILLS_AUTO_UPDATE=0`,
-  all three from the plist template in `design4pro/cezar`; `GH_TOKEN` only as the fine-grained PAT
-  under Host identity below, never `CLOUDFLARE_*` or `CEZ_ENV_PASSTHROUGH`. Cezar
-  builds the agent's env from an allowlist (`PATH`, `HOME`, toolchain prefixes such as
-  `NODE_*`/`PNPM_*`, `GH_TOKEN`, `GH_CONFIG_DIR`, `ANTHROPIC_*`, `CLAUDE_*`, `CEZ_*`), so a token
-  in the service env is a token in every run, and any other variable set there (`HUSKY=0` for
-  one) never reaches the agent. Husky is therefore handled in the repo: `HUSKY=0` before
-  `pnpm install` in `scripts/worktree/bootstrap.sh` and the workflow setup steps keeps
-  `prepare` from rewriting `core.hooksPath` in the host clone's shared config, and
-  `.husky/pre-commit` exits at once when `CEZ_TASK_ID` is set; the gate a run passes is
-  `validation.commands` in `.ai/agentic.config.json`.
-- Host identity (2026-10-01, owner decision): one GitHub identity. The cockpit acts as the owner,
-  `rafalwolak`, like his own terminal; there is no bot account. Agent work is told apart by its
-  pipeline labels and its `cez/` branch, never by author, and the `develop` ruleset needs no
-  approving review, so self-authored PRs merge. The scope guard the bot's token used to give - a
-  fine-grained PAT for only the two repositories with Contents, Issues and Pull requests
-  read/write and **no Workflows, no Administration** - should stay: give the cockpit, and only
-  the cockpit, such a PAT for `rafalwolak` through `GH_TOKEN` in its service environment, so a
-  run cannot push under `.github/workflows/` or change a ruleset while the owner's interactive
-  `gh` keeps its full OAuth scopes. Until that token is in place, runs hold the host's OAuth
-  token (`repo, workflow, admin:org`). Swap the token only with an empty run queue: a run whose
-  `gh` loses its login mid-way stops with a blocked handoff. The
-  main checkout's `.dev.vars` holds sandbox values only: `scripts/worktree/bootstrap.sh` copies
-  it into every worktree.
-- Basemap: CI needs none since ADR 0016, and `pnpm e2e` does not either. `bootstrap.sh` clones the
-  operator cache (`${PLANNED_TRAVEL_CACHE:-~/.cache/planned-travel}`) when it is there.
+Use the official CLI's `cezar run "<task>" --workflow <name>` in this repository, or invoke a
+named Open Mercato skill from Codex. The project default selects Codex. No workflow fixes a
+model from another provider. Agents read `AGENTS.md` and follow the named skill instructions;
+workflow prompts do not rely on Claude slash commands or a Claude `Skill` tool.
 
-## Agent mode
+A fresh checkout needs `pnpm worktree:bootstrap`. Workflows use the retrying
+`.ai/scripts/bootstrap.sh`; those needing the application select `--profile worktree --no-seed`.
+There is no implicit Claude SessionStart hook. The configured gate is
+`node scripts/ci/validation.mjs`; `--resume` is local interruption recovery, never CI evidence.
 
-cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The project's
-`.claude/settings.json` then decides, with no project hook in the way:
+Codex does not enforce Claude `allowedTools` or permission settings. The restrictions in
+`.agents/policies/security.md` and `.agents/policy.json` are repository policy and static tests,
+not an OS sandbox. Host credentials and runner permissions remain an operator responsibility.
+This migration grants no production writes, main promotion or permission bypass.
 
-- `permissions.deny` is refused in every session, agent or not: reading `.dev.vars`, `.env*`,
-  `.ai/qa/test-env.env` and `.e2e-tiles/`; hand-editing `src/routeTree.gen.ts`, `drizzle/` and
-  `worker-configuration.d.ts` (run the generator); force-pushing, `git reset --hard` and
-  `--no-verify`; writing a Cloudflare secret and deleting a D1 database, R2 bucket, KV namespace or
-  the Worker.
-  A denial ends a cezar run, so a run never tries one: AGENTS.md names the allowed equivalents,
-  and `.ai/scripts/__tests__/deny-safe-workflows.test.mjs` keeps every workflow step clear of a
-  denied command.
-- `permissions.ask` - deploys and remote D1 commands - prompts a developer at the keyboard and is
-  refused in a cezar run, because `dontAsk` turns every prompt into a denial.
-- Everything else is open, including a write outside the worktree: a step that holds a bare
-  `Edit` or `Write` may write anywhere the user can. That is an accepted risk (ADR 0030); a run
-  that touches a sibling checkout shows up in that checkout's `git status`, not in its own PR.
+## Retained workflows
 
-Protected configuration is a second boundary the repository's hooks do not move: Claude Code refuses an
-`Edit` or `Write` under `.claude/**` and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
-only that configuration cannot be fixed unattended (#670). The cezar runner declares and preflights
-`writePaths`; here, the ten overrides of the skills that fix, continue, create, implement or check and commit a pull request carry one rule: declare the
-protected writes up front when the dispatch allows it, stop once after the first refusal, hand the exact
-diff, worktree and paths to a supervised run with a configuration guardian verdict, and never enable
-`bypassPermissions` or switch tools to get around a denial.
-`.ai/scripts/__tests__/protected-writes-rule.test.mjs` keeps that rule in every listed override and fails
-on a new override that is in neither of its lists.
+| Workflow              | Purpose                                                                                   |
+| --------------------- | ----------------------------------------------------------------------------------------- |
+| `backlog`             | Deterministic read-only readiness report; use the main checkout for local run visibility. |
+| `brainstorm`          | Interactive product discussion with `om-brainstorm`.                                      |
+| `triage`              | Verify one issue and write its durable Agent Brief under atomic ownership.                |
+| `unblock`             | Resolve an agent-owned hold on independent evidence; preserve human holds.                |
+| `spec`                | Write a design-only specification with `om-auto-write-spec`.                              |
+| `plan-to-spec`        | Specify one already approved plan stage; specialist review remains mandatory.             |
+| `spec-to-tickets`     | Slice one merged specification into bounded implementation tickets.                       |
+| `implement-spec`      | Implement a merged specification with Open Mercato.                                       |
+| `implement-ticket`    | Implement a ready brief, run the gate, review, QA, CI wait and guarded merge.             |
+| `issue-autofix`       | Explicit issue delivery through `om-auto-fix-issue`.                                      |
+| `pr-autopilot`        | One PR owner coordinates review/QA/fixes and native CI waiting.                           |
+| `pr-review`           | Explicit review through `om-auto-review-pr`.                                              |
+| `pr-fix`              | Address assessed review findings with `om-auto-fix-pr`.                                   |
+| `housekeeping`        | Report merged-issue candidates, then use `om-close-fixed-issues` with atomic claims.      |
+| `lessons`             | Evidence-based `om-pipeline-retro`; at most one draft repair PR.                          |
+| `skills-update`       | Review an installed update or resolve repair conflicts, then prepare one draft PR.        |
+| `context-maintenance` | Archive completed contexts with active-run protection.                                    |
 
-Agent steps of the om workflows carry no `bashAllowlist` (ADR 0018): the tracker descriptor is
-shell functions and `jq`, and a prefix allowlist would drop label mutations silently. The
-permission rules above, branch protection on `develop` and `main`, the PAT scopes, one worktree per
-run, `maxParallel: 2` and review of every pull request are the gate.
+`issue-groom` was consolidated into issue preparation/triage. Scheduled architecture review and
+product radar were removed: they create additional speculative work and duplicate manual review
+or discovery skills. Their live automation records are audit findings, not silently deleted state.
 
-## Workflows (`.ai/cezar/workflows/`)
+## Ownership, validation and publication
 
-Every om workflow is a `command` step that provisions the worktree - always through
-`.ai/scripts/bootstrap.sh`, which installs dependencies with up to three attempts (30 and 60 seconds
-apart) because a check step cannot retry itself and one registry error used to end a run before any
-agent started - then one agent step whose
-prompt is the skill as a slash command (`/om-… {{task}}`; never `skill:`, which would load the
-thin `.ai/skills/` override alone). `allowedTools` is the full set for skills that write code and
-drops `Edit`/`Write` for the ones that must not.
+GitHub item writes use the descriptor's `get-lock`, `acquire-lock` and `release-lock` with
+`refs/om-locks/{issue|pr}-N`. The lock binds the item, run and unique owner; a shared login is not
+ownership. Verify `in-progress` as an additional gate, re-read after acquisition, recompute the
+change and release on every exit. Transport errors never fall back to comment-only ownership.
+Release is compare-and-delete of the exact SHA, not REST DELETE. See the narrowly scoped lease
+exception in `.agents/policies/security.md`.
 
-| Workflow              | Agent step                                                               | Started by                                                                                                                                                                                 |
-| --------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `issue-groom`         | `/om-auto-manage-issues {{task}} --prep-impl`, then skill `afk-triage`   | a human, from the cockpit, on an issue number; its two automations are disabled (§ Automations)                                                                                            |
-| `issue-autofix`       | `/om-auto-fix-issue {{task}}`                                            | a human, from the cockpit, on an issue number                                                                                                                                              |
-| `spec`                | `/om-auto-write-spec {{task}}`                                           | a human, from the cockpit, on a `feature` issue                                                                                                                                            |
-| `implement-spec`      | `/om-auto-implement-spec {{task}}`                                       | a human, from the cockpit, after the spec PR merged - or `issue-autofix` on the FR issue, which reaches the same skill                                                                     |
-| `pr-autopilot`        | `/om-pr-autopilot {{task}} --allow-merge`                                | automation **Autopilot new pull requests** (`pull_request.opened` by a human maintainer), **Merge reviewed agent pull requests** (`pull_request.reviewed` on an agent PR in `merge-queue`) |
-| `pr-review`           | `/om-auto-review-pr {{task}} --autofix`                                  | a human, from the cockpit, on a PR number                                                                                                                                                  |
-| `pr-fix`              | `/om-auto-fix-pr {{task}}`                                               | manual request after assessing review findings                                                                                                                                             |
-| `housekeeping`        | `/om-review-prs`, `/om-merge-buddy`, `/om-close-fixed-issues --limit 50` | launchd via `.ai/scripts/housekeeping.sh`, or a human                                                                                                                                      |
-| `brainstorm`          | `/om-brainstorm {{task}}`, **Autonomous off**                            | a human, from the cockpit, with the idea as the task                                                                                                                                       |
-| `triage`              | skill `afk-triage`                                                       | the Reconciler (`triage` action) or a human, from the cockpit; `issue-groom` runs it as its second step                                                                                    |
-| `unblock`             | skill `afk-unblock`                                                      | the Reconciler (`unblock` action), or a human, from the cockpit, on an issue number                                                                                                        |
-| `plan-to-spec`        | skill `afk-plan-to-spec`, the spec gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`write-spec` action; a `DELIVERED:` outcome opens a docs-only PR instead), or a human with a stage id                                                                      |
-| `implement-ticket`    | `om-fix` from the Agent Brief, the gate, `om-open-pr`, `om-pr-autopilot` | the Reconciler (`implement` action), or a human with an issue number                                                                                                                       |
-| `spec-to-tickets`     | skill `afk-to-tickets`                                                   | the Reconciler (`slice` action), or a human with a spec path                                                                                                                               |
-| `architecture-review` | skill `afk-architecture-review`                                          | automation **Weekly architecture review** (schedule, Mondays 06:00)                                                                                                                        |
-| `lessons`             | skill `afk-lessons`                                                      | automation **Weekly lessons** (schedule, Fridays 16:00)                                                                                                                                    |
+New issue creation in the spec/plan workflows uses `pipeline-control.mjs reserve-creation` and
+`release-creation`: a resumable, exact-run lease in the shared Cezar store. It serializes creation
+on the one configured host and never replaces the remote lock acquired after an issue has an ID.
+Foreign or crashed reservations are never automatically removed.
 
-**No workflow names a model.** Until 2026-09-22 most agent steps carried a `model:` - `opus` on
-the ones that reason, `sonnet` on the ones that execute. A step `model:` wins over the model the
-run was started with, and it is a claim about one backend: a Claude alias handed to a codex run is
-a model the API refuses every request on, and cezar read the refusal off a channel that failure
-never uses, so the run recorded `done` having done nothing. The model now belongs to the run: the
-cockpit composer picks it for a run a human starts, and an automation run uses the backend CLI's
-own default unless the automation sets `task.model` in `.ai/cezar/automations.json`.
+Legacy `release-leaked-claims.mjs` is report-only and refuses mutation. The deterministic
+`close-fixed-issues.mjs` remains a report/library but refuses `--apply`; the upgraded skill owns
+writes. Merge confirmation does not run the legacy mutator. A separate graph stage applies the upgraded skill to this merged PR only and verifies eligible issue closures before success.
 
-The task text an event automation sends is the issue or PR number alone (`{{github.number}}`); a
-second token would read as a brief to `om-auto-fix-issue`. The Reconciler sends the
-task text `--plan` prints (`Implement issue #123.`, `Resolve the hold on issue #45.`, `Triage issue #67.`,
-`Slice the spec .ai/specs/<file>.md into tickets.`, `Write the spec for plan stage 02-S3 (docs/plans/02-places-and-maps.md).`).
-From the cockpit type the same: a number, a spec path, a stage id, or for `brainstorm` the idea.
+Keep full validation, executed required CI, current head/base/policy evidence, unresolved-thread
+checks, human holds and the QA gate. `needs-qa` requires current-head sign-off by independent
+reviewers; security/high-risk work also requires an independent security verdict. Rejections get
+at most three fix rounds. Agents merge only into `develop`; the `do-not-merge` promotion remains
+protected. `node .ai/scripts/pr-state.mjs <pr> [--wait]` provides compact paginated evidence;
+unknown or incomplete checks never pass. Native wait nodes release the agent execution slot.
 
-Workflows that need a local app use `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`
-(the retrying install, then `scripts/worktree/bootstrap.sh`: route tree, `.dev.vars`, local D1 with airports,
-basemap when cached; no server). The design-only `spec` and read-only workflows run
-`bash .ai/scripts/bootstrap.sh`, which only installs dependencies and generates routes. The
-`implement-ticket` gate starts with it too. In a run the
-`SessionStart` hook (`scripts/cloud/session-start.sh`) does no more than install dependencies when
-`node_modules` is missing, which is all the workflows without a bootstrap step get. The validation gate the
-skills run is `validation.commands` in `.ai/agentic.config.json`, which leaves the full journeys to
-CI (ADR 0021).
-`bash .ai/scripts/e2e.sh`, which a run uses for the journeys its diff reaches, starts the app through
-`.ai/scripts/test-env-up.sh` on a free port from 3030-3040 (`om-prepare-test-env` contract). That
-server is deliberately left running for the rest of the run to reuse, so nothing else would ever
-stop it: under `E2E=1` `vite.config.ts` therefore has it watch for its own root disappearing and
-send itself `SIGTERM` when it does, which is what keeps a removed worktree from leaving a process
-holding one of the eleven ports for the life of the host (issue #327).
+## Automation cutover
 
-The seven unconnected prototype `.yaml` graphs were removed after checking references. Their
-active equivalents remain; `.ai/cezar/DEFERRED.md` records that retirement.
+See [the automation audit](automation-audit.md) for observed records and recommendations.
+`docs/agents/cezar-automations.json` contains paused candidate definitions, not proof of the live
+host state. Do not apply it automatically. The local `.ai/cezar/automations.json`, Codex schedules,
+cron, launchd services and GitHub settings were not changed by this migration.
 
-The four older workflows (`triage`, `plan`, `plan-area`, `implement-ticket`), the scripts in
-`scripts/agent/` they called and the four process skills built on them are gone (PR C, ADR 0018).
-The automations that used to start them (`triage-opened`, `triage-relabel`, `implement`) had
-already been removed from the cockpit. `triage` and `implement-ticket` are names reused by the
-unattended lane (`SDLC.md` § Readiness), not those workflows restored: `triage`, `spec-to-tickets` and the two schedule workflows run the `afk-*` skills, `implement-ticket` chains
-`om-*` steps from the Agent Brief instead; none of the five name a model, so they run on the
-cockpit's default.
-
-## Automations (`docs/agents/cezar-automations.json`)
-
-Registered with the running cockpit by `.ai/scripts/cez-automations.sh` (idempotent: update in
-place or create, enabled unless the definition says `"enabled": false`, which the script then
-applies; a definition that does not say keeps the cockpit's pause; it lists definitions the cockpit holds that the file no longer names, and
-`--prune` deletes them, so this file is the whole truth about what can start a run - it refuses to
-delete an enabled stray, which is somebody's deliberate act, not a leftover).
-Renaming a definition is the one change that idempotency does not cover: the script matches the
-cockpit by `.name`, so a renamed definition is created beside the old one, which it then keeps
-because it is still enabled. Rename in lockstep with the cockpit - disable the old name, then
-`--prune`, the drill step 2 of the host cutover below walks through.
-
-Six definitions, in three kinds. Two are GitHub polls, started by an event: **Autopilot new pull
-requests** on `pull_request.opened` with `authors` naming the maintainer, and **Merge reviewed agent
-pull requests** on `pull_request.reviewed` with `authors` and `merge-queue`. Two are schedules
-(`kind: "schedule"`), started by the clock and by nobody's action: **Weekly architecture review** on
-Mondays at 06:00 and **Weekly lessons** on Fridays at 16:00. What bounds a schedule is its skill:
-three refactor issues or one pull request per run. Three additional weekly definitions (skills,
-product radar and context rotation) are disabled pending the rollout gates. All schedule times
-are UTC after verifying the effective service timezone.
-
-Triage, implement, slice and unblock are started by the Reconciler (below), not by an automation.
-The old issue event pair and duplicate implement/spec schedules have been removed. Trusted authors
-now live in `.ai/agentic.config.json` → `trustedAuthors`, read by `backlog-status.mjs` and
-`afk-unblock`; an empty list trusts nobody. A new issue, and one whose `blocked` a person removed,
-gets `afk-triage` from the Reconciler's next tick
-but no `om-auto-manage-issues` step (the Definition of Ready check and implementation notes);
-`issue-groom` stays available from the cockpit.
-
-Applying this on the host, from the main checkout once it is merged:
-
-1. `bash .ai/scripts/cez-automations.sh` (the Reconciler's sync runs it too when the file changes):
-   it lists the removed issue pair, duplicate schedules and older definitions as `not in file`.
-   Verify timezone and active schedules before applying the new cadence.
-2. In the cockpit (Automations), disable each automation listed as `not in file`: `--prune` refuses
-   an enabled stray.
-3. `bash .ai/scripts/cez-automations.sh --prune --dry-run` must say `would delete` for each of them,
-   then run it with `--prune` alone.
-
-No label starts a run (ADR 0032). Every event trigger is gated on who can produce it: the open
-events by author, and the unlabel event both by author and because only a collaborator can remove
-a label. This matters because the agent step holds Bash with no allowlist and the issue body is its
-prompt: an issue anyone on GitHub can open must not start a run by itself, so an external report
-waits for a person to start a run from the cockpit - `backlog-status.mjs` applies the same `authors`
-list, so the Reconciler never starts one either. A Sentry finding (filed as the Actions bot, or as
-the maintainer by a local `pnpm sentry-triage`) is the exception: the Reconciler starts `triage` on
-it, and it is ready only on the brief afk-triage writes from the code (ADR 0040). Agent PRs (opened carrying `review` and driven to the merge inside their own chain)
-enter only the merge automation, dependabot enters none, and the promotion PR (`do-not-merge`)
-enters no automation. Every filter excludes `in-progress`; `lookbackDays: 7` and `maxRecords: 25`
-bound a mistaken mass relabel while still reaching a week of events. One run does start another,
-deliberately and only through GitHub: an issue `afk-triage`, `afk-to-tickets` or
-`afk-architecture-review` files is opened as the maintainer, so the Reconciler triages it like any
-other, and implements a ticket it briefs once its blockers close.
-A review or autopilot run checks out the PR's head, hooks and agent layer included: a branch
-cut before the om cutover carries the old agent layer, so merge `develop` into such a branch
-before opening the PR (money-tracker.online PR #67, 2026-09-07).
-
-## The Reconciler
-
-An automation starts a job on an event or a clock. The Reconciler starts a job when there is one: a host cron, every
-ten minutes, that asks `node .ai/scripts/backlog-status.mjs --plan` what there is to start and starts it, inside
-`maxParallel`. ADR 0033 records why; `SDLC.md` § The Reconciler is the table of what it may start. This
-repository owns the contract and the workflows it names; the cron and the repair of failed runs live on the
-host, in `design4pro/cezar` (`host/`), with no Cezar engine change.
-
-`--plan` prints one JSON document and exits 0, whatever it finds:
-
-```json
-{
-  "wip": { "waitingForPerson": 1, "limit": 3 },
-  "actions": [
-    {
-      "kind": "unblock",
-      "target": "#45",
-      "workflow": "unblock",
-      "task": "Resolve the hold on issue #45."
-    },
-    {
-      "kind": "triage",
-      "target": "#67",
-      "workflow": "triage",
-      "task": "Triage issue #67."
-    }
-  ]
-}
-```
-
-All ready implement actions and up to three each of unblock and triage, best first, and at most one each of slice and
-write-spec, in the order implement, unblock, triage, slice, write-spec; a kind with no candidate is left out, and a
-repository with nothing to do prints `"actions": []`. `target` is an issue
-(`#123`), a spec path (`.ai/specs/<file>.md`) or a plan stage id (`02-S3`). `--plan` is a separate output from
-`--json` and `--next`, and combining them is an error. The Reconciler sends `workflow` and `task` as they are.
-
-`write-spec` names the first stage of `docs/plans/` that no spec and no issue mentions, unless the plan marks it with a
-line starting `Delivered:` in the stage's own section (`plan-to-spec` writes it when the code already does what the
-stage asks) or the plan is one the `docs/plans/README.md` table lists as migrated. Without that, a stage the skill can
-only end on stays the first candidate and is named again on every tick. It waits while an open PR adds a spec or comes
-from a branch `docs/plan-delivered-*` (the docs-only PR that marks delivered stages: until it merges, the stages it marks
-are still uncovered on the base branch); a person's own edit to `docs/plans/` holds nothing.
-
-Everything the rules need is in the output of two `gh` list calls, the specs and plans in the checkout, and
-`.ai/cezar/runs.json`; it reads no network beyond that and writes nothing. A candidate is dropped while a
-cockpit run holds it (`queued`, `running`, `waiting` or `review`, or `failed` with `autoResumeAt`): an issue by
-its `issueNumber`, a spec path or a stage id by the run's task text. Because `runs.json` is gitignored, run it
-from the main checkout, as the cron does, not from a worktree.
-
-## One independent review per SHA
-
-Cezar reviews in a context separate from implementation and records the full assessed head SHA.
-Housekeeping reuses a completed report and validation for an unchanged SHA; a new diff, missing
-validation or a concrete concern requires fresh verification. A second opinion is requested
-explicitly through Cezar or `@codex review`.
-
-`pr-fix` is manual. Claude review, `@claude`, `review-threads` and re-arm workflows are retired.
-Existing findings remain open until assessed, and conversation resolution plus process/QA checks
-still block merge. The #711 cutover inventoried active runs and unresolved threads, disabled the
-three workflows and removed `claude-review` from both rulesets. The Codex automatic-review setting
-still requires an authenticated browser session; no repository ruleset requests automatic Copilot
-review. Check any account-level Copilot setting separately.
-
-## Prompt templates (`docs/agents/cezar-prompt-templates.json`)
-
-Installed into the cockpit by `.ai/scripts/cez-prompt-templates.sh` (`--dry-run` lists what it
-would write). One template per `om-*` skill, 37 of them: the task text with its argument
-placeholder, the flags, and the preconditions the skill's `SKILL.md` and its `.ai/skills/`
-override state, phrased as directives because the text is sent as the task. They replace cezar's
-five generic built-ins. The installer `PUT`s `promptTemplates` to
-`/api/v1/p/planned-travel/ui-state`, which merges shallowly at the top level, so it rewrites that
-one array and leaves every other preference alone; the store is `.ai/cezar/ui-state.json`, which
-is gitignored because it also accumulates per-developer state (`skillUsage`, `lastTask`,
-`appearance`). Edit the tracked JSON and re-run the script - never the ui-state file by hand.
-
-Cezar's normalizer truncates and drops silently, so the script checks the caps first: at most 50
-templates, `label` 80 characters, `text` 2000, ids unique and matching an installed skill.
-A template whose `skills` array names the skill selected in the composer is applied automatically,
-but only while the composer is still pristine. That is why only the 19 skills taking a free-text
-brief or no argument carry `skills`; the 18 that take an issue number, a PR number, a spec path or
-a URL carry none and are reached through "Insert a template". From the GitHub issue or PR panel an
-auto-applied template lands as `<number>` + the template text, and a second token there reads as a
-brief to `om-auto-fix-issue` - the same hazard the automations avoid by sending
-`{{github.number}}` alone.
-
-## Housekeeping
-
-`housekeeping` calls the checkpointed closure script and prints backlog exceptions. It no longer
-runs blanket review or merge-buddy passes. The Reconciler also calls closure every ten minutes,
-and `pipeline-control.mjs confirm-merge` calls it for the confirmed PR immediately. Existing
-host cron/plist jobs must be inventoried before removing old triggers or enabling new ones.
-See [the rollout gates](autonomy-rollout.md).
-
-A `review-prs` step that claims a PR and exits without releasing it leaves an `in-progress` lock
-nobody holds, and the same run's `merge-buddy` step then skips that PR (#551).
-`scripts/agents/release-leaked-claims.mjs --since <sweep start> --prs <dispatched PRs>` releases
-such a claim and comments whether any review was submitted. It only acts on an `om-auto-review-pr`
-claim by the automation account that is the PR's only lock event since `--since`: a take-over, or a
-newer claim after a release, belongs to a live run and is left alone. Run it by hand with `--dry-run` to see what it would release.
-
-## Host cutover (operator, once, after PR B merges)
-
-The order is fixed by the labels: the SDLC taxonomy already exists (PR A); the old automations
-must stop before `status:*` is stripped and the surviving labels renamed. Steps 1-7 are the record
-of that cutover, and the command labels step 2 names were retired since (ADR 0032); step 8 is the
-end-to-end check as it stands now.
-
-1. Unload the sweeper: `launchctl bootout gui/$(id -u)/dev.planned-travel.sweeper` and delete
-   `~/Library/LaunchAgents/dev.planned-travel.sweeper.plist`.
-2. In the cockpit (Automations) disable `triage-opened`, `triage-relabel` and `implement`, then
-   delete them with `bash .ai/scripts/cez-automations.sh --dry-run --prune` and the same without
-   the flag. All three are superseded: `implement` by **Fix issues on the autofix label**, and the triage pair by the
-   groom layer - a Sentry finding reaches it because the sweep files `groom` on creation and
-   GitHub records that as a `labeled` timeline event, which is what the poller reads.
-3. Snapshot: `gh label list --limit 200 --json name,color,description > docs/agents/migration/labels-$(date +%F).json`
-   and `gh issue list --state open --limit 500 --json number,labels > docs/agents/migration/issues-$(date +%F).json`;
-   commit both.
-4. Migrate the labels (done by a one-off script, since removed): holds move to
-   `blocked`, `status:*` leaves every open issue, `run:*`, `type:*` and `agent-docs` move to their
-   SDLC names. `prd`, `auto-advance`, `agent-pr` and the empty `status:*` labels waited for
-   PR C, and were deleted on 2026-09-08 (docs/agents/triage-labels.md).
-5. The cockpit service already runs the design4pro/cezar fork
-   (`~/Library/LaunchAgents/dev.cezar.cockpit.plist`, set up per `design4pro/cezar`'s
-   `docs/host/README.md`);
-   confirm `.ai/cezar/config.json` in the main checkout is the merged one, then restart the service
-   while it has no active runs (`launchctl bootout gui/$(id -u)/dev.cezar.cockpit`, then
-   `launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/dev.cezar.cockpit.plist`) so it reloads
-   the workflows.
-6. `bash .ai/scripts/cez-automations.sh --dry-run`, then without the flag: the five new automations
-   are created, enabled unless their definition says `"enabled": false`.
-7. Install the housekeeping plist (above) and run `bash .ai/scripts/housekeeping.sh` once by hand.
-8. Verify end to end on a test issue: open it with the Bug form (as a maintainer) → within ten
-   minutes the Reconciler starts a `triage` run, which adds the category, priority and risk and
-   posts an Agent Brief → `node .ai/scripts/backlog-status.mjs` reports it `READY` → a later tick
-   starts `implement-ticket` on it, which claims it with `in-progress`, opens a PR on develop labelled `review` + category +
-   `needs-qa|skip-qa` + priority + risk, and drives it to the squash-merge → the next housekeeping
-   closes the issue. Then open a PR by hand: **Autopilot new pull requests** reviews it.
-
-## Local use
-
-Every workflow's skill runs the same way in a local `claude` session, with the developer's `gh`:
-`/om-auto-fix-issue <n>`, `/om-auto-write-spec <n>`, `/om-auto-implement-spec <spec>`,
-`/om-auto-review-pr <pr> [--autofix]`, `/om-pr-autopilot <pr>`, `/om-review-prs`,
-`/om-merge-buddy`, `/om-close-fixed-issues`, `/om-brainstorm`. Hand-worked branches go through
-`/om-check-and-commit` and `/om-open-pr`. The hooks are the project's, so nothing depends on the
-host's user-level configuration.
-
-## Autonomous pipeline rollout
-
-The current host configuration observed on 2026-11-03 has four global slots and two monitoring
-slots; this project's `maxParallel: 2` is a separate cap. Startup skills updates are disabled.
-These are local configuration observations, not confirmation of the effective service environment.
-The live crontab and cockpit API were unavailable from the implementation sandbox.
-
-`implement-ticket` and `pr-autopilot` use native `github.wait-ci` parking, then the stricter
-`pr-state` check. Required skipped/neutral checks cannot pass. Claims name the owning run and
-are shared across worktrees. A failed owner's claim is retained for recovery, not stolen by a
-new run. Inspect its handoff and current GitHub state before manually releasing an abandoned claim.
-Review and QA records carry head, base, policy digest and report URL; fresh findings or revocations
-still override a reusable record. A confirmed merge records a business outcome and reconciles the
-issue independently of the Cezar engine's done status.
-
-The three new scheduled workflows are disabled pending [rollout verification](autonomy-rollout.md).
-`product-radar` qualifies at most one feature weekly, context maintenance keeps fourteen days,
-and skills updates prepare one pinned PR at a time. Existing manual entry points remain available.
+Before enabling a new owner, inspect and drain existing workers, preserve their claims and
+reconcile their handoffs. Do not run old comment-only claimers alongside atomic claimers or run
+multiple allocators for the same issue. The old Paperclip pilot integration and its alternative
+review/publication rules are removed from the repository; its host services require a separate
+operator cutover. No scheduler is assumed active merely because its configuration file exists.
