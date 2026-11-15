@@ -3,7 +3,7 @@ name: om-merge-buddy
 description: Repository extension using shared PR and CI evidence.
 ---
 
-Extends `.claude/skills/om-merge-buddy/SKILL.md`; all existing safety gates apply.
+Extends `.agents/skills/om-merge-buddy/SKILL.md`; all existing safety gates apply.
 
 ## Shared PR and CI evidence
 

@@ -2,7 +2,7 @@
 # whole chain (verify, root cause, fix, PR, review, QA for UI fixes) to a reviewed PR on develop
 # (ADR 0018). No automation starts it: the unattended lane is issue-groom, then implement-ticket
 # (ADR 0032). No bashAllowlist by design: the tracker descriptor needs shell functions and jq;
-# .claude/settings.json deny rules are the gate.
+# .agents/legacy/claude-settings.json deny rules are the gate.
 name: issue-autofix
 description: om-auto-fix-issue drives one issue to a reviewed draft-then-ready PR on develop; started from the cockpit.
 steps:

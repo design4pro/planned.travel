@@ -61,7 +61,7 @@ const AUTH_STATE = 'e2e/.auth/demo.json'
 const DEV_TOOLBAR = '[data-testid="tanstack_devtools"]'
 
 /** Where the obligation to quote a `warnings` entry is written down. */
-const WARNINGS_CONTRACT = '.claude/skills/verifying-changes/SKILL.md'
+const WARNINGS_CONTRACT = '.ai/skills/verifying-changes/SKILL.md'
 
 /**
  * Console output that is the toolchain talking, not the application.

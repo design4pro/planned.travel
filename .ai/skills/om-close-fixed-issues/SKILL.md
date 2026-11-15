@@ -3,7 +3,7 @@ name: om-close-fixed-issues
 description: Deterministic merged-PR issue reconciliation for planned.travel.
 ---
 
-Extends `.claude/skills/om-close-fixed-issues/SKILL.md`. For this repository,
+Extends `.agents/skills/om-close-fixed-issues/SKILL.md`. For this repository,
 replace its merged-PR parsing and mutation steps with
 `scripts/agents/close-fixed-issues.mjs`. The housekeeping workflow runs this
 command directly; do not reproduce its decisions with an LLM.

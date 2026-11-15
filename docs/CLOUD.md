@@ -40,8 +40,9 @@ reason a session starts slowly or starts broken:
   and the filesystem is then snapshotted, so later sessions start with its work
   already on disk. It must exit zero and finish inside about five minutes, or the
   snapshot never builds and every session pays for it again.
-- **The SessionStart hook** (`.claude/settings.json` →
-  `scripts/cloud/session-start.sh`, both committed) does the _project_ setup that
+- **The SessionStart hook** (`.agents/legacy/claude-settings.json` →
+  `scripts/cloud/session-start.sh`, both committed; load the migrated settings with `claude --settings
+.agents/legacy/claude-settings.json`) does the _project_ setup that
   has to match the commit that was just cloned: install, route tree, `.dev.vars`,
   D1 migrations, the basemap. It runs on every start and resume, and each step
   skips itself when its result is already there.
@@ -156,8 +157,8 @@ connectors at [claude.ai/customize/connectors](https://claude.ai/customize/conne
 which is also what makes them available to routines.
 
 `~/.claude/` - your personal `CLAUDE.md`, skills, agents, commands - stays on your
-machine too. `AGENTS.md`, `.claude/agents/`, `.claude/commands/` and
-`.claude/settings.json` are committed and do come across.
+machine too. `AGENTS.md`, `.agents/personas/`, `.agents/skills/` and
+`.agents/legacy/claude-settings.json` are committed and do come across.
 
 ---
 

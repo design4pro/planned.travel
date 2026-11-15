@@ -1,5 +1,5 @@
 // A cezar run starts with `--permission-mode dontAsk`, and Claude Code refuses an `Edit` or `Write`
-// under `.claude/**` and `.husky/*` whatever the repository's own hooks allow (#670: three
+// under native protected agent configuration and `.husky/*` whatever the repository's own hooks allow (#670: three
 // `om-auto-fix-pr` runs on #668 each diagnosed the defect, wrote the fix and could not commit it).
 // The runner declares and preflights `writePaths`; the skill side is one rule, worded the same way
 // in every override of a skill that edits files or pushes to a branch. This guard reads those
@@ -31,7 +31,15 @@ const COVERED = [
 // `om-auto-update-changelog` do edit or push, but only as a step of a covered skill or the `spec`
 // workflow, which writes under `.ai/specs`. `om-setup-agent-pipeline` is a skill, not an override, and
 // is a one-time configurator a person runs, so it has no entry here.
+// Migrated local guides do not prescribe autonomous protected-configuration writes.
+// The Paperclip pilot follows its own explicit review and acceptance policy.
 const NOT_COVERED = [
+  'backlog',
+  'code-review',
+  'i18n-messages',
+  'pt-delivery-pilot',
+  'tdd',
+  'verifying-changes',
   'afk-architecture-review',
   'afk-codebase-design',
   'afk-decide',
@@ -81,7 +89,7 @@ const STATEMENTS = {
 // override as it is): the paths it covers, the point it is declared, and who gives the verdict.
 const BEYOND_REVIEW_PR = {
   'names the protected paths':
-    /protected configuration \(`\.claude\/\*\*`, `\.husky\/\*`\)/,
+    /protected configuration \(`\.agents\/\*\*`, `\.codex\/\*\*`, `\.husky\/\*`\)/,
   'declares them before bootstrap or diagnosis':
     /before bootstrap or diagnosis/,
   'hands over the paths with the guardian verdict':

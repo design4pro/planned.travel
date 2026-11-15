@@ -63,7 +63,7 @@ function unquote(value) {
 }
 
 const denyPatterns = JSON.parse(
-  readFileSync(new URL('.claude/settings.json', ROOT), 'utf8'),
+  readFileSync(new URL('.agents/legacy/claude-settings.json', ROOT), 'utf8'),
 )
   .permissions.deny.map((rule) => /^Bash\((.*)\)$/.exec(rule)?.[1])
   .filter(Boolean)
@@ -156,7 +156,7 @@ describe('cezar workflows', () => {
 // keeps that line in step with the deny list.
 describe('denied reads', () => {
   const settings = JSON.parse(
-    readFileSync(new URL('.claude/settings.json', ROOT), 'utf8'),
+    readFileSync(new URL('.agents/legacy/claude-settings.json', ROOT), 'utf8'),
   )
   const readDenies = settings.permissions.deny
     .map((rule) => /^Read\((.*)\)$/.exec(rule)?.[1])

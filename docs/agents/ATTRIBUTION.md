@@ -3,11 +3,11 @@
 Third-party material vendored into this repository, pinned to the upstream commit it was taken from.
 Refresh by copying the same paths from a newer commit and updating the pin here.
 
-| local path                                                   | upstream                                                                                                 | commit         | licence |
-| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | -------------- | ------- |
-| `.claude/skills/tdd/` (`SKILL.md`, `tests.md`, `mocking.md`) | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/tdd/`                      | `6654f6b60cd9` | MIT     |
-| `.claude/skills/code-review/SKILL.md`                        | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/code-review/SKILL.md`      | `6654f6b60cd9` | MIT     |
-| `docs/agents/definition-of-done.md`                          | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) `references/definition-of-done.md` | `d2c37ef6225d` | MIT     |
+| local path                                               | upstream                                                                                                 | commit         | licence |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------- | ------- |
+| `.ai/skills/tdd/` (`SKILL.md`, `tests.md`, `mocking.md`) | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/tdd/`                      | `6654f6b60cd9` | MIT     |
+| `.ai/skills/code-review/SKILL.md`                        | [mattpocock/skills](https://github.com/mattpocock/skills) `skills/engineering/code-review/SKILL.md`      | `6654f6b60cd9` | MIT     |
+| `docs/agents/definition-of-done.md`                      | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) `references/definition-of-done.md` | `d2c37ef6225d` | MIT     |
 
 ## mattpocock/skills
 

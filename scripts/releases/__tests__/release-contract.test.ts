@@ -12,8 +12,8 @@ const policyPaths = [
   'docs/CATALOG.md',
   'docs/agents/CODING_STANDARDS.md',
   'docs/adr/0002-tenant-scoped-repository-boundary.md',
-  '.claude/agents/persona-workspace-owner.md',
-  '.claude/skills/i18n-messages/SKILL.md',
+  '.agents/personas/persona-workspace-owner.md',
+  '.ai/skills/i18n-messages/SKILL.md',
   ...[
     'om-fix',
     'om-code-review',

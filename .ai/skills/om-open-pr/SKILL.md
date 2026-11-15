@@ -3,7 +3,7 @@ name: om-open-pr
 description: planned.travel extension of the installed om-open-pr skill. PR body carries the repo's Definition of Done checklist; target develop.
 ---
 
-Extends the installed skill: read `.claude/skills/om-open-pr/SKILL.md` and follow it. On top:
+Extends the installed skill: read `.agents/skills/om-open-pr/SKILL.md` and follow it. On top:
 
 - Target `develop` (the config's `baseBranch`); never `main`.
 - Linkage: `Closes #{issueId}` for an implementing PR, `Refs #{issueId}` for a spec-only PR. GitHub ignores the keyword on `develop`; `om-close-fixed-issues` closes the issue after merge, so the keyword is the contract.

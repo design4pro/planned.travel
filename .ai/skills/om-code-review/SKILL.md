@@ -18,7 +18,7 @@ the PM. All other review and safety requirements remain mandatory.
 The workflow below, including its persona routing, applies unchanged to tasks
 that are not enrolled.
 
-Extends the installed skill: read `.claude/skills/om-code-review/SKILL.md` and follow it. `CODE_REVIEW.md` at the repo root is the full rule set; these are the mechanical blockers to check first, on the diff alone:
+Extends the installed skill: read `.agents/skills/om-code-review/SKILL.md` and follow it. `CODE_REVIEW.md` at the repo root is the full rule set; these are the mechanical blockers to check first, on the diff alone:
 
 - Added `@ts-ignore`, `@ts-expect-error`, `eslint-disable*` → blocker.
 - Added `.skip`, `.only`, `.todo`, `.fixme`, `xit`, `xdescribe`, `xtest` in a test file → blocker.
@@ -33,7 +33,7 @@ Apply `BACKWARD_COMPATIBILITY.md` to every touched surface. Smells from docs/age
 
 ## The persona panel
 
-Five reviewers in `.claude/agents/persona-*.md` read the change from a seat this checklist does not
+Five reviewers in `.agents/personas/persona-*.md` read the change from a seat this checklist does not
 occupy: `persona-traveller` (the person using it), `persona-workspace-owner` (the person paying for
 it and administering the data), `persona-product-owner` (the promise the ticket made),
 `persona-manual-tester` (the states nobody wrote a test for), `persona-accessibility-auditor`

@@ -3,7 +3,7 @@ name: om-review-prs
 description: planned.travel extension of the installed om-review-prs skill. The sweep ends by releasing any claim one of its own reviews left behind, and never reports a released PR as reviewed (#551).
 ---
 
-Extends the installed skill: read `.claude/skills/om-review-prs/SKILL.md` and follow it. On top:
+Extends the installed skill: read `.agents/skills/om-review-prs/SKILL.md` and follow it. On top:
 
 `om-auto-review-pr` must release the lock it opened on every exit path, and its own step 12 says so
 in a `trap`/finally. On PR #549 a housekeeping sweep claimed, reviewed nothing, and ended `done`

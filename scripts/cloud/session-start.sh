@@ -2,7 +2,7 @@
 #
 # Project setup for a Claude Code session.
 #
-# Runs from the SessionStart hook in .claude/settings.json, after Claude Code
+# Runs from the SessionStart hook in .agents/legacy/claude-settings.json, after Claude Code
 # launches, on startup and on resume. All it decides is which environment this
 # is (a cezar run gets dependencies and nothing else, below);
 # `scripts/worktree/bootstrap.sh` owns every step of the provisioning itself, so

@@ -8,7 +8,7 @@ Use revision-checked Paperclip configuration updates; preserve unrelated setting
 
 ## Common
 
-Read the assigned `pt-delivery-pilot` skill for explicitly enrolled pilot work.
+Read the assigned `.ai/skills/pt-delivery-pilot/SKILL.md` procedure for explicitly enrolled pilot work.
 For existing or non-pilot tasks, read `PRE_PILOT.md` from this agent's managed
 instruction bundle (beside this entry file, not the repository root) and preserve
 that task's scope,

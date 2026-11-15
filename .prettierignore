@@ -1,8 +1,10 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
-# Claude Code orchestration scripts and run state.
-.claude/
+# Migrated provider configuration and reviewer prompts.
+.agents/legacy/
+.agents/personas/
+.agents/hooks/
 # Installed skills and their template assets stay byte-identical to upstream.
 .agents/skills/
 # om-* pipeline descriptors, installed verbatim from the om-setup-agent-pipeline
@@ -41,9 +43,9 @@ yarn.lock
 .ai/skills/afk-to-tickets/SKILL.md
 .ai/skills/afk-triage/SKILL.md
 .ai/trackers/github.md
-.claude/hooks/format-file.sh
-.claude/settings.json
-.claude/skills/backlog/SKILL.md
+.agents/hooks/format-file.sh
+.agents/legacy/claude-settings.json
+.ai/skills/backlog/SKILL.md
 docs/agents/cezar-automations.json
 
 # Preserve Wrangler runtime declarations; only the environment header is adjusted.

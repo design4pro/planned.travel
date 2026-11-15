@@ -24,7 +24,9 @@ describe('scope', () => {
     'docs/adr/0020-something.md',
     'docs/plans/diagram.svg',
     '.ai/cezar/config.json',
-    '.claude/skills/verifying-changes/SKILL.md',
+    '.ai/skills/verifying-changes/SKILL.md',
+    '.agents/skills/om-auto-fix-pr/SKILL.md',
+    '.agents/personas/persona-manual-tester.md',
     'CONTEXT.md',
     'scripts/worktree/README.md',
   ])('treats %s as documentation', (path) => {

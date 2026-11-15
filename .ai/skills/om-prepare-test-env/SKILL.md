@@ -3,7 +3,7 @@ name: om-prepare-test-env
 description: planned.travel extension of the installed om-prepare-test-env skill. Constraints the generated entrypoint must keep when regenerated or repaired.
 ---
 
-Extends the installed skill: read `.claude/skills/om-prepare-test-env/SKILL.md` and follow it. The generated `.ai/scripts/test-env-up.sh` and `test-env-down.sh` must keep these repo facts on any regeneration or repair:
+Extends the installed skill: read `.agents/skills/om-prepare-test-env/SKILL.md` and follow it. The generated `.ai/scripts/test-env-up.sh` and `test-env-down.sh` must keep these repo facts on any regeneration or repair:
 
 - Provisioning (deps, `.dev.vars`, local D1 + airports, basemap in local R2) belongs to `scripts/worktree/bootstrap.sh --profile worktree --no-seed`; the up script selects its port first and calls it with `--port "$PORT" --host 127.0.0.1` before every fresh boot, including a fully provisioned checkout, to reconcile owned `APP_URL`. A conflicting user-owned origin refuses startup without modifying the file. The up script never writes `.dev.vars` itself.
 - Port from **3030-3040 only**: `playwright.config.ts` refuses anything else outside CI, so an automated run can never photograph another checkout's app. Bind `127.0.0.1`, never `localhost` (another checkout may sit on `[::1]`).

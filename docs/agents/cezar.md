@@ -69,8 +69,8 @@ commands below describe the former setup and reusable repository helpers, not an
     `.agents/skills/om-*`, which shows as modified files in `git status` once upstream has moved
     past the pin. `skillsAutoUpdate: false` (kept in `~/.cezar/config.json`) gates only the update;
     the fork makes `CEZ_SKILLS_AUTO_UPDATE=0` skip the check too. Recovery:
-    `git checkout -- .agents/skills .claude/skills skills-lock.json`. Never delete `.agents/`: it
-    is tracked, and `.claude/skills/om-*` are symlinks into it.
+    `git checkout -- .agents/skills skills-lock.json`. Never delete `.agents/`: it
+    is tracked and contains the installed upstream skill files.
   - Two runs forking their worktree in the same moment lose the `.git/config` lock: `git worktree
 add -b` writes the new branch's upstream into the shared config, git's config lock has no
     retry, and the fork happens before cezar takes the repository-root lease, so `maxParallel`
@@ -106,15 +106,16 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
     moves `baselineAt` and the cursor to now. A baseline launches nothing from before it, so every
     issue labelled between the pinned cursor and the baseline is re-triggered by hand: remove the
     label and add it again.
-- Skills: `.agents/skills/om-*` are vendored files based on
-  `open-mercato/skills@75cf3146fd31aa6fa53af0866c076e5b7a3d9179`, and each `.claude/skills/om-*`
-  is a relative symlink to its directory there. Three local helper repairs are retained and
-  hashed with reasons in `scripts/agents/skills-upstream.json`; every other file is byte-identical.
-  This line is the pin, because
-  `skills-lock.json` records only a per-skill `computedHash` and `.ai/cezar/config.json` no longer
-  carries a `skillsRepos` entry to hold a ref. `pnpm install-skills` re-installs and updates them;
-  the diff is a PR, read with `/om-apply-upgrade-notes`, and the SHA on this line moves in the same
-  commit.
+- Skills: all 74 upstream skills are copied into `.agents/skills/` from
+  `open-mercato/skills@a90b091d27141a6cd12f363e94ebd0f5f84ba615`.
+  `scripts/agents/skills-upstream.json` records every upstream file hash and three reviewed
+  local repairs (criterion IDs, secret redaction, prototype comments/focus). Their patches live
+  in `scripts/agents/skill-patches/` and are reapplied by the installer. `skills-lock.json` records per-skill hashes. Impeccable is the
+  only other installed skill. Project-specific guidance lives in `.ai/skills/`, reviewer prompts
+  in `.agents/personas/`, and legacy Claude settings in `.agents/legacy/`.
+  `pnpm install-skills` refreshes the complete Open Mercato collection for Codex without creating
+  `.claude/`. Update the pin and manifest together and review applicable upgrade notes whenever
+  upstream changes; installed artifacts under `.ai/` are not refreshed by the installer itself.
   Repo specifics live in `.ai/skills/om-<name>/SKILL.md` as extensions of the installed skill.
 - Language: `systemPrompt` in `.ai/cezar/config.json` (Settings → Agents edits the same key) is
   appended to the system prompt of every agent step and tells the run to talk to the developer in
@@ -148,8 +149,10 @@ add -b` writes the new branch's upstream into the shared config, git's config lo
 
 ## Agent mode
 
-cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The project's
-`.claude/settings.json` then decides, with no project hook in the way:
+Historical Claude runs used `--permission-mode dontAsk` (ADR 0030). The retained policy is
+`.agents/legacy/claude-settings.json`; Claude must load it explicitly with `--settings` after
+the directory migration. Codex does not read this file. Its native Impeccable hooks live in
+`.codex/hooks.json`. The retained Claude policy defines:
 
 - `permissions.deny` is refused in every session, agent or not: reading `.dev.vars`, `.env*`,
   `.ai/qa/test-env.env` and `.e2e-tiles/`; hand-editing `src/routeTree.gen.ts`, `drizzle/` and
@@ -166,7 +169,7 @@ cezar starts Claude Code with `--permission-mode dontAsk` (ADR 0030). The projec
   that touches a sibling checkout shows up in that checkout's `git status`, not in its own PR.
 
 Protected configuration is a second boundary the repository's hooks do not move: Claude Code refuses an
-`Edit` or `Write` under `.claude/**` and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
+`Edit` or `Write` under its native protected configuration and `.husky/*` in a `dontAsk` run, and a pull request whose diff is
 only that configuration cannot be fixed unattended (#670). The cezar runner declares and preflights
 `writePaths`; here, the ten overrides of the skills that fix, continue, create, implement or check and commit a pull request carry one rule: declare the
 protected writes up front when the dispatch allows it, stop once after the first refusal, hand the exact
@@ -472,3 +475,21 @@ issue independently of the Cezar engine's done status.
 The three new scheduled workflows are disabled pending [rollout verification](autonomy-rollout.md).
 `product-radar` qualifies at most one feature weekly, context maintenance keeps fourteen days,
 and skills updates prepare one pinned PR at a time. Existing manual entry points remain available.
+
+<!-- om-skills-version:start -->
+
+Installed Open Mercato commit: `a90b091d27141a6cd12f363e94ebd0f5f84ba615` (74 skills).
+<!-- om-skills-version:end -->
+
+## Checkout-specific automatic skill updates
+
+For this checkout, `.agents/skills-updates.json` opts in to the native project updater:
+Open Mercato `main`, at startup and every six hours while Cezar is running. The host's local
+project registry enrolls the primary checkout. The former global-disable observations above
+are historical; this checkout's current opt-in is explicit.
+
+Cezar stages the update and calls `scripts/agents/sync-skills.mjs --ref <sha>`, which preserves
+reviewed local repairs and updates the manifest, lock and version marker together. Cezar
+publishes only while idle and under its reader lock, with a recoverable publication journal.
+Uncommitted installation metadata or a repair conflict defers the update; the reason is shown
+in the Skills panel. No Codex daily automation is needed.

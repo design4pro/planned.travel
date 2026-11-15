@@ -3,7 +3,7 @@ name: om-auto-write-spec
 description: planned.travel extension of the installed om-auto-write-spec skill. Repo-specific spec sections and the spec PR's labels; the installed workflow applies unchanged.
 ---
 
-Extends the installed skill: read `.claude/skills/om-auto-write-spec/SKILL.md` and follow it. On top:
+Extends the installed skill: read `.agents/skills/om-auto-write-spec/SKILL.md` and follow it. On top:
 
 - No label starts this skill (ADR 0032): a person starts the `spec` workflow from the Cezar cockpit. Never add a label outside the Open Mercato taxonomy (`.ai/trackers/github.md`).
 - Every spec carries a metadata table directly under its `H1`, before the first section: `Status`, `Issue`, `Spec PR`, `Implementation`, in that order, `none` where a value is absent. This skill writes it: `Status` is `draft` while the spec PR is open and `ready` once it merges, `Issue` is the FR issue driving the run, `Spec PR` is the design PR, `Implementation` is `none` - filling it is `om-auto-implement-spec`'s job. A brief-driven run with no issue still needs one before the spec can be scheduled; open it rather than leaving `Issue: none` on a merged spec, which leaves a design nobody can reach. New specs land at the root of `.ai/specs/`; `implemented/` and `archived/` are the other lifecycle states and belong to later skills. The rules are `.ai/specs/AGENTS.md`.

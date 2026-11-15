@@ -45,7 +45,7 @@ Spawn **one** sub-agent with the `Agent` tool. Pick the specialist by the questi
 | Reproducibility, untested states, QA coverage                                                             | manual tester                 | `persona-manual-tester`         |
 | A change to agent or project configuration (workflows, automations, skills, `.claude/`, hooks, `.husky/`) | configuration guardian        | `general-purpose`               |
 
-The `persona-*` agents live in `.claude/agents/`. Their own instructions say they recommend rather than decide: here, the recommendation they give in the verdict shape below is the verdict you apply. For a `general-purpose` specialist, open the prompt with the role, for example: "You are an independent senior software architect reviewing a decision for an unattended pipeline."
+The `persona-*` agents live in `.agents/personas/`. Their own instructions say they recommend rather than decide: here, the recommendation they give in the verdict shape below is the verdict you apply. For a `general-purpose` specialist, open the prompt with the role, for example: "You are an independent senior software architect reviewing a decision for an unattended pipeline."
 
 The prompt carries the path to the decision brief, and it asks the specialist to:
 

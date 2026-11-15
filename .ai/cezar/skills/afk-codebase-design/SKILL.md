@@ -57,7 +57,7 @@ Four things decide the project a test lands in, and they are not interchangeable
 
 - `ui` - jsdom, for `src/components/**` and `src/lib/**`.
 - `server` - plain Node, for `src/server/**`. **No `cloudflare:workers` import.**
-- `tooling` - policy outside `src/**`: `scripts/`, `.ai/scripts/`, `.claude/hooks/`, config files, e2e helpers.
+- `tooling` - policy outside `src/**`: `scripts/`, `.ai/scripts/`, `.agents/hooks/`, config files, e2e helpers.
 - Playwright (`e2e/`) - journeys only, chromium and mobile-safari, behind `.ai/scripts/e2e.sh`.
 
 Tests are colocated in `__tests__/` beside the code they cover.

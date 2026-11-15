@@ -3,7 +3,7 @@ name: om-auto-manage-issues
 description: planned.travel extension of the installed om-auto-manage-issues skill. Human-hold labels, category mapping, the readiness verifier and the hand-on to afk-triage.
 ---
 
-Extends the installed skill: read `.claude/skills/om-auto-manage-issues/SKILL.md` and follow it. On top:
+Extends the installed skill: read `.agents/skills/om-auto-manage-issues/SKILL.md` and follow it. On top:
 
 - Human-hold labels (skip the issue entirely): `blocked`, `do-not-close`, `do-not-merge`.
 - Category comes from the issue form (`.github/ISSUE_TEMPLATE`): a bug report is `bug`, an enhancement or idea is `feature`, a maintenance item is `refactor`; Dependabot is `dependencies`; Sentry-filed issues (`pnpm sentry-triage`) are `bug` and keep the `priority-high` the filer set.

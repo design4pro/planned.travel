@@ -31,7 +31,7 @@ sign-off, self-approval or automatic-repair routes below.
 
 The workflow below applies unchanged only to tasks that are not enrolled.
 
-Extends the installed skill: read `.claude/skills/om-approve-merge-pr/SKILL.md` and follow it. The following additions override the installed skill where necessary:
+Extends the installed skill: read `.agents/skills/om-approve-merge-pr/SKILL.md` and follow it. The following additions override the installed skill where necessary:
 
 - Step 2: run **list-review-threads**. Any thread that is unresolved and not outdated makes the PR not mergeable here, even with `APPROVED` and green checks: report the threads by path and author and offer `om-auto-fix-pr <number>`, which replies in and resolves the ones it handles. Never resolve a thread from this skill: it merges, it does not answer review feedback.
 

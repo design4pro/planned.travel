@@ -22,15 +22,15 @@ a 500 on `/login` looks like a code defect and is a missing file.
 
 ## Flags
 
-| Flag                        | Effect                                                                              |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `--profile worktree\|cloud` | Which environment this is. Default `worktree`. See the table below.                 |
-| `--port N`                  | Serve on this port instead of the allocated one.                                    |
+| Flag                          | Effect                                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `--profile worktree\|cloud`   | Which environment this is. Default `worktree`. See the table below.                                            |
+| `--port N`                    | Serve on this port instead of the allocated one.                                                               |
 | `--host localhost\|127.0.0.1` | Local origin and bind host; defaults to `localhost`. Explicit host refuses a conflicting user-owned `APP_URL`. |
-| `--check`                   | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight. |
-| `--if-needed`               | Exit 0 immediately when nothing is missing. What the SessionStart hook passes.      |
-| `--no-seed`                 | Stop after the schema; start no server and seed nothing.                            |
-| `--force`                   | Redo every step even when its result is already on disk.                            |
+| `--check`                     | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight.                            |
+| `--if-needed`                 | Exit 0 immediately when nothing is missing. What the SessionStart hook passes.                                 |
+| `--no-seed`                   | Stop after the schema; start no server and seed nothing.                                                       |
+| `--force`                     | Redo every step even when its result is already on disk.                                                       |
 
 Anything else is a hard error rather than a silently ignored typo.
 
@@ -47,7 +47,7 @@ Anything else is a hard error rather than a silently ignored typo.
 `scripts/cloud/session-start.sh` picks the profile off `CLAUDE_CODE_REMOTE` and does nothing else,
 and in a cezar run (`CEZ_TASK_ID` is set), whose workflow bootstraps itself, only installs
 dependencies when `node_modules` is missing.
-`.claude/settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
+When explicitly loaded with `claude --settings`, `.agents/legacy/claude-settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
 generous timeout because the first run in a fresh worktree installs dependencies.
 
 ## Its relationship to `.ai/scripts/test-env-up.sh`
