@@ -62,8 +62,11 @@ Domain vocabulary lives in CONTEXT.md — a glossary and nothing else. Architect
 
 Only Open Mercato skills are installed, under `.agents/skills/`. The exact upstream pin and
 local repairs live in `scripts/agents/skills-upstream.json`; `skills-lock.json` hashes complete
-installed directories. `pnpm install-skills` restores that pin. Updates are deliberate changes,
-never a Cezar startup side effect.
+installed directories. `pnpm install-skills` restores that pin. This primary checkout explicitly
+opts into automatic Open Mercato updates through `.agents/skills-updates.json` and the host's
+project enrollment. Cezar checks at startup and every six hours; installation waits for idle
+readers, preserves local repairs and publishes the skills, manifest, lock and documented pin
+together. See `docs/agents/codex-isolation.md`. Other checkouts and global skills are excluded.
 
 - Runtime: official [open-mercato/cezar](https://github.com/open-mercato/cezar), Codex runner,
   `.ai/cezar/config.json`; operating guide and retained workflows: `docs/agents/cezar.md`.

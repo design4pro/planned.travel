@@ -6,6 +6,10 @@ with Codex as the default runner. `.ai/cezar/config.json` keeps `baseBranch: dev
 repository; it neither installs a global CLI nor starts or reconfigures a host service.
 The former fork-specific patches and service instructions are historical, not prerequisites.
 
+For host-installed `codex-project` and per-repository Codex state, see
+[Project-isolated Codex](codex-isolation.md). Cezar selects that launcher through
+`CEZ_CODEX_BIN`; the ordinary personal Codex environment remains separate.
+
 ## Instructions and skills
 
 `AGENTS.md` is the entry point for Cezar and Codex. Only `.agents/skills/om-*` are installed
@@ -22,10 +26,17 @@ Use fresh generic sub-agents with the relevant reviewer brief instead of Claude-
 The optional upstream multi-model harness requires a Claude conductor; it remains vendored as
 part of the complete collection but is not configured or used by this Codex delivery pipeline.
 
-`pnpm install-skills` restores the current reviewed pin. To prepare an update, run
-`pnpm install-skills -- --ref <full-reviewed-SHA>`, inspect the complete diff, apply
-`om-apply-upgrade-notes`, and run the configured gate. A changed upstream base for a local repair
-stops the updater before installation. Keep automatic skill updates disabled on the host.
+The enrolled primary checkout automatically installs newer `open-mercato/skills` commits from
+`main` at Cezar startup and every six hours while Cezar runs. The host updater stages and verifies
+the complete collection, waits for idle readers, and publishes skills, manifest, lock and this
+pin together with a recovery journal and retained backup. Other projects and linked worktrees
+are not enrolled implicitly. Details and opt-out: [Project-isolated Codex](codex-isolation.md).
+Automatic installation leaves a local Git diff; it never commits, pushes, changes repository
+policies or runs downloaded code. A changed upstream base for a local repair stops installation
+and appears in Cezar's update status. The `skills-update` workflow reviews the installed diff,
+applies upgrade notes and runs the gate before preparing a draft PR.
+`pnpm install-skills` remains a manual pin-restoration tool; run it only with project readers
+stopped. Explicit manual updates use `pnpm install-skills -- --ref <full-reviewed-SHA>`.
 Never recreate another tool's skill directory as a compatibility alias.
 
 ## Local execution
@@ -64,7 +75,7 @@ This migration grants no production writes, main promotion or permission bypass.
 | `pr-fix`              | Address assessed review findings with `om-auto-fix-pr`.                                   |
 | `housekeeping`        | Report merged-issue candidates, then use `om-close-fixed-issues` with atomic claims.      |
 | `lessons`             | Evidence-based `om-pipeline-retro`; at most one draft repair PR.                          |
-| `skills-update`       | One deliberately pinned, reviewed skills update.                                          |
+| `skills-update`       | Review an installed update or resolve repair conflicts, then prepare one draft PR.        |
 | `context-maintenance` | Archive completed contexts with active-run protection.                                    |
 
 `issue-groom` was consolidated into issue preparation/triage. Scheduled architecture review and

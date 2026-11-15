@@ -1,14 +1,19 @@
 name: skills-update
-description: Prepare one pinned skills update PR, preserving local policy.
+description: Review a project skill update and prepare one PR, preserving local policy.
 steps:
   - id: update
     prompt: |
       Check for one existing skills update PR before doing any work; reuse it if present.
-      Compare open-mercato/skills with the pin in docs/agents/cezar.md. If unchanged, stop.
-      Run pnpm install-skills -- --ref <full-reviewed-SHA> to vendor the complete selected SHA. Preserve the documented
+      The enrolled primary checkout installs skills automatically; inspect its local diff and
+      .ai/tmp/skills-auto-update/status.json before selecting work. Never overwrite unrelated local changes.
+      Compare open-mercato/skills with the pin in docs/agents/cezar.md and the committed manifest.
+      If both upstream and the committed pin match the installed pin, stop.
+      Review an already installed update in a separate worktree. If the automatic updater stopped
+      on a changed repair base, prepare the compatible repair in that worktree using the selected full SHA.
+      Never run the manual installer against a primary checkout with active readers. Preserve the documented
       local repairs in scripts/agents/skills-upstream.json; review each against upstream. Update
       that manifest, skills-lock.json and the documentation pin together.
       Read UPGRADE_NOTES.md and merge tracker/browser descriptors preserving local REST operations,
-      claim, QA, security and merge gates. Keep startup auto-update disabled.
+      claim, QA, security and merge gates. Do not change the explicit project auto-update enrollment.
       Validate complete hashes, the single skill directory and compatibility; open one draft PR. Do not merge this update,
       install a harness or schedule a second PR owner.
