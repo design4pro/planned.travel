@@ -37,12 +37,27 @@ for (const path of expected) {
     expectedDirectories.add(parts.join('/'))
   }
 }
+// Impeccable is the sole user-approved addon; it is never owned by this updater.
+const addonPath = '.agents/skills/impeccable'
+function verifyAddon(root) {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = `${root}/${entry.name}`
+    if (entry.isDirectory()) verifyAddon(path)
+    else if (!entry.isFile())
+      throw new Error(`Refusing to preserve a non-regular addon entry: ${path}`)
+  }
+}
 function verifyInventory(root) {
   if (lstatSync(root).isSymbolicLink())
     throw new Error(`Refusing a symlinked skill path: ${root}`)
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     const path = `${root}/${entry.name}`
-    if (entry.isDirectory() && expectedDirectories.has(path))
+    if (path === addonPath && entry.isDirectory()) {
+      const skill = `${path}/SKILL.md`
+      if (!lstatSync(skill).isFile())
+        throw new Error(`Refusing to preserve an invalid addon: ${skill}`)
+      verifyAddon(path)
+    } else if (entry.isDirectory() && expectedDirectories.has(path))
       verifyInventory(path)
     else if (!entry.isFile() || !expected.has(path))
       throw new Error(`Refusing to delete an unreviewed skill entry: ${path}`)
@@ -50,6 +65,13 @@ function verifyInventory(root) {
 }
 verifyInventory('.agents/skills')
 for (const file of manifest.files) {
+  if (
+    !['100644', '100755'].includes(file.mode) ||
+    Boolean(lstatSync(file.path).mode & 0o111) !== (file.mode === '100755')
+  )
+    throw new Error(
+      `Refusing to overwrite local skill permissions: ${file.path}`,
+    )
   if (blobHash(readFileSync(file.path)) !== (file.localSha ?? file.sha)) {
     throw new Error(`Refusing to overwrite a local skill edit: ${file.path}`)
   }
@@ -136,10 +158,12 @@ try {
   }
   // All upstream and repair validation precedes mutation of the installed collection.
   for (const entry of readdirSync('.agents/skills', { withFileTypes: true })) {
-    if (!entry.name.startsWith('om-'))
+    if (entry.name !== 'impeccable' && !entry.name.startsWith('om-'))
       throw new Error(`Unexpected project skill: ${entry.name}`)
   }
-  for (const entry of readdirSync('.agents/skills'))
+  for (const entry of readdirSync('.agents/skills').filter(
+    (name) => name !== 'impeccable',
+  ))
     rmSync(join('.agents/skills', entry), { recursive: true })
   for (const name of names)
     cpSync(join(checkout, 'skills', name), join('.agents/skills', name), {

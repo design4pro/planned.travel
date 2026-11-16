@@ -1,0 +1,2 @@
+# Preserve the upstream Windows launcher's CRLF line endings byte-for-byte.
+.agents/skills/impeccable/scripts/impeccable.cmd whitespace=cr-at-eol

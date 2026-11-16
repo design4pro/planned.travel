@@ -64,6 +64,43 @@ class AutoUpdateTests(unittest.TestCase):
         version(stage, '# New\n', 'b' * 40)
         return transaction
 
+    def test_update_preserves_impeccable_and_its_executable_mode(self):
+        addon = self.root / '.agents/skills/impeccable/scripts/tool'
+        addon.parent.mkdir(parents=True)
+        addon.write_bytes(b'#!/bin/sh\necho preserved\n')
+        addon.chmod(0o755)
+        (addon.parent.parent / 'SKILL.md').write_text('# Impeccable\n')
+        self.assertEqual(auto.validate_installed(self.root), 'a' * 40)
+        baseline = auto.snapshot(self.root)
+        auto.publish(self.root, self.common, self.staged(), baseline, lambda: None)
+        self.assertEqual(auto.validate_installed(self.root), 'b' * 40)
+        self.assertEqual(addon.read_bytes(), b'#!/bin/sh\necho preserved\n')
+        self.assertEqual(addon.stat().st_mode & 0o777, 0o755)
+
+    def test_unknown_addons_and_symlinked_impeccable_are_refused(self):
+        unknown = self.root / '.agents/skills/other-tool'
+        unknown.mkdir()
+        with self.assertRaises(auto.Deferred):
+            auto.validate_installed(self.root)
+        unknown.rmdir()
+        addon = self.root / '.agents/skills/impeccable'
+        addon.symlink_to(self.root / '.agents/skills/om-example', target_is_directory=True)
+        with self.assertRaises((ValueError, auto.Deferred)):
+            auto.validate_installed(self.root)
+
+    def test_concurrent_impeccable_edit_defers_publication(self):
+        addon = self.root / '.agents/skills/impeccable/SKILL.md'
+        addon.parent.mkdir()
+        addon.write_text('# Impeccable\n')
+        def prepare(command, **options):
+            version(Path(options['cwd']), '# New\n', 'b' * 40)
+            addon.write_text('# Concurrent addon edit\n')
+            return subprocess.CompletedProcess(command, 0, '', '')
+        with self.assertRaises(auto.Deferred):
+            auto.update(self.root, self.common, 'b' * 40, lambda: None, prepare)
+        self.assertEqual(addon.read_text(), '# Concurrent addon edit\n')
+        self.assertEqual(auto.validate_installed(self.root), 'a' * 40)
+
     def test_success_updates_all_owned_files_and_retains_backup(self):
         baseline = auto.snapshot(self.root)
         transaction = self.staged()

@@ -180,7 +180,25 @@ def validate_installed(root):
         if actual != entry.get('localSha', entry['sha']):
             raise Deferred(f'Local skill edits must be preserved: {name}')
         expected.add(name)
-    actual = {str(path.relative_to(root)) for path in safe_path(root, TARGETS[0]).rglob('*') if path.is_file()}
+    skills = safe_path(root, TARGETS[0])
+    # Keep the full-tree fingerprint: addon edits must still defer publication.
+    fingerprint(skills)
+    directories = {str(parent) for name in expected for parent in Path(name).parents}
+    actual = set()
+    for child in skills.iterdir():
+        if child.name == 'impeccable' and child.is_dir():
+            if not (child / 'SKILL.md').is_file():
+                raise Deferred('The Impeccable addon needs its SKILL.md entry point.')
+            continue
+        name = str(child.relative_to(root))
+        if not child.is_dir() or name not in directories:
+            raise Deferred('The project skill inventory contains an unknown entry.')
+        for path in child.rglob('*'):
+            relative = str(path.relative_to(root))
+            if path.is_dir() and relative not in directories:
+                raise Deferred('The project skill inventory contains an unknown directory.')
+            if path.is_file():
+                actual.add(relative)
     if actual != expected:
         raise Deferred('The project skill inventory contains local additions or removals.')
     return manifest['sha']
