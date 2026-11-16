@@ -1,8 +1,11 @@
 # Dependency compatibility
 
-PR #1868 keeps one compatible dependency update while deferring upgrades that need
-application migrations. `package.json` pins the selected versions exactly and
-`pnpm-lock.yaml` records their coordinated transitive graph. Install with
+PRs #1868 and #1939 retain compatible dependency updates while deferring upgrades
+that need application migrations. PR #1939 reproduced the Start request-context
+export and route-typing failures, and Better Auth 1.7.22 again failed account
+authority during real account creation. The coordinated sets below remain pinned.
+`package.json` pins the selected versions exactly; `pnpm-lock.yaml` records the
+resolved graph, including refreshed compatible transitive dependencies. Install with
 `pnpm install --frozen-lockfile`; regenerating the lockfile from scratch is not a
 compatibility proof.
 
@@ -14,8 +17,10 @@ compatibility proof.
 | Worker build               | Vite 8.2.1, Cloudflare Vite plugin 1.53.0, Wrangler 4.124.0, Workers types 5.20260818.1, React Vite plugin 6.0.5 | Production and E2E builds. The grouped update failed to resolve `cloudflare:workers`; do not hide this by externalizing Worker bindings into client code.                                                                                                                           |
 | Development tools          | React Devtools 0.10.12, Devtools Vite 0.8.5                                                                      | Retain with the framework/build set until separately validated.                                                                                                                                                                                                                     |
 
-The remaining updates retain the versions proposed by #1868, including Query,
-Virtual, Tailwind, Drizzle, MapLibre, Lucide, Zod, Playwright and test tooling.
+PR #1939 retains ten direct updates: Query and Query Devtools 5.107.1, Tailwind
+and its Vite plugin 4.3.5, MapLibre 6.18.0, Lucide 1.72.0, Testing Library
+user-event 14.6.10, Oxlint 1.93.0, Prettier 3.10.1 and React Email 6.11.12.
+Virtual, Drizzle, Zod and Playwright keep their existing versions.
 These pins do not change the dependency freeze, authorization boundaries, access
 policy or acceptance gates. A future upgrade must pass the complete configured
 gate and native required CI, followed by independent review and applicable QA.
