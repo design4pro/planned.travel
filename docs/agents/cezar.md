@@ -12,8 +12,9 @@ For host-installed `codex-project` and per-repository Codex state, see
 
 ## Instructions and skills
 
-`AGENTS.md` is the entry point for Cezar and Codex. Only `.agents/skills/om-*` are installed
-project skills. The collection is pinned to
+`AGENTS.md` is the entry point for Cezar and Codex. The complete `.agents/skills/om-*` collection and
+the explicitly approved `.agents/skills/impeccable` addon are installed project skills.
+The Open Mercato collection is pinned to
 `open-mercato/skills@a90b091d27141a6cd12f363e94ebd0f5f84ba615`.
 `scripts/agents/skills-upstream.json` records every upstream blob and three reviewed local repairs;
 `skills-lock.json` hashes complete skill directories. Local policies live in `.agents/policies/`,
@@ -36,7 +37,9 @@ policies or runs downloaded code. A changed upstream base for a local repair sto
 and appears in Cezar's update status. The `skills-update` workflow reviews the installed diff,
 applies upgrade notes and runs the gate before preparing a draft PR.
 `pnpm install-skills` remains a manual pin-restoration tool; run it only with project readers
-stopped. Explicit manual updates use `pnpm install-skills -- --ref <full-reviewed-SHA>`.
+stopped. Both update paths preserve Impeccable bytes and executable modes, reject other
+addons. Automatic publication retains full-tree concurrency checks. Impeccable is updated separately.
+Explicit manual updates use `pnpm install-skills -- --ref <full-reviewed-SHA>`.
 Never recreate another tool's skill directory as a compatibility alias.
 
 ## Local execution

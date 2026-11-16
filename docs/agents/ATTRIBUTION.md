@@ -6,6 +6,7 @@ Refresh by copying the same paths from a newer commit and updating the pin here.
 | Local path                          | Upstream                                                              | Pin                                   | License                             |
 | ----------------------------------- | --------------------------------------------------------------------- | ------------------------------------- | ----------------------------------- |
 | `.agents/skills/om-*/`              | [open-mercato/skills](https://github.com/open-mercato/skills)         | `scripts/agents/skills-upstream.json` | MIT; `.agents/LICENSE.open-mercato` |
+| `.agents/skills/impeccable/`        | [pbakaus/impeccable](https://github.com/pbakaus/impeccable)           | `4.9.1`                               | Apache-2.0                          |
 | `docs/agents/definition-of-done.md` | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | `d2c37ef6225d`                        | MIT                                 |
 
 The separate TDD and code-review skill installations were removed on 2026-11-15.

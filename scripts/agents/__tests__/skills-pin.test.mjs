@@ -20,7 +20,11 @@ it('vendors every upstream file byte-for-byte and keeps complete skill hashes in
   }
   const skills = new Set(manifest.files.map((file) => file.path.split('/')[2]))
   expect(skills.size).toBe(74)
-  expect(readdirSync('.agents/skills').sort()).toEqual([...skills].sort())
+  expect(readdirSync('.agents/skills').sort()).toEqual(
+    [...skills, 'impeccable'].sort(),
+  )
+  expect(lstatSync('.agents/skills/impeccable').isSymbolicLink()).toBe(false)
+  expect(existsSync('.agents/skills/impeccable/SKILL.md')).toBe(true)
   expect(Object.keys(lock.skills).sort()).toEqual([...skills].sort())
   for (const retired of [
     '.claude',

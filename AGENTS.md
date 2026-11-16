@@ -2,7 +2,7 @@
 
 Talk to the developer in Polish; use "-", never a long dash in Polish prose. Code, comments, file contents, commits and GitHub artifacts stay in English.
 
-Before any task, read `.agents/policies/security.md`. Before invoking any `om-*` skill, including a chained invocation, read its `.agents/skills/<name>/SKILL.md` and, when present, `.agents/policies/<name>.md`. Repository policies supplement the vendored skill and remain mandatory even though its upstream preflight mentions `.ai/skills`. Never install another skill collection into this project.
+Before any task, read `.agents/policies/security.md`. Before invoking any `om-*` skill, including a chained invocation, read its `.agents/skills/<name>/SKILL.md` and, when present, `.agents/policies/<name>.md`. Repository policies supplement the vendored skill and remain mandatory even though its upstream preflight mentions `.ai/skills`. The only approved installations are the complete Open Mercato collection and the user-requested Impeccable addon; never install another collection.
 
 Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 19, D1/Drizzle, KV, R2, Durable Objects, Queues). Package manager: pnpm. Stack is pinned — see docs/SPEC.md §3 before adding or changing any dependency.
 
@@ -60,9 +60,10 @@ Domain vocabulary lives in CONTEXT.md — a glossary and nothing else. Architect
 
 ## Agent instructions and delivery
 
-Only Open Mercato skills are installed, under `.agents/skills/`. The exact upstream pin and
+The complete Open Mercato collection and Impeccable are installed under `.agents/skills/`.
+The Open Mercato updater preserves Impeccable without updating it. The exact upstream pin and
 local repairs live in `scripts/agents/skills-upstream.json`; `skills-lock.json` hashes complete
-installed directories. `pnpm install-skills` restores that pin. This primary checkout explicitly
+Open Mercato directories. `pnpm install-skills` restores that pin. This primary checkout explicitly
 opts into automatic Open Mercato updates through `.agents/skills-updates.json` and the host's
 project enrollment. Cezar checks at startup and every six hours; installation waits for idle
 readers, preserves local repairs and publishes the skills, manifest, lock and documented pin
