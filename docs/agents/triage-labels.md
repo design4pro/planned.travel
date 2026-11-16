@@ -1,21 +1,21 @@
 # Labels
 
 The label vocabulary is the Open Mercato SDLC taxonomy in `SDLC.md` (ADR 0018), read by every
-`om-*` skill from `.ai/agentic.config.json`, plus `do-not-close`. It is the whole vocabulary: no
+`om-*` skill from `.ai/agentic.config.json`, plus `do-not-close` and the human-only `claim-reset` recovery label. It is the whole vocabulary: no
 label says an issue is ready, and no label starts a run (ADR 0032). This page adds only what is
 specific to this repository: who writes each group, the holds, the flow, and the map from the
 retired vocabularies.
 
 ## Vocabulary
 
-| Group    | Labels                                                                                     | Written by                                                                                               |
-| -------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| Pipeline | `review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`, `blocked`, `do-not-merge` | skills move the first five on PRs, only a QA reviewer sets `qa`; the holds are below                     |
-| Category | `bug`, `feature`, `refactor`, `security`, `dependencies`, `documentation`                  | issue forms, Sentry sweep, Dependabot (`dependencies`), `om-auto-manage-issues`, `afk-triage`, PR skills |
-| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by the unattended sign-off (a specialist panel), `risk-high` included (ADR 0035)   |
-| Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                                |
-| Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                                |
-| Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                          |
+| Group    | Labels                                                                                     | Written by                                                                                             |
+| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Pipeline | `review`, `changes-requested`, `qa`, `qa-failed`, `merge-queue`, `blocked`, `do-not-merge` | skills move the first five on PRs, only a QA reviewer sets `qa`; the holds are below                   |
+| Category | `bug`, `feature`, `refactor`, `security`, `dependencies`, `documentation`                  | issue forms, Sentry sweep, Dependabot (`dependencies`), `om-auto-manage-issues`, `triage`, PR skills   |
+| Meta     | `needs-qa`, `skip-qa`, `qa-approved`, `qa-self-verified`, `in-progress`, `ci-monitoring`   | skills; `qa-approved` by the unattended sign-off (a specialist panel), `risk-high` included (ADR 0035) |
+| Priority | `priority-low`, `priority-medium`, `priority-high`, `priority-extreme`                     | issue grooming, Sentry sweep (`priority-high`), PR skills                                              |
+| Risk     | `risk-low`, `risk-medium`, `risk-high`                                                     | issue grooming, PR skills                                                                              |
+| Outside  | `do-not-close`                                                                             | humans; housekeeping never closes such an issue                                                        |
 
 There is no `status:` axis and no intake ladder. Where an open issue stands is computed by
 `node .ai/scripts/backlog-status.mjs` from what is already on it: the holds, the claim, an open PR,
@@ -26,11 +26,11 @@ outlives its run is reported by `om-review-prs`, not repaired by a sweeper.
 ## Holds
 
 - `blocked` - nothing starts while it is there. A person sets it, or a skill does with a comment that
-  starts `🤖 HUMAN-ONLY:` and names the one thing a person must do: `afk-triage` for what only the
+  starts `🤖 HUMAN-ONLY:` and names the one thing a person must do: `triage` for what only the
   reporter or the owner can supply, `implement-ticket` when the security and tenancy specialist does
   not approve `risk-high` work. A person removes that one, and the issue, still without an Agent Brief,
   is triaged again by the Reconciler. A `blocked` an agent set without `HUMAN-ONLY:` is offered
-  to `afk-unblock`, which lifts it on a specialist's verdict (`🤖 RESOLVED:`) or marks it
+  to `unblock`, which lifts it on a specialist's verdict (`🤖 RESOLVED:`) or marks it
   `HUMAN-ONLY:`; a hold a person set or commented on last is never lifted by an agent (ADR 0033).
 - `do-not-merge` - a PR never merges unattended while it is there. The `develop` -> `main`
   promotion carries it from the moment `.github/workflows/promote-develop.yml` opens it, and every
@@ -39,27 +39,16 @@ outlives its run is reported by `om-review-prs`, not repaired by a sweeper.
 
 ## Flow
 
-```
-issue form ─► category;  Sentry sweep ─► bug + priority-high (NEEDS_TRIAGE, ADR 0040)
-      ─(Reconciler: backlog-status.mjs --plan, issue by a maintainer)─► triage
-            afk-triage: + category, priority, risk, Agent Brief + SLC scope check
-                  ├─► Agent Brief ─► ready once its Blocked by issues close
-                  └─► blocked + 🤖 HUMAN-ONLY comment ─► a person answers and removes blocked ─► triage again
-agent-set blocked or STOP ─(Reconciler: backlog-status.mjs --plan)─► unblock ─► 🤖 RESOLVED (lifted) | 🤖 HUMAN-ONLY
-plan stage nothing covers ─(Reconciler)─► plan-to-spec ─► specialist panel ─► spec PR ─► merged by the pipeline
-                                                        └─► already delivered ─► `Delivered:` line in the plan (docs-only PR)
-merged spec ─(Reconciler)─► afk-to-tickets: tickets whose body is their Agent Brief
+An operator or explicitly configured allocator dispatches `triage`. The Agent Brief, category,
+priority, risk and closed dependencies make an issue ready; no trigger label is required.
+One owner delivers it through implementation, review, QA, executed CI and guarded develop merge.
+A separate post-merge graph stage reconciles eligible closing issues under atomic ownership.
 
-ready issue ─(Reconciler: backlog-status.mjs --next, WIP limit 3 PRs waiting for a person)─► implement-ticket
-      ─► PR (review, category, needs-qa|skip-qa, priority, risk) ─► om-pr-autopilot --allow-merge ─► develop
-
-a person, from the cockpit, on any issue: issue-groom · issue-autofix · spec · implement-ticket · triage
-PR opened by a human ─(pull_request.opened: Autopilot new pull requests)─► review / fix / QA / merge into develop
-agent PR in merge-queue ─(pull_request.reviewed: Merge reviewed agent pull requests)─► om-pr-autopilot --allow-merge ─► merged into develop
-housekeeping (no CEZAR automation; launchd runs it 07:30/12:30/17:30 on weekdays): om-review-prs, om-merge-buddy (report), om-close-fixed-issues
-      ─► issue closed when its `Closes #n` PR merged into develop
-develop ─(promote-develop.yml)─► promotion PR to main, do-not-merge ─► merged by the owner
-```
+The retained workflows and paused schedule candidates are in `docs/agents/cezar.md`.
+Current saved records and retirement recommendations are in `docs/agents/automation-audit.md`.
+This repository migration does not enable an allocator or reconcile live automations.
+`claim-reset` is applied only by a human after stopping the owner and its workers; the descriptor
+verifies the label event and exact lock generation. An agent never uses it as a shortcut.
 
 ## Map from the retired vocabularies
 
@@ -111,6 +100,6 @@ YAMLs spelled the old vocabulary; PR C deleted them, so nothing in the tree read
 - **Sentry** findings (`.github/workflows/sentry-triage.yml`, ADR 0008 as amended by ADR 0018) as
   `bug` + `priority-high` with `<!-- sentry-issue: SHORT-ID -->` in the body; dedup is keyed on the
   marker across open and closed issues. The body quotes production data, so no automation grooms
-  one; the Reconciler starts `triage` on it, and afk-triage briefs it from the code (ADR 0040).
-- **Follow-ups** from `om-followup-issue-from-pr`, `om-review-prs`, `afk-triage` (a split) and
-  `afk-architecture-review`, triaged like any other.
+  one; the Reconciler starts `triage` on it, and triage briefs it from the code (ADR 0040).
+- **Follow-ups** from `om-followup-issue-from-pr`, `om-review-prs`, `triage` (a split) and
+  `manual architecture review`, triaged like any other.

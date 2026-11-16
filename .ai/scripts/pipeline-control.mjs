@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import {
   appendFileSync,
   readFileSync,
+  readdirSync,
   mkdirSync,
   writeFileSync,
   existsSync,
@@ -31,15 +32,53 @@ export function claimWork(store, key, runId) {
   }
 }
 
+// New issues have no remote numeric identity yet. Serialize creation on the single
+// configured Cezar host; this lease never replaces atomic ownership of existing items.
+export function creationReservation(store, runId, release = false) {
+  if (!/^[a-zA-Z0-9-]+$/.test(runId ?? ''))
+    throw new Error('Invalid run identity')
+  const directory = join(store, 'claims')
+  mkdirSync(directory, { recursive: true })
+  const path = join(directory, 'issue-creation.json')
+  if (!release) {
+    try {
+      writeFileSync(path, JSON.stringify({ runId }), { flag: 'wx' })
+      return true
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error
+      return JSON.parse(readFileSync(path, 'utf8')).runId === runId
+    }
+  }
+  if (!existsSync(path)) return true
+  if (JSON.parse(readFileSync(path, 'utf8')).runId !== runId) return false
+  unlinkSync(path)
+  return true
+}
+
 export function policyDigest(root = '.') {
   const hash = createHash('sha256')
-  for (const path of [
+  const paths = [
     '.ai/agentic.config.json',
+    'AGENTS.md',
+    '.agents/policy.json',
+    'scripts/agents/skills-upstream.json',
     'SDLC.md',
     'CODE_REVIEW.md',
     'BACKWARD_COMPATIBILITY.md',
-  ])
+  ]
+  for (const directory of [
+    '.agents/policies',
+    '.agents/reviewers',
+    '.agents/workflows',
+  ]) {
+    for (const file of readdirSync(join(root, directory)).sort()) {
+      if (file.endsWith('.md')) paths.push(`${directory}/${file}`)
+    }
+  }
+  for (const path of paths) {
+    hash.update(path)
     hash.update(readFileSync(join(root, path)))
+  }
   return hash.digest('hex')
 }
 
@@ -86,6 +125,22 @@ function main(mode) {
   if (!/^[a-zA-Z0-9-]+$/.test(id ?? ''))
     throw new Error('CEZ_RUN_ID is required')
   const store = runStore()
+  if (mode === 'reserve-creation' || mode === 'release-creation') {
+    const runs = JSON.parse(readFileSync(join(store, 'runs.json'), 'utf8'))
+    if (!runs.some((run) => run.id === id))
+      throw new Error('Current run not found')
+    if (!creationReservation(store, id, mode === 'release-creation')) {
+      throw new Error(
+        'Another run owns issue creation; leave its reservation intact',
+      )
+    }
+    console.log(
+      mode === 'reserve-creation'
+        ? 'CREATION_RESERVED=1'
+        : 'CREATION_RELEASED=1',
+    )
+    return
+  }
   const handoff = join(store, 'runs', `${id}.handoff.md`)
   const config = JSON.parse(readFileSync('.ai/agentic.config.json', 'utf8'))
   const read = (args) =>
@@ -215,12 +270,7 @@ function main(mode) {
     }
     execFileSync(
       process.execPath,
-      [
-        'scripts/agents/close-fixed-issues.mjs',
-        '--pr',
-        String(pr.number),
-        '--apply',
-      ],
+      ['scripts/agents/close-fixed-issues.mjs', '--pr', String(pr.number)],
       { stdio: 'inherit', timeout: 120_000 },
     )
     return

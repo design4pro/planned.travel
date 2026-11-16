@@ -1,6 +1,8 @@
 ---
 name: planned.travel
-description: Collaborative trip planning that reads like a well-made instrument - warm paper, one near-black voice, one deep pine, and colour that only carries data on the map.
+description:
+  'Collaborative trip planning as a quiet instrument: warm paper, near-black actions,
+  deep pine brand and explicit data colours.'
 colors:
   ink: '#16150f'
   ink-2: '#403e36'
@@ -37,149 +39,283 @@ colors:
   selection: '#cfe4dc'
   track: '#f0eee9'
   track-thumb: '#ffffff'
+  edge-faint: rgb(22 21 15 / 0.07)
+  hover: rgb(22 21 15 / 0.045)
+  active: rgb(22 21 15 / 0.085)
+  overlay: rgb(22 21 15 / 0.42)
+  inverse-edge: rgb(255 255 255 / 0.12)
+  inverse-surface: rgb(255 255 255 / 0.06)
+  glass: rgb(255 255 255 / 0.78)
+  glass-edge: rgb(22 21 15 / 0.08)
+  map-card: '#ffffff'
+  map-card-edge: '#78766e'
+  map-card-inset: '#edebe6'
+  on-light: '#16150f'
+  on-dark: '#f8f7f4'
+  data-1: '#1d4fd8'
+  data-2: '#256256'
+  data-3: '#8a5305'
+  data-4: '#7542a0'
+  data-5: '#b22f22'
+  data-6: '#006d80'
+  data-7: '#a12570'
+  data-8: '#5b5951'
+  success-soft: '#e2f1e8'
+  success-on: '#ffffff'
+  warning-soft: '#faeedb'
+  warning-on: '#ffffff'
+  danger-soft: '#fbe7e4'
+  danger-on: '#ffffff'
+  info-soft: '#e5eafb'
+  info-on: '#ffffff'
 typography:
   hero:
-    fontFamily: 'MuseoModerno, Avenir Next, ui-rounded, sans-serif'
-    fontSize: 'clamp(2.75rem, 7.6vw, 6rem)'
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: clamp(2.75rem, 7.6vw, 6rem)
     fontWeight: 700
     lineHeight: 0.95
-    letterSpacing: '-0.035em'
+    letterSpacing: -0.035em
   headline:
-    fontFamily: 'MuseoModerno, Avenir Next, ui-rounded, sans-serif'
-    fontSize: 'clamp(2.25rem, 5.4vw, 4rem)'
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: clamp(2.25rem, 5.4vw, 4rem)
     fontWeight: 700
     lineHeight: 1.02
-    letterSpacing: '-0.032em'
+    letterSpacing: -0.032em
   display:
-    fontFamily: 'MuseoModerno, Avenir Next, ui-rounded, sans-serif'
-    fontSize: 'clamp(2.125rem, 5.2vw, 3rem)'
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: clamp(2.125rem, 5.2vw, 3rem)
     fontWeight: 700
     lineHeight: 1
-    letterSpacing: '-0.03em'
-    fontFeature: 'tabular-nums'
+    letterSpacing: -0.03em
+    fontFeature: tabular-nums
   title:
-    fontFamily: 'MuseoModerno, Avenir Next, ui-rounded, sans-serif'
-    fontSize: '1.625rem'
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: 1.625rem
     fontWeight: 700
     lineHeight: 1.15
-    letterSpacing: '-0.022em'
+    letterSpacing: -0.022em
   subtitle:
-    fontFamily: 'Geist, Geist Sans, -apple-system, sans-serif'
-    fontSize: '1.125rem'
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 1.125rem
     fontWeight: 600
     lineHeight: 1.4
-    letterSpacing: '-0.012em'
+    letterSpacing: -0.012em
   body:
-    fontFamily: 'Geist, Geist Sans, -apple-system, sans-serif'
-    fontSize: '0.9375rem'
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 0.9375rem
     fontWeight: 400
     lineHeight: 1.55
   label:
-    fontFamily: 'Geist, Geist Sans, -apple-system, sans-serif'
-    fontSize: '0.8125rem'
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 0.8125rem
     fontWeight: 500
     lineHeight: 1.4
   caption:
-    fontFamily: 'Geist, Geist Sans, -apple-system, sans-serif'
-    fontSize: '0.75rem'
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 0.75rem
     fontWeight: 400
     lineHeight: 1.35
   micro:
-    fontFamily: 'Geist, Geist Sans, -apple-system, sans-serif'
-    fontSize: '0.6875rem'
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 0.6875rem
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: '0.08em'
-  scale:
-    wordmark-sm: '1.0625rem'
-    wordmark-md: '1.25rem'
-    email-body: '14px'
-    email-heading: '24px'
-  fallback:
-    fontFamily: 'Planned Latin Fallback, Planned Display Fallback, Planned Cyrillic Fallback, Planned Greek Fallback, Planned Arabic Fallback, Planned Kana Fallback, Planned Han Fallback, Planned Hangul Fallback'
+    letterSpacing: 0.08em
+  wordmark-sm:
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: 1.0625rem
+  wordmark-md:
+    fontFamily:
+      "'MuseoModerno', 'Planned Display Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Planned Cyrillic Fallback', 'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC',
+      'Noto Sans TC', 'Noto Sans JP', 'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han
+      Fallback', 'Planned Hangul Fallback', 'Avenir Next', 'Trebuchet MS', ui-rounded, system-ui,
+      sans-serif"
+    fontSize: 1.25rem
+  email-body:
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 14px
+  email-heading:
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 24px
+  button-md:
+    fontFamily:
+      "'Geist', 'Geist Sans', 'Planned Latin Fallback', 'Noto Sans', 'Planned Greek Fallback',
+      'Noto Sans Arabic', 'Planned Arabic Fallback', 'Noto Sans SC', 'Noto Sans TC', 'Noto Sans JP',
+      'Noto Sans KR', 'Planned Kana Fallback', 'Planned Han Fallback', 'Planned Hangul Fallback',
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: 0.9375rem
+    fontWeight: 600
+    lineHeight: 1.55
 rounded:
-  sm: '8px'
-  md: '12px'
-  lg: '16px'
-  xl: '20px'
-  '2xl': '28px'
-  full: '9999px'
+  sm: 8px
+  md: 12px
+  lg: 16px
+  xl: 20px
+  2xl: 28px
+  full: 9999px
 spacing:
-  '1': '0.25rem'
-  '2': '0.5rem'
-  '3': '0.75rem'
-  '4': '1rem'
-  '5': '1.25rem'
-  '6': '1.5rem'
-  '8': '2rem'
-  '10': '2.5rem'
-  '12': '3rem'
-  '16': '4rem'
+  '1': 0.25rem
+  '2': 0.5rem
+  '3': 0.75rem
+  '4': 1rem
+  '5': 1.25rem
+  '6': 1.5rem
+  '8': 2rem
+  '10': 2.5rem
+  '12': 3rem
+  '16': 4rem
 components:
   button-primary:
     backgroundColor: '{colors.accent}'
     textColor: '{colors.accent-on}'
-    typography: '{typography.label}'
+    typography: '{typography.button-md}'
     rounded: '{rounded.md}'
-    padding: '0 1rem'
-    height: '2.5rem'
+    padding: 0 1rem
+    height: 2.5rem
   button-primary-hover:
     backgroundColor: '{colors.accent-hover}'
     textColor: '{colors.accent-on}'
   button-secondary:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
-    typography: '{typography.label}'
+    typography: '{typography.button-md}'
     rounded: '{rounded.md}'
-    padding: '0 1rem'
-    height: '2.5rem'
+    padding: 0 1rem
+    height: 2.5rem
   button-brand:
     backgroundColor: '{colors.brand}'
     textColor: '{colors.brand-on}'
-    typography: '{typography.label}'
+    typography: '{typography.button-md}'
     rounded: '{rounded.md}'
-    padding: '0 1rem'
-    height: '2.5rem'
+    padding: 0 1rem
+    height: 2.5rem
   button-ghost:
-    backgroundColor: 'transparent'
+    backgroundColor: transparent
     textColor: '{colors.ink-2}'
-    typography: '{typography.label}'
+    typography: '{typography.button-md}'
     rounded: '{rounded.md}'
-    padding: '0 1rem'
-    height: '2.5rem'
+    padding: 0 1rem
+    height: 2.5rem
   card-default:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
     rounded: '{rounded.xl}'
-    padding: '1.25rem'
+    padding: 1.25rem
   card-inverse:
     backgroundColor: '{colors.inverse}'
     textColor: '{colors.inverse-on}'
     rounded: '{rounded.xl}'
-    padding: '1.25rem'
+    padding: 1.25rem
   input-default:
     backgroundColor: '{colors.surface}'
     textColor: '{colors.ink}'
     typography: '{typography.label}'
     rounded: '{rounded.md}'
-    padding: '0 0.75rem'
-    height: '2.5rem'
+    padding: 0 0.75rem
+    height: 2.5rem
   chip-selected:
     backgroundColor: '{colors.brand}'
     textColor: '{colors.brand-on}'
     typography: '{typography.label}'
     rounded: '{rounded.full}'
-    padding: '0 0.75rem'
-    height: '2rem'
+    padding: 0 0.75rem
+    height: 2rem
   section-label:
-    backgroundColor: 'transparent'
+    backgroundColor: transparent
     textColor: '{colors.ink-3}'
     typography: '{typography.micro}'
   fab:
     backgroundColor: '{colors.accent}'
     textColor: '{colors.accent-on}'
     rounded: '{rounded.full}'
-    size: '3rem'
+    size: 3rem
+  button-subtle:
+    backgroundColor: '{colors.surface-2}'
+    textColor: '{colors.ink}'
+    typography: '{typography.button-md}'
+    rounded: '{rounded.md}'
+    padding: 0 1rem
+    height: 2.5rem
+  button-danger:
+    backgroundColor: '{colors.danger}'
+    textColor: '{colors.danger-on}'
+    typography: '{typography.button-md}'
+    rounded: '{rounded.md}'
+    padding: 0 1rem
+    height: 2.5rem
+  button-inverse:
+    backgroundColor: '{colors.inverse-surface}'
+    textColor: '{colors.inverse-on}'
+    typography: '{typography.button-md}'
+    rounded: '{rounded.md}'
+    padding: 0 1rem
+    height: 2.5rem
+  button-link:
+    backgroundColor: transparent
+    textColor: '{colors.brand}'
+    typography: '{typography.button-md}'
+    rounded: '{rounded.md}'
+    padding: '0'
+    height: auto
+  nav-segmented:
+    backgroundColor: '{colors.track}'
+    textColor: '{colors.ink}'
+    rounded: '{rounded.full}'
+    padding: 0.25rem
 ---
 
 # Design System: planned.travel
@@ -190,7 +326,8 @@ components:
 
 planned.travel is a precision tool that happens to be about holidays. It is drawn in near-black
 and deep pine on warm paper, and it holds itself still: surfaces are flat at rest, controls show
-no chrome until you approach them, and nothing moves further than a pixel or longer than 220ms.
+minimal chrome until you approach them. Button presses and card lifts travel one pixel; layer
+entrances and the travel mascot have their own deliberately bounded choreography.
 The confidence comes from exactness rather than from volume. An oversized display numeral and an
 11px uppercase label sitting three lines apart do more work than any amount of colour would.
 
@@ -212,9 +349,13 @@ taller before its web face landed. This is a system that states its tolerances.
 - Flat at rest; shadow is an answer to interaction, not a resting property.
 - Oversized display numerals against 11px uppercase whisper labels: extreme scale contrast, no
   intermediate steps to soften it.
-- Strict 4px grid, everywhere, with no eyeballed exceptions.
-- Colour carries data on exactly one surface (the Atlas map) and decorates everywhere else.
+- A 4px layout rhythm, with component half-steps and optical adjustments documented at source.
+- Colour distinguishes semantic state and categorical data; the Atlas uses a separate sequential pine ramp.
 - Light and dark are two designed systems, not one system and its inversion.
+
+Visual reference refreshed from the existing implementation on 2026-11-15. Token values come
+from `src/styles/tokens.css`; component geometry and states come from `src/components/ui` and
+`src/components/layout`. Existing audit findings remain defects to resolve, not new design rules.
 
 ## Colors
 
@@ -233,7 +374,7 @@ commanding and a deep pine that does the pointing.
 
 - **Deep Pine** (`#256256` light / `#5fbba0` dark): the brand. Links, active navigation, the focus
   ring, text selection, map markers, and the entire visited-country ramp. It points rather than
-  commands. It is also the only hue in the product allowed to encode a value.
+  commands. Its sequential country ramp is separate from the categorical data palette.
 - **Pine Wash** (`brand-subtle`, `#e3efeb` light / `#12261f` dark): the tinted ground for upsells,
   empty-state invitations and selected chips. It carries Deep Pine as readable text (6.02:1 light,
   6.88:1 dark), so the pair is a real surface, not a decorative tint.
@@ -252,6 +393,12 @@ The four semantic hues, each with a `-soft` tint that carries its own hue as rea
   failure. Never the resting state of a row action.
 - **Reference Blue** (`info`, `#1d4fd8` / `#8aacf9`): neutral system notices with no verdict.
 
+The categorical palette (`data-1` through `data-8`) serves expense categories and their
+charts: accommodation, transport, food, activities, shopping, fees, insurance and other.
+`src/routes/_app/-lib/tone.ts` owns the category mapping; `-costs/chart-colours.ts` resolves
+those same hue tokens for chart segments. The measured separation requirement in the token
+source is a product rule, not a substitute for visible labels or WCAG contrast checks.
+
 ### Neutral
 
 - **Warm Paper** (`canvas`, `#faf9f7` / `#121211`): the page ground. Warm, never clinical, and in
@@ -269,17 +416,21 @@ The four semantic hues, each with a `-soft` tint that carries its own hue as rea
   heaviness of a full-contrast border. This is the token that separates a _drawn_ box from a
   _pressable_ one.
 
+**Map surfaces:** `map-card`, `map-card-edge` and `map-card-inset` form their own theme pair
+for floating country facts and skeletons. In dark mode their surface differs from the page
+surface. `on-light` and `on-dark` are fixed foregrounds for data-owned colour swatches.
+
 ### Named Rules
 
-**The One Voice Rule.** Ink Black and Deep Pine are the only two saturated voices. A screen gets
+**The One Voice Rule.** Ink Black and Deep Pine carry the brand; categorical and semantic
+colours carry data and state. A screen gets
 at most one inverse slab and one primary button. If a design needs a third colour to make its
 hierarchy legible, the hierarchy is wrong, not the palette.
 
-**The Data Colour Rule.** Colour carries meaning on exactly one surface: the Atlas world map,
-where a single pine hue varies only in lightness to encode recency. Everywhere else colour is
-decoration and must never be the sole channel of information. And even on the Atlas, adjacent
-recency steps sit about 1.25:1 apart, which is a difference you can see but not read, so any
-surface painting with that ramp owes the reader a legend or a per-country label (WCAG 1.4.1).
+**The Data Colour Rule.** Categorical values use the eight `data-*` tokens, while the Atlas
+country ramp varies pine lightness to encode recency. Semantic success, warning, danger and info
+colours communicate state. No colour is the sole channel of information: charts pair it with
+labels and values, and the Atlas provides a legend or per-country labels (WCAG 1.4.1).
 
 **The Measured Pair Rule.** Every colour token that can meet text carries its measured contrast
 ratio as a trailing comment beside its declaration. A token added without one is not finished. The
@@ -328,8 +479,8 @@ what stops a re-rendering total from shifting the row it sits in.
 a Display numeral with nothing in between. Do not soften that jump with an intermediate size. The
 gap is the composition.
 
-**The Off-Ramp Register Rule.** Three registers sit beside the ramp rather than on it, and each is
-enumerated in `typography.scale` so it is a decision rather than drift. The **wordmark** takes two
+**The Off-Ramp Type Rule.** Wordmark and email sizes sit beside the main ramp and are
+enumerated as separate typography roles in the frontmatter. The **wordmark** takes two
 optical sizes of its own — 17px and 20px — because a logotype is lettering, not copy, and forcing it
 onto a text ramp sizes it against the wrong thing; its largest size is Title, which it shares. **Email**
 adds 14px and 24px and reuses Micro, Caption, Label, Body and the wordmark's 17px for the rest,
@@ -356,9 +507,10 @@ hand it every ideograph as well.
 Tailwind's own scale is pinned to the same grid via `--spacing: 0.25rem`, so `p-6` and
 `--space-6` are always the same 24px. There is no eyeballed margin anywhere in the product.
 
-**Content maxes at 1440px** (`--content-max: 90rem`), on a warm canvas that runs full-bleed behind
+**Standard content maxes at 1440px** (`--content-max: 90rem`), on a warm canvas that runs full-bleed behind
 it. Cards are the unit of composition: a page is a small number of soft-cornered sheets on paper,
-not a dense table of regions.
+not a dense table of regions. The authenticated wide-layout preference removes this cap only
+from `.app-content-width` inside the app shell; reading containers and map overlays keep their measure.
 
 **Chrome is a stack of named rows.** `--nav-h` (64px), `--subnav-h` (48px), and
 `--impersonation-h` (0 by default, 56px only on the shell subtree that renders the impersonation
@@ -377,8 +529,9 @@ Arabic.
 
 ### Named Rules
 
-**The 4px Rule.** Every dimension in the product is a multiple of 4px and comes from the space
-scale. A one-off value in a component is a defect, not a judgement call.
+**The 4px Rule.** The space tokens define the 4px layout rhythm. Existing control padding and
+glyph sizes also use Tailwind half-steps (for example 14px button padding and 18px icons);
+hairlines, optical adjustments and type metrics are not rounded onto the layout grid.
 
 **The Composed Offset Rule.** Every piece of chrome geometry composes `var(--impersonation-h)`
 unconditionally. With no bar the term resolves to `0rem` and the geometry is exactly what it was;
@@ -418,6 +571,16 @@ dropdown, popover, modal - takes its own shadow because it genuinely is on anoth
 - **focus** (`0 0 0 2px canvas, 0 0 0 4px ring`): the offset focus ring, drawn _outside_ the
   control on a canvas-coloured gap so it survives against any fill.
 
+**Layer bands:** map overlay 30, map surface 35, navigation 40, in-page dropdown 50, scrim 60,
+modal 70, portalled popover 75, tooltip 78, toast 80, impersonation 90. Portalled menus must sit
+above the dialog that opened them; tooltips sit above those menus.
+
+**Motion:** the CSS easing vocabulary is `ease-out-quint`, `ease-in-quint` and `ease-drawer`.
+Control feedback also transitions paint properties and Tailwind's standalone `translate`,
+`scale` and `rotate` properties. Under reduced motion, CSS entrances collapse while
+`data-motion-loop` keeps an opacity pulse for indeterminate progress. The mascot's 8/12/16-second
+travel and 2-second pose loops are opt-in, pause on interaction and have reduced-motion guards.
+
 ### Named Rules
 
 **The Flat-At-Rest Rule.** A resting surface gets a hairline and a tone, not a shadow step. If a
@@ -425,7 +588,7 @@ card needs a shadow to be findable, its surface value is wrong.
 
 **The One-Pixel Rule.** The hover lift is 1px of translate plus one shadow step; the press is 1px
 down with the shadow stepping back with it, so a control reads as pushed into the page rather than
-as shrinking. A card that bounces reads as a toy.
+as shrinking. The floating action button has its own 2px hover lift in `fab.tsx`.
 
 **The Re-declared Dark Rule.** Dark shadows are written out again, darker and tighter, never
 inherited from light. `--shadow-card` in dark is `0 1px 2px rgb(0 0 0 / .5)` - an order of
@@ -454,8 +617,9 @@ opacity is the system's one invitation shape: the "create something here" afford
 **The Pill Means Pickable Rule.** `border-radius: full` on a rectangle-sized element declares it a
 discrete, selectable token. Do not use it to soften a panel.
 
-**The Hairline Honesty Rule.** If a box can be clicked, its border is `edge-strong`. If it cannot,
-its border is `edge-faint`. The user reads that difference before they read the label.
+**The Hairline Honesty Rule.** Outlined form controls and secondary buttons use `edge-strong`;
+card surfaces use `edge-faint`. Ghost buttons intentionally reveal their surface on interaction,
+and selected chips communicate their state through a filled surface and `aria-pressed`.
 
 ## Components
 
@@ -483,9 +647,9 @@ with exact, small, fast movements.
 - **Inverse:** a 6% white wash with a hairline ring, for use on a near-black slab.
 - **Link:** Deep Pine text with a 35%-opacity underline that reaches full opacity on hover.
 - **Press:** `translateY(1px)` with the shadow stepping down. Never a scale.
-- **Disabled:** each variant _repaints_ to `ink-4` on `surface-inset` rather than fading. Opacity
-  would dim the label along with the fill and land a disabled primary at about 2.9:1, which reads
-  as a broken button rather than a waiting one.
+- **Disabled:** labelled buttons repaint rather than fade: solid variants use `ink-4` on
+  `surface-inset`, secondary uses `surface-2`, and inverse retains `inverse-muted`. Icon-only and
+  unlabelled primitives use the shared opacity treatment.
 - **Loading:** the label is swapped for a centred spinner while the measured width is held, so a
   pending action never reflows its row. Loading keeps keyboard focus with `aria-disabled` and
   `aria-busy`, blocking activation until it settles; explicit `disabled` remains native on buttons.
@@ -523,16 +687,26 @@ with exact, small, fast movements.
 
 ### Navigation
 
-- **PillNav / segmented tabs:** a `track`-coloured trough with 4px of padding and a white thumb
-  carrying `shadow-card`. The thumb is anchored at the inline start and slides with `translateX`
-  alone - never `left`, never a width transition - so it works identically in RTL and animates on
-  the compositor.
+- **PillNav:** a `track`-coloured trough with 4px padding, 40px links and a `track-thumb`
+  surface carrying `shadow-card`. `src/components/layout/pill-nav.tsx` shares the active
+  `motion.span` through `layoutId="pill-nav-thumb"`, using a 260ms quintic transition, or
+  zero duration under reduced motion. The thumb follows the active link in either direction.
+- **Mobile navigation:** four equal-width 64px destinations below the `lg` breakpoint, with
+  safe-area padding, `aria-current` and an active rule as well as colour.
 - **Underline tabs:** the page-level bar. A 2px Ink Black rule under the active label, `ink-3`
   text lifting to `ink` on hover.
 
+### Dialogs and sheets
+
+Radix owns trapping focus, Escape dismissal and restoring focus. The dialog also remembers
+the opener for state-driven launches. At narrow widths the surface becomes a bottom sheet
+with 28px top corners and a 92dvh cap; from `sm` it is centred, uses 20px corners and an
+85dvh cap. Overlay and modal occupy separate layers, with portalled menus above both.
+
 ### Signature: the Atlas country ramp
 
-The world map is the one place colour carries data. Land is `surface-inset`, so the map is drawn
+The Atlas uses a sequential palette rather than the categorical data colours. Land is
+`surface-inset`, so the map is drawn
 on the same recessed sheet every card in the product is inset into, and belongs to the page rather
 than sitting on top of it. Visited countries are a single hue - the brand pine at 168° - varying
 only in lightness by recency: `distant` → base → `recent` (which _is_ `--color-brand`), with
@@ -562,12 +736,13 @@ type in the system and it is used the most - the whisper that makes the numeral 
 - **Do** set `tabular-nums` on any number that can change.
 - **Do** ship every state - rest, hover, focus-visible, active, disabled, loading - and a designed
   empty, skeleton and error state for every list.
-- **Do** animate transform and opacity only, at 150ms out / 220ms in on `--ease-out-quint`, and
-  collapse to opacity or nothing under `prefers-reduced-motion: reduce`.
+- **Do** use 150ms control transitions, 220ms entrances and 320ms larger layers. Animate
+  transforms and opacity for movement; colour, border, outline and shadow may transition for
+  feedback. Honour reduced motion and preserve indeterminate progress as a soft opacity pulse.
 - **Do** stagger list entrances by 20-30ms, capped at about eight items.
 - **Do** use logical properties (`start`/`end`, `ms`/`me`) so Arabic is a layout rather than a flip.
-- **Do** repaint a disabled control to `ink-4`, and reserve `opacity` for controls that carry no
-  label of their own.
+- **Do** repaint labelled buttons to their variant-specific disabled colours. Icon buttons and
+  unlabelled controls retain the shared opacity treatment.
 
 ### Don't:
 
@@ -579,9 +754,10 @@ type in the system and it is used the most - the whisper that makes the numeral 
   owes the reader a legend or a per-country label.
 - **Don't** animate a layout-affecting property. Height, width, `left`, `top` and margin are all
   reflows, and a reflow cannot be animated honestly at 60fps.
-- **Don't** exceed 400ms, and don't use a linear easing.
+- **Don't** extend ordinary control transitions beyond the named duration tokens. The mascot
+  travel loop and indeterminate indicators have separate timing and pause/reduced-motion rules.
 - **Don't** put `border-radius: full` on a panel, or an `edge-faint` border on something clickable.
 - **Don't** ship a bare `<div>` acting as a button, or a custom control that loses keyboard or
   screen-reader behaviour.
 - **Don't** add a second reservation for a fixed edge that something already clears.
-- **Don't** invent a spacing value outside the 4px scale.
+- **Don't** invent a new layout spacing scale; use the established tokens and component sizes.

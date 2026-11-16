@@ -45,3 +45,4 @@ claims/
 close-fixed-issues.json
 close-fixed-issues.json.tmp
 close-fixed-issues.json.lock
+artifacts/

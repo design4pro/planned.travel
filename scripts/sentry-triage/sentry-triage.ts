@@ -3,7 +3,7 @@
 // amended by ADR 0018 and ADR 0040). Nothing here starts a run: the Reconciler triages each ticket,
 // and because the body is drawn from production data and the routine has reproduced nothing,
 // .ai/scripts/backlog-status.mjs counts only a trusted comment's brief, written from the code by
-// afk-triage, for a ticket carrying the `sentry-issue` marker.
+// the triage workflow, for a ticket carrying the `sentry-issue` marker.
 //
 //   pnpm sentry-triage                      # report only — files nothing
 //   pnpm sentry-triage --file-issues        # also file, capped
