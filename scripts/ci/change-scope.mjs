@@ -11,7 +11,7 @@
  * timed out under load, and a green run would have proven nothing about its diff either.
  *
  * Only the journeys are skipped. `verify` and the unit suite still run on every pull request,
- * because they are what guards documentation: `spec-registry.test.ts` reads `.ai/specs`, the hook
+ * because they are what guards documentation: `spec-registry.test.ts` reads `.ai/specs`, the policy
  * tests read `.agents`, and `verify` regenerates the spec index.
  *
  * The list below is what is provably documentation, not what is provably code, so a path nobody

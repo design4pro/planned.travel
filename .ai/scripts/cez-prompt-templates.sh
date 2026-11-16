@@ -42,7 +42,7 @@ jq -e '
 # Every id, and every skill a template binds to, must be an installed skill.
 [ -d "$ROOT/.agents/skills" ] || die "no .agents/skills in $ROOT"
 installed=$(cd "$ROOT/.agents/skills" && printf '%s\n' om-*/ | sed 's:/$::' | sort)
-[ "$installed" = "om-*" ] && die "no om-* skills in .claude/skills - the vendored collection is missing"
+[ "$installed" = "om-*" ] && die "no om-* skills in .agents/skills - the vendored collection is missing"
 strays=$(comm -13 <(printf '%s\n' "$installed") \
                   <(jq -r '.[].id, (.[].skills // [])[]' "$FILE" | sort -u))
 [ -z "$strays" ] || die "not installed skills: $(tr '\n' ' ' <<<"$strays")"

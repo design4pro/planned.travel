@@ -1,8 +1,4 @@
-// A cezar run uses `--permission-mode dontAsk`, so the first command `permissions.deny` refuses
-// ends it. Run d232173a (money-tracker.online, 2026-10-02) died on an improvised
-// `git reset --hard origin/<branch>`. No workflow step may prescribe such a command: this guard
-// reads the `Bash(...)` deny patterns and checks every step's `command:` and `prompt:` against them.
-// A skill a step invokes is not scanned: its own text carries the rule (AGENTS.md).
+// Static repository policy checks. Codex runtime permissions are configured separately.
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
@@ -63,10 +59,8 @@ function unquote(value) {
 }
 
 const denyPatterns = JSON.parse(
-  readFileSync(new URL('.agents/legacy/claude-settings.json', ROOT), 'utf8'),
-)
-  .permissions.deny.map((rule) => /^Bash\((.*)\)$/.exec(rule)?.[1])
-  .filter(Boolean)
+  readFileSync(new URL('.agents/policy.json', ROOT), 'utf8'),
+).forbiddenCommands
 
 const workflows = readdirSync(WORKFLOWS).filter((name) => name.endsWith('.yml'))
 
@@ -136,7 +130,7 @@ describe('cezar workflows', () => {
   })
 
   it.each(workflows)(
-    '%s prescribes no command permissions.deny refuses',
+    '%s prescribes no command repository policy forbids',
     (name) => {
       const texts = stepTexts(readFileSync(new URL(name, WORKFLOWS), 'utf8'))
       expect(texts.length).toBeGreaterThan(0)
@@ -150,29 +144,15 @@ describe('cezar workflows', () => {
   )
 })
 
-// A `Read(...)` deny refuses `cat`, `sed` or `grep` of the file through Bash too, and run b6eb30ef
-// (planned.travel, 2026-10-03) died on a redacted `cat .ai/qa/test-env.env`. AGENTS.md, which
-// every cezar run loads, names the denied files and the allowed way to use a test-env login; this
-// keeps that line in step with the deny list.
-describe('denied reads', () => {
-  const settings = JSON.parse(
-    readFileSync(new URL('.agents/legacy/claude-settings.json', ROOT), 'utf8'),
+describe('secret read policy', () => {
+  const policy = JSON.parse(
+    readFileSync(new URL('.agents/policy.json', ROOT), 'utf8'),
   )
-  const readDenies = settings.permissions.deny
-    .map((rule) => /^Read\((.*)\)$/.exec(rule)?.[1])
-    .filter((path) => path && !path.startsWith('!'))
-  const rule = readFileSync(new URL('AGENTS.md', ROOT), 'utf8')
-    .split('\n')
-    .find((line) =>
-      line.startsWith('- Reading a file `permissions.deny` lists'),
-    )
-
-  it('AGENTS.md has the denied-reads rule', () => {
-    expect(readDenies.length).toBeGreaterThan(0)
-    expect(rule).toBeDefined()
-  })
-
-  it.each(readDenies)('AGENTS.md names the denied read %s', (path) => {
-    expect(rule).toContain(path.replace(/\/\*\*$/, '/'))
+  const instructions = readFileSync(
+    new URL('.agents/policies/security.md', ROOT),
+    'utf8',
+  )
+  it.each(policy.secretPaths)('documents the protected path %s', (path) => {
+    expect(instructions).toContain(path.replace(/\/\*\*$/, '/'))
   })
 })

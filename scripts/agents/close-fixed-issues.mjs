@@ -302,6 +302,10 @@ function main() {
   if (typeof config.baseBranch !== 'string' || !config.baseBranch)
     throw new Error('Missing configured baseBranch.')
   options.baseBranch = config.baseBranch
+  if (options.apply)
+    throw new Error(
+      'Legacy --apply is retired. Use om-close-fixed-issues with atomic item ownership.',
+    )
   const gh = (args, input) => {
     try {
       return execFileSync('gh', args, {

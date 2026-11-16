@@ -48,7 +48,7 @@
       "priority-extreme"
     ],
     "risk": ["risk-low", "risk-medium", "risk-high"],
-    "outside": ["do-not-close"]
+    "outside": ["do-not-close", "claim-reset"]
   },
   "qaGate": true,
   "ci": {

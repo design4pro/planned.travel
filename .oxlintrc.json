@@ -17,10 +17,9 @@
   "env": { "builtin": true },
   "ignorePatterns": [
     "prettier.config.js",
-    ".agents/**",
     ".agents/skills/**",
     // Agent tooling that GitHub's own surfaces read - skills, agent definitions, hooks. Same
-    // reason `.agents/**` is here: vendored configuration for tools around the project, not
+    // reason installed skills are excluded: vendored configuration for tools around the project, not
     // application source.
     ".github/**"
   ],

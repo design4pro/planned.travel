@@ -1,25 +1,9 @@
 #!/bin/bash
 #
-# Project setup for a Claude Code session.
-#
-# Runs from the SessionStart hook in .agents/legacy/claude-settings.json, after Claude Code
-# launches, on startup and on resume. All it decides is which environment this
-# is (a cezar run gets dependencies and nothing else, below);
-# `scripts/worktree/bootstrap.sh` owns every step of the provisioning itself, so
-# the two profiles cannot drift apart.
-#
-# The division of labour on a session VM, which the docs are firm about and
-# which is easy to get backwards: the *setup script* configured at
-# claude.ai/code provisions the VM (toolchains, browsers - things that belong in
-# the cached filesystem snapshot), and this hook does the project setup that has
-# to reflect the commit that was just cloned. See docs/CLOUD.md §2.
-#
-# `CLAUDE_CODE_REMOTE` is `true` only on the session VM. Everywhere else this is
-# a local checkout or a `git worktree`, which needs the same four fixtures for a
-# different reason: a fresh worktree carries none of them, so `/login` answers
-# 500 and the whole application behind it is unreachable until they exist.
-# `--if-needed` makes the common case - a resume with everything already on
-# disk - cost a few milliseconds.
+# Legacy explicit compatibility dispatcher; no project hook installs it.
+# New Cezar/Codex sessions call scripts/worktree/bootstrap.sh directly with
+# --profile worktree or --profile cloud. Keep the legacy environment variables
+# here for existing callers; the shared bootstrap owns provisioning.
 
 set -euo pipefail
 
@@ -29,7 +13,7 @@ cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 # bootstrap has nothing to add there. It still cost every session 2.5-10.6 minutes before the first
 # turn: the basemap check never passes on the host, so `--if-needed` never skips and each session
 # restarted vite, re-seeded and re-verified a server no automated flow uses (2026-09-24/25 run logs).
-# Dependencies are the exception: implement-ticket, lessons, triage, architecture-review and
+# Dependencies are the exception: implement-ticket, lessons, triage and
 # spec-to-tickets have no bootstrap step, and a test run without node_modules finds no vitest or
 # resolves the main checkout's packages. Same check and same HUSKY=0 as step 1 of bootstrap.sh.
 if [ -n "${CEZ_TASK_ID-}" ]; then

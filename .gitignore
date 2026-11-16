@@ -45,8 +45,9 @@ e2e/.auth
 
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
-# Per-developer legacy Claude overrides. This file is not loaded by Codex.
-.agents/legacy/claude-settings.local.json
+# Retired agent installations and their machine-local state.
+.claude/
+.github/skills/
 
 # Scratch a browser agent drops in the working directory. The blind pairs belong
 # outside the repository entirely (the session scratchpad, or .sandcastle-shots/
@@ -85,16 +86,14 @@ preview-server.log
 # from this checkout, `server.json` carries the live helper's port and its
 # bearer token, and `sessions/` is the append-only event journal. None of that
 # means anything in another clone, and the token means rather too much.
-# Platform-specific engine binaries are downloaded by the skill launcher.
-.agents/skills/impeccable/scripts/bin/
 .impeccable/config.local.json
 .impeccable/live/roots.json
 .impeccable/live/server.json
 .impeccable/live/inject-journal.json
 .impeccable/live/sessions/
-# The impeccable hook's own state (the Impeccable engine,
-# `HOOK_LOCAL_IGNORE_PATTERNS`). It is rewritten on every UI edit, and a cezar autosave commit put
+# Local Impeccable hook state. A cezar autosave commit put
 # it on the branches of #1004, #1076 and #1185, where it had to be deleted again by hand.
+.agents/skills/impeccable/scripts/bin/
 .impeccable/hook.cache.json
 .impeccable/hook.pending.json
 

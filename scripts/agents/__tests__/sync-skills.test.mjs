@@ -1,156 +1,195 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
-  mkdtempSync,
+  chmodSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { afterEach, expect, it } from 'vitest'
-import { installSnapshot } from '../sync-skills.mjs'
+import { join, resolve } from 'node:path'
+import { expect, it } from 'vitest'
 
-const temporary = []
-afterEach(() =>
-  temporary
-    .splice(0)
-    .forEach((path) => rmSync(path, { recursive: true, force: true })),
-)
-const blob = (text) =>
-  createHash('sha1')
-    .update(`blob ${Buffer.byteLength(text)}\0`)
-    .update(text)
-    .digest('hex')
-const env = Object.fromEntries(
-  Object.entries(process.env).filter(([name]) => !name.startsWith('GIT_')),
-)
-function fixture(conflict = false) {
-  const directory = mkdtempSync(join(tmpdir(), 'planned-skills-sync-test-'))
-  temporary.push(directory)
-  const checkout = join(directory, 'upstream')
-  const root = join(directory, 'stage')
-  mkdirSync(checkout)
-  const git = (...args) =>
-    execFileSync('git', ['-C', checkout, ...args], {
-      env,
-      encoding: 'utf8',
-    }).trim()
-  git('init', '--quiet')
-  const path = '.agents/skills/om-example/SKILL.md'
-  const base =
-    '---\nname: om-example\n---\n\n# Example\n\nOriginal upstream guidance.\n'
-  mkdirSync(join(checkout, 'skills/om-example'), { recursive: true })
-  writeFileSync(join(checkout, 'skills/om-example/SKILL.md'), base)
-  git('add', '.')
-  git(
-    '-c',
-    'user.name=Fixture',
-    '-c',
-    'user.email=fixture@example.invalid',
-    'commit',
-    '--quiet',
-    '-m',
-    'Initial fixture',
-  )
-  const sha = git('rev-parse', 'HEAD')
-  const patched = base + '\nReviewed project repair.\n'
-  mkdirSync(join(root, '.agents/skills/om-example'), { recursive: true })
-  mkdirSync(join(root, '.agents/skills/impeccable'))
-  writeFileSync(
-    join(root, '.agents/skills/impeccable/SKILL.md'),
-    'Preserve Impeccable',
-  )
-  writeFileSync(join(root, path), patched)
-  mkdirSync(join(root, 'scripts/agents'), { recursive: true })
-  writeFileSync(
-    join(root, 'scripts/agents/skills-upstream.json'),
-    JSON.stringify({
-      sha,
-      files: [
+it.each([
+  'extra-file',
+  'extra-directory',
+  'symlink',
+  'edited-file',
+  'unknown-addon',
+  'addon-symlink',
+  'edited-mode',
+])(
+  'preserves local work and refuses installation before network access: %s',
+  (kind) => {
+    const root = mkdtempSync(join(tmpdir(), 'skill-update-guard-'))
+    try {
+      const path = '.agents/skills/om-example/SKILL.md'
+      mkdirSync(join(root, '.agents/skills/om-example'), { recursive: true })
+      mkdirSync(join(root, 'scripts/agents'), { recursive: true })
+      const original = Buffer.from('# Example\n')
+      writeFileSync(join(root, path), original)
+      writeFileSync(
+        join(root, 'scripts/agents/skills-upstream.json'),
+        JSON.stringify({
+          sha: 'a'.repeat(40),
+          files: [
+            {
+              path,
+              mode: '100644',
+              sha: createHash('sha1')
+                .update(`blob ${original.length}\0`)
+                .update(original)
+                .digest('hex'),
+            },
+          ],
+        }),
+      )
+      if (kind === 'extra-file')
+        writeFileSync(
+          join(root, '.agents/skills/om-example/notes.md'),
+          'Local notes',
+        )
+      if (kind === 'extra-directory')
+        mkdirSync(join(root, '.agents/skills/om-local'))
+      if (kind === 'symlink')
+        symlinkSync('SKILL.md', join(root, '.agents/skills/om-example/link.md'))
+      if (kind === 'edited-file')
+        writeFileSync(join(root, path), '# Local edit\n')
+      if (kind === 'unknown-addon')
+        mkdirSync(join(root, '.agents/skills/other-tool'))
+      if (kind === 'addon-symlink')
+        symlinkSync('om-example', join(root, '.agents/skills/impeccable'))
+      if (kind === 'edited-mode') chmodSync(join(root, path), 0o755)
+      const before = readFileSync(join(root, path), 'utf8')
+      const result = spawnSync(
+        process.execPath,
+        [resolve('scripts/agents/sync-skills.mjs')],
         {
-          path,
-          sha: blob(base),
-          localSha: blob(patched),
-          mode: '100644',
-          reason: 'Reviewed repair.',
+          cwd: root,
+          env: { ...process.env, PATH: '/nonexistent' },
+          encoding: 'utf8',
+          timeout: 10_000,
         },
-      ],
-    }),
-  )
-  writeFileSync(
-    join(root, 'skills-lock.json'),
-    JSON.stringify({
-      version: 2,
-      skills: { 'om-example': { source: 'open-mercato/skills' } },
-    }),
-  )
-  mkdirSync(join(root, 'docs/agents'), { recursive: true })
-  writeFileSync(
-    join(root, 'docs/agents/cezar.md'),
-    `open-mercato/skills@${sha}\n\n<!-- om-skills-version:start -->\nInstalled fixture.\n<!-- om-skills-version:end -->\n`,
-  )
-  if (conflict)
-    writeFileSync(
-      join(checkout, 'skills/om-example/SKILL.md'),
-      '# Incompatible replacement\n',
-    )
-  else
-    writeFileSync(
-      join(checkout, 'skills/om-example/new.md'),
-      'New upstream reference\n',
-    )
-  git('add', '.')
-  git(
-    '-c',
-    'user.name=Fixture',
-    '-c',
-    'user.email=fixture@example.invalid',
-    'commit',
-    '--quiet',
-    '-m',
-    'Update fixture',
-  )
-  return { root, checkout, path, patched, latest: git('rev-parse', 'HEAD') }
-}
+      )
+      expect(result.status).not.toBe(0)
+      expect(result.stderr).toContain('Refusing to')
+      expect(result.stderr).not.toContain('spawnSync git')
+      expect(readFileSync(join(root, path), 'utf8')).toBe(before)
+      if (kind === 'extra-file')
+        expect(
+          readFileSync(
+            join(root, '.agents/skills/om-example/notes.md'),
+            'utf8',
+          ),
+        ).toBe('Local notes')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  },
+)
 
-it('stages the selected upstream SHA while preserving reviewed repairs and Impeccable', () => {
-  const { root, checkout, path, patched, latest } = fixture()
-  expect(installSnapshot(root, checkout, latest)).toBe(1)
-  expect(readFileSync(join(root, path), 'utf8')).toBe(patched)
-  expect(
-    readFileSync(join(root, '.agents/skills/om-example/new.md'), 'utf8'),
-  ).toBe('New upstream reference\n')
-  expect(
-    readFileSync(join(root, '.agents/skills/impeccable/SKILL.md'), 'utf8'),
-  ).toBe('Preserve Impeccable')
-  const manifest = JSON.parse(
-    readFileSync(join(root, 'scripts/agents/skills-upstream.json'), 'utf8'),
-  )
-  expect(manifest.sha).toBe(latest)
-  expect(manifest.files.find((file) => file.path === path).localSha).toBe(
-    blob(patched),
-  )
-  expect(readFileSync(join(root, 'docs/agents/cezar.md'), 'utf8')).toContain(
-    latest,
-  )
-  expect(
-    JSON.parse(readFileSync(join(root, 'skills-lock.json'), 'utf8')).skills[
-      'om-example'
-    ].computedHash,
-  ).toMatch(/^[a-f0-9]{64}$/)
-})
-
-it('leaves staged installation metadata and skills untouched when a repair conflicts', () => {
-  const { root, checkout, path, patched, latest } = fixture(true)
-  const before = readFileSync(
-    join(root, 'scripts/agents/skills-upstream.json'),
-    'utf8',
-  )
-  expect(() => installSnapshot(root, checkout, latest)).toThrow()
-  expect(readFileSync(join(root, path), 'utf8')).toBe(patched)
-  expect(
-    readFileSync(join(root, 'scripts/agents/skills-upstream.json'), 'utf8'),
-  ).toBe(before)
+it('restores the pin from Git while preserving Impeccable bytes and executable mode', () => {
+  const root = mkdtempSync(join(tmpdir(), 'skill-addon-update-'))
+  try {
+    // Model a parent hook without passing its repository identity to fixture commands.
+    const env = {
+      ...process.env,
+      GIT_DIR: '/nonexistent/parent-hook.git',
+      GIT_COMMON_DIR: '/nonexistent/parent-common.git',
+      GIT_INDEX_FILE: '/nonexistent/parent-hook.index',
+    }
+    for (const name of execFileSync('git', ['rev-parse', '--local-env-vars'], {
+      encoding: 'utf8',
+    })
+      .trim()
+      .split('\n'))
+      delete env[name]
+    const upstream = join(root, 'upstream')
+    mkdirSync(join(upstream, 'skills/om-example'), { recursive: true })
+    writeFileSync(join(upstream, 'skills/om-example/SKILL.md'), '# Example\n')
+    const git = (...args) => {
+      const result = spawnSync('git', args, {
+        cwd: upstream,
+        encoding: 'utf8',
+        env,
+      })
+      expect(result.status, result.stderr).toBe(0)
+      return result.stdout.trim()
+    }
+    git('init', '-q')
+    git('add', '.')
+    git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      '-c',
+      'commit.gpgsign=false',
+      'commit',
+      '-qm',
+      'Fixture',
+    )
+    const sha = git('rev-parse', 'HEAD')
+    const path = '.agents/skills/om-example/SKILL.md'
+    mkdirSync(join(root, '.agents/skills/om-example'), { recursive: true })
+    mkdirSync(join(root, '.agents/skills/impeccable/scripts'), {
+      recursive: true,
+    })
+    mkdirSync(join(root, 'scripts/agents'), { recursive: true })
+    mkdirSync(join(root, 'docs/agents'), { recursive: true })
+    writeFileSync(join(root, path), '# Example\n')
+    writeFileSync(
+      join(root, '.agents/skills/impeccable/SKILL.md'),
+      '# Impeccable\n',
+    )
+    const addon = join(root, '.agents/skills/impeccable/scripts/tool')
+    writeFileSync(addon, '#!/bin/sh\necho preserved\n', { mode: 0o755 })
+    writeFileSync(
+      join(root, 'scripts/agents/skills-upstream.json'),
+      JSON.stringify({
+        sha,
+        files: [
+          {
+            path,
+            mode: '100644',
+            sha: git('rev-parse', 'HEAD:skills/om-example/SKILL.md'),
+          },
+        ],
+      }),
+    )
+    writeFileSync(
+      join(root, 'docs/agents/cezar.md'),
+      `open-mercato/skills@${sha}\n`,
+    )
+    const result = spawnSync(
+      process.execPath,
+      [resolve('scripts/agents/sync-skills.mjs')],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        timeout: 15_000,
+        env: {
+          ...env,
+          GIT_CONFIG_COUNT: '1',
+          GIT_CONFIG_KEY_0: `url.${upstream}.insteadOf`,
+          GIT_CONFIG_VALUE_0: 'https://github.com/open-mercato/skills.git',
+        },
+      },
+    )
+    expect(result.status, result.stderr).toBe(0)
+    expect(readFileSync(addon, 'utf8')).toBe('#!/bin/sh\necho preserved\n')
+    expect(spawnSync(addon, [], { encoding: 'utf8' }).stdout.trim()).toBe(
+      'preserved',
+    )
+    expect(
+      Object.keys(
+        JSON.parse(readFileSync(join(root, 'skills-lock.json'), 'utf8')).skills,
+      ),
+    ).toEqual(['om-example'])
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })

@@ -28,7 +28,7 @@ a 500 on `/login` looks like a code defect and is a missing file.
 | `--port N`                    | Serve on this port instead of the allocated one.                                                               |
 | `--host localhost\|127.0.0.1` | Local origin and bind host; defaults to `localhost`. Explicit host refuses a conflicting user-owned `APP_URL`. |
 | `--check`                     | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight.                            |
-| `--if-needed`                 | Exit 0 immediately when nothing is missing. What the SessionStart hook passes.                                 |
+| `--if-needed`                 | Exit 0 immediately when nothing is missing. Useful for repeat explicit setup.                                  |
 | `--no-seed`                   | Stop after the schema; start no server and seed nothing.                                                       |
 | `--force`                     | Redo every step even when its result is already on disk.                                                       |
 
@@ -38,17 +38,15 @@ Anything else is a hard error rather than a silently ignored typo.
 
 |             | `worktree`                                                      | `cloud`                     |
 | ----------- | --------------------------------------------------------------- | --------------------------- |
-| Who runs it | a person or an agent, locally                                   | a Claude Code session VM    |
+| Who runs it | a person or an agent, locally                                   | an ephemeral remote VM      |
 | Port        | first free in 3001-3009                                         | 3000                        |
 | `.dev.vars` | copied from the main checkout when it has one, else throwaway   | throwaway, always           |
 | Basemap     | APFS clone of the main checkout's local R2, else pulled from R2 | pulled from R2              |
 | Seeds       | yes                                                             | no; prints the two commands |
 
-`scripts/cloud/session-start.sh` picks the profile off `CLAUDE_CODE_REMOTE` and does nothing else,
-and in a cezar run (`CEZ_TASK_ID` is set), whose workflow bootstraps itself, only installs
-dependencies when `node_modules` is missing.
-When explicitly loaded with `claude --settings`, `.agents/legacy/claude-settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
-generous timeout because the first run in a fresh worktree installs dependencies.
+`scripts/cloud/session-start.sh` remains a legacy compatibility helper, not an installed hook.
+New sessions select a bootstrap profile explicitly.
+Cezar workflows call the bootstrap explicitly. Codex has no implicit SessionStart hook; run `pnpm worktree:bootstrap` in a fresh checkout.
 
 ## Its relationship to `.ai/scripts/test-env-up.sh`
 
@@ -110,5 +108,5 @@ other port use the password form. `/sign-in/email` allows ten attempts a minute.
 ## Expected noise
 
 After the seed's sign-ups the queue consumer logs `TaskConfigurationError`, because a local
-`.dev.vars` has no `EMAIL_API_KEY`. Environmental, documented in the `verifying-changes` skill,
+`.dev.vars` has no `EMAIL_API_KEY`. Environmental, documented in `.agents/policies/verification.md`,
 and not something `--check` reports.

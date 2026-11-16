@@ -1,10 +1,10 @@
 <!-- vendored from addyosmani/agent-skills@d2c37ef6225d references/definition-of-done.md (MIT); see docs/agents/ATTRIBUTION.md.
      The binding definition of done for this repo is docs/SPEC.md §7; this file is the standing checklist an
-     implement run fills into its PR body (.agent/dod.json). Skill names it mentions are upstream names. -->
+     implementation run fills into its PR body. -->
 
 # Definition of Done
 
-A standing, project-wide bar that every change must clear before it counts as done. Unlike acceptance criteria, which vary per task and answer "did we build the right thing?", the Definition of Done is the same every time and answers "is this finished to our standard?". Use it as the final gate in `planning-and-task-breakdown`, `incremental-implementation`, and `shipping-and-launch`.
+A standing, project-wide bar that every change must clear before it counts as done. Unlike acceptance criteria, which vary per task and answer "did we build the right thing?", the Definition of Done is the same every time and answers "is this finished to our standard?". Apply it during planning, implementation and delivery, together with the configured validation gate.
 
 ## Definition of Done vs. Acceptance Criteria
 

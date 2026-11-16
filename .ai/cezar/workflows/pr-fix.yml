@@ -1,5 +1,3 @@
-# Manual follow-up for assessed review findings. Never re-arm automatically.
-# The run claims the PR, fixes findings, reviews the resulting SHA and never merges.
 name: pr-fix
 description: Manual follow-up for assessed PR findings; om-auto-fix-pr resolves the threads it handles.
 steps:
@@ -8,5 +6,4 @@ steps:
     command: bash .ai/scripts/bootstrap.sh --profile worktree --no-seed
   - id: fix
     name: om-auto-fix-pr
-    prompt: '/om-auto-fix-pr {{task}}'
-    allowedTools: [Read, Edit, Write, Grep, Glob, Bash, Skill, TodoWrite, Agent]
+    prompt: 'om-auto-fix-pr {{task}}'

@@ -1,10 +1,6 @@
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
-# Migrated provider configuration and reviewer prompts.
-.agents/legacy/
-.agents/personas/
-.agents/hooks/
 # Installed skills and their template assets stay byte-identical to upstream.
 .agents/skills/
 # om-* pipeline descriptors, installed verbatim from the om-setup-agent-pipeline
@@ -16,14 +12,12 @@ yarn.lock
 # om-* skills collection and the cezar fork - are the formatting authority for their own text,
 # and a reflow here would turn every future upgrade into a diff nobody can read.
 .ai/cezar/config.json
-.ai/cezar/workflows/architecture-review.yml
 .ai/cezar/workflows/backlog.yml
 .ai/cezar/workflows/brainstorm.yml
 .ai/cezar/workflows/housekeeping.yml
 .ai/cezar/workflows/implement-spec.yml
 .ai/cezar/workflows/implement-ticket.yml
 .ai/cezar/workflows/issue-autofix.yml
-.ai/cezar/workflows/issue-groom.yml
 .ai/cezar/workflows/lessons.yml
 .ai/cezar/workflows/pr-autopilot.yml
 .ai/cezar/workflows/pr-fix.yml
@@ -36,16 +30,7 @@ yarn.lock
 .ai/scripts/cez-automations.sh
 .ai/scripts/cez-prompt-templates.sh
 .ai/scripts/housekeeping.sh
-.ai/skills/afk-architecture-review/SKILL.md
-.ai/skills/afk-codebase-design/SKILL.md
-.ai/skills/afk-domain-modeling/SKILL.md
-.ai/skills/afk-lessons/SKILL.md
-.ai/skills/afk-to-tickets/SKILL.md
-.ai/skills/afk-triage/SKILL.md
 .ai/trackers/github.md
-.agents/hooks/format-file.sh
-.agents/legacy/claude-settings.json
-.ai/skills/backlog/SKILL.md
 docs/agents/cezar-automations.json
 
 # Preserve Wrangler runtime declarations; only the environment header is adjusted.

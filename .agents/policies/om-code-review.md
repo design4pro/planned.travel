@@ -1,0 +1,59 @@
+# om-code-review repository policy
+
+Always apply `.agents/policies/security.md` and the atomic ownership protocol in `.ai/trackers/github.md`.
+
+Extends the installed skill: read `.agents/skills/om-code-review/SKILL.md` and follow it. `CODE_REVIEW.md` at the repo root is the full rule set; these are the mechanical blockers to check first, on the diff alone:
+
+- Added `@ts-ignore`, `@ts-expect-error`, `eslint-disable*` → blocker.
+- Added `.skip`, `.only`, `.todo`, `.fixme`, `xit`, `xdescribe`, `xtest` in a test file → blocker.
+- Deleted `*.test.ts(x)`, `*.spec.ts` or `e2e/**` spec without the tested code being deleted in the same PR → blocker.
+- Diff in `src/routeTree.gen.ts` or `drizzle/` that `bash .ai/scripts/check-generated.sh` does not reproduce → blocker. A hand-written `drizzle/*.sql` → blocker.
+- `package.json` dependency change or unexplained `pnpm-lock.yaml` diff outside a `dependencies`-labelled PR → blocker.
+- New or changed method in `src/server/repos` without a tenant-isolation test → blocker. SQL outside `src/server/repos`, `src/server/catalog` and the identity-table SQL of `src/server/auth/provisioning.ts` (SPEC §6: five closed exceptions including account-auth and bounded content/release repositories; a fourth provisioning table is a blocker) → blocker. An `…Unscoped` function in `src/server/repos` may instead take a plain `Database` under SPEC §5 FU-3: an `Unscoped` suffix, a file-header justification, one named production caller per function, and a narrow projection that cannot return tenant content. Grep `Unscoped` callers; any caller outside the named one is a blocker.
+- New user-facing string not present as a key in every locale under `src/lib/i18n/messages/` → blocker.
+- Server function called from another server function's handler → blocker (`scripts/check-server-fn-manifest.mjs` explains the production failure).
+
+Apply `BACKWARD_COMPATIBILITY.md` to every touched surface. Smells from docs/agents/CODING_STANDARDS.md are judgement findings (minor), never blockers.
+
+## The persona panel
+
+Five reviewers in `.agents/reviewers/persona-*.md` read the change from a seat this checklist does not
+occupy: `persona-traveller` (the person using it), `persona-workspace-owner` (the person paying for
+it and administering the data), `persona-product-owner` (the promise the ticket made),
+`persona-manual-tester` (the states nobody wrote a test for), `persona-accessibility-auditor`
+(WCAG 2.2 AA). They are read-only and advisory - they return findings in this file's severity
+vocabulary, they never edit and they never decide.
+
+Consult a persona with the `Agent` tool when the diff reaches its seat, and not otherwise:
+
+| The diff touches                                                        | Consult                         |
+| ----------------------------------------------------------------------- | ------------------------------- |
+| a rendered surface, a message, a default a user meets                   | `persona-traveller`             |
+| a component, a form, a dialog, a chart, a page                          | `persona-accessibility-auditor` |
+| tenancy, roles, sharing, deletion, export, invitations, anything billed | `persona-workspace-owner`       |
+| a screen, a form, a list, or a server function                          | `persona-manual-tester`         |
+| a capability added or narrowed, or a ticket claimed done                | `persona-product-owner`         |
+
+Send each one the diff and the ticket, and run the ones that apply in a single message so they work
+in parallel. Fold what comes back into your own report rather than pasting it: a persona finding
+that maps onto a blocker in this file is a blocker, and everything else is a judgement finding you
+weigh and may reject with a reason. A panel that found nothing is worth one line saying so.
+
+Folding is for findings. The sections that are not findings - `## What I could not check` in every
+report, `## Human decides`, `## Acceptance criteria` and `## Cases worth a test` where the persona
+returns them - are carried into your own report verbatim under the persona's name rather than
+weighed against this file's severities. These reviews mostly run unattended and nothing else
+surfaces a subagent's output, so your report is the only place the human those sections were
+written for will ever read them.
+
+Skip the panel entirely on a diff that reaches no seat - a dependency bump, a generated file, a
+docs-only change. Consulting nobody is the correct outcome there, and cheaper than five reports
+saying the same.
+
+Release-content contract only: [ADR 0051](../../docs/adr/0051-bounded-release-content-contract.md)
+admits exactly seven content/release tables in `repos/content.ts` and `repos/releases.ts`
+with `Database`, separate from the four catalog members and FU-3. Fresh admin permission,
+single-owner audit preparation and fail-closed atomic batching are mandatory. Runtime work
+needs fresh security approval; this amendment grants no production writes or main promotion.
+Only reviewed exact-version release prose may use whole-entry English with entry `lang`/`dir`
+and localized notice; interface messages retain 23-locale parity and no fallback.
