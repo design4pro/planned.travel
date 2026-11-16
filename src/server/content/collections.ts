@@ -1,12 +1,9 @@
-/** The bounded blog/changelog subset; Git parsing belongs to the later operator slice. */
+/** The bounded blog/changelog display projection; git-source owns its restricted source grammar. */
 import { z } from 'zod'
+import { validateReleaseProse } from './prose'
 import { LOCALE_TAGS } from '#/lib/i18n/locales'
 
-const prose = z
-  .string()
-  .min(1)
-  .max(4000)
-  .refine((value) => !/<(?:\/?[a-z]|!)/i.test(value))
+const prose = z.string().min(1).max(4000).refine(validateReleaseProse)
 export const releaseBodySchema = z
   .strictObject({
     title: prose.refine((value) => value.length <= 240),

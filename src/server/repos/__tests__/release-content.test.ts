@@ -1020,3 +1020,271 @@ it('refuses a translation review audit that omits its locale', () => {
     ),
   ).toThrow()
 })
+
+it('binds operator imports to the caller generation/hash and persists retry identity', async () => {
+  const sourceHash = await crypto.subtle
+    .digest('SHA-256', new TextEncoder().encode(JSON.stringify(body)))
+    .then((buffer) =>
+      Array.from(new Uint8Array(buffer), (byte) =>
+        byte.toString(16).padStart(2, '0'),
+      ).join(''),
+    )
+  const guarded = {
+    ...source,
+    expectedGeneration: 0,
+    sourceHash,
+    operationHash: '1'.repeat(64),
+  }
+  expect(
+    (await importRelease(db, authority, { ...guarded, expectedGeneration: 99 }))
+      .status,
+  ).toBe('conflict')
+  expect(
+    (
+      await importRelease(db, authority, {
+        ...guarded,
+        sourceHash: '0'.repeat(64),
+      })
+    ).status,
+  ).toBe('conflict')
+  const applied = await importRelease(db, authority, guarded)
+  expect(applied.status).toBe('applied')
+  expect((await importRelease(db, authority, guarded)).status).toBe('unchanged')
+  expect(
+    (
+      await importRelease(db, authority, {
+        ...guarded,
+        operationHash: '2'.repeat(64),
+      })
+    ).status,
+  ).toBe('conflict')
+  expect(await db.select().from(contentVersions)).toHaveLength(1)
+  expect(await db.select().from(platformAuditLog)).toHaveLength(1)
+})
+
+it('runs preview/import/review/recovery through publication without publishing or trusting uploaded prose', async () => {
+  const { runReleaseOperation } = await import('#/server/content/publication')
+  const { markdown } = await import('#/server/content/__tests__/fixtures')
+  const git = {
+    readChangelog: async () => markdown,
+    resolveCutoff: async () => 'a'.repeat(40),
+  }
+  const runtime = {
+    db,
+    authority,
+    git,
+    writeAuthorization: 'local-fixture' as const,
+  }
+  const input = {
+    version: '1.2.0',
+    sourceCommit: 'b'.repeat(40),
+    operationId: 'operator-import',
+    expectedGeneration: 0,
+  }
+  const preview = await runReleaseOperation(runtime, input)
+  expect(preview.status).toBe('unchanged')
+  expect(await db.select().from(contentVersions)).toEqual([])
+  const mutation = {
+    ...input,
+    operation: 'import',
+    sourceHash: preview.sourceHash,
+    screened: true,
+  }
+  expect((await runReleaseOperation(runtime, mutation)).status).toBe('applied')
+  expect((await runReleaseOperation(runtime, mutation)).status).toBe(
+    'unchanged',
+  )
+  expect(
+    (
+      await runReleaseOperation(runtime, {
+        ...mutation,
+        sourceCommit: 'c'.repeat(40),
+      })
+    ).status,
+  ).toBe('conflict')
+  const inspect = await runReleaseOperation(runtime, {
+    ...input,
+    operation: 'inspect',
+  })
+  expect(inspect.receipt?.metadata?.sourceHash).toBe(preview.sourceHash)
+  const review = {
+    ...input,
+    operation: 'approve',
+    sourceHash: preview.sourceHash,
+    operationId: 'operator-review',
+    review: {
+      plainLanguage: true,
+      accuracy: true,
+      safeLinks: true,
+      privacy: true,
+      security: true,
+    },
+  }
+  expect((await runReleaseOperation(runtime, review)).status).toBe('applied')
+  expect((await runReleaseOperation(runtime, review)).status).toBe('unchanged')
+  expect(
+    (await listReleaseHistory(db, session, { locale: 'en' })).items,
+  ).toEqual([])
+  expect(await db.select().from(platformAuditLog)).toHaveLength(2)
+  expect(
+    (
+      await runReleaseOperation(
+        { ...runtime, git: null, writeAuthorization: null },
+        mutation,
+      )
+    ).status,
+  ).toBe('pending-evidence')
+})
+
+it('publication refuses unsafe source, missing review, stale generation and unauthorized actors before writes', async () => {
+  const { runReleaseOperation } = await import('#/server/content/publication')
+  const { markdown } = await import('#/server/content/__tests__/fixtures')
+  const runtime = {
+    db,
+    authority,
+    git: {
+      readChangelog: async () =>
+        markdown.replace(
+          'Plan a **better** trip with [help](/help).',
+          '<script>private</script>',
+        ),
+      resolveCutoff: async () => 'a'.repeat(40),
+    },
+    writeAuthorization: 'local-fixture' as const,
+  }
+  const input = {
+    operation: 'import',
+    version: '1.2.0',
+    sourceCommit: 'b'.repeat(40),
+    operationId: 'unsafe-import',
+    expectedGeneration: 0,
+    sourceHash: 'c'.repeat(64),
+    screened: true,
+  }
+  expect((await runReleaseOperation(runtime, input)).status).toBe('refused')
+  expect(
+    (await runReleaseOperation(runtime, { ...input, operation: 'approve' }))
+      .status,
+  ).toBe('refused')
+  expect(
+    (
+      await runReleaseOperation(
+        { ...runtime, authority: { ...authority, session: null } },
+        input,
+      )
+    ).status,
+  ).toBe('refused')
+  expect(await db.select().from(contentVersions)).toEqual([])
+  expect(await db.select().from(platformAuditLog)).toEqual([])
+})
+
+it('reserves a new operation identity even when importing existing content is unchanged', async () => {
+  const { runReleaseOperation } = await import('#/server/content/publication')
+  const { markdown } = await import('#/server/content/__tests__/fixtures')
+  let sourceMarkdown = markdown
+  const runtime = {
+    db,
+    authority,
+    git: {
+      readChangelog: async () => sourceMarkdown,
+      resolveCutoff: async () => 'a'.repeat(40),
+    },
+    writeAuthorization: 'local-fixture' as const,
+  }
+  const base = {
+    version: '1.2.0',
+    sourceCommit: 'b'.repeat(40),
+    expectedGeneration: 0,
+    operationId: 'import-original',
+  }
+  const preview = await runReleaseOperation(runtime, base)
+  const input = {
+    ...base,
+    operation: 'import',
+    sourceHash: preview.sourceHash,
+    screened: true,
+  }
+  expect((await runReleaseOperation(runtime, input)).status).toBe('applied')
+  expect(
+    (
+      await runReleaseOperation(runtime, {
+        ...input,
+        operationId: 'import-existing',
+      })
+    ).status,
+  ).toBe('unchanged')
+  sourceMarkdown = markdown.replace('Save a place.', 'Save another place.')
+  const changed = await runReleaseOperation(runtime, {
+    ...base,
+    sourceCommit: 'c'.repeat(40),
+  })
+  expect(
+    (
+      await runReleaseOperation(runtime, {
+        ...input,
+        operationId: 'import-existing',
+        sourceCommit: 'c'.repeat(40),
+        sourceHash: changed.sourceHash,
+      })
+    ).status,
+  ).toBe('conflict')
+  expect(await db.select().from(contentVersions)).toHaveLength(1)
+})
+
+it('does not return an unreserved unchanged identity when an initial operator import loses a race', async () => {
+  const { runReleaseOperation } = await import('#/server/content/publication')
+  const { markdown } = await import('#/server/content/__tests__/fixtures')
+  const git = {
+    readChangelog: async () => markdown,
+    resolveCutoff: async () => 'a'.repeat(40),
+  }
+  const runtime = {
+    db,
+    authority,
+    git,
+    writeAuthorization: 'local-fixture' as const,
+  }
+  const base = {
+    version: '1.2.0',
+    sourceCommit: 'b'.repeat(40),
+    expectedGeneration: 0,
+    operationId: 'racing-winner',
+  }
+  const preview = await runReleaseOperation(runtime, base)
+  const input = {
+    ...base,
+    operation: 'import',
+    sourceHash: preview.sourceHash,
+    screened: true,
+  }
+  let intercepted = false
+  const competing = new Proxy(platform.env.DB, {
+    get(target, property) {
+      if (property === 'batch')
+        return async (statements: Array<D1PreparedStatement>) => {
+          if (!intercepted) {
+            intercepted = true
+            expect((await runReleaseOperation(runtime, input)).status).toBe(
+              'applied',
+            )
+          }
+          return target.batch(statements)
+        }
+      const value: unknown = Reflect.get(target, property)
+      return typeof value === 'function' ? value.bind(target) : value
+    },
+  })
+  const loser = { ...input, operationId: 'racing-loser' }
+  expect(
+    (await runReleaseOperation({ ...runtime, db: drizzle(competing) }, loser))
+      .status,
+  ).toBe('conflict')
+  expect((await runReleaseOperation(runtime, loser)).status).toBe('unchanged')
+  const inspect = await runReleaseOperation(runtime, {
+    ...base,
+    operationId: 'racing-loser',
+    operation: 'inspect',
+  })
+  expect(inspect.receipt?.metadata?.sourceHash).toBe(preview.sourceHash)
+  expect(await db.select().from(contentVersions)).toHaveLength(1)
+})
