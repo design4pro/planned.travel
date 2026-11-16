@@ -786,6 +786,18 @@ const messages = {
     'Segarkan halaman ini untuk menggunakan pemeriksaan keamanan terbaru.',
   'twoFactor.security.unavailable':
     'Perubahan keamanan tidak tersedia. Muat ulang untuk memeriksa lagi.',
+  'workspace.delete.email.deleted': 'Ruang kerja dihapus',
+  'workspace.delete.email.receipt':
+    '{name} telah dihapus secara permanen. Akun Anda tetap aktif.',
+  'workspace.delete.email.refused': 'Penghapusan ruang kerja ditolak',
+  'workspace.delete.email.refusal': '{name} tidak dapat dihapus. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Penagihan tidak dapat diverifikasi. Silakan coba lagi.',
+  'workspace.delete.email.live-subscription':
+    'Langganan yang masih berlaku mencegah penghapusan.',
+  'workspace.delete.email.has-other-members':
+    'Masih ada anggota lain di ruang kerja ini.',
+  'workspace.delete.email.footer': 'Anda meminta penghapusan ruang kerja ini.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

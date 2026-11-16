@@ -1,3 +1,5 @@
+import { providerSubscriptionBlocksWorkspaceDeletion } from './workspace-deletion'
+import { workspaceDeletionActivated } from '#/server/workspace-deletion/activation'
 /**
  * The Polar webhook: what happens between a delivery arriving and the 200.
  *
@@ -376,6 +378,15 @@ async function onSubscriptionEvent(
     return outcomeOf(delivery, 'ignored', null)
   }
   if (!(await runtime.subscriptions.organizationExists(organizationId))) {
+    if (workspaceDeletionActivated() && providerSubscriptionBlocksWorkspaceDeletion(subscription)) {
+      // No tenant write occurred. Failed admission must retry this delivery rather than lose it.
+      await runtime.tasks.send({
+        kind: 'workspace-late-subscription',
+        organizationId,
+        providerEventId: delivery.eventId,
+        providerSubscriptionId: subscription.id,
+      })
+    }
     return ignoredForDeletedOrganization(runtime, delivery, organizationId)
   }
 
@@ -618,7 +629,8 @@ async function onCheckoutUpdated(
  * a cancellation set for the end of the period passes), so Polar goes on sending events for it. A
  * non-2xx answer would be retried and, repeated, disable the endpoint for every workspace; writing a
  * row would violate the `organization_id` foreign key. So it answers 2xx, writes no row, drops no
- * cache entry and enqueues no follow-up, and the next delivery is answered the same way.
+ * cache entry. When the Phase 7 release latch is open, a live subscription not already ending
+ * queues the id-only late-subscription task before this acknowledgement; no provider call runs here.
  *
  * It logs at `warn`, not `info`: an event for a deleted workspace means the provider may still be charging
  * for it (a cancellation undone, a renewal paid), and the log is the only trace of that. Whether to cancel or

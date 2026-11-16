@@ -790,6 +790,16 @@ const messages = {
   'twoFactor.security.upgrade': 'حدّث الصفحة لاستخدام فحوص الأمان الجديدة.',
   'twoFactor.security.unavailable':
     'تغييرات الأمان غير متاحة. أعد التحميل للتحقق مجددًا.',
+  'workspace.delete.email.deleted': 'تم حذف مساحة العمل',
+  'workspace.delete.email.receipt': 'تم حذف {name} نهائيًا. يبقى حسابك نشطًا.',
+  'workspace.delete.email.refused': 'تم رفض حذف مساحة العمل',
+  'workspace.delete.email.refusal': 'تعذر حذف {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'تعذر التحقق من الفوترة. يرجى المحاولة مجددًا.',
+  'workspace.delete.email.live-subscription': 'يمنع اشتراك سارٍ عملية الحذف.',
+  'workspace.delete.email.has-other-members':
+    'لا يزال هناك أعضاء آخرون في مساحة العمل هذه.',
+  'workspace.delete.email.footer': 'لقد طلبت حذف مساحة العمل هذه.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -803,6 +803,20 @@ const messages = {
     'Ανανεώστε τη σελίδα για τους νέους ελέγχους ασφαλείας.',
   'twoFactor.security.unavailable':
     'Οι αλλαγές ασφαλείας δεν είναι διαθέσιμες. Φορτώστε ξανά για επανέλεγχο.',
+  'workspace.delete.email.deleted': 'Ο χώρος εργασίας διαγράφηκε',
+  'workspace.delete.email.receipt':
+    'Ο χώρος {name} διαγράφηκε οριστικά. Ο λογαριασμός σας παραμένει ενεργός.',
+  'workspace.delete.email.refused': 'Η διαγραφή του χώρου απορρίφθηκε',
+  'workspace.delete.email.refusal':
+    'Δεν ήταν δυνατή η διαγραφή του χώρου {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Δεν ήταν δυνατή η επαλήθευση της χρέωσης. Δοκιμάστε ξανά.',
+  'workspace.delete.email.live-subscription':
+    'Μια τρέχουσα συνδρομή εμποδίζει τη διαγραφή.',
+  'workspace.delete.email.has-other-members':
+    'Άλλα μέλη εξακολουθούν να ανήκουν σε αυτόν τον χώρο.',
+  'workspace.delete.email.footer':
+    'Ζητήσατε τη διαγραφή αυτού του χώρου εργασίας.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

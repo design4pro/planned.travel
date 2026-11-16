@@ -730,6 +730,18 @@ const messages = {
     '페이지를 새로 고쳐 업데이트된 보안 검사를 사용하세요.',
   'twoFactor.security.unavailable':
     '보안 변경을 사용할 수 없습니다. 새로 고쳐 다시 확인하세요.',
+  'workspace.delete.email.deleted': '워크스페이스가 삭제되었습니다',
+  'workspace.delete.email.receipt':
+    '{name}이(가) 영구적으로 삭제되었습니다. 계정은 계속 활성 상태로 유지됩니다.',
+  'workspace.delete.email.refused': '워크스페이스 삭제가 거부되었습니다',
+  'workspace.delete.email.refusal': '{name}을(를) 삭제할 수 없습니다. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    '결제 정보를 확인할 수 없습니다. 다시 시도해 주세요.',
+  'workspace.delete.email.live-subscription':
+    '이용 중인 구독으로 인해 삭제할 수 없습니다.',
+  'workspace.delete.email.has-other-members':
+    '이 워크스페이스에 아직 다른 멤버가 있습니다.',
+  'workspace.delete.email.footer': '이 워크스페이스의 삭제를 요청하셨습니다.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

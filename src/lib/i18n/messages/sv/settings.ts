@@ -791,6 +791,20 @@ const messages = {
     'Uppdatera sidan för att använda de nya säkerhetskontrollerna.',
   'twoFactor.security.unavailable':
     'Säkerhetsändringar är inte tillgängliga. Läs in sidan igen för att kontrollera.',
+  'workspace.delete.email.deleted': 'Arbetsyta borttagen',
+  'workspace.delete.email.receipt':
+    '{name} har tagits bort permanent. Ditt konto är fortfarande aktivt.',
+  'workspace.delete.email.refused': 'Borttagning av arbetsyta nekad',
+  'workspace.delete.email.refusal':
+    'Det gick inte att ta bort {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Faktureringen kunde inte verifieras. Försök igen.',
+  'workspace.delete.email.live-subscription':
+    'En pågående prenumeration förhindrar borttagning.',
+  'workspace.delete.email.has-other-members':
+    'Andra medlemmar tillhör fortfarande denna arbetsyta.',
+  'workspace.delete.email.footer':
+    'Du begärde att denna arbetsyta skulle tas bort.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

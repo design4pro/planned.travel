@@ -821,6 +821,19 @@ const messages = {
     'Обновите страницу, чтобы использовать новые проверки безопасности.',
   'twoFactor.security.unavailable':
     'Изменения безопасности недоступны. Обновите страницу для повторной проверки.',
+  'workspace.delete.email.deleted': 'Рабочее пространство удалено',
+  'workspace.delete.email.receipt':
+    'Пространство {name} удалено навсегда. Ваша учётная запись остаётся активной.',
+  'workspace.delete.email.refused': 'Удаление пространства отклонено',
+  'workspace.delete.email.refusal': 'Не удалось удалить {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Не удалось проверить оплату. Попробуйте ещё раз.',
+  'workspace.delete.email.live-subscription':
+    'Действующая подписка препятствует удалению.',
+  'workspace.delete.email.has-other-members':
+    'В этом пространстве ещё есть другие участники.',
+  'workspace.delete.email.footer':
+    'Вы запросили удаление этого рабочего пространства.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

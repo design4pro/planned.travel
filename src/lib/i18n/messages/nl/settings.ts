@@ -805,6 +805,20 @@ const messages = {
     'Vernieuw deze pagina om de bijgewerkte beveiligingscontroles te gebruiken.',
   'twoFactor.security.unavailable':
     'Beveiligingswijzigingen zijn niet beschikbaar. Laad opnieuw om het nogmaals te controleren.',
+  'workspace.delete.email.deleted': 'Werkruimte verwijderd',
+  'workspace.delete.email.receipt':
+    '{name} is definitief verwijderd. Je account blijft actief.',
+  'workspace.delete.email.refused': 'Verwijdering werkruimte geweigerd',
+  'workspace.delete.email.refusal':
+    '{name} kon niet worden verwijderd. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'De facturering kon niet worden gecontroleerd. Probeer het opnieuw.',
+  'workspace.delete.email.live-subscription':
+    'Een lopend abonnement voorkomt verwijdering.',
+  'workspace.delete.email.has-other-members':
+    'Er zijn nog andere leden in deze werkruimte.',
+  'workspace.delete.email.footer':
+    'Je hebt gevraagd deze werkruimte te verwijderen.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

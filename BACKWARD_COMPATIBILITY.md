@@ -170,3 +170,18 @@ queue shapes: no person-erasure kind/handler, producer or engine is registered. 
 adapters and #1060 activation remain separately gated.
 
 No request input, queue envelope, physical schema or locale shape changes for this fence.
+
+### Owner workspace deletion candidate (#1742)
+
+The new strict owner POST entry checks scope/id/name/step-up before driver-owned ledger
+admission. Its named composition entry alone may reach the internal driver transitively; no
+request constructs the reserved scope. The additive nullable `receipt_locale` retains the supported
+owner language until accepted receipt/refusal delivery clears identity. Legacy missing-locale
+rows fail closed; erasure input accepts no receipt identity. Rendered emails use the existing
+`email` shape and stable envelope ids (the UUID-only optional `eventId` is omitted). The per-user
+five-password-attempt/300-second KV limiter is eventually consistent and may undercount.
+
+The owner/webhook release latch remains false pending recorded prior deployment revision and
+completion time for both handlers and retirement of every unfenced Worker/in-flight execution.
+Request/queue/cron share the activated delivery adapter; #1060 erasure wake stays unavailable.
+No production activation or deployment is claimed. Full contract: ADR 0048.

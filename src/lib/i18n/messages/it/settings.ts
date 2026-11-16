@@ -808,6 +808,19 @@ const messages = {
     'Aggiorna la pagina per usare i nuovi controlli di sicurezza.',
   'twoFactor.security.unavailable':
     'Le modifiche di sicurezza non sono disponibili. Ricarica per verificare di nuovo.',
+  'workspace.delete.email.deleted': 'Spazio di lavoro eliminato',
+  'workspace.delete.email.receipt':
+    '{name} è stato eliminato definitivamente. Il tuo account resta attivo.',
+  'workspace.delete.email.refused': 'Eliminazione dello spazio rifiutata',
+  'workspace.delete.email.refusal': 'Impossibile eliminare {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Non è stato possibile verificare la fatturazione. Riprova.',
+  'workspace.delete.email.live-subscription':
+    'Un abbonamento in corso impedisce l’eliminazione.',
+  'workspace.delete.email.has-other-members':
+    'Altri membri appartengono ancora a questo spazio.',
+  'workspace.delete.email.footer':
+    'Hai richiesto l’eliminazione di questo spazio di lavoro.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

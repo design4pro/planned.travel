@@ -786,6 +786,20 @@ const messages = {
     'Làm mới trang để sử dụng các bước kiểm tra bảo mật mới.',
   'twoFactor.security.unavailable':
     'Hiện không thể thay đổi bảo mật. Tải lại để kiểm tra lần nữa.',
+  'workspace.delete.email.deleted': 'Đã xóa không gian làm việc',
+  'workspace.delete.email.receipt':
+    '{name} đã bị xóa vĩnh viễn. Tài khoản của bạn vẫn hoạt động.',
+  'workspace.delete.email.refused':
+    'Yêu cầu xóa không gian làm việc bị từ chối',
+  'workspace.delete.email.refusal': 'Không thể xóa {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Không thể xác minh thông tin thanh toán. Vui lòng thử lại.',
+  'workspace.delete.email.live-subscription':
+    'Gói đăng ký còn hiệu lực ngăn việc xóa.',
+  'workspace.delete.email.has-other-members':
+    'Vẫn còn thành viên khác trong không gian làm việc này.',
+  'workspace.delete.email.footer':
+    'Bạn đã yêu cầu xóa không gian làm việc này.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

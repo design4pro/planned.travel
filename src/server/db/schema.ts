@@ -3468,6 +3468,7 @@ export const workspaceDeletions = sqliteTable(
       .default({}),
     receiptTo: text('receipt_to'),
     receiptName: text('receipt_name'),
+    receiptLocale: text('receipt_locale'),
     requestedAt: integer('requested_at', { mode: 'timestamp_ms' }).notNull(),
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
     sweptAt: integer('swept_at', { mode: 'timestamp_ms' }),

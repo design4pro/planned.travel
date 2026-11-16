@@ -1,3 +1,5 @@
+import { directionOf } from '#/lib/i18n/locales'
+import type { Locale } from '#/lib/i18n/locales'
 /**
  * The shared shell every transactional template renders into.
  *
@@ -34,6 +36,7 @@ export interface EmailBrand {
 
 export interface EmailShellProps {
   readonly brand: EmailBrand
+  readonly locale?: Locale
   /** The line an inbox shows after the subject. Keep it under 90 characters. */
   readonly preview: string
   /** Tiny tracked label opposite the wordmark: `Security`, `Billing`, `Packs`. */
@@ -55,9 +58,10 @@ export function EmailShell({
   heading,
   footer,
   children,
+  locale = 'en',
 }: EmailShellProps) {
   return (
-    <Html lang="en" dir="ltr">
+    <Html lang={locale} dir={directionOf(locale)}>
       <Head>
         {/*
           The palette is warm paper on purpose. Declaring the scheme stops Apple

@@ -1,3 +1,5 @@
+import { createWorkspaceDeletionDelivery } from './delivery'
+import { workspaceDeletionActivated } from './activation'
 import {
   TaskAbandonedError,
   TaskConfigurationError,
@@ -7,7 +9,10 @@ import {
 import { createPolarClient } from '#/server/billing/polar'
 import { PLATFORM_SYSTEM_ACTOR } from '#/server/catalog/audit'
 import { closeTripRoom, resetTripRoom } from '#/server/do/trip-room-client'
-import { listStaleWorkspaceDeletions } from '#/server/catalog/workspace-deletions'
+import {
+  listStaleWorkspaceDeletions,
+  readWorkspaceDeletionOutcome,
+} from '#/server/catalog/workspace-deletions'
 import { advanceWorkspaceDeletion } from './driver'
 import { createWorkspaceDeletionEffects } from './effects'
 import { createWorkspaceDeletionLedgerPorts } from './ledger'
@@ -98,11 +103,23 @@ export function createWorkspaceDeletionRuntime(
               role: null,
               tokenId: null,
             },
-      notifications: options.delivery ?? {
-        refusalNotice: deliveryUnavailable,
-        receipt: deliveryUnavailable,
-        resumeErasure: deliveryUnavailable,
-      },
+      notifications:
+        options.delivery ??
+        (workspaceDeletionActivated() && env.APP_URL
+          ? createWorkspaceDeletionDelivery(
+              env.TASKS,
+              {
+                appName: env.APP_NAME ?? 'planned.travel',
+                appUrl: env.APP_URL,
+              },
+              async (id) =>
+                (await readWorkspaceDeletionOutcome(db, id))?.locale ?? null,
+            )
+          : {
+              refusalNotice: deliveryUnavailable,
+              receipt: deliveryUnavailable,
+              resumeErasure: deliveryUnavailable,
+            }),
     }),
   }
   const advance = async (id: string) => {

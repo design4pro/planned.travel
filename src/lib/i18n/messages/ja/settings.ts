@@ -756,6 +756,19 @@ const messages = {
     'ページを更新して新しいセキュリティ確認を使用してください。',
   'twoFactor.security.unavailable':
     'セキュリティの変更は利用できません。再読み込みして確認してください。',
+  'workspace.delete.email.deleted': 'ワークスペースを削除しました',
+  'workspace.delete.email.receipt':
+    '{name}を完全に削除しました。アカウントは引き続き有効です。',
+  'workspace.delete.email.refused': 'ワークスペースの削除を拒否しました',
+  'workspace.delete.email.refusal': '{name}を削除できませんでした。{reason}',
+  'workspace.delete.email.billing-unavailable':
+    '請求情報を確認できませんでした。もう一度お試しください。',
+  'workspace.delete.email.live-subscription':
+    '有効なサブスクリプションがあるため削除できません。',
+  'workspace.delete.email.has-other-members':
+    'このワークスペースには他のメンバーがいます。',
+  'workspace.delete.email.footer':
+    'このワークスペースの削除をリクエストしました。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -452,7 +452,7 @@ the deletion itself. Importer tests pin rare readers: auth organization hooks, d
 and invitation creation, atomic invitation acceptance, the billing store used by checkout and
 plan changes, and `repos/community.ts` for private gallery-preview capture and actor-bound preview
 reads only. The gallery repository may import only `workspaceDeletionAbsent`, returning no ledger
-projection and adding no writer. All other request paths and webhooks gain no ledger lookup. Repository inserts bind the
+projection and adding no writer. All other request paths gain no ledger lookup. The release-gated owner deletion entry reaches only driver-owned admission/progress, and the billing webhook enqueues a late subscription for a missing organization without reading the ledger (ADR 0048, #1742). Repository inserts bind the
 shared non-refused predicate into the writing statement. This catalog-owned anti-exists predicate and its named sibling
 `workspaceDeletionAuthorityPresent` are the closed exception to a tenant statement reaching this global table: it returns no ledger
 projection and never registers the ledger with the tenant repository factory. Better Auth hooks and external billing
@@ -1248,3 +1248,18 @@ substitution renders ASCII digits with no group separator in all 23 locales. Not
 actually does before asserting on it: `ar` as a bare tag carries the `latn` numbering system, so
 Arabic correctly renders `1,234` and never Arabic-Indic digits, which belong to `ar-EG` /
 `ar-u-nu-arab` and are not tags we ship.
+
+### Owner workspace deletion candidate (#1742)
+
+The new strict owner POST entry checks scope/id/name/step-up before driver-owned ledger
+admission. Its named composition entry alone may reach the internal driver transitively; no
+request constructs the reserved scope. The additive nullable `receipt_locale` retains the supported
+owner language until accepted receipt/refusal delivery clears identity. Legacy missing-locale
+rows fail closed; erasure input accepts no receipt identity. Rendered emails use the existing
+`email` shape and stable envelope ids (the UUID-only optional `eventId` is omitted). The per-user
+five-password-attempt/300-second KV limiter is eventually consistent and may undercount.
+
+The owner/webhook release latch remains false pending recorded prior deployment revision and
+completion time for both handlers and retirement of every unfenced Worker/in-flight execution.
+Request/queue/cron share the activated delivery adapter; #1060 erasure wake stays unavailable.
+No production activation or deployment is claimed. Full contract: ADR 0048.

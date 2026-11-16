@@ -787,6 +787,18 @@ const messages = {
     'Güncel güvenlik kontrollerini kullanmak için bu sayfayı yenileyin.',
   'twoFactor.security.unavailable':
     'Güvenlik değişiklikleri kullanılamıyor. Tekrar kontrol etmek için yeniden yükleyin.',
+  'workspace.delete.email.deleted': 'Çalışma alanı silindi',
+  'workspace.delete.email.receipt':
+    '{name} kalıcı olarak silindi. Hesabınız etkin kalmaya devam ediyor.',
+  'workspace.delete.email.refused': 'Çalışma alanı silme isteği reddedildi',
+  'workspace.delete.email.refusal': '{name} silinemedi. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Faturalandırma doğrulanamadı. Lütfen tekrar deneyin.',
+  'workspace.delete.email.live-subscription':
+    'Devam eden bir abonelik silmeyi engelliyor.',
+  'workspace.delete.email.has-other-members':
+    'Bu çalışma alanında hâlâ başka üyeler var.',
+  'workspace.delete.email.footer': 'Bu çalışma alanının silinmesini istediniz.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
