@@ -8,5 +8,7 @@
   "systemPrompt": "Talk to the developer in Polish: every message of this session, progress notes, every question (CEZ:ASK - the question, the option labels and their descriptions) and the final report. Everything that leaves the session stays in English: code and code comments, commit messages, branch names and pull request titles, file names and file contents (docs, ADRs, CONTEXT.md, skills, drafts under .ai/tmp/), and everything that reaches GitHub (issue bodies, comments, the grilling log). Identifiers, technical terms and quoted output stay as they are. In Polish prose write \"-\", never the long dash. Read AGENTS.md and .agents/policies/security.md. Before every om-* skill, including chained calls, read .agents/policies/<skill-name>.md when present. Only .agents/skills contains installed project skills. Do not assume workflow tool lists enforce a Codex sandbox.",
   "defaultModels": {
     "codex": "gpt-6.1-sol"
-  }
+  },
+  "defaultSkill": "om-prepare-issue",
+  "askSkill": "om-help"
 }
