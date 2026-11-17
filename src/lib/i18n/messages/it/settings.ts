@@ -30,6 +30,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Cronologia delle versioni',
+  'nav.releases.hint': 'Scopri i miglioramenti',
+  'releases.title': 'Cronologia delle versioni',
+  'releases.description':
+    'Miglioramenti e correzioni pubblicati su planned.travel.',
+  'releases.version': 'Versione {version}',
+  'releases.shipped': 'Pubblicata il {date}',
+  'releases.updated': 'Note aggiornate il {date}',
+  'releases.features': 'Miglioramenti',
+  'releases.fixes': 'Correzioni',
+  'releases.empty.title': 'Ancora nessuna nota di rilascio',
+  'releases.empty.body':
+    'Qui appariranno i miglioramenti e le correzioni pubblicati.',
+  'releases.error':
+    'Impossibile caricare la cronologia delle versioni. Riprova.',
+  'releases.olderError':
+    'Impossibile caricare le versioni precedenti. L’elenco attuale rimane disponibile.',
+  'releases.retry': 'Riprova',
+  'releases.loading': 'Caricamento della cronologia delle versioni…',
+  'releases.older': 'Mostra versioni precedenti',
+  'releases.fallback': 'Queste note sono disponibili in inglese.',
+  'releases.loaded': {
+    one: 'Versioni precedenti caricate: {value}.',
+    many: 'Versioni precedenti caricate: {value}.',
+    other: 'Versioni precedenti caricate: {value}.',
+  },
+
   'workspace.invite.invite': 'Invita',
   'workspace.invite.resend': 'Invia di nuovo',
   'workspace.invite.revoke': 'Revoca',

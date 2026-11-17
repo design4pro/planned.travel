@@ -24,6 +24,32 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'Kiadási előzmények',
+  'nav.releases.hint': 'Tekintsd meg a fejlesztéseket',
+  'releases.title': 'Kiadási előzmények',
+  'releases.description':
+    'A planned.travel megjelent fejlesztései és javításai.',
+  'releases.version': '{version} verzió',
+  'releases.shipped': 'Megjelent: {date}',
+  'releases.updated': 'Jegyzetek frissítve: {date}',
+  'releases.features': 'Fejlesztések',
+  'releases.fixes': 'Javítások',
+  'releases.empty.title': 'Még nincsenek kiadási jegyzetek',
+  'releases.empty.body':
+    'Itt jelennek majd meg a közzétett fejlesztések és javítások.',
+  'releases.error':
+    'Nem sikerült betölteni a kiadási előzményeket. Próbáld újra.',
+  'releases.olderError':
+    'Nem sikerült betölteni a régebbi kiadásokat. A jelenlegi lista továbbra is elérhető.',
+  'releases.retry': 'Újrapróbálás',
+  'releases.loading': 'Kiadási előzmények betöltése…',
+  'releases.older': 'Régebbi kiadások megjelenítése',
+  'releases.fallback': 'Ezek a jegyzetek angolul érhetők el.',
+  'releases.loaded': {
+    one: 'Betöltött régebbi kiadások: {value}.',
+    other: 'Betöltött régebbi kiadások: {value}.',
+  },
+
   'workspace.invite.invite': 'Meghívás',
   'workspace.invite.resend': 'Újraküldés',
   'workspace.invite.revoke': 'Visszavonás',

@@ -1,7 +1,7 @@
 /**
  * The settings section index, and the frame every settings section renders in.
  *
- * Kept out of the route file so the seven sections can share it without
+ * Kept out of the route file so the settings sections can share it without
  * importing from each other's route modules.
  *
  * The index carries message *keys* rather than sentences. A `SECTIONS` array of
@@ -16,6 +16,7 @@ import {
   Building2,
   CreditCard,
   Languages,
+  History,
   Palette,
   ShieldCheck,
   UserRound,
@@ -42,6 +43,7 @@ interface SettingsSectionLink {
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/billing'
+    | '/settings/releases'
   readonly label: MessageKey
   readonly description: MessageKey
   readonly icon: LucideIcon
@@ -92,6 +94,12 @@ const SECTIONS: ReadonlyArray<SettingsSectionLink> = [
     label: 'settings.nav.billing',
     description: 'settings.nav.billing.hint',
     icon: CreditCard,
+  },
+  {
+    to: '/settings/releases',
+    label: 'settings.nav.releases',
+    description: 'settings.nav.releases.hint',
+    icon: History,
   },
 ]
 

@@ -36,6 +36,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Historia wydań',
+  'nav.releases.hint': 'Zobacz, co ulepszyliśmy',
+  'releases.title': 'Historia wydań',
+  'releases.description': 'Ulepszenia i poprawki wprowadzone w planned.travel.',
+  'releases.version': 'Wersja {version}',
+  'releases.shipped': 'Wydano {date}',
+  'releases.updated': 'Opis zaktualizowano {date}',
+  'releases.features': 'Ulepszenia',
+  'releases.fixes': 'Poprawki',
+  'releases.empty.title': 'Nie ma jeszcze opisów wydań',
+  'releases.empty.body':
+    'Tutaj pojawią się opublikowane ulepszenia i poprawki.',
+  'releases.error': 'Nie udało się wczytać historii wydań. Spróbuj ponownie.',
+  'releases.olderError':
+    'Nie udało się wczytać starszych wydań. Obecna lista jest nadal dostępna.',
+  'releases.retry': 'Spróbuj ponownie',
+  'releases.loading': 'Wczytywanie historii wydań…',
+  'releases.older': 'Pokaż starsze wydania',
+  'releases.fallback': 'Te opisy są dostępne w języku angielskim.',
+  'releases.loaded': {
+    one: 'Wczytano {value} starsze wydanie.',
+    few: 'Wczytano {value} starsze wydania.',
+    many: 'Wczytano {value} starszych wydań.',
+    other: 'Wczytano {value} starszego wydania.',
+  },
+
   'workspace.invite.invite': 'Zaproś',
   'workspace.invite.resend': 'Wyślij ponownie',
   'workspace.invite.revoke': 'Cofnij',

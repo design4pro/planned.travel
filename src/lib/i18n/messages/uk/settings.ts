@@ -33,6 +33,34 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Історія випусків',
+  'nav.releases.hint': 'Дізнайтеся про покращення',
+  'releases.title': 'Історія випусків',
+  'releases.description':
+    'Покращення та виправлення, випущені в planned.travel.',
+  'releases.version': 'Версія {version}',
+  'releases.shipped': 'Випущено {date}',
+  'releases.updated': 'Опис оновлено {date}',
+  'releases.features': 'Покращення',
+  'releases.fixes': 'Виправлення',
+  'releases.empty.title': 'Описів випусків поки немає',
+  'releases.empty.body':
+    'Тут з’являться опубліковані покращення та виправлення.',
+  'releases.error':
+    'Не вдалося завантажити історію випусків. Спробуйте ще раз.',
+  'releases.olderError':
+    'Не вдалося завантажити старі випуски. Поточний список збережено.',
+  'releases.retry': 'Спробувати ще раз',
+  'releases.loading': 'Завантаження історії випусків…',
+  'releases.older': 'Показати старі випуски',
+  'releases.fallback': 'Ці описи доступні англійською мовою.',
+  'releases.loaded': {
+    one: 'Завантажено {value} старий випуск.',
+    few: 'Завантажено {value} старі випуски.',
+    many: 'Завантажено {value} старих випусків.',
+    other: 'Завантажено {value} старого випуску.',
+  },
+
   'workspace.invite.invite': 'Запросити',
   'workspace.invite.resend': 'Надіслати повторно',
   'workspace.invite.revoke': 'Відкликати',

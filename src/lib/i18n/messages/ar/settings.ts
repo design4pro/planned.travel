@@ -29,6 +29,33 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'سجل الإصدارات',
+  'nav.releases.hint': 'اكتشف التحسينات',
+  'releases.title': 'سجل الإصدارات',
+  'releases.description': 'التحسينات والإصلاحات التي أُطلقت في planned.travel.',
+  'releases.version': 'الإصدار {version}',
+  'releases.shipped': 'صدر في {date}',
+  'releases.updated': 'حُدثت الملاحظات في {date}',
+  'releases.features': 'التحسينات',
+  'releases.fixes': 'الإصلاحات',
+  'releases.empty.title': 'لا توجد ملاحظات إصدار بعد',
+  'releases.empty.body': 'ستظهر هنا التحسينات والإصلاحات المنشورة.',
+  'releases.error': 'تعذر تحميل سجل الإصدارات. حاول مجددًا.',
+  'releases.olderError':
+    'تعذر تحميل الإصدارات الأقدم. ما زالت قائمتك الحالية متاحة.',
+  'releases.retry': 'إعادة المحاولة',
+  'releases.loading': 'جارٍ تحميل سجل الإصدارات…',
+  'releases.older': 'عرض الإصدارات الأقدم',
+  'releases.fallback': 'هذه الملاحظات متاحة باللغة الإنجليزية.',
+  'releases.loaded': {
+    zero: 'لم تُحمّل إصدارات أقدم ({value}).',
+    one: 'حُمّل إصدار أقدم واحد ({value}).',
+    two: 'حُمّل إصداران أقدم ({value}).',
+    few: 'حُمّلت {value} إصدارات أقدم.',
+    many: 'حُمّل {value} إصدارًا أقدم.',
+    other: 'حُمّل {value} إصدار أقدم.',
+  },
+
   'workspace.invite.invite': 'دعوة',
   'workspace.invite.resend': 'إعادة الإرسال',
   'workspace.invite.revoke': 'إلغاء',

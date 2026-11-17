@@ -41,6 +41,28 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'Riwayat rilis',
+  'nav.releases.hint': 'Lihat peningkatannya',
+  'releases.title': 'Riwayat rilis',
+  'releases.description':
+    'Peningkatan dan perbaikan yang telah dirilis di planned.travel.',
+  'releases.version': 'Versi {version}',
+  'releases.shipped': 'Dirilis {date}',
+  'releases.updated': 'Catatan diperbarui {date}',
+  'releases.features': 'Peningkatan',
+  'releases.fixes': 'Perbaikan',
+  'releases.empty.title': 'Belum ada catatan rilis',
+  'releases.empty.body':
+    'Peningkatan dan perbaikan yang dipublikasikan akan muncul di sini.',
+  'releases.error': 'Riwayat rilis tidak dapat dimuat. Coba lagi.',
+  'releases.olderError':
+    'Rilis sebelumnya tidak dapat dimuat. Daftar Anda saat ini tetap tersedia.',
+  'releases.retry': 'Coba lagi',
+  'releases.loading': 'Memuat riwayat rilis…',
+  'releases.older': 'Tampilkan rilis sebelumnya',
+  'releases.fallback': 'Catatan ini tersedia dalam bahasa Inggris.',
+  'releases.loaded': { other: 'Rilis sebelumnya yang dimuat: {value}.' },
+
   'workspace.invite.invite': 'Undang',
   'workspace.invite.resend': 'Kirim ulang',
   'workspace.invite.revoke': 'Batalkan',

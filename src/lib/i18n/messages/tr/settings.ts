@@ -25,6 +25,31 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'Sürüm geçmişi',
+  'nav.releases.hint': 'İyileştirmelere göz atın',
+  'releases.title': 'Sürüm geçmişi',
+  'releases.description':
+    'planned.travel için yayımlanan iyileştirmeler ve düzeltmeler.',
+  'releases.version': 'Sürüm {version}',
+  'releases.shipped': 'Yayım tarihi: {date}',
+  'releases.updated': 'Notlar güncellendi: {date}',
+  'releases.features': 'İyileştirmeler',
+  'releases.fixes': 'Düzeltmeler',
+  'releases.empty.title': 'Henüz sürüm notu yok',
+  'releases.empty.body':
+    'Yayımlanan iyileştirmeler ve düzeltmeler burada görünecek.',
+  'releases.error': 'Sürüm geçmişi yüklenemedi. Yeniden deneyin.',
+  'releases.olderError':
+    'Eski sürümler yüklenemedi. Mevcut listeniz korunuyor.',
+  'releases.retry': 'Yeniden dene',
+  'releases.loading': 'Sürüm geçmişi yükleniyor…',
+  'releases.older': 'Eski sürümleri göster',
+  'releases.fallback': 'Bu notlar İngilizce olarak sunulmaktadır.',
+  'releases.loaded': {
+    one: 'Yüklenen eski sürümler: {value}.',
+    other: 'Yüklenen eski sürümler: {value}.',
+  },
+
   'workspace.invite.invite': 'Davet et',
   'workspace.invite.resend': 'Yeniden gönder',
   'workspace.invite.revoke': 'İptal et',

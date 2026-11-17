@@ -17,6 +17,27 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'リリース履歴',
+  'nav.releases.hint': '改善内容を見る',
+  'releases.title': 'リリース履歴',
+  'releases.description': 'planned.travelで公開された改善と修正。',
+  'releases.version': 'バージョン {version}',
+  'releases.shipped': '公開日 {date}',
+  'releases.updated': '更新日 {date}',
+  'releases.features': '改善',
+  'releases.fixes': '修正',
+  'releases.empty.title': 'リリースノートはまだありません',
+  'releases.empty.body': '公開された改善と修正がここに表示されます。',
+  'releases.error':
+    'リリース履歴を読み込めませんでした。もう一度お試しください。',
+  'releases.olderError':
+    '過去のリリースを読み込めませんでした。現在の一覧は引き続き表示されています。',
+  'releases.retry': '再試行',
+  'releases.loading': 'リリース履歴を読み込み中…',
+  'releases.older': '過去のリリースを表示',
+  'releases.fallback': 'これらのノートは英語でご覧いただけます。',
+  'releases.loaded': { other: '過去のリリースを{value}件読み込みました。' },
+
   'workspace.invite.invite': '招待',
   'workspace.invite.resend': '再送信',
   'workspace.invite.revoke': '取り消す',

@@ -153,6 +153,23 @@ afterAll(async () => {
   await platform?.dispose()
   if (directory) await rm(directory, { recursive: true, force: true })
 })
+/** Local database only: simulate trusted production proof without adding a runtime writer. */
+async function seedPublishedFixture(
+  ...args: Parameters<typeof seedPreviewReleaseDeployment>
+) {
+  await args[0]
+    .update(releaseDeployments)
+    .set({ target: 'local-preview' })
+    .where(eq(releaseDeployments.providerId, args[2].deployment.providerId))
+  const result = await seedPreviewReleaseDeployment(...args)
+  if (result.status === 'applied' || result.status === 'unchanged') {
+    await args[0]
+      .update(releaseDeployments)
+      .set({ target: 'production' })
+      .where(eq(releaseDeployments.providerId, args[2].deployment.providerId))
+  }
+  return result
+}
 async function imported() {
   return importRelease(db, authority, source)
 }
@@ -169,7 +186,7 @@ async function approved() {
 }
 async function shipped() {
   const result = await approved()
-  return seedPreviewReleaseDeployment(db, authority, {
+  return seedPublishedFixture(db, authority, {
     operationId: 'ship-1',
     version: source.version,
     versionId: result.versionId,
@@ -215,7 +232,7 @@ it('keeps drafts and approvals invisible; ships a whitelist shared across worksp
   expect(
     (await listReleaseHistory(db, session, { locale: 'pl' })).items,
   ).toEqual([])
-  await seedPreviewReleaseDeployment(db, authority, {
+  await seedPublishedFixture(db, authority, {
     operationId: 'ship-1',
     version: source.version,
     versionId: (await imported()).versionId,
@@ -395,7 +412,7 @@ it('appends a correction while retaining the previous approved visible source un
   expect(
     (await listReleaseHistory(db, session, { locale: 'en' })).items[0].title,
   ).toBe(body.title)
-  await seedPreviewReleaseDeployment(db, authority, {
+  await seedPublishedFixture(db, authority, {
     operationId: 'correct-ship',
     version: source.version,
     versionId: correction.versionId,
@@ -468,7 +485,7 @@ it('uses only the whole reviewed translation of the visible exact source revisio
     sourceHash: correction.sourceHash,
     expectedGeneration: 4,
   })
-  await seedPreviewReleaseDeployment(db, authority, {
+  await seedPublishedFixture(db, authority, {
     operationId: 'ship-2',
     version: source.version,
     versionId: correction.versionId,
@@ -513,7 +530,7 @@ it('paginates equal timestamps by the same deterministic binary version tuple', 
       expectedGeneration: 0,
       operationId: `approve-${index}`,
     })
-    await seedPreviewReleaseDeployment(db, authority, {
+    await seedPublishedFixture(db, authority, {
       version,
       versionId: importedRevision.versionId,
       sourceHash: importedRevision.sourceHash,
@@ -770,12 +787,12 @@ it('links several approved releases to one matching receipt without advancing ac
       receiptDigest: 'd'.repeat(64),
     },
   }
-  expect(
-    (await seedPreviewReleaseDeployment(db, authority, input)).status,
-  ).toBe('applied')
-  expect(
-    (await seedPreviewReleaseDeployment(db, authority, input)).status,
-  ).toBe('unchanged')
+  expect((await seedPublishedFixture(db, authority, input)).status).toBe(
+    'applied',
+  )
+  expect((await seedPublishedFixture(db, authority, input)).status).toBe(
+    'unchanged',
+  )
   expect(await db.select().from(releaseDeployments)).toHaveLength(1)
   expect(await db.select().from(releaseDeploymentEntries)).toHaveLength(2)
   expect((await db.select().from(releaseProductionState))[0].generation).toBe(1)
@@ -974,16 +991,14 @@ it('keeps review attribution solely in its atomic audit row and survives identit
       },
     },
   })
-  await db
-    .insert(user)
-    .values({
-      id: 'retained-reader',
-      name: 'Reader',
-      email: 'reader@example.test',
-      role: 'user',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+  await db.insert(user).values({
+    id: 'retained-reader',
+    name: 'Reader',
+    email: 'reader@example.test',
+    role: 'user',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
   const readerSession = {
     ...session,
     user: { ...session.user, id: 'retained-reader', role: 'user' },
@@ -1322,4 +1337,27 @@ it('refuses PEM source before persistence even with an explicit screening attest
   expect(result.reason).toMatch(/CHANGELOG.md:7:/)
   expect(await db.select().from(contentVersions)).toEqual([])
   expect(await db.select().from(platformAuditLog)).toEqual([])
+})
+
+it('does not treat preview, staging or unknown target evidence as production publication', async () => {
+  await shipped()
+  for (const target of ['local-preview', 'staging', 'unknown']) {
+    await db.update(releaseDeployments).set({ target })
+    expect(
+      (await listReleaseHistory(db, session, { locale: 'en' })).items,
+    ).toEqual([])
+  }
+})
+
+it('propagates listing storage failures instead of returning an empty history', async () => {
+  const read = vi.spyOn(db, 'select').mockImplementationOnce(() => {
+    throw new Error('storage unavailable')
+  })
+  try {
+    await expect(
+      listReleaseHistory(db, session, { locale: 'en' }),
+    ).rejects.toThrow('storage unavailable')
+  } finally {
+    read.mockRestore()
+  }
 })
