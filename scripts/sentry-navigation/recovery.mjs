@@ -162,6 +162,9 @@ window.probe={
     'sensitive',
     'accept-invitation',
     'accept-invitation-cold',
+    'mixed-auth-cold',
+    'mixed-auth-arrival',
+    'mixed-auth-spa',
     'cancelled-beforeunload',
     'cancelled-beforeunload-warm',
   ].filter((timing) => !process.argv[3] || timing === process.argv[3]))
@@ -178,6 +181,10 @@ window.probe={
       }
       report.trials.push(trial)
       const first = collector.records.length
+      const coldAuthEntry = [
+        'accept-invitation-cold',
+        'mixed-auth-cold',
+      ].includes(timing)
       try {
         await context.route(
           (url) => ![origin, collectorOrigin].includes(url.origin),
@@ -228,14 +235,23 @@ window.probe={
           }
         })
         await page.goto(
-          timing === 'accept-invitation-cold'
-            ? origin + '/accept-invitation/synthetic'
+          coldAuthEntry
+            ? origin +
+                (timing === 'mixed-auth-cold'
+                  ? '/LOGIN'
+                  : '/accept-invitation/synthetic')
             : origin,
         )
         await page.waitForFunction(() => window.probe !== undefined)
-        if (timing === 'accept-invitation-cold') {
+        if (coldAuthEntry) {
           trial.selected = await page.evaluate(() => window.probe.send(100))
           assert.equal(trial.selected.admitted, false)
+        } else if (timing === 'mixed-auth-spa') {
+          trial.selected = await page.evaluate(() => {
+            const selected = window.probe.send(235000)
+            history.pushState({}, '', '/Accept-Invitation/synthetic')
+            return selected
+          })
         } else if (timing === 'provisional') {
           await page.evaluate(() =>
             setTimeout(() => window.probe.send(235000), 100),
@@ -304,6 +320,8 @@ window.probe={
           if (timing === 'scope-changed') destination += '?changed=1'
           if (timing === 'accept-invitation')
             destination = '/accept-invitation/synthetic'
+          if (timing === 'mixed-auth-arrival')
+            destination = '/Accept-Invitation/synthetic'
           if (timing === 'sensitive')
             destination = '/join/synthetic?token=synthetic'
           trial.selected = await page.evaluate(
@@ -313,19 +331,22 @@ window.probe={
           await page.waitForURL(origin + destination)
         }
         trial.navigation = 'complete'
-        assert.equal(
-          trial.selected.admitted,
-          timing !== 'accept-invitation-cold',
-        )
+        assert.equal(trial.selected.admitted, !coldAuthEntry)
         await page.waitForFunction(() => window.probe !== undefined)
-        if (timing === 'accept-invitation-cold') {
+        if (coldAuthEntry) {
           assert.equal(await page.evaluate(() => window.probe.retained()), 0)
           assert.equal(
             events.filter((event) => event.kind === 'register').length,
             0,
           )
         } else if (
-          ['scope-changed', 'sensitive', 'accept-invitation'].includes(timing)
+          [
+            'scope-changed',
+            'sensitive',
+            'accept-invitation',
+            'mixed-auth-arrival',
+            'mixed-auth-spa',
+          ].includes(timing)
         ) {
           await wait(1500)
           assert.equal(await page.evaluate(() => window.probe.retained()), 0)

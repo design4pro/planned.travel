@@ -1,6 +1,6 @@
 import { makeFetchTransport } from '@sentry/react'
 import workerScript from './worker.ts?worker&url'
-import { holdsSensitiveLocation } from '#/lib/sentry-scrub'
+import { permitsTransactionRecoveryLocation } from './location'
 import { watchLocation } from '#/lib/location-watch'
 import {
   subscribeWorkspaceClaim,
@@ -17,12 +17,7 @@ import { createWorkerSender } from './sender'
 import type { TransportOptions } from './transaction'
 
 function eligibleLocation(): boolean {
-  return (
-    !holdsSensitiveLocation(window.location.href) &&
-    !/^\/(?:login|register|reset-password|forgot-password|two-factor|verify-email|accept-invitation|join)(?:\/|$)/.test(
-      window.location.pathname,
-    )
-  )
+  return permitsTransactionRecoveryLocation(window.location.href)
 }
 
 /** Called synchronously by Sentry's client constructor before fetch instrumentation is installed. */
