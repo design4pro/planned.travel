@@ -85,6 +85,7 @@ runs:
     #
     # `--with-deps` is the half that cannot be cached - it is apt, not a
     # tarball - which is why this step is a plain install rather than a restore.
+    # Portable and custom engines can resolve different locked Playwright builds.
     - name: Install the browsers
       shell: bash
       run: |
@@ -98,8 +99,10 @@ runs:
         # for the browsers costs a no-op.
         if [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1; then
           pnpm exec e2e-web install --with-deps ${{ inputs.browsers }}
+          pnpm exec playwright install --with-deps ${{ inputs.browsers }}
         else
           pnpm exec e2e-web install ${{ inputs.browsers }}
+          pnpm exec playwright install ${{ inputs.browsers }}
         fi
 
     - name: Generate route tree
