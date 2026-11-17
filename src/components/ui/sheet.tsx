@@ -183,7 +183,15 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
             if (event.defaultPrevented) return
             const target = opener.current
             opener.current = null
-            if (target === null || !target.isConnected) return
+            // Safari pointer activation can leave the page root active. In that
+            // case the primitive must restore its registered trigger.
+            if (
+              target === null ||
+              target === document.body ||
+              target === document.documentElement ||
+              !target.isConnected
+            )
+              return
             event.preventDefault()
             target.focus({ preventScroll: true })
           }}

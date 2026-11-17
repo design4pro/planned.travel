@@ -210,7 +210,7 @@ function staleSession(seen, { wantsAuth }) {
   return new Error(
     `--auth was asked for but ${url} redirected to ${seen}. The cached session in ` +
       `${AUTH_STATE} is stale or the workspace is unseeded. Refresh it with: ` +
-      `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm exec playwright test --project=setup`,
+      `PLAYWRIGHT_BASE_URL=${new URL(url).origin} pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts`,
   )
 }
 
@@ -232,7 +232,7 @@ async function main() {
   if (wantsAuth && !existsSync(AUTH_STATE)) {
     console.error(
       `capture: --auth was asked for but ${AUTH_STATE} does not exist. ` +
-        `Run the Playwright setup project first: pnpm exec playwright test --project=setup`,
+        `Run the e2e browser session setup first: pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts`,
     )
     process.exit(2)
   }

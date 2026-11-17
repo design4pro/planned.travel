@@ -16,7 +16,7 @@ import * as realFormat from '../format'
  * catches a call that takes a bare `Locale`. None of that notices the regression
  * this file exists for: delete `useGrouping` from `makeNumberFormat` and every
  * case in the suite stays green, because V8 already answers `latn` for `ar` and
- * already honours `minimumGroupingDigits=2`. Only `e2e/i18n-runtime-parity.spec.ts`
+ * already honours `minimumGroupingDigits=2`. Only `e2e/native/i18n-runtime-parity.e2e.ts`
  * went red — in the linux WebKit the Playwright container ships, which is the
  * most expensive check in the repo and the one furthest from the edit.
  *

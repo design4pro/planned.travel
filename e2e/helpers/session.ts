@@ -125,9 +125,9 @@ async function storeSession(
  * It runs once per run, in the setup project, because it is the only place a
  * write belongs — a per-test reset would be a write per frame against a
  * database every worker shares. That is enforced by the call graph rather than
- * asserted in prose: the callers are `cacheSession()`, which `auth.setup.ts`
+ * asserted in prose: the callers are `cacheSession()`, which `e2e/browser/auth.setup.e2e.ts`
  * alone runs, and the `finally` block of the Chromium-only journey that
- * writes the demo member's language (`journeys.spec.ts`), which puts the fixture
+ * writes the demo member's language (`journeys.e2e.ts`), which puts the fixture
  * back and asserts it did. The sign-in fallback a filtered run needs goes to `storeSession()`
  * instead, which touches no fixture data.
  *

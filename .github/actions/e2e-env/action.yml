@@ -1,6 +1,6 @@
 name: Prepare the e2e environment
 description: >
-  Everything the Playwright suite needs before a single spec runs: dependencies,
+  Everything both e2e-inc engines need before a single test runs: dependencies,
   a migrated local D1, an `E2E_BUILD=1` build served by `vite preview` on port
   3000 and the seeded demo workspace behind it. Optionally the PMTiles basemap
   in the local R2 simulator - see the `basemap` input, which is off.
@@ -97,9 +97,9 @@ runs:
         # are already in place. Asking for them there would fail the job; asking
         # for the browsers costs a no-op.
         if [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1; then
-          pnpm exec playwright install --with-deps ${{ inputs.browsers }}
+          pnpm exec e2e-web install --with-deps ${{ inputs.browsers }}
         else
-          pnpm exec playwright install ${{ inputs.browsers }}
+          pnpm exec e2e-web install ${{ inputs.browsers }}
         fi
 
     - name: Generate route tree
@@ -196,7 +196,11 @@ runs:
       shell: bash
       env:
         E2E_BUILD: '1'
-      run: pnpm exec vite build
+        VITE_SENTRY_DSN: ''
+        SENTRY_AUTH_TOKEN: ''
+      run: |
+        pnpm exec vite build
+        echo 'E2E_PREVIEW=1' >> "$GITHUB_ENV"
 
     # The seed still needs the dev server: `/api/dev/seed` is compiled out of every build, the
     # E2E one included, and it stays that way - an endpoint that rewrites the owner's password

@@ -2,7 +2,7 @@ import { expect } from '@playwright/test'
 import type { BrowserContext, Locator, Page } from '@playwright/test'
 
 /**
- * What `e2e/trip-weather.spec.ts` needs to look at a day's weather the way a traveller does, and to
+ * What `e2e/browser/trip-weather.e2e.ts` needs to look at a day's weather the way a traveller does, and to
  * prove two things a traveller can only feel: that nothing moved when the answer arrived, and that
  * nothing was asked of a weather service to produce it.
  *
@@ -41,7 +41,27 @@ export async function showDays(page: Page): Promise<void> {
     return
   }
   await page.getByRole('button', { name: 'Days', exact: true }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => {
+        for (
+          let node: Element | null = element;
+          node;
+          node = node.parentElement
+        ) {
+          if (
+            node
+              .getAnimations()
+              .some((animation) => animation.playState === 'running')
+          )
+            return false
+        }
+        return true
+      }),
+    )
+    .toBe(true)
 }
 
 /** The planner's section for one day, by the title its header carries. */

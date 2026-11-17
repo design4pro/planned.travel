@@ -99,7 +99,7 @@ Four things decide the project a test lands in, and they are not interchangeable
 - `ui` - jsdom, for `src/components/**` and `src/lib/**`.
 - `server` - plain Node, for `src/server/**`. **No `cloudflare:workers` import.**
 - `tooling` - policy outside `src/**`: `scripts/`, `.ai/scripts/`, `.agents/`, config files, e2e helpers.
-- Playwright (`e2e/`) - journeys only, chromium and mobile-safari, behind `.ai/scripts/e2e.sh`.
+- E2E (`e2e/`) - portable e2e-inc behaviors in `native/*.e2e.ts` and public custom-engine journeys in `browser/*.e2e.ts`. Playwright is only their driver/assertion library. Both configuration outcomes are required in CI; `docs/testing/e2e.md` owns the migration contract.
 
 Tests are colocated in `__tests__/` beside the code they cover.
 

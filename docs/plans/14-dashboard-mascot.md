@@ -94,7 +94,7 @@ decision, recorded here for the auditor and the executing run alike:
   (`:1086-1089`). The `motion` package is pinned (`package.json:45`, `^13.1.0`) and the shipped
   JS-motion pattern is `src/components/layout/pill-nav.tsx:2,10,25-28`.
 - **Why the loops must be CSS keyframes and not `motion`'s rAF loop:** the visual gate captures
-  with `animations: 'disabled'` (`playwright.config.ts:90`), which settles CSS animations
+  with `animations: 'disabled'` (`e2e.browser.config.ts:90`), which settles CSS animations
   deterministically but — measured in `e2e/helpers/shoot.ts:998-999` — cannot settle a transform
   driven from JavaScript. A rAF-driven ambient loop would make every dashboard baseline
   nondeterministic. So: ambient loops are CSS `@keyframes` appended to `src/styles/styles.css`
@@ -252,7 +252,7 @@ enqueued and nothing touches the Durable Object protocol.
   contain no `Date.now()` and no `new Date()`, and the unit test reads the shipped source to hold
   that (the `copy-rules.test.ts` technique). This matches the hero's own countdown
   (`dashboard.tsx:175`) and the capture harness's `x-pt-server-today` pin
-  (`src/server/clock.ts:81`, `playwright.config.ts:32-34`). (2) The server renders the designed
+  (`src/server/clock.ts:81`, `e2e.browser.config.ts:32-34`). (2) The server renders the designed
   static pose for the current state; the markup React hydrates is exactly the markup the server
   sent. (3) Animation mounts client-side only: a `useEffect` after mount sets a `data-` attribute
   on the stage, and only that attribute's CSS enables the keyframes — the class list at hydration
@@ -261,7 +261,7 @@ enqueued and nothing touches the Durable Object protocol.
 
 - **Motion, all CSS.** Keyframes `pt-mascot-*` in `src/styles/styles.css` beside the existing set
   (`:814-943`): transform and opacity only; every loop's first and last keyframe is the identity
-  transform, so both the gate's `animations: 'disabled'` settle (`playwright.config.ts:90`) and
+  transform, so both the gate's `animations: 'disabled'` settle (`e2e.browser.config.ts:90`) and
   the reduced-motion collapse (`styles.css:1068-1077`) land the character exactly on its designed
   rest pose. Discrete transitions (pose swap, flap entrance) run 150–260ms on `--ease-out-quint`.
   Base positions use Tailwind translate utilities (the `translate` property, which the
@@ -355,9 +355,9 @@ existing payload, whose isolation is already enforced and tested at the reposito
     and the mirrored art.
 - **The committed gate baselines** — the four claimed dashboard PNGs are re-recorded with
   Playwright (`--update-snapshots`, never another browser). At `BASELINE_DAY = '2026-08-20'`
-  (`e2e/helpers/shoot.ts:1150`, sent by `playwright.config.ts:32-34`) the fixture's August trip
+  (`e2e/helpers/shoot.ts:1150`, sent by `e2e.browser.config.ts:32-34`) the fixture's August trip
   is still running, so the baselines capture the `travelling` pose, settled deterministically to
-  its first keyframe by `animations: 'disabled'` (`playwright.config.ts:90`) — which is exactly
+  its first keyframe by `animations: 'disabled'` (`e2e.browser.config.ts:90`) — which is exactly
   why the loops are CSS and not rAF (`e2e/helpers/shoot.ts:998-999`).
 - **No `RELATIVE_TIME_SITES` entry and no `e2e/helpers/shoot.ts` claim**, reasoned rather than
   skipped: the flap digit is the mascot's only clock-derived string, it renders only in

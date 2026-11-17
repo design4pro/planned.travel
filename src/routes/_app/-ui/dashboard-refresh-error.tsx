@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
 import { AppFrame } from '#/components/layout/app-frame'
 import { ErrorPanel } from '#/components/layout/error-state'
 import { useTranslate } from '#/lib/i18n'
@@ -14,54 +15,18 @@ export function DashboardRefreshError({ error }: { error: unknown }) {
 export function DashboardRefreshErrorPanel({
   error,
   onRetry,
+  containerRef,
 }: {
   error: unknown
-  onRetry?: () => Promise<boolean>
+  onRetry?: () => void
+  containerRef?: RefObject<HTMLDivElement | null>
 }) {
-  const container = useRef<HTMLDivElement>(null)
-  const pending = useRef(false)
+  const localContainer = useRef<HTMLDivElement>(null)
+  const container = containerRef ?? localContainer
   const t = useTranslate()
   useEffect(() => {
     if (document.activeElement === document.body) container.current?.focus()
   }, [])
-  const retry =
-    onRetry === undefined
-      ? undefined
-      : () => {
-          if (pending.current) return
-          pending.current = true
-          let moved = false
-          const track = (event: Event) => {
-            if (
-              event.target instanceof Node &&
-              !container.current?.contains(event.target)
-            )
-              moved = true
-          }
-          document.addEventListener('focusin', track, true)
-          document.addEventListener('pointerdown', track, true)
-          void onRetry().then(
-            (ok) => {
-              requestAnimationFrame(() => {
-                document.removeEventListener('focusin', track, true)
-                document.removeEventListener('pointerdown', track, true)
-                pending.current = false
-                if (ok && !moved)
-                  document
-                    .querySelector<HTMLButtonElement>(
-                      '[data-dashboard-mascot-launcher]',
-                    )
-                    ?.focus()
-                if (!ok && !moved) container.current?.focus()
-              })
-            },
-            () => {
-              document.removeEventListener('focusin', track, true)
-              document.removeEventListener('pointerdown', track, true)
-              pending.current = false
-            },
-          )
-        }
   return (
     <div
       ref={container}
@@ -72,7 +37,7 @@ export function DashboardRefreshErrorPanel({
       <ErrorPanel
         error={error}
         title={t('shell.dashboard.error')}
-        onRetry={retry}
+        onRetry={onRetry}
       />
     </div>
   )

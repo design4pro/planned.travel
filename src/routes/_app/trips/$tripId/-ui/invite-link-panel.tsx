@@ -185,7 +185,12 @@ export function InviteLinkPanel({
         requestAnimationFrame(() => {
           if (focus === 'copy') focusControl(copy.current)
           else if (focus === 'replace') focusControl(replace.current)
-          else if (!previousFocus?.isConnected) focusControl(null)
+          else if (
+            !previousFocus?.isConnected ||
+            (previousFocus === document.body &&
+              document.activeElement === document.body)
+          )
+            focusControl(null)
         })
       }
     }

@@ -37,7 +37,7 @@ index and nothing else, went red twice on Playwright's 15 min `globalTimeout`, a
 
 Seven of the ten real failures were in the journeys. Two of them are classes the local gate cannot
 see at all: a mobile-safari layout failure (#438, run 34652512129) - `e2e.sh` runs
-`--project=chromium` only - and a fixture the new test borrowed and did not give back (#435), which
+`--target chromium` only - and a fixture the new test borrowed and did not give back (#435), which
 shows up only against a clean database. _Amended by ADR 0022: the first of those two classes is no
 longer caught here either. `mobile-safari` came off the pull-request path and runs nightly, so a
 WebKit layout failure of #438's shape now surfaces against `develop` within a day rather than on the

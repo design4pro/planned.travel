@@ -12,7 +12,7 @@ Multi-tenant SaaS travel planner on Cloudflare Workers (TanStack Start + React 1
 - `pnpm dev` — dev server on :3000
 - `pnpm typecheck` / `pnpm lint` / `pnpm test` — the fast feedback loop while you work. They are **not** the gate: the gate is `validation.commands` in `.ai/agentic.config.json`, and every PR passes it in full
 - `pnpm build` — production build
-- `pnpm e2e` — Playwright critical journeys + i18n parity (needs local D1 migrations; no basemap, ADR 0016)
+- `pnpm e2e` / `pnpm e2e:all` — both e2e-inc configurations; `pnpm e2e:native` — portable behaviors + i18n parity; `pnpm e2e:browser` — browser journeys (local D1, no basemap, ADR 0016; docs/testing/e2e.md)
 - `pnpm generate-routes` — regenerate the route tree; `src/routeTree.gen.ts` is generated, never hand-edit
 - `pnpm db:generate` — generate Drizzle migrations; `drizzle/` is generated, never hand-edit
 - `pnpm generate-spec-index` — regenerate `.ai/specs/README.md` from the metadata table in each spec; generated, never hand-edit

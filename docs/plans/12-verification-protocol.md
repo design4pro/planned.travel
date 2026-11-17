@@ -79,14 +79,14 @@ nobody ran it.
 
 ### The dev server
 
-`pnpm dev` is `vite dev --port 3000`, and `playwright.config.ts` defaults `baseURL` to
+`pnpm dev` is `vite dev --port 3000`, and `e2e.browser.config.ts` defaults `baseURL` to
 `http://localhost:3000` and starts `pnpm dev` itself when no external URL is given
 (`reuseExistingServer: !isCI`). That is the documented, one-command path and a stage may state it as
 such:
 
 ```sh
 pnpm dev                       # vite dev --port 3000
-pnpm exec playwright test      # config's webServer starts/reuses it on 3000
+pnpm e2e:browser      # config's webServer starts/reuses it on 3000
 ```
 
 Port 3000 is not guaranteed to be ours on a developer machine, and a suite pointed at a stranger's
@@ -111,7 +111,7 @@ time, the script prints `TEST_ENV_STATUS=unavailable` and exits **75**, and `e2e
 status through. Exit 75 means the suite was not executed for an environment reason: report it as
 "not executed, environment", never as a failed e2e run. Every other non-zero exit is a real failure.
 
-`PLAYWRIGHT_BASE_URL` is read by `playwright.config.ts` and suppresses the `webServer` block
+`PLAYWRIGHT_BASE_URL` is read by `e2e.browser.config.ts` and suppresses the `webServer` block
 entirely. Without it the config waits on 3000 until the global timeout. Outside CI the config also
 _refuses_ a base URL outside 3030-3040 unless `PLAYWRIGHT_ALLOW_ANY_PORT=1` is set, because four
 consecutive rounds ran the suite against somebody else's server and reported the result as evidence.
@@ -122,7 +122,7 @@ Three, and only these three names are valid after `--project=`:
 
 | Project         | Engine and viewport                                      | What it is for                                                                                               |
 | --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `setup`         | Desktop Chrome, `e2e/auth.setup.ts` only                 | Signs the demo account in once and caches the session at `e2e/.auth/demo.json`. Both others depend on it.    |
+| `setup`         | Desktop Chrome, `e2e/browser/auth.setup.e2e.ts` only     | Signs the demo account in once and caches the session at `e2e/.auth/demo.json`. Both others depend on it.    |
 | `chromium`      | `devices['Desktop Chrome']`, viewport pinned to 1440x900 | The desktop half, and the one project for any claim no browser is really involved in.                        |
 | `mobile-safari` | `devices['iPhone 15']` — WebKit, touch, 393x659 viewport | The mobile half. Safe-area insets, `100dvh` and momentum scrolling behave differently here and nowhere else. |
 
@@ -142,14 +142,14 @@ The commands a stage cites, in the order it runs them:
 
 ```sh
 # once, or whenever /atlas starts redirecting to /login
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
 
 # the stage's own spec, both engines
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/<module>.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/<module>.spec.ts
 
 # one engine, when triaging a failure that only appears there
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/<module>.spec.ts --project=mobile-safari
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/<module>.spec.ts --target mobile-safari
 ```
 
 There is no fourth command. Recording a baseline was the fourth, and there are no baselines.
@@ -245,7 +245,7 @@ state, and names the selector that reaches it.**
 - The selector is written into the stage's Verification block, and it is passed to
   `--hover` / `--click`, or reached by the stage's own spec before its `toHaveScreenshot`.
 - **The selector must have been verified to exist against a running server**, and the stage says how
-  it was verified — `pnpm exec playwright test e2e/<module>.visual.spec.ts` passing is a
+  it was verified — `pnpm e2e:browser e2e/<module>.visual.spec.ts` passing is a
   verification; a `page.locator(sel).count()` that returned 1 is a verification; reading the JSX and
   believing it is not. A selector that resolves to nothing makes `capture.mjs` throw at
   `--hover`/`--click`, and a stage that discovers that during capture has spent a round on it.
@@ -269,14 +269,14 @@ quietly.
 
 ### Measured, at HEAD
 
-`e2e/journeys.spec.ts` is 1,568 lines and 67 KB, and carries fourteen `test()` declarations.
-`e2e/trips-core.spec.ts` carries three and `e2e/csrf.spec.ts` two, so `pnpm e2e` is nineteen
+`e2e/browser/journeys.e2e.ts` is 1,568 lines and 67 KB, and carries fourteen `test()` declarations.
+`e2e/browser/trips-core.e2e.ts` carries three and `e2e/native/csrf.e2e.ts` two, so `pnpm e2e` is nineteen
 declarations across two browser projects plus the `setup` test. Every module still to be built
 would otherwise append to the first of those files.
 
 ### The rule
 
-**A module plan adds `e2e/<module>.spec.ts`. It never appends to `e2e/journeys.spec.ts`.**
+**A module plan adds `e2e/<module>.spec.ts`. It never appends to `e2e/browser/journeys.e2e.ts`.**
 
 `<module>` is the plan's area name in the same kebab-case as its plan file, so
 `04-budget-and-currencies.md` produces `e2e/budget-and-currencies.spec.ts`. One spec file per plan
@@ -285,7 +285,7 @@ file, not one per stage: stages within a plan share the file and are told apart 
 
 The `.visual.` infix the earlier version of this rule mandated is gone with the gate that justified
 it (ADR 0016). `trips-core.visual.spec.ts` was renamed to `trips-core.spec.ts` in the same change,
-and `playwright.config.ts` matches `**/*.spec.ts` and nothing else - a `.test.ts` under `e2e/`
+and `e2e.browser.config.ts` matches `**/*.spec.ts` and nothing else - a `.test.ts` under `e2e/`
 belongs to vitest, which is where the pure helpers are graded.
 
 ### Why the split is safe
@@ -295,7 +295,7 @@ property that two plans writing two files touch two disjoint paths, which is the
 `README.md` requires of **Owned paths**, obtained mechanically. `fullyParallel: true` then runs them
 in different workers against one dev server and one D1 file, which is safe because the suite writes
 to the fixture from exactly three places, all of them named in the `workers` comment in
-`playwright.config.ts`.
+`e2e.browser.config.ts`.
 
 A stage's **Owned paths** lists its spec file explicitly, and nothing else under `e2e/` unless it
 genuinely adds a helper:
@@ -442,7 +442,7 @@ none of them.
 The half of the problem that was real is **closed, not deferred**, and a stage should stop treating
 it as an open risk. The Worker chooses which rows a dated screen shows through `serverToday()`
 (`src/server/clock.ts`), which takes `x-pt-server-today` on a development request;
-`playwright.config.ts` sends `BASELINE_DAY` on both browser projects, and `capture.mjs` sends the
+`e2e.browser.config.ts` sends `BASELINE_DAY` on both browser projects, and `capture.mjs` sends the
 same value when `PT_SERVER_TODAY` is set (§2). Absolute dates on one side and a pinned reader on the
 other is a fixed comparison. `reportServerCalendar()`, `crossedBoundaries()`, `CALENDAR_SELECTIONS`
 and `shiftServerToday()` survive as the **audit** of that pin — a pin that stopped arriving is named

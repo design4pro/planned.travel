@@ -41,7 +41,7 @@ import {
  *
  * The cross-runtime half cannot be proven here — this suite runs on V8, which
  * agrees with workerd about everything and with WebKit about rather less, so a
- * green run in Node says nothing about Safari. `e2e/i18n-runtime-parity.spec.ts`
+ * green run in Node says nothing about Safari. `e2e/native/i18n-runtime-parity.e2e.ts`
  * is where that is measured. What *can* be proven here is the property that
  * makes the runtimes agree in the first place: that no date, list, relative time
  * or money layout is composed by `Intl` at all.
@@ -494,7 +494,7 @@ describe('the frozen month names against the platform that supplied them', () =>
    * V8 is workerd's ICU for practical purposes — every field this suite touches
    * was measured identical in the two — so a bare `Intl` call here is a
    * standing drift check against the runtime that renders first. What it cannot
-   * see is WebKit; `e2e/i18n-runtime-parity.spec.ts` is where that is measured.
+   * see is WebKit; `e2e/native/i18n-runtime-parity.e2e.ts` is where that is measured.
    */
   it('are the standalone form every runtime agrees on, Greek excepted', () => {
     for (const tag of LOCALE_TAGS) {
