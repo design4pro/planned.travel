@@ -30,7 +30,7 @@ let server,
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const until = async (predicate) => {
   const end = Date.now() + 15000
-  while (!predicate()) {
+  while (!(await predicate())) {
     assert.ok(Date.now() < end, 'correlated receipt timeout')
     await wait(20)
   }
@@ -160,9 +160,11 @@ window.probe={
     'settled',
     'scope-changed',
     'sensitive',
-  ])
+    'cancelled-beforeunload',
+    'cancelled-beforeunload-warm',
+  ].filter((timing) => !process.argv[3] || timing === process.argv[3]))
     for (let repetition = 1; repetition <= 2; repetition++) {
-      workerDelay = 800
+      workerDelay = timing === 'cancelled-beforeunload' ? 2000 : 800
       const context = await browser.newContext({ serviceWorkers: 'allow' })
       const events = []
       const trial = {
@@ -194,6 +196,16 @@ window.probe={
           events.push(event),
         )
         await page.addInitScript(() => {
+          const nativeRegister = navigator.serviceWorker.register
+          navigator.serviceWorker.register = function (...args) {
+            window
+              .reportRecovery({
+                kind: 'register',
+                leaving: window.__plannedDeliveryLeaving === true,
+              })
+              .catch(() => {})
+            return nativeRegister.apply(this, args)
+          }
           const raw = sessionStorage.getItem('planned.sentry.transactions.v1')
           if (!raw) return
           for (const entry of JSON.parse(raw).entries) {
@@ -223,6 +235,50 @@ window.probe={
           await until(() => events.some((event) => event.kind === 'admitted'))
           trial.selected = events.find((event) => event.kind === 'admitted')
           assert.equal(trial.selected.leaving, true)
+        } else if (timing.startsWith('cancelled-beforeunload')) {
+          if (timing.endsWith('-warm'))
+            await until(() =>
+              page.evaluate(() =>
+                navigator.serviceWorker
+                  .getRegistrations()
+                  .then((registrations) =>
+                    registrations.some(
+                      (registration) =>
+                        registration.active?.state === 'activated',
+                    ),
+                  ),
+              ),
+            )
+          trial.workerActiveAtPrompt = await page.evaluate(() =>
+            navigator.serviceWorker
+              .getRegistrations()
+              .then((registrations) =>
+                registrations.some(
+                  (registration) => registration.active?.state === 'activated',
+                ),
+              ),
+          )
+          assert.equal(trial.workerActiveAtPrompt, timing.endsWith('-warm'))
+          await page.evaluate(() => {
+            window.addEventListener('beforeunload', (event) => {
+              event.preventDefault()
+              event.returnValue = ''
+            })
+            const button = document.createElement('button')
+            button.textContent = 'Leave synthetic fixture'
+            button.onclick = () => location.assign('/destination')
+            document.body.appendChild(button)
+          })
+          page.once('dialog', (dialog) => {
+            trial.cancelledDialog = dialog.type()
+            void dialog.dismiss()
+          })
+          await page
+            .getByRole('button', { name: 'Leave synthetic fixture' })
+            .click()
+          assert.equal(trial.cancelledDialog, 'beforeunload')
+          assert.equal(page.url(), origin + '/')
+          trial.selected = await page.evaluate(() => window.probe.send(235000))
         } else if (timing === 'settled') {
           trial.selected = await page.evaluate(() => window.probe.send(235000))
           await until(() =>
@@ -296,6 +352,13 @@ window.probe={
           .slice(first)
           .filter((record) => record.id === trial.selected.id)
         trial.console = observe()
+        trial.registrations = events.filter(
+          (event) => event.kind === 'register',
+        )
+        assert.ok(
+          trial.registrations.every((event) => event.leaving === false),
+          'No registration may start after departure',
+        )
         assert.deepEqual(trial.console.fatal, [])
         trial.phase = 'passed'
       } catch (error) {

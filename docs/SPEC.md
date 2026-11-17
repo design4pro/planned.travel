@@ -1254,3 +1254,8 @@ substitution renders ASCII digits with no group separator in all 23 locales. Not
 actually does before asserting on it: `ar` as a bare tag carries the `latn` numbering system, so
 Arabic correctly renders `1,234` and never Arabic-Indic digits, which belong to `ar-EG` /
 `ar-u-nu-arab` and are not tags we ship.
+
+Empty sender initialization is data-free and may precede admission only in a known eligible,
+storage-capable, non-leaving context. Every payload still requires synchronous WAL admission;
+during departure only a saved activated worker may send, with no registration retry. See
+[ADR 0052](adr/0052-bounded-browser-transaction-recovery.md) for cancelled native-prompt recovery and bounded activation.

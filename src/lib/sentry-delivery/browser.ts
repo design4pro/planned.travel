@@ -57,6 +57,11 @@ export function makeNavigationTransport(options: TransportOptions) {
     workerScript,
     options.url,
     window.location.origin,
+    () =>
+      !transactionDocumentLeaving() &&
+      eligibleLocation() &&
+      !workspaceClaimState().switching &&
+      !workspaceClaimState().stale,
   )
   const recovery = createRecoveryTransport(options, {
     storage,
@@ -65,6 +70,10 @@ export function makeNavigationTransport(options: TransportOptions) {
     ...sender,
     nativeFetch,
     leaving: transactionDocumentLeaving,
+    eligible: () =>
+      eligibleLocation() &&
+      !workspaceClaimState().switching &&
+      !workspaceClaimState().stale,
   })
   const reconcileLocation = () => {
     if (!eligibleLocation()) retireTransactionRecovery()

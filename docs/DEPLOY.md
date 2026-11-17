@@ -2391,7 +2391,7 @@ the SDK is tree-shaken out of the client bundle entirely.
 | User feedback       | browser                         | A floating "Report a problem" button on every page, with an optional screenshot                                 |
 
 **Browser transaction recovery:** the browser uses a narrow module ServiceWorker for admitted
-single JSON transactions and tab-local session storage before asynchronous registration.
+single JSON transactions and tab-local session storage before payload-triggered registration and every dispatch.
 The worker has no fetch interceptor and accepts only the configured DSN target. It sends with
 credentials omitted, redirects refused and keepalive disabled. Other envelope types, including
 Replay, retain the installed SDK transport. The server supplies an opaque, Replay-blocked scope
@@ -2589,3 +2589,15 @@ is drained; changing `BETTER_AUTH_SECRET` without retaining decryptability stran
 An authorized native account deletion reserves its account before teardown, refuses while cleanup
 is pending, and resumes an interrupted reservation after one minute. Never manually clear a deletion
 reservation or delete pending cleanup records to unblock an account.
+
+### Empty sender initialization and cancelled departure (issue #1849)
+
+Empty worker infrastructure may initialize only in an eligible, validated known scope with
+working bounded storage, a current workspace and a document not leaving. Every payload-triggered
+registration and dispatch still follows synchronous validated WAL admission. Registration checks
+departure immediately, including retries; activation has a10-second deadline and listener cleanup.
+During departure only an already saved, activated worker may send. Prestarted initialization may
+complete, allowing a cancelled native beforeunload prompt to resume delivery without guessing
+cancellation, resetting privacy fences or initiating registration during provisional replacement.
+There is no timer/focus/fresh-scope reset, window.stop, or container.ready/controller lookup.
+Unknown initialization failures remain bounded unavailable outcomes, not a delivery guarantee.

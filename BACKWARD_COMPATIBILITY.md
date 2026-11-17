@@ -181,3 +181,8 @@ queue additionally binds endpoint path and release, and discards mismatches. An 
 continues native delivery; rollback does not ingest a newer queue. Physical storage cleanup
 requires executing a compatible document or closing the tab. See ADR 0052 for bounded dispatch
 expiry, unknown-outcome duplication and retirement conditions.
+
+Empty sender initialization is data-free and may precede admission only in a known eligible,
+storage-capable, non-leaving context. Every payload still requires synchronous WAL admission;
+during departure only a saved activated worker may send, with no registration retry. See
+[ADR 0052](docs/adr/0052-bounded-browser-transaction-recovery.md) for cancelled native-prompt recovery and bounded activation.

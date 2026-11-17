@@ -6,6 +6,14 @@ import { createServer } from 'node:http'
 import { pathToFileURL } from 'node:url'
 import { relayWorkerSource } from './relay.mjs'
 
+/** Historical native evidence must not silently compare the corrected working head. */
+export function nativeSourceRevisions() {
+  return [
+    'c3d1504856683fb8848d51cdee796efd00fc7949',
+    '9ed0a446d2d5692e43fb6bdb1b0de65bca08c4fc',
+  ]
+}
+
 // Only side handlers observe: the receiver, arguments and returned promise stay native.
 export function observeNativeFetch(nativeFetch, report, failures) {
   let sequence = 0
@@ -151,10 +159,7 @@ async function main() {
   const git = (...args) =>
     execFileSync('git', args, { encoding: 'utf8' }).trim()
   const sha = (value) => createHash('sha256').update(value).digest('hex')
-  const refs = [
-    git('rev-parse', 'HEAD'),
-    '9ed0a446d2d5692e43fb6bdb1b0de65bca08c4fc',
-  ]
+  const refs = nativeSourceRevisions()
   const files = [
     'package.json',
     'pnpm-lock.yaml',
@@ -179,7 +184,8 @@ async function main() {
     '10.72.0',
   )
   const report = {
-    source: git('rev-parse', 'HEAD'),
+    source: refs[0],
+    runnerRevision: git('rev-parse', 'HEAD'),
     refs,
     hashes,
     sdk: '10.72.0',

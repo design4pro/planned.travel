@@ -18,49 +18,85 @@ interface WorkerContainer {
   }>
 }
 
-/** Registration owns no request acknowledgement; callers persist before awaiting ready. */
+/** Empty initialization carries no payload; admission still precedes every dispatch. */
 export function createWorkerSender(
   container: WorkerContainer,
   script: string,
   endpoint: string,
   origin: string,
+  mayRegister: () => boolean = () => true,
 ) {
   let worker: WorkerReference | null = null
   let registration: Promise<void> | undefined
+  let initialization: AbortController | undefined
+  const initializing = () => registration !== undefined
+  const activated = () => worker?.state === 'activated'
+  const cancelInitialization = () => initialization?.abort()
   const ready = (): Promise<void> => {
-    if (worker?.state === 'activated') return Promise.resolve()
+    if (activated()) return Promise.resolve()
     if (registration) return registration
-    registration = (async () => {
+    if (!mayRegister())
+      return Promise.reject(new Error('Transaction registration deferred'))
+    const controller = new AbortController()
+    initialization = controller
+    let cleanup = () => {}
+    let deadline: ReturnType<typeof setTimeout>
+    const aborted = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener(
+        'abort',
+        () => reject(new Error('Transaction activation ended')),
+        { once: true },
+      )
+      deadline = setTimeout(() => controller.abort(), 10000)
+    })
+    const initialize = async () => {
       const url = new URL(script, origin)
       if (url.origin !== origin) throw new Error('Foreign transaction worker')
       const scope = new URL('./sentry-delivery/', url).pathname
+      // No await separates this final departure check from register, including a retry.
+      if (controller.signal.aborted || !mayRegister())
+        throw new Error('Transaction registration deferred')
       const result = await container.register(url.href, {
         type: 'module',
         scope,
         updateViaCache: 'none',
       })
+      if (controller.signal.aborted)
+        throw new Error('Transaction activation ended')
       const candidate = result.installing ?? result.waiting ?? result.active
       if (!candidate) throw new Error('Transaction worker unavailable')
       if (candidate.state !== 'activated')
-        await new Promise<void>((resolve, reject) => {
-          const changed = () => {
-            if (
-              candidate.state !== 'activated' &&
-              candidate.state !== 'redundant'
-            )
-              return
-            candidate.removeEventListener('statechange', changed)
-            if (candidate.state === 'activated') resolve()
-            else reject(new Error('Transaction worker activation failed'))
-          }
-          candidate.addEventListener('statechange', changed)
-          changed()
-        })
+        await Promise.race([
+          new Promise<void>((resolve, reject) => {
+            const changed = () => {
+              if (
+                candidate.state !== 'activated' &&
+                candidate.state !== 'redundant'
+              )
+                return
+              cleanup()
+              if (candidate.state === 'activated') resolve()
+              else reject(new Error('Transaction worker activation failed'))
+            }
+            cleanup = () =>
+              candidate.removeEventListener('statechange', changed)
+            candidate.addEventListener('statechange', changed)
+            changed()
+          }),
+          aborted,
+        ])
+      if (controller.signal.aborted)
+        throw new Error('Transaction activation ended')
       worker = candidate
-    })().finally(() => {
-      registration = undefined
+    }
+    const pending = Promise.race([initialize(), aborted]).finally(() => {
+      clearTimeout(deadline)
+      cleanup()
+      if (initialization === controller) initialization = undefined
+      if (registration === pending) registration = undefined
     })
-    return registration
+    registration = pending
+    return pending
   }
   const send: DeliverySender = (id, body, signal) =>
     new Promise((resolve, reject) => {
@@ -122,5 +158,5 @@ export function createWorkerSender(
         finish(new Error('Transaction worker dispatch failed'))
       }
     })
-  return { ready, send }
+  return { ready, send, activated, initializing, cancelInitialization }
 }

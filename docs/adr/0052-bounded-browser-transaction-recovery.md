@@ -32,3 +32,15 @@ be retried with the original event ID; no ingestion deduplication guarantee is a
 - Native keepalive and cold memory-only workers were rejected by browser experiments. Changing
   sampling, dropping large transactions or disabling Replay would avoid neither the handoff
   invariant nor the requirement to preserve existing telemetry behavior.
+
+### Empty sender initialization and cancelled departure (issue #1849)
+
+Empty worker infrastructure may initialize only in an eligible, validated known scope with
+working bounded storage, a current workspace and a document not leaving. Every payload-triggered
+registration and dispatch still follows synchronous validated WAL admission. Registration checks
+departure immediately, including retries; activation has a10-second deadline and listener cleanup.
+During departure only an already saved, activated worker may send. Prestarted initialization may
+complete, allowing a cancelled native beforeunload prompt to resume delivery without guessing
+cancellation, resetting privacy fences or initiating registration during provisional replacement.
+There is no timer/focus/fresh-scope reset, window.stop, or container.ready/controller lookup.
+Unknown initialization failures remain bounded unavailable outcomes, not a delivery guarantee.

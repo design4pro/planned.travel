@@ -47,6 +47,10 @@ export interface RecoveryPorts {
   project: string
   send: DeliverySender
   ready?: () => Promise<void>
+  activated?: () => boolean
+  initializing?: () => boolean
+  cancelInitialization?: () => void
+  eligible?: () => boolean
   nativeFetch: typeof fetch
   leaving: () => boolean
 }
@@ -84,7 +88,7 @@ export function createRecoveryTransport(
       count('cleanup_failed')
     }
   }
-  const write = (next: Store): boolean => {
+  const write = (next: Store, probe = false): boolean => {
     try {
       if (!ports.storage || scope === null) return false
       const { entries, ...header } = next
@@ -98,9 +102,10 @@ export function createRecoveryTransport(
         rows.push(row)
       }
       const raw = prefix + rows.join(',') + ']}'
-      if (next.entries.length === 0 && next.notBefore <= Date.now())
+      if (next.entries.length === 0 && next.notBefore <= Date.now()) {
+        if (probe) ports.storage.setItem(TRANSACTION_STORAGE_KEY, raw)
         ports.storage.removeItem(TRANSACTION_STORAGE_KEY)
-      else ports.storage.setItem(TRANSACTION_STORAGE_KEY, raw)
+      } else ports.storage.setItem(TRANSACTION_STORAGE_KEY, raw)
       state = next
       return true
     } catch {
@@ -170,6 +175,27 @@ export function createRecoveryTransport(
   }
   if (scope === null) clearStorage()
 
+  const deferredForDeparture = () =>
+    ports.leaving() && ports.activated?.() !== true
+  const cannotAwaitReadiness = () =>
+    deferredForDeparture() && ports.initializing?.() !== true
+  const ineligible = () => ports.eligible?.() === false
+  const initializeEmpty = () => {
+    if (
+      disposed ||
+      scope === null ||
+      !ports.storage ||
+      ports.leaving() ||
+      ineligible()
+    )
+      return
+    // This bounded write probes actual storage capability without admitting or sending a payload.
+    if (!write(state, true)) {
+      count('initialization_unavailable')
+      return
+    }
+    void ports.ready?.().catch(() => count('initialization_failed'))
+  }
   const start = (entry: StoredRecord): Promise<Response> => {
     const existing = active.get(entry.id)
     if (existing) return existing.promise
@@ -183,17 +209,31 @@ export function createRecoveryTransport(
       deadline = setTimeout(() => controller.abort(), RESPONSE_DEADLINE)
     })
     const perform = async () => {
+      if (
+        disposed ||
+        scope === null ||
+        captured !== generation ||
+        controller.signal.aborted ||
+        ineligible() ||
+        cannotAwaitReadiness()
+      )
+        throw new Error('Transaction dispatch deferred')
       await ports.ready?.()
       if (
         disposed ||
         scope === null ||
         captured !== generation ||
         controller.signal.aborted ||
-        ports.leaving()
+        deferredForDeparture() ||
+        ineligible()
       )
         throw new Error('Transaction dispatch deferred')
       const current = state.entries.find((item) => item.id === entry.id)
-      if (!current || Date.now() - current.createdAt >= TRANSACTION_LIFETIME)
+      if (
+        !current ||
+        current.nextAttemptAt > Date.now() ||
+        Date.now() - current.createdAt >= TRANSACTION_LIFETIME
+      )
         throw new Error('Transaction expired')
       if (state.notBefore > Date.now()) throw new Error('Transaction backoff')
       if (current.attempts >= MAX_TRANSACTION_ATTEMPTS) {
@@ -280,6 +320,7 @@ export function createRecoveryTransport(
       if (
         disposed ||
         scope === null ||
+        ineligible() ||
         !ports.storage ||
         state.entries.length >= MAX_RECORDS
       ) {
@@ -299,7 +340,7 @@ export function createRecoveryTransport(
       }
       count('admitted')
     }
-    if (ports.leaving()) {
+    if (cannotAwaitReadiness()) {
       count('deferred')
       return new Promise<Response>((_, reject) => {
         const pending = {
@@ -322,7 +363,8 @@ export function createRecoveryTransport(
   const recover = async () => {
     if (disposed) return
     prune()
-    if (recovering || scope === null || ports.leaving()) return
+    if (recovering || scope === null || deferredForDeparture() || ineligible())
+      return
     recovering = true
     try {
       if (state.notBefore > Date.now()) return
@@ -374,6 +416,7 @@ export function createRecoveryTransport(
   const retire = () => {
     generation++
     scope = null
+    ports.cancelInitialization?.()
     settleActive()
     state = { ...state, entries: [], notBefore: 0 }
     clearStorage()
@@ -395,14 +438,17 @@ export function createRecoveryTransport(
         entries: [],
       }
     }
+    initializeEmpty()
   }
   const dispose = ({ preserve = false }: { preserve?: boolean } = {}) => {
     disposed = true
+    ports.cancelInitialization?.()
     generation++
     clearInterval(retryTimer)
     clearTimeout(initialTimer)
     settleActive()
     if (!preserve) clearStorage()
   }
+  initializeEmpty()
   return { transport, recover, retire, confirmScope, dispose, counts }
 }

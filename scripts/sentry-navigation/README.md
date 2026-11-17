@@ -137,3 +137,8 @@ ServiceWorkers for that recovery snapshot; the unchanged native baseline blocks 
 use an unstaged change as claimed snapshot evidence. `node --import tsx` avoids the `tsx` CLI's
 Unix socket path limit in deeply nested Cezar temporary directories. Use the repository CI's
 Node major for final verification.
+
+Empty sender initialization is data-free and may precede admission only in a known eligible,
+storage-capable, non-leaving context. Every payload still requires synchronous WAL admission;
+during departure only a saved activated worker may send, with no registration retry. See
+[ADR 0052](../../docs/adr/0052-bounded-browser-transaction-recovery.md) for cancelled native-prompt recovery and bounded activation.

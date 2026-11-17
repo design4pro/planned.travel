@@ -54,3 +54,122 @@ it('rejects invalid response headers without escaping the message callback', asy
   await rejection
   expect(close).toHaveBeenCalledTimes(2)
 })
+
+it('never starts registration after departure and reports actual activation separately', async () => {
+  let leaving = true
+  const worker = {
+    state: 'activated',
+    postMessage: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }
+  const register = vi.fn(async () => ({
+    active: worker,
+    installing: null,
+    waiting: null,
+  }))
+  const sender = createWorkerSender(
+    { register },
+    '/worker.js',
+    'https://ingest.example/api/1/envelope/',
+    'https://app.example',
+    () => !leaving,
+  )
+  expect(sender.activated()).toBe(false)
+  await expect(sender.ready()).rejects.toThrow('registration deferred')
+  expect(register).not.toHaveBeenCalled()
+  leaving = false
+  await sender.ready()
+  expect(sender.activated()).toBe(true)
+  leaving = true
+  await sender.ready()
+  expect(register).toHaveBeenCalledOnce()
+})
+
+it('bounds activation and cleans its listener without accepting a late worker', async () => {
+  vi.useFakeTimers()
+  const worker = {
+    state: 'installing',
+    postMessage: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }
+  const sender = createWorkerSender(
+    {
+      register: async () => ({
+        active: null,
+        installing: worker,
+        waiting: null,
+      }),
+    },
+    '/worker.js',
+    'https://ingest.example/api/1/envelope/',
+    'https://app.example',
+  )
+  try {
+    const pending = expect(sender.ready()).rejects.toThrow('activation ended')
+    await vi.advanceTimersByTimeAsync(10001)
+    await pending
+    expect(worker.removeEventListener).toHaveBeenCalledOnce()
+    worker.state = 'activated'
+    expect(sender.activated()).toBe(false)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it('retirement cancels activation and cannot cache a worker returned after cancellation', async () => {
+  let resolveRegistration!: (value: {
+    active: {
+      state: string
+      postMessage: ReturnType<typeof vi.fn>
+      addEventListener: ReturnType<typeof vi.fn>
+      removeEventListener: ReturnType<typeof vi.fn>
+    }
+    installing: null
+    waiting: null
+  }) => void
+  const sender = createWorkerSender(
+    {
+      register: () =>
+        new Promise((resolve) => {
+          resolveRegistration = resolve
+        }),
+    },
+    '/worker.js',
+    'https://ingest.example/api/1/envelope/',
+    'https://app.example',
+  )
+  const stopped = expect(sender.ready()).rejects.toThrow('activation ended')
+  sender.cancelInitialization()
+  await stopped
+  resolveRegistration({
+    active: {
+      state: 'activated',
+      postMessage: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    },
+    installing: null,
+    waiting: null,
+  })
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(sender.activated()).toBe(false)
+})
+
+it('rechecks departure before retrying failed empty registration', async () => {
+  let leaving = false
+  const register = vi.fn().mockRejectedValue(new Error('startup failed'))
+  const sender = createWorkerSender(
+    { register },
+    '/worker.js',
+    'https://ingest.example/api/1/envelope/',
+    'https://app.example',
+    () => !leaving,
+  )
+  await expect(sender.ready()).rejects.toThrow('startup failed')
+  leaving = true
+  await expect(sender.ready()).rejects.toThrow('registration deferred')
+  expect(register).toHaveBeenCalledOnce()
+})

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import {
   observeNativeFetch,
+  nativeSourceRevisions,
   classifyTrial,
   certifyProvisional,
 } from '../fetch-lifecycle.mjs'
@@ -210,4 +211,11 @@ test('provisional certification uses every native dispatch time, not a late crea
   assert.equal(certifyProvisional(trial, request), true)
   trial.events.pop()
   assert.equal(certifyProvisional(trial, request), false)
+})
+
+test('native comparison remains pinned after the production transport changes', () => {
+  assert.deepEqual(nativeSourceRevisions(), [
+    'c3d1504856683fb8848d51cdee796efd00fc7949',
+    '9ed0a446d2d5692e43fb6bdb1b0de65bca08c4fc',
+  ])
 })

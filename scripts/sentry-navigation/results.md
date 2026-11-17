@@ -130,7 +130,7 @@ A clean console is insufficient delivery evidence. Certify the same request's li
 ## Amended implementation
 
 The explicit amended Agent Brief permits bounded transaction recovery. The actual client now
-uses synchronous session-storage admission before asynchronous worker startup, with a narrow
+uses synchronous session-storage admission before payload-triggered registration and dispatch, with a narrow
 configured-DSN worker sender and recovery under matching fresh server-confirmed session/effective
 workspace context. Auth mutation start/pending/finally fences, generation-fenced loader results,
 workspace changes, cross-tab retirement, BFCache and sensitive locations prevent stale reactivation.
@@ -200,3 +200,18 @@ there is no security refusal, HUMAN-ONLY decision, new issue hold or claim trans
 All diagnostic snapshots were cleaned through their owning helper, the owned development server
 was stopped, and no run-owned browser/probe/test/build process remained at the final process
 check. Changes remain staged, without commit, push, PR, deploy or issue closure.
+
+### Same-owner review correction
+
+Independent review at37c665e7 found cancelled native beforeunload could leave delivery deferred
+forever in the surviving document. The architecture/security clarification now permits eligible,
+validated, storage-capable data-free worker initialization before any event, while retaining WAL
+admission before payload-triggered registration/dispatch. An already saved activated worker can
+send safely even while departure remains marked; no cancellation is guessed and no new register
+starts after departure. Actual WebKit Stay regressed red2/2 before the correction and green2/2
+afterwards; full warm/delayed Chromium/WebKit and exact-head re-review remain required.
+
+The canonical primary task-check wrapper also completed a fresh full configured gate at37c665e7
+(receipt90b2787a), after one preserved transient skills-directory fixture race. Previous local
+cleanup failure is historical. The review correction requires another fresh gate on its final
+revision; that passing earlier gate is not reused as approval of the correction.

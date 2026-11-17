@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { TransactionEnvelope } from '../transaction'
+import type { RecoveryPorts } from '../recovery'
 import { createRecoveryTransport, TRANSACTION_STORAGE_KEY } from '../recovery'
 
 class TabStore implements Storage {
@@ -40,6 +41,7 @@ afterEach(() => {
 function fixture(
   storage: Storage | null = new TabStore(),
   scope: string | null = 'anonymous',
+  overrides: Partial<RecoveryPorts> = {},
 ) {
   const drops = vi.fn()
   const sender =
@@ -59,6 +61,7 @@ function fixture(
       send: sender,
       nativeFetch,
       leaving: () => false,
+      ...overrides,
     },
   )
   disposals.push(recovery.dispose)
@@ -387,3 +390,85 @@ it('never dispatches or falls back after the attempt counter cannot be persisted
   expect(f.sender).not.toHaveBeenCalled()
   expect(f.nativeFetch).not.toHaveBeenCalled()
 })
+
+it('waits for prestarted empty activation after Stay and resolves the original SDK send only on its response', async () => {
+  let leaving = false
+  let activated = false
+  let complete!: () => void
+  const initialized = new Promise<void>((resolve) => {
+    complete = () => {
+      activated = true
+      resolve()
+    }
+  })
+  const ready = vi.fn(() => initialized)
+  const f = fixture(new TabStore(), 'anonymous', {
+    ready,
+    leaving: () => leaving,
+    activated: () => activated,
+    initializing: () => !activated,
+  })
+  expect(ready).toHaveBeenCalledOnce()
+  expect(f.storage?.getItem(TRANSACTION_STORAGE_KEY)).toBeNull()
+  expect(f.sender).not.toHaveBeenCalled()
+  leaving = true
+  f.sender.mockResolvedValue(new Response(null, { status: 204 }))
+  const sent = Promise.resolve(f.recovery.transport.send(envelope()))
+  expect(f.storage?.getItem(TRANSACTION_STORAGE_KEY)).not.toBeNull()
+  expect(f.sender).not.toHaveBeenCalled()
+  complete()
+  await expect(sent).resolves.toMatchObject({ statusCode: 204 })
+  expect(f.sender).toHaveBeenCalledOnce()
+})
+
+it('does not initialize empty infrastructure when a real bounded storage write is refused', () => {
+  const storage = new TabStore()
+  vi.spyOn(storage, 'setItem').mockImplementation(() => {
+    throw new Error('quota')
+  })
+  const ready = vi.fn().mockResolvedValue(undefined)
+  const f = fixture(storage, 'anonymous', { ready })
+  expect(ready).not.toHaveBeenCalled()
+  expect(f.recovery.counts.initialization_unavailable).toBe(1)
+})
+
+it('retirement during prestarted activation rejects pending sends without a late dispatch', async () => {
+  let complete!: () => void
+  const initialized = new Promise<void>((resolve) => {
+    complete = resolve
+  })
+  const ready = vi.fn(() => initialized)
+  const cancelInitialization = vi.fn()
+  const f = fixture(new TabStore(), 'anonymous', {
+    ready,
+    cancelInitialization,
+  })
+  const pending = expect(
+    Promise.resolve(f.recovery.transport.send(envelope())),
+  ).rejects.toMatchObject({ name: 'AbortError' })
+  f.recovery.retire()
+  await pending
+  complete()
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(cancelInitialization).toHaveBeenCalledOnce()
+  expect(f.sender).not.toHaveBeenCalled()
+  expect(f.storage?.getItem(TRANSACTION_STORAGE_KEY)).toBeNull()
+})
+
+it.each([
+  { scope: null, eligible: true, leaving: false },
+  { scope: 'anonymous', eligible: false, leaving: false },
+  { scope: 'anonymous', eligible: true, leaving: true },
+])(
+  'does not preinitialize outside an eligible current non-leaving context: %j',
+  (value) => {
+    const ready = vi.fn().mockResolvedValue(undefined)
+    fixture(new TabStore(), value.scope, {
+      ready,
+      eligible: () => value.eligible,
+      leaving: () => value.leaving,
+    })
+    expect(ready).not.toHaveBeenCalled()
+  },
+)
