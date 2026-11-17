@@ -125,7 +125,7 @@ export type ToleratedPageError = {
  * a number, the page's clock objects. Caught with its stack on the 01-S1d copy
  * dialog on Chromium, from a keyboard breadcrumb (issue #402); the same sentence was
  * blamed on `@radix-ui/react-password-toggle-field` on WebKit
- * (`e2e/journeys.spec.ts`), where the sign-in form is typed into. Without the fake
+ * (`e2e/browser/journeys.e2e.ts`), where the sign-in form is typed into. Without the fake
  * clock `window.setTimeout` is native, Sentry takes it, and there is no second clock
  * — so no build and no browser raises this. It needs a `VITE_SENTRY_DSN` in the
  * local env to happen at all, which is why CI, which sets none, has never seen it.

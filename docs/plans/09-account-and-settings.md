@@ -469,8 +469,8 @@ names only what is specific to `/passkeys`.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts
 ```
 
@@ -639,7 +639,7 @@ Rows unblocked: none. `ACC-02` has no dependants in `gap-rows.json`.
 - `e2e/account-and-settings.visual.spec.ts` — append. This stage's own `test.describe` block, named
   for the stage id and title.
 - `e2e/__screenshots__/account-and-settings.visual.spec.ts/` — append. Its own frames in the shared
-  baseline directory; `playwright.config.ts`'s `snapshotPathTemplate` keys every file by test name,
+  baseline directory; `e2e.browser.config.ts`'s `snapshotPathTemplate` keys every file by test name,
   so two stages appending to one spec cannot overwrite each other's pixels.
 
 `src/server/auth/index.ts` is **not** claimed — see **Server** below for why nothing there needs to
@@ -817,8 +817,8 @@ declared with the selector that reaches it and the way that selector was verifie
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts -g '09-S2'
 ```
 
@@ -1288,8 +1288,8 @@ stages share.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts -g '09-S3'
 ```
 
@@ -1960,8 +1960,8 @@ fixes the frame set for both of the routes below.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts -g '09-S6'
 ```
 
@@ -2297,8 +2297,8 @@ baseline `/notifications`; both are answered below rather than inherited silentl
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts -g '09-S7'
 ```
 
@@ -2836,8 +2836,8 @@ re-record is a decision this stage argues in its diff, never a reflex.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)   # --start only when the pool is empty
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
   e2e/account-and-settings.visual.spec.ts -g '09-S8'
 ```
 
@@ -3032,7 +3032,7 @@ cites — `00-S1`, `00-S2`, `00-S3`, `00-S5`, `01-S1`, `01-S2`, `01-S3`, `01-S5`
 revision: `02-S12` and `06-S7` are the corrected destinations in `09-S8`'s disposition table, and
 `00-S1` was cited all along and simply missing from this list. The second
 count is the one that matters for an area plan: each of the eight stages writes its
-`pnpm exec playwright test` line out in full under **Verification**, because `docs/SPEC.md` §3 freezes
+`pnpm e2e:browser` line out in full under **Verification**, because `docs/SPEC.md` §3 freezes
 `package.json` and there is no `test:e2e` script to hide behind.
 
 **No same-wave exclusive collision involves this plan.** That is the result the plan is written to
@@ -3064,7 +3064,7 @@ every revision rather than trusted from the round it was first taken in.
 across the other plans, always as `append`. That is the documented cooperative pattern and the script
 does not count it, correctly: each stage adds its own `describe` block and none rewrites another's.
 The same is true of `e2e/account-and-settings.visual.spec.ts`, which `09-S1` mints and every later
-stage in this plan appends to — `playwright.config.ts`'s `snapshotPathTemplate` keys every baseline
+stage in this plan appends to — `e2e.browser.config.ts`'s `snapshotPathTemplate` keys every baseline
 by test name, so two stages sharing one spec file cannot overwrite each other's pixels.
 
 `src/lib/i18n/messages/en/settings.ts` is the third path of that shape and the newest, so it is worth

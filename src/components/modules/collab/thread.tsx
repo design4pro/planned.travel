@@ -41,7 +41,7 @@ import { formatNumber, formatWeekday } from '#/lib/format'
 import { useLocale, useTranslate } from '#/lib/i18n'
 
 import type { Locale, MessageKey, Translate } from '#/lib/i18n'
-import { dayKeyIn, todayKeyIn } from '#/lib/time'
+import { dayKeyIn } from '#/lib/time'
 import {
   deleteMessageFn,
   editMessageFn,
@@ -169,6 +169,8 @@ export interface ThreadProps {
   readonly canWrite: boolean
   /** IANA zone every timestamp in the transcript is read in. */
   readonly timeZone: string
+  /** Destination-day snapshot from the loader, shared by SSR and hydration. */
+  readonly todayKey: string
   readonly onDirtyChange?: (dirty: boolean) => void
   readonly turnedOff?: boolean
 }
@@ -181,6 +183,7 @@ export function Thread({
   canModerate,
   canWrite,
   timeZone,
+  todayKey,
   onDirtyChange,
   turnedOff = false,
 }: ThreadProps) {
@@ -363,7 +366,6 @@ export function Thread({
     onSuccess: () => setConfirm(null),
   })
 
-  const todayKey = useMemo(() => todayKeyIn(timeZone), [timeZone])
   const grouped = useMemo(
     () => groupThread(messages, timeZone),
     [messages, timeZone],

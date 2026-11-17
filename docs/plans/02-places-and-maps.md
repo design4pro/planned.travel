@@ -312,7 +312,7 @@ Five properties of that path, each the reason it is chosen rather than a conveni
   because there is no ratio here to widen.
 - **The frames land in the same directory, under the same names, as `capture.mjs`'s.** The stage's
   evidence says which tool took which set; the critic sees one coherent set either way.
-- **The clock and the fonts are already pinned, and better than in capture.** `playwright.config.ts`
+- **The clock and the fonts are already pinned, and better than in capture.** `e2e.browser.config.ts`
   sends `x-pt-server-today: 2026-08-20` on both browser projects, and `visit(page, route, theme)`
   calls `unblockCrossOriginFonts(page)` first (`e2e/helpers/shoot.ts:2036`), so these frames render in
   the real faces rather than in the metric fallback.
@@ -841,8 +841,8 @@ Browser evidence, per `docs/plans/12-verification-protocol.md`:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/settings/appearance" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S2" \
@@ -1093,8 +1093,8 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S3" \
@@ -1475,8 +1475,8 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S4" \
@@ -1683,7 +1683,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S5" \
@@ -1930,7 +1930,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S6" \
@@ -2198,7 +2198,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S7" \
@@ -2431,7 +2431,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S8" \
@@ -2742,7 +2742,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S9" \
@@ -3011,7 +3011,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/settings/places" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S10" \
@@ -3269,7 +3269,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S11" \
@@ -3542,7 +3542,7 @@ Browser evidence:
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/places-and-maps.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/places-and-maps.visual.spec.ts
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/<resolved-id>/plan" \
   --out ".claude/ultrabuild/shots/<slug>/round-<n>/02-S12" \

@@ -52,6 +52,7 @@ const data: CollabScreenData = {
   people: [],
   viewerUserId: 'u',
   timeZone: 'UTC',
+  todayKey: '2026-06-15',
 }
 function setup(initial = data) {
   const props = {

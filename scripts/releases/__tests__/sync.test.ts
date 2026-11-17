@@ -17,6 +17,13 @@ afterEach(() => {
 })
 
 it('previews a real immutable Git source by default without invoking a write transport', async () => {
+  // A hook's repository identity must never redirect fixture Git into its caller.
+  for (const name of execFileSync('git', ['rev-parse', '--local-env-vars'], {
+    encoding: 'utf8',
+  })
+    .trim()
+    .split('\n'))
+    vi.stubEnv(name, undefined)
   directory = mkdtempSync(join(tmpdir(), 'release-git-'))
   const git = (...args: string[]) =>
     execFileSync('git', args, {

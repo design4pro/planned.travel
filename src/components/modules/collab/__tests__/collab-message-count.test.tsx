@@ -65,6 +65,7 @@ const base: CollabScreenData = {
   people: [],
   viewerUserId: 'u',
   timeZone: 'UTC',
+  todayKey: '2026-06-15',
 }
 
 function screenOf(data: CollabScreenData) {

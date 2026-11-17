@@ -66,7 +66,8 @@ comparative evidence.
 in `e2e/` only if its failure mode cannot be produced in a lower layer. What survives is routing,
 sessions, hydration, WebGL, real hit-testing, sequential focus and the request pipeline. Fifty
 declarations became fourteen in `journeys.spec.ts`, plus three in `trips-core.spec.ts` and two
-browser-free HTTP claims in `csrf.spec.ts`.
+browser-free HTTP claims originally in `csrf.spec.ts` (now split into
+`e2e/native/csrf.e2e.ts`; the migration boundary is `docs/testing/e2e.md`).
 
 **4. The console is the net the pixels used to be.** Every journey attaches `watchConsole()` before
 it navigates and fails on any `pageerror`, any `console.error` and any `console.warn` outside two
@@ -175,14 +176,14 @@ The console being the whole net has a consequence nobody planned: TanStack Start
 dev-server process that server functions are not behind `createCsrfMiddleware`, and with the
 baselines gone that warning landed in whichever journey ran first and failed it. The gap was real -
 nothing in the repository registered one - and it is fixed in the same branch (`src/start.ts`,
-`e2e/csrf.spec.ts`). A suite that grades what the engine says finds things a suite that compares
+`e2e/native/csrf.e2e.ts`). A suite that grades what the engine says finds things a suite that compares
 pixels does not.
 
 The same relay then bit the fix's own test: a same-origin probe to an invented server-function id
 reaches dispatch, the Worker throws, and the throw lands in whichever journey was open. That half of
 the claim is asserted by `trips-core.spec.ts` instead, which writes through a server function on our
 own origin and reads it back from a second page - and the reasoning is written into
-`e2e/csrf.spec.ts` so nobody adds the probe back.
+`e2e/native/csrf.e2e.ts` so nobody adds the probe back.
 
 ### Documentation
 

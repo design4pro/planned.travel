@@ -6,29 +6,41 @@ import { fileURLToPath } from 'node:url'
 /** The marker the workflow uses to find and update the one report comment on a pull request. */
 export const MARKER = '<!-- ci-test-report -->'
 
-/** The numbers a shard keeps from its Playwright JSON report; null when the report is unusable. */
+/** The numbers a shard keeps from its e2e-inc JSON report; null when the report is unusable. */
 export function shardStats(report) {
-  const s = report?.stats
+  const s = report?.run?.summary
   if (
     !s ||
-    ['expected', 'unexpected', 'flaky', 'skipped'].some(
-      (k) => typeof s[k] !== 'number',
-    )
-  ) {
+    [
+      'passed',
+      'failed',
+      'flaky',
+      'skipped',
+      'interrupted',
+      'selected',
+      'executed',
+    ].some((key) => !Number.isInteger(s[key]) || s[key] < 0)
+  )
     return null
-  }
+  if (s.interrupted > 0 || s.executed + s.skipped < s.selected) return null
   return {
-    passed: s.expected,
-    failed: s.unexpected,
+    passed: s.passed,
+    failed: s.failed,
     flaky: s.flaky,
     skipped: s.skipped,
   }
 }
 
-/** Sum the shards. Null when no shard reported, so "no data" never reads as "0 failed". */
-export function sumShards(shards) {
+/** Sum the shards. Null when any shard did not report, so "no data" never reads as "0 failed". */
+export function sumShards(shards, expectedShards = shards.length) {
   const usable = shards.filter(Boolean)
-  if (usable.length === 0) return null
+  if (
+    !Number.isInteger(expectedShards) ||
+    expectedShards < 1 ||
+    shards.length !== expectedShards ||
+    usable.length !== expectedShards
+  )
+    return null
   return usable.reduce(
     (a, s) => ({
       passed: a.passed + s.passed,
@@ -97,15 +109,16 @@ if (
 ) {
   const [command, arg] = process.argv.slice(2)
   if (command === 'stats') {
-    // Shard side: test-results/results.json -> the totals file the report job downloads.
+    // Both engine reports are required; a missing lane never means zero failures.
     let stats = null
     try {
-      stats = shardStats(
-        JSON.parse(readFileSync('test-results/results.json', 'utf8')),
+      const reports = ['.e2e/report.json', '.e2e/browser/report.json'].map(
+        (path) => shardStats(JSON.parse(readFileSync(path, 'utf8'))),
       )
+      if (reports.every(Boolean)) stats = sumShards(reports)
     } catch {
       console.error(
-        '::warning::Playwright JSON is unavailable; this shard reports no totals.',
+        '::warning::An e2e-inc report is unavailable; this shard reports no totals.',
       )
     }
     writeFileSync('e2e-stats.json', JSON.stringify(stats))
@@ -118,7 +131,7 @@ if (
         sha: SHA,
         runUrl: RUN_URL,
         results: { verify: VERIFY, test: TEST, e2e: E2E },
-        e2e: sumShards(shards),
+        e2e: sumShards(shards, Number(process.env.EXPECTED_SHARDS)),
       }),
     )
   } else {

@@ -33,7 +33,7 @@ describe('scope', () => {
 
   it.each([
     'src/routes/index.tsx',
-    'e2e/journeys.spec.ts',
+    'e2e/browser/journeys.e2e.ts',
     'public/robots.txt',
     'package.json',
     'pnpm-lock.yaml',

@@ -22,6 +22,7 @@ import {
   useState,
 } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import { usePasteQueueScroll } from './use-paste-queue-scroll'
 import {
   CloudUpload,
   Download,
@@ -176,8 +177,6 @@ export function FileLibrary({
   const [previewing, setPreviewing] = useState<FileData | null>(null)
   const [editing, setEditing] = useState<FileData | null>(null)
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
-  /** Bumped by each paste that brought files; the queue is scrolled to once it has rendered. */
-  const [scrollRequest, setScrollRequest] = useState(0)
   const hintMounted = useHasMounted()
   const t = useTranslate()
   const locale = useLocale()
@@ -185,7 +184,7 @@ export function FileLibrary({
 
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
-  const queueListRef = useRef<HTMLUListElement>(null)
+  const { queueListRef, revealPaste } = usePasteQueueScroll(queue)
   /** Pasted screenshots named per second, for the screen's whole life: names stay unique across pastes. */
   const pastedPerSecond = useRef(new Map<string, number>())
   /** The controller for the upload actually in flight, so Cancel can abort it. */
@@ -242,9 +241,9 @@ export function FileLibrary({
   }, [canWrite, pickRequestedAt])
 
   const add = useCallback(
-    (incoming: ReadonlyArray<File>): void => {
+    (incoming: ReadonlyArray<File>): ReadonlyArray<string> => {
       if (!canWrite || incoming.length === 0) {
-        return
+        return []
       }
       const { accepted, rejected } = screenFiles(incoming, {
         usedBytes: workspaceBytes,
@@ -252,8 +251,10 @@ export function FileLibrary({
         pendingBytes: pendingBytes(queue),
       })
 
+      const ids: string[] = []
       for (const entry of rejected) {
         taskSequence += 1
+        ids.push(`task-${taskSequence}`)
         dispatch({
           type: 'reject',
           id: `task-${taskSequence}`,
@@ -270,6 +271,7 @@ export function FileLibrary({
         return { id, filename: file.name, sizeBytes: file.size }
       })
       dispatch({ type: 'enqueue', tasks })
+      return [...ids, ...tasks.map((task) => task.id)]
     },
     [canWrite, workspaceBytes, limitBytes, queue],
   )
@@ -299,25 +301,13 @@ export function FileLibrary({
         return
       }
       event.preventDefault()
-      add(nameForPaste(pasted, new Date(), pastedPerSecond.current))
-      setScrollRequest((count) => count + 1)
+      revealPaste(
+        add(nameForPaste(pasted, new Date(), pastedPerSecond.current)),
+      )
     }
     document.addEventListener('paste', onPaste)
     return () => document.removeEventListener('paste', onPaste)
-  }, [canWrite, add, editing, confirm, previewing])
-
-  // After the render that shows the pasted rows: the list only exists once the queue holds a task,
-  // so the handler itself has nothing to scroll to on a first paste. On a long library this is what
-  // lets the traveller see the upload begin instead of pasting a second time.
-  useEffect(() => {
-    if (scrollRequest > 0) {
-      // Keep the queue clear of sticky chrome and progress rows that disappear on completion.
-      queueListRef.current?.scrollIntoView({
-        behavior: 'instant',
-        block: 'center',
-      })
-    }
-  }, [scrollRequest])
+  }, [canWrite, add, editing, confirm, previewing, revealPaste])
 
   /**
    * The pump. One upload at a time, restarted whenever the queue changes, guarded
@@ -704,7 +694,7 @@ export function FileLibrary({
               )}
               <ul
                 ref={queueListRef}
-                className="flex flex-col gap-2"
+                className="flex scroll-mt-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+2.75rem+var(--subnav-h)+1px+1rem)] flex-col gap-2 lg:scroll-mt-[calc(var(--safe-top)+var(--impersonation-h)+var(--nav-h)+1px+var(--subnav-h)+1px+1rem)]"
                 data-part="file-queue"
               >
                 {queue.tasks.map((task) => (

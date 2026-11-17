@@ -571,7 +571,7 @@ live count past the limit); and `getPublicationRecordForRelease` returning no sn
   frames, the trigger, and this plan's `e2e/community-gallery.visual.spec.ts` blocks for the
   dialog all land with `13-S2`, which owns the mount — stated there under its Verification.
 - A repo-gate Playwright pass still runs for regression cover:
-  `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test` must stay green — this
+  `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser` must stay green — this
   stage adds server code and a component nothing mounts, so any red here is a break this stage
   caused elsewhere.
 - Console silent in the harness in both themes; a warning is this stage's bug.
@@ -811,7 +811,7 @@ schema.
   because a route file is added, and the regenerated tree is inspected in the diff.
 - i18n: `curation.*` and the two notification pairs land in all 23 catalogues in this stage; the
   parity suite passes with zero new failures.
-- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test -g '13-S2'`.
+- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser -g '13-S2'`.
   Browser evidence at **360px and 2560px**, both themes: the queue with seeded submissions, the
   queue's empty state (seed cleared through the route's own test hooks), the review panel, the
   decline dialog with its note validation state, and the locked state under a non-curator
@@ -1022,7 +1022,7 @@ ceiling.
 - Gate: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`; `pnpm generate-routes` runs
   because two route files are added.
 - i18n: every `gallery.*` marketing key lands in all 23 catalogues in this stage; parity passes.
-- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test -g '13-S3'`,
+- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser -g '13-S3'`,
   in a **fresh context without the cached session** — the strongest available assertion that the
   pages need no account. Seeded state: two released publications (one with coordinates and
   dates, one with neither) plus the empty state exercised against a cleared index.
@@ -1314,7 +1314,7 @@ a re-delivery after success no-ops.
 
 - Gate: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 - i18n: every new key in all 23 catalogues in this stage; parity passes with zero new failures.
-- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test -g '13-S4'`.
+- Playwright: `PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser -g '13-S4'`.
   Two contexts: the fresh anonymous context (thread readable, composer replaced by sign-in,
   save affordance in its signed-out form) and the cached session (posting a suggestion and
   watching it appear; the delete confirm; save → saved → materialise pending → "Open your

@@ -1892,7 +1892,7 @@ export const patagoniaTrip: SeedTrip = {
  * The planner opens on one of three frames, and the fixture holds a trip for each: the flagship spans
  * a country, Patagonia has nothing mapped, and this one is a single coordinate — the rectangle of zero
  * area that `expandBounds()` widens to a neighbourhood instead of letting `fitBounds` snap to a
- * doorway. `e2e/places-and-maps.spec.ts` opens it by its title. A second place would make it a small
+ * doorway. `e2e/browser/places-and-maps.e2e.ts` opens it by its title. A second place would make it a small
  * copy of the flagship and leave the single-place frame with nothing to be asserted against.
  */
 export const portoTrip: SeedTrip = {

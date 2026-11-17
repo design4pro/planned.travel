@@ -122,7 +122,7 @@ Specifically:
 | Drag & drop       | `@dnd-kit`                                                                                                                                                                                                                                                                   |
 | Toasts            | `sonner`                                                                                                                                                                                                                                                                     |
 | Observability     | Structured logs to Workers Observability (`src/server/observability`) + Sentry (`@sentry/cloudflare` in the Worker, `@sentry/react` in the browser): errors, logs, tracing, metrics and masked session replay. One project, environments told apart by the `environment` tag |
-| Tests             | Vitest (unit) + Playwright (critical journeys, no screenshots — ADR 0016)                                                                                                                                                                                                    |
+| Tests             | Vitest (unit) + e2e-inc (portable and public custom-browser engines; Playwright driver/assertions only, no screenshot comparisons — ADR 0016; docs/testing/e2e.md)                                                                                                           |
 
 **Dependency freeze.** The dependency set is complete. Do **not** run `pnpm add`, and do not
 edit the `dependencies` or `devDependencies` blocks of `package.json`, or `pnpm-lock.yaml`. If
@@ -135,6 +135,15 @@ this one renderer because the native PDF viewer consumes Escape outside the appl
 The application renders PDF pages and selectable text itself; its client-only renderer, worker,
 fonts, CMaps and decoding assets load locally on demand, never from a CDN. No other package
 addition or upgrade is authorized by this exception; the dependency freeze otherwise holds.
+
+**Named E2E maintenance exception (2026-11-16).** The owner requested migration to
+`e2e-inc/e2e`. This maintenance PR commits the existing development-only scaffold:
+`e2e@0.23.1`, `@e2e-dev/web@0.16.0`, `ai`, `@ai-sdk/openai` and
+`@e2e-dev/mobile`. The runner and web adapter own native execution; Playwright
+remains the browser driver and assertion library. The PR records the existing
+resolved versions in the frozen lockfile and activates no mobile target.
+Additional ACP, reporter, decision or hosted-browser packages still need separate
+maintenance review. See `docs/testing/e2e.md` for the public custom-engine boundary.
 
 **What the freeze does not cover.** The `scripts` block. The freeze exists so the deployed
 bundle's contents stay a decision rather than an accident; a task runner that shells out to a
