@@ -119,16 +119,11 @@ it('bounds activation and cleans its listener without accepting a late worker', 
 })
 
 it('retirement cancels activation and cannot cache a worker returned after cancellation', async () => {
-  let resolveRegistration!: (value: {
-    active: {
-      state: string
-      postMessage: ReturnType<typeof vi.fn>
-      addEventListener: ReturnType<typeof vi.fn>
-      removeEventListener: ReturnType<typeof vi.fn>
-    }
-    installing: null
-    waiting: null
-  }) => void
+  let resolveRegistration!: (
+    value: Awaited<
+      ReturnType<Parameters<typeof createWorkerSender>[0]['register']>
+    >,
+  ) => void
   const sender = createWorkerSender(
     {
       register: () =>
