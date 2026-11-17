@@ -10,18 +10,14 @@
 # looking at - planner, atlas, costs, journal, both consoles - sits behind a
 # redirect nobody can satisfy. This script is the one command that fixes that.
 #
-# It owns local provisioning for every profile. `scripts/cloud/session-start.sh`
-# is a dispatcher that picks one and delegates here (in a cezar run it only
-# installs missing dependencies); `.claude/settings.json` runs that dispatcher
-# from the SessionStart hook, on startup and on resume.
-#
-# Every step is skipped when its result is already on disk, because the hook
-# runs again on every resume and a resume must not cost two minutes.
+# It owns local provisioning for every profile. Cezar and Codex invoke it
+# explicitly; no installed session hook provisions the project. Repeated setup
+# can use --if-needed to reuse fixtures already present.
 #
 #   worktree  a person or an agent working locally. Port 3001-3009, secrets
 #             copied from the main checkout when it has them, basemap cloned
 #             from it, demo workspace seeded.
-#   cloud     a Claude Code session VM. Port 3000, throwaway secrets for a
+#   cloud     an ephemeral remote VM. Port 3000, throwaway secrets for a
 #             database that lives and dies with the VM, basemap pulled from R2.
 #             Does not seed; docs/CLOUD.md §2 describes this profile.
 #
@@ -121,7 +117,7 @@ fi
 #
 # 3000 is the developer's port and `pnpm dev` hardcodes it, so a second worktree
 # on the same machine cannot have it. 3030-3040 is off limits in the other
-# direction: playwright.config.ts refuses to run against anything outside that
+# direction: e2e.browser.config.ts refuses to run against anything outside that
 # range, precisely so an automated round cannot photograph another branch's app,
 # and 3010-3020 belongs to money-tracker on the same host. That leaves 3001-3009
 # for parallel worktrees.

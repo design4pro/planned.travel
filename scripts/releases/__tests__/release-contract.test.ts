@@ -12,8 +12,8 @@ const policyPaths = [
   'docs/CATALOG.md',
   'docs/agents/CODING_STANDARDS.md',
   'docs/adr/0002-tenant-scoped-repository-boundary.md',
-  '.claude/agents/persona-workspace-owner.md',
-  '.claude/skills/i18n-messages/SKILL.md',
+  '.agents/reviewers/persona-workspace-owner.md',
+  '.agents/policies/i18n.md',
   ...[
     'om-fix',
     'om-code-review',
@@ -21,7 +21,7 @@ const policyPaths = [
     'om-auto-create-pr-loop',
     'om-auto-continue-pr',
     'om-auto-continue-pr-loop',
-  ].map((skill) => `.ai/skills/${skill}/SKILL.md`),
+  ].map((skill) => `.agents/policies/${skill}.md`),
 ]
 
 describe('bounded release-content policy', () => {

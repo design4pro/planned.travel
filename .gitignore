@@ -37,7 +37,7 @@ playwright/.cache
 __unconfig*
 todos.json
 
-# One cached demo session per e2e run, written by e2e/auth.setup.ts.
+# One cached demo session per e2e run, written by e2e/browser/auth.setup.e2e.ts.
 e2e/.auth
 
 # Playwright MCP scratch output (page snapshots, console dumps).
@@ -45,9 +45,9 @@ e2e/.auth
 
 # Local MCP server config. Developer-specific, never shared.
 .mcp.json
-# Claude Code per-developer overrides (which of those MCP servers to enable, extra
-# permission rules). Shared settings and hooks live in .claude/settings.json.
-.claude/settings.local.json
+# Retired agent installations and their machine-local state.
+.claude/
+.github/skills/
 
 # Scratch a browser agent drops in the working directory. The blind pairs belong
 # outside the repository entirely (the session scratchpad, or .sandcastle-shots/
@@ -91,9 +91,9 @@ preview-server.log
 .impeccable/live/server.json
 .impeccable/live/inject-journal.json
 .impeccable/live/sessions/
-# The impeccable hook's own state (`.claude/skills/impeccable/scripts/hook-lib.mjs`,
-# `HOOK_LOCAL_IGNORE_PATTERNS`). It is rewritten on every UI edit, and a cezar autosave commit put
+# Local Impeccable hook state. A cezar autosave commit put
 # it on the branches of #1004, #1076 and #1185, where it had to be deleted again by hand.
+.agents/skills/impeccable/scripts/bin/
 .impeccable/hook.cache.json
 .impeccable/hook.pending.json
 
@@ -129,3 +129,17 @@ airports.sql
 # Local release receipts; Actions stores verified copies as artifacts.
 release-smoke.json
 previous-release.json
+node_modules/
+.e2e/results/
+.e2e/cache/
+.e2e/sessions/
+.e2e/report.json
+.e2e/ai-trace.json
+.e2e/timings.json
+.e2e/junit.xml
+.e2e/summary.md
+.e2e/logs/
+.e2e/videos/
+
+# All e2e-inc configurations contain private sessions and disposable evidence.
+.e2e/

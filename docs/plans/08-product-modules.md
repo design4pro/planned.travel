@@ -285,7 +285,7 @@ planned.travel's vocabulary against the eight `vacay_*` tables that already exis
 - `e2e/product-modules.visual.spec.ts` — new. This plan's spec file, per
   `12-verification-protocol.md` §4. Every later stage appends a `test.describe` to it.
 - `e2e/__screenshots__/product-modules.visual.spec.ts/` — new. Its baseline directory, which
-  `playwright.config.ts`'s `snapshotPathTemplate` keeps disjoint from every existing one.
+  `e2e.browser.config.ts`'s `snapshotPathTemplate` keeps disjoint from every existing one.
 - `e2e/__screenshots__/visual.spec.ts/vacay-light-chromium.png` — edit.
 - `e2e/__screenshots__/visual.spec.ts/vacay-dark-chromium.png` — edit.
 - `e2e/__screenshots__/visual.spec.ts/vacay-light-mobile-safari.png` — edit.
@@ -490,9 +490,9 @@ Functions covered: `ensurePlan`, `updatePlan`, `ensureYear`, `setEntitlement`, `
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g vacay --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g vacay --update-snapshots
   ```
 
   The spec file this stage creates declares `/vacay?year=2026` in its own route table — the same
@@ -798,9 +798,9 @@ Functions covered: `listVisitedRegions`, `markRegionVisited`, `unmarkRegionVisit
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g atlas --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g atlas --update-snapshots
   ```
 
   The spec's route table declares `/atlas` with `map: true`, which is not optional: `settleMap()`
@@ -1136,9 +1136,9 @@ Functions covered: `getJourney`, `updateJourney`, `publishJourney`, `unpublishJo
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g journey --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g journey --update-snapshots
   ```
 
   The spec reaches `/journey/$journeyId` by clicking the first card on `/journey` rather than by
@@ -1441,8 +1441,8 @@ Functions covered: `getCollection`, `listCollectionPlaces`, `listLabels`, `updat
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
   ```
 
   The spec declares `/collections` and reaches `/collections/$collectionId` by clicking the first
@@ -1779,9 +1779,9 @@ Functions covered: `setEntry`, `setEntryRange`, `removeEntry`, `listVacayEntries
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g vacay --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g vacay --update-snapshots
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/vacay?year=2026" \
@@ -2048,9 +2048,9 @@ than that workspace's figures, exercised through the same `createScope()` fixtur
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g atlas --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g atlas --update-snapshots
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/atlas" \
@@ -2421,9 +2421,9 @@ Functions covered: `createEntry`, `updateEntry`, `deleteEntry`, `listJourneyEntr
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g journey --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g journey --update-snapshots
   ```
 
   The spec's route table declares `/journey/$journeyId` with `map: true` once the entry map ships —
@@ -2736,9 +2736,9 @@ Functions covered: `listPlanMembers`, `invitePlanMember`, `setPlanMemberStatus`,
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g vacay --update-snapshots
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g vacay --update-snapshots
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/vacay?year=2026" \
@@ -3082,8 +3082,8 @@ Functions covered: `listCollectionPlaces`, `listCollectionPlacesWithLabels`,
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/collections" \
@@ -3371,9 +3371,9 @@ refactor.
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/product-modules.visual.spec.ts
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/visual.spec.ts -g "atlas|journey"
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/product-modules.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/visual.spec.ts -g "atlas|journey"
   ```
 
   The last command has **no `--update-snapshots`**: it is the evidence that this stage changed no

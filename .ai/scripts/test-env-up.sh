@@ -15,7 +15,7 @@ set -eu
 # Provisioning (deps, .dev.vars, local D1 + airports, basemap) is owned by
 # scripts/worktree/bootstrap.sh and is a precondition here, never repeated.
 BOOTSTRAP="scripts/worktree/bootstrap.sh"
-# 3030-3040 is the only range playwright.config.ts accepts outside CI, so an
+# 3030-3040 is the only range e2e.config.ts accepts outside CI, so an
 # automated run can never photograph another checkout's app.
 PORT_MIN=3030
 PORT_MAX=3040
@@ -171,8 +171,8 @@ cat > "$DESCRIPTOR" <<JSON
   "credentials": [ { "role": "demo", "username": "$DEMO_EMAIL", "passwordEnv": "TEST_DEMO_PASSWORD" } ],
   "credentialsFile": "$CREDS_FILE",
   "browser": { "provider": "playwright", "installed": true, "command": "pnpm exec playwright", "version": "$(pnpm exec playwright --version 2>/dev/null | sed 's/^Version //')", "descriptor": ".ai/browsers/playwright.md", "notes": "" },
-  "playwright": { "runner": "playwright", "installed": true, "config": "playwright.config.ts", "browsers": ["chromium"] },
-  "testRunner": { "name": "playwright", "config": "playwright.config.ts" },
+  "playwright": { "runner": "e2e-inc", "installed": true, "config": "e2e.browser.config.ts", "browsers": ["chromium"] },
+  "testRunner": { "name": "e2e-inc", "config": "e2e.config.ts" },
   "platform": "$PLATFORM",
   "startedAt": "$(date -u +%FT%TZ)",
   "notes": "Local D1/KV/R2 via Miniflare (.wrangler/). Demo workspace seeded by scripts/seed/seed.mjs; sign in with the demo credential reference. Run the committed suite with: PLAYWRIGHT_BASE_URL=$BASE_URL pnpm e2e. Teardown: sh .ai/scripts/test-env-down.sh"

@@ -10,7 +10,9 @@ basemap.
 pnpm worktree:bootstrap   # fresh checkout or worktree: everything below, once
 pnpm dev                  # http://localhost:3000
 pnpm test                 # unit tests (Vitest)
-pnpm e2e                  # critical journeys (Playwright); no screenshots
+pnpm e2e:native           # portable e2e-inc scenarios; no model required
+pnpm e2e                  # both e2e-inc configurations, including browser regressions
+pnpm e2e:all              # both e2e-inc configurations, sequentially
 ```
 
 Four fixtures are gitignored and per-checkout: `node_modules`, `.dev.vars`, a
@@ -25,9 +27,12 @@ cloud sessions and CI the same steps are automated (see below).
 Doing it by hand instead: copy `.dev.vars.example` to `.dev.vars` and fill it
 in, then `pnpm db:migrate:local`, load the basemap, and seed.
 
+The runner split, migration inventory, Codex MCP workflow and optional integrations
+are documented in [End-to-end testing](docs/testing/e2e.md).
+
 ## Branch model
 
-- Feature branches (`claude/*`, `feat/*`, …) → pull request to **`develop`**.
+- Feature branches (`codex/*`, `feat/*`, …) → pull request to **`develop`**.
 - Merging to `develop` auto-deploys **staging**: https://staging.planned.travel
   (`deploy-staging.yml`).
 - Promotion is a pull request `develop` → **`main`**, opened automatically after
@@ -42,14 +47,13 @@ in, then `pnpm db:migrate:local`, load the basemap, and seed.
 
 ## Working with agents
 
-- Open an issue: the Cezar Reconciler triages it, writes an Agent Brief and
-  implements it on a reviewed pull request against `develop`. To start one now, run `issue-autofix`
-  on it from the cockpit; see `docs/agents/cezar.md`.
-- Or hand a task to a cloud session: `claude --cloud "Implement issue #123"`
-  (or from claude.ai/code). The committed SessionStart hook
-  (`scripts/cloud/session-start.sh`) prepares the project automatically.
-  `docs/CLOUD.md` is the authoritative guide: environment setup, network
-  allowlist, what a cloud session can and cannot do.
+- Use the official Cezar CLI with the Codex runner, or work directly in Codex. Read
+  `AGENTS.md`; project skills live only in `.agents/skills/` and project policies in `.agents/policies/`.
+- Start a retained workflow explicitly, such as `triage` or `implement-ticket`, following
+  `docs/agents/cezar.md`. Existing host schedules require a separate cutover; opening an issue
+  does not by itself establish that an allocator is running.
+- Run `pnpm worktree:bootstrap` in a fresh checkout. Remote environments use the explicit
+  setup in `docs/CLOUD.md`; there is no installed SessionStart hook.
 
 ## Documentation
 

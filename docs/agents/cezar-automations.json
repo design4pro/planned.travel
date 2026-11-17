@@ -1,7 +1,7 @@
 [
   {
     "name": "Autopilot new pull requests",
-    "description": "A PR opened as `rafalwolak` gets om-pr-autopilot, which diagnoses it and runs the right chain through to the squash-merge into develop (ADR 0031). There is one GitHub identity: every agent PR is authored by `rafalwolak` too, so the author filter only keeps dependabot and outside contributors out. Agent PRs are told apart by their pipeline labels instead: om-open-pr opens one carrying `review` inside its own chain (implement-ticket, issue-autofix), so `excludeLabels` stands down on `review` and every later pipeline label rather than race that chain. The standing develop-to-main promotion PR is opened with the owner's token too, and no filter here reads the base branch, so .github/workflows/promote-develop.yml opens it carrying `do-not-merge`, which is excluded: an unattended run never touches the release (ADR 0032).",
+    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
     "events": [
       "pull_request.opened"
     ],
@@ -31,11 +31,12 @@
       "worktree": true,
       "variants": 1,
       "generateFollowups": false
-    }
+    },
+    "enabled": false
   },
   {
     "name": "Merge reviewed agent pull requests",
-    "description": "A PR that om-auto-review-pr approved into `merge-queue` gets om-pr-autopilot --allow-merge, which squash-merges it into develop through om-approve-merge-pr (ADR 0031). A backstop for the implement chain, which drives its own PR to the merge: a reviewed PR whose chain ended early is picked up here. `authors` stays `rafalwolak`: every agent PR is authored by that one account, and the filter keeps dependabot and outsider PRs out of the unattended merge (the pinned stack, AGENTS.md). The develop-to-main promotion PR carries `do-not-merge` and never `merge-queue`, so it never matches (ADR 0032).",
+    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
     "events": [
       "pull_request.reviewed"
     ],
@@ -65,34 +66,12 @@
       "worktree": true,
       "variants": 1,
       "generateFollowups": false
-    }
-  },
-  {
-    "name": "Weekly architecture review",
-    "description": "Mondays: afk-architecture-review reads the last 30 days of hot spots and files at most three refactor issues, each with a recommendation strength. Read-only on code - the only writes are issues, which the Reconciler then triages and briefs like any other (ADR 0033); a security defect it finds is filed outside the three-issue cap. It reads `.ai/skills/afk-codebase-design/SKILL.md` for its vocabulary, and this repository's own seams are in the override beside it.",
-    "kind": "schedule",
-    "schedule": {
-      "type": "weekly",
-      "day": 1,
-      "hour": 6,
-      "minute": 0
     },
-    "task": {
-      "prompt": "Run the afk-architecture-review skill for {{project}} on {{date}}.",
-      "workflow": "architecture-review",
-      "autonomous": true,
-      "worktree": true,
-      "variants": 1,
-      "generateFollowups": false,
-      "dispatch": {
-        "maxSubtasks": 3,
-        "reviewChild": false
-      }
-    }
+    "enabled": false
   },
   {
     "name": "Weekly lessons",
-    "description": "Fridays: afk-lessons turns mistakes repeated across the last 14 days of pull requests into enforced rules - mechanical ones into a lint rule, judgement into CODE_REVIEW.md, operational into AGENTS.md. A lesson seen only once is not a rule, so a quiet fortnight is a no-op, and it opens at most one pull request per run.",
+    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
     "kind": "schedule",
     "schedule": {
       "type": "weekly",
@@ -101,17 +80,18 @@
       "minute": 0
     },
     "task": {
-      "prompt": "Run the afk-lessons skill for {{project}} on {{date}}.",
+      "prompt": "Run the om-pipeline-retro skill for {{project}} on {{date}}.",
       "workflow": "lessons",
       "autonomous": true,
       "worktree": true,
       "variants": 1,
       "generateFollowups": false
-    }
+    },
+    "enabled": false
   },
   {
     "name": "Weekly skills update",
-    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
+    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
     "enabled": false,
     "kind": "schedule",
     "schedule": {
@@ -130,28 +110,8 @@
     }
   },
   {
-    "name": "Weekly product radar",
-    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
-    "enabled": false,
-    "kind": "schedule",
-    "schedule": {
-      "type": "weekly",
-      "day": 3,
-      "hour": 6,
-      "minute": 0
-    },
-    "task": {
-      "prompt": "Run product-radar for {{project}} on {{date}}.",
-      "workflow": "product-radar",
-      "autonomous": true,
-      "worktree": true,
-      "variants": 1,
-      "generateFollowups": false
-    }
-  },
-  {
     "name": "Weekly context rotation",
-    "description": "UTC schedule; enable only after effective host schedules and timezone have been verified.",
+    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
     "enabled": false,
     "kind": "schedule",
     "schedule": {

@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { journeyInfo } from '../driver/test'
 import type { BrowserContext, Page } from '@playwright/test'
 import { visit, watchConsole } from './console.ts'
 import { APP_ROUTES } from './routes.ts'
@@ -6,7 +7,7 @@ import type { RouteCase } from './routes.ts'
 import { MAP_READY_TIMEOUT_MS } from './settle.ts'
 
 /**
- * What `e2e/places-and-maps.spec.ts` needs to read a camera: the routes, the seeded trips by name,
+ * What `e2e/browser/places-and-maps.e2e.ts` needs to read a camera: the routes, the seeded trips by name,
  * and the map's own account of where it is looking.
  *
  * The camera is read from the MapLibre instance rather than from pixels. A screenshot can say a frame
@@ -70,7 +71,7 @@ export async function onRoute<T>(
       `${route.path}: the console must be clean through this step`,
     ).toEqual([])
     if (output.tolerated.length > 0) {
-      test.info().annotations.push({
+      journeyInfo().annotations.push({
         type: 'tolerated console output',
         description: `${route.path}: ${output.tolerated.join('\n')}`,
       })

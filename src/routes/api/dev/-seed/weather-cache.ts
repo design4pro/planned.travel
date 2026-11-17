@@ -1,6 +1,6 @@
 /**
  * The weather cache and allowance the demo workspace opens with, so the planner's weather journey
- * (`e2e/trip-weather.spec.ts`) is deterministic without a stubbed provider.
+ * (`e2e/browser/trip-weather.e2e.ts`) is deterministic without a stubbed provider.
  *
  * The journey must meet every state a day can be in. Calling MET Norway and NASA POWER from a test
  * would make it depend on two services and on the day it runs, and a stub inside the Worker would

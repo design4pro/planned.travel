@@ -17,7 +17,7 @@
  *
  * Two ranges, in this order and for two different readers. 3000-3005 is where `vite dev` lands for a
  * person working on the project, and it is tried first because that person did not pass a flag.
- * 3030-3040 is the range `playwright.config.ts` reserves for an automated round and refuses to run
+ * 3030-3040 is the range `e2e.browser.config.ts` reserves for an automated round and refuses to run
  * outside of; a round that seeds without `--url` should still find its own server rather than
  * silently rebuild somebody else's workspace, which is the accident the port guard exists to stop.
  *
@@ -156,7 +156,7 @@ async function findOrigin(explicit) {
     `No dev server answered ${ENDPOINT} on ports ${DEFAULT_PORTS.join(', ')}.\n` +
       'Start one with `pnpm exec vite dev --port 3030 --strictPort`, or pass\n' +
       '--url http://localhost:<port>. Note that `pnpm dev` hardcodes --port 3000, which\n' +
-      'playwright.config.ts refuses to run the journeys against.',
+      'e2e.browser.config.ts refuses to run the journeys against.',
   )
 }
 

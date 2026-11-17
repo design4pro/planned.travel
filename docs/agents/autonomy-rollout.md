@@ -14,7 +14,7 @@ uncommitted merge-outcome changes were copied into the isolated worktree and pre
    housekeeping calls with the existing ten-minute Reconciler's closure pass.
 2. Review the pinned skills update separately: upstream
    `75cf3146fd31aa6fa53af0866c076e5b7a3d9179`, all 74 skills and their helper files. The manifest
-   and compatibility test verify bytes, folder hashes and symlinks, including three explicit local helper repairs. Local `.ai/skills` overlays,
+   and compatibility test verify bytes, folder hashes and the single skill directory, including three explicit local helper repairs. Local `.agents/policies` documents,
    REST mutations, hold labels, merge strategy and prohibition of protection bypass remain.
    No harness, interactive triage or second merge-buddy scheduler is installed or activated.
 3. Pass the configured validation gate and inspect independent security review. Exercise two

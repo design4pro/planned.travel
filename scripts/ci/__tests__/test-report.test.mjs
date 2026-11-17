@@ -22,10 +22,20 @@ const base = { sha, runUrl: 'https://example.test/run/1' }
 const ok = { verify: 'success', test: 'success', e2e: 'success' }
 
 describe('shardStats', () => {
-  it('maps the Playwright stats names', () => {
+  it('maps complete e2e-inc run totals', () => {
     expect(
       shardStats({
-        stats: { expected: 5, unexpected: 1, flaky: 2, skipped: 3 },
+        run: {
+          summary: {
+            passed: 5,
+            failed: 1,
+            flaky: 2,
+            skipped: 3,
+            interrupted: 0,
+            selected: 11,
+            executed: 8,
+          },
+        },
       }),
     ).toEqual({
       passed: 5,
@@ -44,15 +54,27 @@ describe('shardStats', () => {
 })
 
 describe('sumShards', () => {
-  it('adds the shards and ignores one that reported nothing', () => {
+  it('adds all complete shards', () => {
     const a = { passed: 2, failed: 0, flaky: 1, skipped: 0 }
     const b = { passed: 3, failed: 1, flaky: 0, skipped: 2 }
-    expect(sumShards([a, null, b])).toEqual({
+    expect(sumShards([a, b])).toEqual({
       passed: 5,
       failed: 1,
       flaky: 1,
       skipped: 2,
     })
+  })
+
+  it('requires every expected shard artifact', () => {
+    expect(
+      sumShards([{ passed: 2, failed: 0, flaky: 0, skipped: 0 }], 2),
+    ).toBeNull()
+  })
+
+  it('refuses a partial shard sum', () => {
+    expect(
+      sumShards([{ passed: 2, failed: 0, flaky: 0, skipped: 0 }, null]),
+    ).toBeNull()
   })
 
   it('is null when no shard reported, never zero', () => {

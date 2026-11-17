@@ -1,4 +1,10 @@
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs'
+import {
+  readFileSync,
+  mkdtempSync,
+  rmSync,
+  mkdirSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +13,8 @@ import {
   mayContinue,
   claimWork,
   reusableEvidence,
+  policyDigest,
+  creationReservation,
 } from '../pipeline-control.mjs'
 
 describe('pipeline control', () => {
@@ -18,6 +26,23 @@ describe('pipeline control', () => {
       expect(claimWork(store, 'issue-7', 'run-b')).toBe(false)
       expect(claimWork(store, 'pr-7', 'run-b')).toBe(true)
       expect(() => claimWork(store, '../issue-8', 'run-b')).toThrow()
+    } finally {
+      rmSync(store, { recursive: true, force: true })
+    }
+  })
+
+  it('serializes new-issue creation and refuses foreign release', () => {
+    const store = mkdtempSync(join(tmpdir(), 'creation-reservation-'))
+    try {
+      expect(creationReservation(store, 'run-a')).toBe(true)
+      expect(creationReservation(store, 'run-a')).toBe(true)
+      expect(creationReservation(store, 'run-b')).toBe(false)
+      expect(creationReservation(store, 'run-b', true)).toBe(false)
+      expect(creationReservation(store, 'run-b')).toBe(false)
+      expect(creationReservation(store, 'run-a', true)).toBe(true)
+      expect(creationReservation(store, 'run-b')).toBe(true)
+      expect(creationReservation(store, 'run-a', true)).toBe(false)
+      expect(() => creationReservation(store, '../owner')).toThrow()
     } finally {
       rmSync(store, { recursive: true, force: true })
     }
@@ -39,6 +64,66 @@ describe('pipeline control', () => {
     )
     expect(reusableEvidence(null, current)).toBe(false)
   })
+  it('invalidates review evidence when a routed policy changes', () => {
+    const root = mkdtempSync(join(tmpdir(), 'policy-evidence-'))
+    try {
+      for (const directory of [
+        '.ai',
+        'scripts/agents',
+        '.agents/policies',
+        '.agents/reviewers',
+        '.agents/workflows',
+      ])
+        mkdirSync(join(root, directory), { recursive: true })
+      for (const path of [
+        '.ai/agentic.config.json',
+        'AGENTS.md',
+        '.agents/policy.json',
+        'scripts/agents/skills-upstream.json',
+        'SDLC.md',
+        'CODE_REVIEW.md',
+        'BACKWARD_COMPATIBILITY.md',
+        '.agents/policies/security.md',
+      ])
+        writeFileSync(join(root, path), 'initial')
+      const record = {
+        kind: 'review',
+        result: 'passed',
+        source: 'report',
+        head: 'same-head',
+        base: 'same-base',
+        policy: policyDigest(root),
+      }
+      writeFileSync(
+        join(root, '.agents/policies/security.md'),
+        'changed policy',
+      )
+      expect(
+        reusableEvidence(record, {
+          head: record.head,
+          base: record.base,
+          policy: policyDigest(root),
+        }),
+      ).toBe(false)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it.each([
+    ['implement-ticket', 'confirm-merge'],
+    ['pr-autopilot', 'confirm'],
+  ])('reconciles closing issues before completing %s', (name, confirm) => {
+    const workflow = readFileSync(
+      new URL(`../../cezar/workflows/${name}.yml`, import.meta.url),
+      'utf8',
+    )
+    expect(workflow).toContain(`from: ${confirm}.pass, to: reconcile-issues`)
+    expect(workflow).toContain('from: reconcile-issues.reconciled, to: done')
+    expect(workflow).toContain('from: reconcile-issues.blocked, to: failed')
+    expect(workflow).toContain('atomic issue ownership protocol')
+  })
+
   it('accepts only issue tasks and never interpolates free text into Bash', () => {
     expect(issueFromTask('Implement issue #123.')).toBe(123)
     expect(issueFromTask('#123')).toBe(123)

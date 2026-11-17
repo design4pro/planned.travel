@@ -262,12 +262,12 @@ rekordu, dokłada też przejście przez prawdziwą bazę (wzorzec z
 Cztery rundy z rzędu puściły Playwrighta na porcie spoza zakresu: dwa razy 3000, raz na serwer
 odpowiadający 500 na wszystko, raz na 3002 należący do innego worktree - i ta ostatnia runda
 sfotografowała aplikację z cudzej gałęzi, po czym zaliczyła dziewięć porażek jako dowód. Od Fazy A
-`playwright.config.ts` **rzuca wyjątkiem**, jeśli port rozwiązany z `PLAYWRIGHT_BASE_URL` nie mieści
+`e2e.browser.config.ts` **rzuca wyjątkiem**, jeśli port rozwiązany z `PLAYWRIGHT_BASE_URL` nie mieści
 się w zarezerwowanym zakresie; furtką jest `PLAYWRIGHT_ALLOW_ANY_PORT=1`, a `CI` jest zwolnione.
 Komunikat błędu podaje jedyne poprawne wywołanie ręczne: `pnpm exec vite dev --port <port>
 --strictPort` - nigdy `pnpm dev`, który ma na sztywno `--port 3000`. (Zakres z tej rundy, 3010-3020,
 przeniósł się później na **3030-3040**, bo money-tracker na tym samym hoście ma 3010 na sztywno
-i nie ma alokatora. Aktualny zakres jest zawsze w `playwright.config.ts`.)
+i nie ma alokatora. Aktualny zakres jest zawsze w `e2e.browser.config.ts`.)
 
 Dwie konsekwencje warte zapisania. Po pierwsze: `pnpm dev` zostaje z portem 3000, bo to port
 dewelopera, więc reguła o zakresie zarezerwowanym może żyć tylko w tym pliku konfiguracyjnym oraz

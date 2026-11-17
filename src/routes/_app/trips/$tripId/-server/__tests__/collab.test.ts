@@ -170,6 +170,29 @@ describe('collaboration handlers', () => {
     expect(payload.timeZone).toBe('Europe/Lisbon')
   })
 
+  it.each([
+    {
+      storedZone: 'Europe/Lisbon',
+      resolvedZone: 'Europe/Lisbon',
+      todayKey: '2026-07-01',
+    },
+    { storedZone: 'Not/AZone', resolvedZone: 'UTC', todayKey: '2026-06-30' },
+  ])(
+    'snapshots the destination day with stored zone $storedZone',
+    async ({ storedZone, resolvedZone, todayKey }) => {
+      await updateTrip(tenant.scope, tripId, { timezone: storedZone })
+      vi.useFakeTimers({ toFake: ['Date'] })
+      try {
+        vi.setSystemTime(new Date('2026-06-30T23:30:00Z'))
+        const payload = requireFound(await loadTripCollab({ data: { tripId } }))
+        expect(payload.timeZone).toBe(resolvedZone)
+        expect(payload.todayKey).toBe(todayKey)
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it('counts the whole conversation, not the window the loader returns', async () => {
     for (let index = 1; index <= 52; index += 1) {
       await postMessage(tenant.scope, { tripId, body: `message ${index}` })

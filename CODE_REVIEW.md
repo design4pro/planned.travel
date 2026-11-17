@@ -1,7 +1,5 @@
 # Code review
 
-For explicitly enrolled Paperclip pilot issues, read [Paperclip delivery pilot](docs/agents/paperclip-delivery-pilot.md) before delivery or review. It defines the sole Paperclip allocator, two-lane limit and the explicit persona-review substitution; all other repository gates remain mandatory. Existing work keeps its process.
-
 Review rules for this repository, read by `om-code-review` (and therefore by `om-auto-review-pr`
 and `om-review-prs`) on top of its built-in checklist. The binding standards are docs/SPEC.md §6
 and §7; docs/agents/CODING_STANDARDS.md distils them and is the `reviewChecklist` in
@@ -138,7 +136,7 @@ floor guard script; the review now does.
 
 User-facing copy is never hardcoded. A new string means a new key in `en` and in every other locale
 under `src/lib/i18n/messages/` in the same PR; the parity test enforces the set. Rendering a literal
-string, or adding a key to `en` only, is a blocker. Procedure: the `i18n-messages` skill;
+string, or adding a key to `en` only, is a blocker. Procedure: `.agents/policies/i18n.md`;
 contract: docs/SPEC.md §9. RTL (`ar`) layouts use logical properties, never `left`/`right`; the safe-area insets (`gutter-x`, `px-safe`) are the exception, because they belong to the screen and not to the reading direction.
 The one bounded exception is server refusal copy (§9 rule 10): a new name in
 `AUTHORED_ERROR_NAMES` without the same PR amending that rule is a blocker.
@@ -157,7 +155,12 @@ The one bounded exception is server refusal copy (§9 rule 10): a new name in
 New logic has tests at the seams the ticket names, not implementation-coupled and not tautological.
 Component tests run in the `ui` vitest project, server code in `server`, and tooling and policy
 files in `tooling` (vitest.config.ts). A new e2e journey belongs in `e2e/` and must run against the
-3030-3040 port range that `playwright.config.ts` insists on.
+3030-3040 port range enforced by both `e2e.browser.config.ts` and `e2e.config.ts`.
+During the owner-requested e2e-inc migration, `docs/testing/e2e-inventory.json`
+maps every original behavior to its e2e-inc engine. Originals are retired only
+after equivalent Chromium and applicable WebKit execution. The custom browser
+engine preserves unsupported portable-API assertions, device profiles, isolation
+and failure evidence; Playwright is a driver and assertion library only.
 
 An assertion on the order of rows a test wrote itself holds only if the query's `ORDER BY` puts
 those rows in that order. Rows written in the same millisecond tie on `created_at` and on `newId()`'s
@@ -202,13 +205,13 @@ check without that failing probe is a should-fix (#1209, #1283).
   "none" in the PR body's grep box on a PR that changed behaviour counts as unchecked (#880, #925,
   #964, #977, #798; waiting specs also in #682's and #819's runs). The grep also covers the OLD
   text, not only the new name: a PR that rewrites a user-facing sentence or label greps a distinctive
-  phrase of the old one over `e2e/` and the test files (`e2e/journeys.spec.ts` still asserted the old sentence in #1366, found only by the product-owner review; a surface moved to the catalogue broke
+  phrase of the old one over `e2e/` and the test files (`e2e/browser/journeys.e2e.ts` still asserted the old sentence in #1366, found only by the product-owner review; a surface moved to the catalogue broke
   tests that found it by English labels in #1549), an invariant by its constant name as well as the
   feature's words (`DEAD_KEYS` sat in a waiting spec the feature grep missed, #1314), and a count a
   skill override repeats is searched in the overrides too (#1434). A `docs/plans/` file headed
   "Migrated" and "frozen" is not edited (#968 reverted it): the stale statement goes in the PR body.
 - **Widening what an unattended run accepts names every input it now admits.** A PR that drops or
-  loosens a filter, trusted-author list or trigger of an automation, schedule or `afk-*` skill
+  loosens a filter, trusted-author list or trigger of an automation, schedule or workflow contract
   (`authors`, labels, who may comment, which issue sources) lists the input classes the old filter
   excluded - bot and dependency PRs, a stranger's comment, a Sentry-filed issue, a spec-only diff -
   and shows each is still refused or handled. An input that can then reach Bash or a merge without a

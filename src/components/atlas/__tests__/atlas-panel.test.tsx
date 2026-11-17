@@ -254,6 +254,14 @@ describe('sections', () => {
     expect(onExpandedChange).toHaveBeenCalledWith(true)
   })
 
+  it('opens a collapsed panel when its already selected tab is pressed', async () => {
+    const user = userEvent.setup()
+    const onExpandedChange = vi.fn()
+    panel({ tab: 'stats', expanded: false, onExpandedChange })
+    await user.click(screen.getByRole('tab', { name: 'Stats' }))
+    expect(onExpandedChange).toHaveBeenCalledWith(true)
+  })
+
   it('offers the drawer toggle with its state on it', async () => {
     const user = userEvent.setup()
     const onExpandedChange = vi.fn()

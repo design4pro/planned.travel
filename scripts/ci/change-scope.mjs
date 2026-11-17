@@ -11,8 +11,8 @@
  * timed out under load, and a green run would have proven nothing about its diff either.
  *
  * Only the journeys are skipped. `verify` and the unit suite still run on every pull request,
- * because they are what guards documentation: `spec-registry.test.ts` reads `.ai/specs`, the hook
- * tests read `.claude`, and `verify` regenerates the spec index.
+ * because they are what guards documentation: `spec-registry.test.ts` reads `.ai/specs`, the policy
+ * tests read `.agents`, and `verify` regenerates the spec index.
  *
  * The list below is what is provably documentation, not what is provably code, so a path nobody
  * thought about runs the journeys. That is the direction to be wrong in: a wasted run costs
@@ -29,7 +29,7 @@ import { fileURLToPath } from 'node:url'
 export const DOCUMENTATION = [
   /^docs\//,
   /^\.ai\//,
-  /^\.claude\//,
+  /^\.agents\//,
   /^(?!src\/|e2e\/|public\/).*\.md$/,
 ]
 

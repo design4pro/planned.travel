@@ -1,5 +1,5 @@
 {
-  "sha": "75cf3146fd31aa6fa53af0866c076e5b7a3d9179",
+  "sha": "a90b091d27141a6cd12f363e94ebd0f5f84ba615",
   "files": [
     {
       "path": ".agents/skills/om-ai-context-maintenance/SKILL.md",
@@ -28,7 +28,7 @@
     },
     {
       "path": ".agents/skills/om-ai-context-maintenance/references/rules.md",
-      "sha": "0e71badcd4a2051750a0c2132f1364155fb4ec06",
+      "sha": "56fd7d23800258655e9f61d1cd5363a57417f814",
       "mode": "100644"
     },
     {
@@ -78,12 +78,12 @@
     },
     {
       "path": ".agents/skills/om-app-spec-writing/references/rules.md",
-      "sha": "aa1360af2fc9da5f9c92bf2eadb29c1a8a216974",
+      "sha": "301e314982f7bb1d1d7b079bbea197cdd7125ff6",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-apply-upgrade-notes/SKILL.md",
-      "sha": "9f073d28c61814065edd4de5d3be18ec4c8fa7cd",
+      "sha": "e549ad5f34d734999494045c13f1fd438a0edfcf",
       "mode": "100644"
     },
     {
@@ -98,7 +98,7 @@
     },
     {
       "path": ".agents/skills/om-apply-upgrade-notes/references/rules.md",
-      "sha": "cc635706595c30478afc2505d30718e07d53d9df",
+      "sha": "c56d8b42a9c48981ce431c21386cea3911adddc2",
       "mode": "100644"
     },
     {
@@ -118,7 +118,7 @@
     },
     {
       "path": ".agents/skills/om-approve-merge-pr/references/rules.md",
-      "sha": "49fc727bc085dff5f746150629094ef47ae799f1",
+      "sha": "bd8dd4ddc8d0b2704ccc5d497aa3c0ea0857cde0",
       "mode": "100644"
     },
     {
@@ -158,7 +158,7 @@
     },
     {
       "path": ".agents/skills/om-auto-audit-dependencies/references/rules.md",
-      "sha": "1ee05fdee948b86f33105d36b42ccc9ba1b30f87",
+      "sha": "bb9c762852068d31ab3f83056843cf9f65fcf3b7",
       "mode": "100644"
     },
     {
@@ -168,7 +168,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr-loop/SKILL.md",
-      "sha": "7aa500c8d51838667defd1e9e65e087e782a158f",
+      "sha": "743dadf309c7f965110e576518a7e1a598cc51fe",
       "mode": "100644"
     },
     {
@@ -183,7 +183,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr-loop/references/claim-pr.md",
-      "sha": "6e4bffe89af27d967247ec4367caf035cddfdcef",
+      "sha": "178eb7ef28cfe8e865b7b522bdcce7c50bf86b04",
       "mode": "100644"
     },
     {
@@ -228,7 +228,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr-loop/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -258,7 +258,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr/SKILL.md",
-      "sha": "4588d247f47673fb8525a5b31b30de33f2ddee21",
+      "sha": "bce0d8ae1f44bef4ecce52a65c17474cfd51e920",
       "mode": "100644"
     },
     {
@@ -273,7 +273,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr/references/claim-pr.md",
-      "sha": "9c59d911a5947a5de34b75b8e1a18a26024dd06d",
+      "sha": "668e242e77ac752a1b64ce92b4720b83f67f3e8c",
       "mode": "100644"
     },
     {
@@ -298,7 +298,7 @@
     },
     {
       "path": ".agents/skills/om-auto-continue-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -313,7 +313,7 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr-loop/SKILL.md",
-      "sha": "b9bb4c4116cd16adc9e2c053ebf34e31639d8552",
+      "sha": "911e749af10c91221b33e32635fe5fa7f3a47e01",
       "mode": "100644"
     },
     {
@@ -328,7 +328,7 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr-loop/references/claim-pr.md",
-      "sha": "f2a9b1972783e273aa6112ca9b1853939f97e42e",
+      "sha": "47d1500e9d971f065875c739c172b6bebdad2b9a",
       "mode": "100644"
     },
     {
@@ -368,12 +368,12 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr-loop/references/review-report.md",
-      "sha": "16cdee2f8a6e1f5f9d138b08af32660aba260632",
+      "sha": "0fea7285c036f72aec15cee1bcaad833187ebaf1",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-create-pr-loop/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -413,7 +413,7 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr/SKILL.md",
-      "sha": "abc90b0ac9a2cc2ef9c31f32284e776633bfc27d",
+      "sha": "2f48d96ad50796052c5e23db2279d454ba8750fb",
       "mode": "100644"
     },
     {
@@ -423,7 +423,7 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr/references/claim-pr.md",
-      "sha": "fd0fe173022ef624418a467c05461d3e20b68a7a",
+      "sha": "c372e2bfca972e7193aa3ee24daf068f5e2ee3ed",
       "mode": "100644"
     },
     {
@@ -458,7 +458,7 @@
     },
     {
       "path": ".agents/skills/om-auto-create-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -473,7 +473,7 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-issue/SKILL.md",
-      "sha": "78aaa3ef4808dcf90debfc6e18eadd75284cb742",
+      "sha": "8dc8c42073b7fdf1658a1540d9d9a7ae1fdb2c9b",
       "mode": "100644"
     },
     {
@@ -488,7 +488,7 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-issue/references/claim-pr.md",
-      "sha": "b5e79222361cd1e4399ce9c089645cc8064c6da8",
+      "sha": "9a573e73ad19cb5af4c48f510b376b6f9cfa516f",
       "mode": "100644"
     },
     {
@@ -518,12 +518,12 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-issue/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-fix-issue/references/spec-resolution.md",
-      "sha": "57f651751ac0eb10caf010e7ac96f46bdabb35d6",
+      "sha": "a37152c218e1e877ac4ad0eb6cea0a0c36c7c6ac",
       "mode": "100644"
     },
     {
@@ -533,7 +533,7 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-pr/SKILL.md",
-      "sha": "976b34e3855b584017cb2c2b23a666f0e351139b",
+      "sha": "05aa8d87c8a34a8e6d3a2da3d0a505efb754ae49",
       "mode": "100644"
     },
     {
@@ -558,7 +558,7 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-pr/references/claim-pr.md",
-      "sha": "d8a993793e05a6cf0d616b458ef998d2b5a356e0",
+      "sha": "91c27266ebba326adaebec4ca3d59923543b8068",
       "mode": "100644"
     },
     {
@@ -578,7 +578,7 @@
     },
     {
       "path": ".agents/skills/om-auto-fix-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -593,12 +593,17 @@
     },
     {
       "path": ".agents/skills/om-auto-implement-spec/SKILL.md",
-      "sha": "bff36d26bbdb4e4351a9da232b35ee9923105ae4",
+      "sha": "98eba18a99e3cfc8f331ceea42e3960b2be81a9b",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-implement-spec/references/agentic-setup.md",
       "sha": "4be1ab7a2d56d925c1f81700de2c90a1232f4c20",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-implement-spec/references/delta-archive.md",
+      "sha": "76a75826c496f7baf1f4dcaf2e6e270d02623abd",
       "mode": "100644"
     },
     {
@@ -613,12 +618,12 @@
     },
     {
       "path": ".agents/skills/om-auto-implement-spec/references/rules.md",
-      "sha": "62066c32f2726c08f05899da92aac481d829e242",
+      "sha": "e2784825f8c358cdbc76b8b343447f88756cbe0a",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-implement-spec/references/spec-resolution.md",
-      "sha": "68a9c26e4bc3e222575d184447ee6c4a2b76039b",
+      "sha": "d6e9fc31c6af81d6b480db065ec381416434d174",
       "mode": "100644"
     },
     {
@@ -643,7 +648,7 @@
     },
     {
       "path": ".agents/skills/om-auto-issue-triage/references/rules.md",
-      "sha": "a63c748f8b6a6b478429848ad709a82d1b896425",
+      "sha": "e548cfb809beaeb51d37dc245fc16fe6318553b8",
       "mode": "100644"
     },
     {
@@ -653,7 +658,7 @@
     },
     {
       "path": ".agents/skills/om-auto-manage-issues/SKILL.md",
-      "sha": "f0b9371a6b9e0aa74ac14af3319e3ec69efe47e8",
+      "sha": "dd717fdb7888ca97da2712deee1aa74fff9c24e3",
       "mode": "100644"
     },
     {
@@ -668,12 +673,12 @@
     },
     {
       "path": ".agents/skills/om-auto-manage-issues/references/claim-pr.md",
-      "sha": "65a419784aa8f858a8c0725c8afc8ac8fb11ab9c",
+      "sha": "1c23cbe17837918fb2a0414c9155fafa34d0efda",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-manage-issues/references/enrich-existing-issue.md",
-      "sha": "2939d4af5ada75499519fffd038e226d282f9f34",
+      "sha": "11b4e677d39fb24c76e6c9b150a53d20e8df22e9",
       "mode": "100644"
     },
     {
@@ -688,7 +693,7 @@
     },
     {
       "path": ".agents/skills/om-auto-manage-issues/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -697,8 +702,13 @@
       "mode": "100644"
     },
     {
+      "path": ".agents/skills/om-auto-manage-issues/references/write-transaction.md",
+      "sha": "2578320cac363ceae5084a71146e1d47d57b51b0",
+      "mode": "100644"
+    },
+    {
       "path": ".agents/skills/om-auto-merge-buddy/SKILL.md",
-      "sha": "ccd7daa3de173e16c39a07e8b4c61775d890d7e9",
+      "sha": "7b58d7d1992ab6f48c5f81f61978eaf3e7648948",
       "mode": "100644"
     },
     {
@@ -723,7 +733,7 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/claim-pr.md",
-      "sha": "61a293b8120c9ce4fc8d1d4670008c0fffd901a5",
+      "sha": "0ad21f22cc4f351856a62918659108489359c76c",
       "mode": "100644"
     },
     {
@@ -753,7 +763,7 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/human-gates.md",
-      "sha": "482a58cb6227f53f9a196de433749edb95b62ecf",
+      "sha": "1fbe0f564a13c5785880974ff9f4a610b4428ac4",
       "mode": "100644"
     },
     {
@@ -793,7 +803,7 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/report-templates.md",
-      "sha": "a750f59c5fa3d060ddccfc9cff3343f105720875",
+      "sha": "7d6a6826e98b61ce3b94b9f85b11930492fb18a9",
       "mode": "100644"
     },
     {
@@ -803,7 +813,7 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -813,7 +823,7 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/scheduler.md",
-      "sha": "404bec0da6d99766d7b4a178fe69c7a87ec2965f",
+      "sha": "cd438a18b13bb786801c26b3d3675d7a2e2709e9",
       "mode": "100644"
     },
     {
@@ -824,6 +834,11 @@
     {
       "path": ".agents/skills/om-auto-merge-buddy/references/stages.md",
       "sha": "61e4a2bcca4f270b5958c9c3c4b877c25ca8184e",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-auto-merge-buddy/references/stalled-claims.md",
+      "sha": "c77c4bb8cefeaf4d37c3494ac94fe00cb962a755",
       "mode": "100644"
     },
     {
@@ -868,12 +883,12 @@
     },
     {
       "path": ".agents/skills/om-auto-merge-triage/references/rules.md",
-      "sha": "dac5393cfa0f7911167ca2b647a553db6998b291",
+      "sha": "3e2ba07aa05466ea11f3b661819240a304e07ad1",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-auto-qa-pr/SKILL.md",
-      "sha": "1e572b183802069c9d09d2229013b430e3d7f463",
+      "sha": "3b0abf2326320f4393079f7e2687268881be97cc",
       "mode": "100644"
     },
     {
@@ -888,7 +903,7 @@
     },
     {
       "path": ".agents/skills/om-auto-qa-pr/references/claim-pr.md",
-      "sha": "7b20b1d7704ab0dd46bc268067d09c0ad44d613e",
+      "sha": "be1834f8c62a2818d6ae664fa993e40b2dd37d14",
       "mode": "100644"
     },
     {
@@ -913,7 +928,7 @@
     },
     {
       "path": ".agents/skills/om-auto-qa-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -948,7 +963,7 @@
     },
     {
       "path": ".agents/skills/om-auto-qa-scenarios/references/rules.md",
-      "sha": "a338a98aff0069d4ee5972891244b99c18ca823a",
+      "sha": "8633ef0affa4e898d79777dd8c6279bb551030b9",
       "mode": "100644"
     },
     {
@@ -958,7 +973,7 @@
     },
     {
       "path": ".agents/skills/om-auto-review-pr/SKILL.md",
-      "sha": "647bf710c34ab1b49ce504a5b6fdf36bc30ba420",
+      "sha": "e800b5afd6334b486582376113b281e3ebfde38d",
       "mode": "100644"
     },
     {
@@ -973,7 +988,7 @@
     },
     {
       "path": ".agents/skills/om-auto-review-pr/references/claim-pr.md",
-      "sha": "ec5d42b2ee6918b7f1e9ad14e9d6ab4bcd1ae9ec",
+      "sha": "6191b3445c1bbe83dbb1857937aaba0d000c33f1",
       "mode": "100644"
     },
     {
@@ -1028,7 +1043,7 @@
     },
     {
       "path": ".agents/skills/om-auto-review-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -1068,7 +1083,7 @@
     },
     {
       "path": ".agents/skills/om-auto-sec-report-pr/references/rules.md",
-      "sha": "4611cf9cbc3761fa9d31dc5c8e5ff09ac15259a7",
+      "sha": "f18aa986702720f79b52a9b4607b3ad2f11b044b",
       "mode": "100644"
     },
     {
@@ -1093,7 +1108,7 @@
     },
     {
       "path": ".agents/skills/om-auto-sec-report/references/rules.md",
-      "sha": "4da2b3e83dae292bdd4cd750978e7ea2d8a4f41f",
+      "sha": "267d1d3a61285043d8b7ad0c58d34fa91ca2033e",
       "mode": "100644"
     },
     {
@@ -1123,7 +1138,7 @@
     },
     {
       "path": ".agents/skills/om-auto-update-changelog/references/rules.md",
-      "sha": "17a0c37c49c1023e13be7ba867f642e20e3e4763",
+      "sha": "7c661961915c479c5a49ee2b3620dcbe51519460",
       "mode": "100644"
     },
     {
@@ -1133,7 +1148,7 @@
     },
     {
       "path": ".agents/skills/om-auto-write-spec/SKILL.md",
-      "sha": "005be29fdb54a51a5a8d964f9b503ac5c99ade03",
+      "sha": "034c6a0c6828bdbdf626e210c74f98b6f94f9bff",
       "mode": "100644"
     },
     {
@@ -1148,7 +1163,7 @@
     },
     {
       "path": ".agents/skills/om-auto-write-spec/references/claim-pr.md",
-      "sha": "6e9f6c90ee8c8dc307873cab483ff4d1087b654a",
+      "sha": "b4c3616ba0b4da02e98a6073ea9db68162fea777",
       "mode": "100644"
     },
     {
@@ -1168,7 +1183,7 @@
     },
     {
       "path": ".agents/skills/om-auto-write-spec/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -1208,7 +1223,7 @@
     },
     {
       "path": ".agents/skills/om-backlog/references/rules.md",
-      "sha": "61a8fa31a2f14a4ccf323d83710ec9c3dc11408f",
+      "sha": "9e8439dd03b9a430fedb10520c98a306646ba72a",
       "mode": "100644"
     },
     {
@@ -1248,7 +1263,7 @@
     },
     {
       "path": ".agents/skills/om-brainstorm/references/rules.md",
-      "sha": "9e27a96497c7eba01de68b97786de03be0be0b63",
+      "sha": "8dad6f0796d64182fcc8732e6390bd057727158a",
       "mode": "100644"
     },
     {
@@ -1268,12 +1283,12 @@
     },
     {
       "path": ".agents/skills/om-check-and-commit/references/rules.md",
-      "sha": "4e93840f5ee39da8e5858b109f7bc0efbda39f96",
+      "sha": "8b586916bc013b666e4f6d7f57ec46137dc69028",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-close-fixed-issues/SKILL.md",
-      "sha": "5e7467f8a4d8b33bb238aaf6d193ea89650686d5",
+      "sha": "5a7412f74c50bd83727b0b784a309fb5a0d465ac",
       "mode": "100644"
     },
     {
@@ -1283,7 +1298,7 @@
     },
     {
       "path": ".agents/skills/om-close-fixed-issues/references/claim-pr.md",
-      "sha": "e8fd00973cd018250408367ff3e65d85e9c5d4a5",
+      "sha": "b567c46a95b926fb66bcd335af4b4b61ff6d46c8",
       "mode": "100644"
     },
     {
@@ -1298,12 +1313,12 @@
     },
     {
       "path": ".agents/skills/om-close-fixed-issues/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-code-review/SKILL.md",
-      "sha": "84ae60b665ce8aa8bc4a3ac73a3113c743b4cf3a",
+      "sha": "20869b7082a489a7830581b53675e599e63e98a1",
       "mode": "100644"
     },
     {
@@ -1323,7 +1338,7 @@
     },
     {
       "path": ".agents/skills/om-code-review/references/rules.md",
-      "sha": "03a73cc450730453d1881331be3d417824242f11",
+      "sha": "c85ada6e2b53312e887a72df0abab22191677f3e",
       "mode": "100644"
     },
     {
@@ -1428,7 +1443,7 @@
     },
     {
       "path": ".agents/skills/om-create-skill/references/rules.md",
-      "sha": "d7a2591c4bf17bebd178aa9e15ba74c165f094ae",
+      "sha": "3c08dbe718007777a99e5fc07ec55a6a76041648",
       "mode": "100644"
     },
     {
@@ -1508,7 +1523,7 @@
     },
     {
       "path": ".agents/skills/om-discover/references/rules.md",
-      "sha": "62fdcdc6124faf92087f08573211d6aab1cd2ebe",
+      "sha": "e1259b9f2ecd9cc12b4ed054b488ba49b5513694",
       "mode": "100644"
     },
     {
@@ -1548,7 +1563,7 @@
     },
     {
       "path": ".agents/skills/om-eject-and-customize/references/rules.md",
-      "sha": "562338e93ee110fc66bb92f4e1d9c3365bf53ad9",
+      "sha": "24fc35e7b1b52abc52f1c3739bb211076e99d89c",
       "mode": "100644"
     },
     {
@@ -1588,7 +1603,7 @@
     },
     {
       "path": ".agents/skills/om-evolve-harness/references/rules.md",
-      "sha": "b30666acacb636e7dd474ba79f343fea7cf67e5b",
+      "sha": "ef9932ab7aa437ce8188c97783b6d9085e33793b",
       "mode": "100644"
     },
     {
@@ -1623,7 +1638,7 @@
     },
     {
       "path": ".agents/skills/om-fix-issue-multi-optimized/SKILL.md",
-      "sha": "9af2d9fe6383105afb7db31a5b51e84a131ea7c8",
+      "sha": "dc8d88d8aadc22da7c7906f8e087a9b2f8e91e96",
       "mode": "100644"
     },
     {
@@ -1638,17 +1653,17 @@
     },
     {
       "path": ".agents/skills/om-fix-issue-multi-optimized/references/claim-pr.md",
-      "sha": "44cde41f7b20af1bc68ca738b6aa8c2fb4dc2f10",
+      "sha": "f0516c18402095aeb697394da99226336c8ca133",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue-multi-optimized/references/rules.md",
-      "sha": "fda5c907df5c0096455b04d2cea27d89f0c44629",
+      "sha": "7e56c17cb5de46ba1764587c642ef115a18b9359",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue-multi/SKILL.md",
-      "sha": "d60eed29c3c0652a9744ef12f3cde5047f92bad3",
+      "sha": "5ffaccbc332778002ec2fe65c68f3e2fa2d001d2",
       "mode": "100644"
     },
     {
@@ -1663,17 +1678,17 @@
     },
     {
       "path": ".agents/skills/om-fix-issue-multi/references/claim-pr.md",
-      "sha": "7728a41f32334240ae00700e77387d83c3c1cec8",
+      "sha": "82ca49bc7281be47ae91886687778afda59a5a72",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue-multi/references/rules.md",
-      "sha": "f0667cdd4e843c89ac86a37fc672963d853cc5b4",
+      "sha": "a68a699f8a7f665fab0a9d990b4353358f9e5d54",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue-optimized/SKILL.md",
-      "sha": "4fe20852884b8d0b8a34469347678cdd7ed965aa",
+      "sha": "9769c042b64fe43a35f7b61ac830f0c5b28238cd",
       "mode": "100644"
     },
     {
@@ -1688,17 +1703,17 @@
     },
     {
       "path": ".agents/skills/om-fix-issue-optimized/references/claim-pr.md",
-      "sha": "608a1599f450e590079616fd07ba4ed6d41823f1",
+      "sha": "4939a51a2f463b157a775994d10bfcc80cae65a7",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue-optimized/references/rules.md",
-      "sha": "3b2b45beacc4edd78b40aa16dae8d42d661a66e9",
+      "sha": "b8036be9fbf85973f24466e1dcf63b98c1d2188c",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix-issue/SKILL.md",
-      "sha": "a548261201f1fffa166fda20fba33cac41749e5a",
+      "sha": "934aa3ac61ac3cf9f7c27f348f6cf9ecc8c3ab0c",
       "mode": "100644"
     },
     {
@@ -1713,7 +1728,7 @@
     },
     {
       "path": ".agents/skills/om-fix-issue/references/claim-pr.md",
-      "sha": "f89f070d5f339ca9c536196772e66a7c5cb3a100",
+      "sha": "9b6724cdd82cbbdd7eb5fffbe33bd2adecf1525a",
       "mode": "100644"
     },
     {
@@ -1733,12 +1748,12 @@
     },
     {
       "path": ".agents/skills/om-fix-issue/references/rules.md",
-      "sha": "b91a2a9a7685fbb7c5fcdf7c50c688b4a65cfae2",
+      "sha": "a96973ee02598d2d8227c63dc04332b3c3b26439",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-fix/SKILL.md",
-      "sha": "43c6c258e5fa9157fc79edc7dff76c1fe3f7ffcd",
+      "sha": "34beb8b80f28fbfa7e03d50dc9eecdcc1cafce5c",
       "mode": "100644"
     },
     {
@@ -1748,7 +1763,7 @@
     },
     {
       "path": ".agents/skills/om-fix/references/claim-pr.md",
-      "sha": "3666ef0dfd2372feecfff6002621c2195edb65a1",
+      "sha": "a169ee2f11c323aa09154745eda83dad74c187f4",
       "mode": "100644"
     },
     {
@@ -1758,7 +1773,7 @@
     },
     {
       "path": ".agents/skills/om-fix/references/rules.md",
-      "sha": "9768b3a6b288bc876ea6b578f84133cfc4d26854",
+      "sha": "8a7d7eacba589f9028cb65436c61f94731a5c561",
       "mode": "100644"
     },
     {
@@ -1778,7 +1793,7 @@
     },
     {
       "path": ".agents/skills/om-followup-issue-from-pr/references/rules.md",
-      "sha": "ac421b278b6c92da9682a5ac1f2f319a16569ad1",
+      "sha": "b7fbdd522eb39137d296f2da762a5968ca066b0d",
       "mode": "100644"
     },
     {
@@ -1808,7 +1823,7 @@
     },
     {
       "path": ".agents/skills/om-framework-context/references/rules.md",
-      "sha": "8e952492650970785f0724ac6b63de20f0adab03",
+      "sha": "f51d8502a9f0bec23ba572df1085a7309134be92",
       "mode": "100644"
     },
     {
@@ -1925,7 +1940,7 @@
     },
     {
       "path": ".agents/skills/om-gap-analysis/references/rules.md",
-      "sha": "481ef9640bdd22d6d7f35dba347b5c208bf60c67",
+      "sha": "59749f16ef2cd494536c923aaace66998f395bad",
       "mode": "100644"
     },
     {
@@ -1955,7 +1970,7 @@
     },
     {
       "path": ".agents/skills/om-harness/SKILL.md",
-      "sha": "b4e26b969f91d86b1ad8683560ef5782712fa02e",
+      "sha": "0004d87201f6dabc404af84db98a1e82fed427e2",
       "mode": "100644"
     },
     {
@@ -1995,7 +2010,7 @@
     },
     {
       "path": ".agents/skills/om-harness/references/claim-pr.md",
-      "sha": "05cd21aad69bf46c2f1441312b7734b10cb5047b",
+      "sha": "79ba518850213f80917fc0af9730fe7665e16d99",
       "mode": "100644"
     },
     {
@@ -2045,7 +2060,7 @@
     },
     {
       "path": ".agents/skills/om-harness/references/rules.md",
-      "sha": "8899c883bdae134f16345389b95cdec1f31fc8c5",
+      "sha": "bafdc6978e1907daa69b7b64f8ad4ffd2bccb0fe",
       "mode": "100644"
     },
     {
@@ -2085,7 +2100,7 @@
     },
     {
       "path": ".agents/skills/om-help/references/rules.md",
-      "sha": "38e1ed0ef2ecdffd7f4696dbda745d8e3fc2060d",
+      "sha": "350d0cdd5ab34dd7f3e99eb5c8712fafa906b2a6",
       "mode": "100644"
     },
     {
@@ -2095,7 +2110,7 @@
     },
     {
       "path": ".agents/skills/om-implement-feature-multi-optimized/SKILL.md",
-      "sha": "c0b1664a5984e7b3a0944bbd95923e5c34252b16",
+      "sha": "0fc828f3a9041f36c155fff157f84bc72fdf8692",
       "mode": "100644"
     },
     {
@@ -2110,17 +2125,17 @@
     },
     {
       "path": ".agents/skills/om-implement-feature-multi-optimized/references/claim-pr.md",
-      "sha": "39aa27d5f47ba396dc55dc19ee707b9ef1f7f69f",
+      "sha": "c94ad5b9136609c68888f6a3cac7672332ec2a6d",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature-multi-optimized/references/rules.md",
-      "sha": "058b3aa47864cfee42cf019d54fcb8e42cf0f9d5",
+      "sha": "fd6f457b72d77762a40d800abb1da2895de51f46",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature-multi/SKILL.md",
-      "sha": "00d45661f3660aa79ecb47dd6eba99baf549e643",
+      "sha": "74a4ce3f8081f31f2cb2ccc3f9300f470ead1145",
       "mode": "100644"
     },
     {
@@ -2135,17 +2150,17 @@
     },
     {
       "path": ".agents/skills/om-implement-feature-multi/references/claim-pr.md",
-      "sha": "326d4a7e25a9eca1c25b500c8702fbdbf77613ec",
+      "sha": "7f658946e6a86744f6f9bb4f1155c617cf83982b",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature-multi/references/rules.md",
-      "sha": "ac9d768190985c6fdef2ef734a1645425a0cbb46",
+      "sha": "a448e8ffe1ad735d5032957297374d66f40f1096",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature-optimized/SKILL.md",
-      "sha": "cc78306b48d1a703262817747e3885f31f1a0782",
+      "sha": "a186a70877281c3b51f483f4c2705d1f5005c842",
       "mode": "100644"
     },
     {
@@ -2160,17 +2175,17 @@
     },
     {
       "path": ".agents/skills/om-implement-feature-optimized/references/claim-pr.md",
-      "sha": "36efbdceb84ebf5bafbcaa807c6a08f4ba52be2a",
+      "sha": "38e54be5bee202b19e68fb960c86cdc57333c320",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature-optimized/references/rules.md",
-      "sha": "c01d560a0497a385ac4a38d5f50d0695e946bf8e",
+      "sha": "3c8bfde5f7ed6995ae4932e4f73a37db00659d48",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-implement-feature/SKILL.md",
-      "sha": "7097b00af0af7a2ea5f85ef8a82c26527cae0da1",
+      "sha": "bca3a06ebba3b6a4aab119369cf3bcb87416bd6d",
       "mode": "100644"
     },
     {
@@ -2185,7 +2200,7 @@
     },
     {
       "path": ".agents/skills/om-implement-feature/references/claim-pr.md",
-      "sha": "71553a0b8c480b0eb6f23e73cd0a103105fb973b",
+      "sha": "2610c1044f0046965ecf91f72fbbc526d7693973",
       "mode": "100644"
     },
     {
@@ -2205,12 +2220,12 @@
     },
     {
       "path": ".agents/skills/om-implement-feature/references/rules.md",
-      "sha": "77b154b360606225705c686eb0657ef0fd9cca94",
+      "sha": "0e62f938cf9cb71ca30bda1b29bcb7fad837c00e",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-integration-tests/SKILL.md",
-      "sha": "19e40669cc4c609d89a7f0d87f1b13bd28903c4d",
+      "sha": "1d71ea28c6f612b62d2f0ff21869aaedab5ec436",
       "mode": "100644"
     },
     {
@@ -2225,7 +2240,7 @@
     },
     {
       "path": ".agents/skills/om-integration-tests/references/rules.md",
-      "sha": "00cdbe375f1279546c9c3d4e31386c94288f7be4",
+      "sha": "bfde7139047bd842f89a175ffa24df4c65b31e79",
       "mode": "100644"
     },
     {
@@ -2270,12 +2285,12 @@
     },
     {
       "path": ".agents/skills/om-judge-agent-session/references/rules.md",
-      "sha": "8d4eb80a208c2c74d76144e0b93582a1c03f0957",
+      "sha": "97e69625a3c7e54c1c245cd1b0be8e18cca6951c",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-merge-buddy/SKILL.md",
-      "sha": "892204baaa9090e1ed5dca6c5dd5f196a2aec5f0",
+      "sha": "4372e6a95bd563ee2ca8909048f08c646b16d1ec",
       "mode": "100644"
     },
     {
@@ -2290,7 +2305,7 @@
     },
     {
       "path": ".agents/skills/om-merge-buddy/references/rules.md",
-      "sha": "d757e9545345f6d9b63c19339b5ca5d04d96655a",
+      "sha": "9f12a077c9cce90b5fcb3e7c666b1cc2dce22b8c",
       "mode": "100644"
     },
     {
@@ -2325,7 +2340,7 @@
     },
     {
       "path": ".agents/skills/om-open-pr/SKILL.md",
-      "sha": "db842ef71cd88f43e1b7a750648b4f1615460e2d",
+      "sha": "713c13bf5bc3eff6fa5abe7bd192159539240ead",
       "mode": "100644"
     },
     {
@@ -2335,7 +2350,7 @@
     },
     {
       "path": ".agents/skills/om-open-pr/references/claim-pr.md",
-      "sha": "ff988e5fafcfc294efd426df3b59238bbe1853a1",
+      "sha": "b20fc510398ddc6692812f2b72dd16de1123bd24",
       "mode": "100644"
     },
     {
@@ -2350,7 +2365,7 @@
     },
     {
       "path": ".agents/skills/om-open-pr/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -2375,12 +2390,12 @@
     },
     {
       "path": ".agents/skills/om-pipeline-retro/references/rules.md",
-      "sha": "f7ecacc9520428c0b7a407fd587f5977a5a596b8",
+      "sha": "0456373d0248e0b60708b80e17265c4d379f407b",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-pr-autopilot/SKILL.md",
-      "sha": "1e458bf7e5471364c74f24bd8c9392347b1d4d2d",
+      "sha": "250d7ab352344acabe02bfc1cac2a9b45882c638",
       "mode": "100644"
     },
     {
@@ -2395,7 +2410,7 @@
     },
     {
       "path": ".agents/skills/om-pr-autopilot/references/claim-pr.md",
-      "sha": "575c3375f21af249e4cfdc951e927f148653eb8f",
+      "sha": "45fc027253fe9267c397483bb013c5ade3253883",
       "mode": "100644"
     },
     {
@@ -2410,7 +2425,7 @@
     },
     {
       "path": ".agents/skills/om-pr-autopilot/references/rules.md",
-      "sha": "1d6953c8fad10f79969c612a2655d507b41c5f39",
+      "sha": "debf6632927b75e7131c575fcb8c2b93f0b8666d",
       "mode": "100644"
     },
     {
@@ -2450,12 +2465,12 @@
     },
     {
       "path": ".agents/skills/om-pre-implement-spec/references/rules.md",
-      "sha": "250869ae6c5bb8d215674200bd3ac391b8803f48",
+      "sha": "06cfaae69cb3cf6f71e33d753cd622071090ae24",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-pre-implement-spec/references/spec-resolution.md",
-      "sha": "cf06b6ee8ed3ccfa664172e2725eb2c779148438",
+      "sha": "c9198482f4222ee053dbc6dcce697101769be32a",
       "mode": "100644"
     },
     {
@@ -2475,7 +2490,7 @@
     },
     {
       "path": ".agents/skills/om-prepare-issue/references/rules.md",
-      "sha": "ac79f53b86f55e65aeedbfea62029b86859f3313",
+      "sha": "3b217427ea01673b4df12a81cb6a9e3bcd1d6692",
       "mode": "100644"
     },
     {
@@ -2485,7 +2500,7 @@
     },
     {
       "path": ".agents/skills/om-prepare-test-env/SKILL.md",
-      "sha": "d7d8b23a54b109eeec4a7052c4d5de8335ae6b53",
+      "sha": "31bc9be72a5d05a98cabe2c499e2994389a00a90",
       "mode": "100644"
     },
     {
@@ -2520,7 +2535,7 @@
     },
     {
       "path": ".agents/skills/om-prepare-test-env/references/rules.md",
-      "sha": "d104ec6d11e7ed4da716615182f207c4c4c530c5",
+      "sha": "e7cb48aa6d12c869b3f071e69501060a158fe879",
       "mode": "100644"
     },
     {
@@ -2560,7 +2575,7 @@
     },
     {
       "path": ".agents/skills/om-qa-buddy/references/rules.md",
-      "sha": "561461ae8479127c8371f1039189dcfe31f7f806",
+      "sha": "a17d03792a51d55780b4513cacd5a0d4106c1a74",
       "mode": "100644"
     },
     {
@@ -2580,7 +2595,7 @@
     },
     {
       "path": ".agents/skills/om-review-prs/SKILL.md",
-      "sha": "2ff1d35830996cc3153c9f8aaeb808bb6cb64c1c",
+      "sha": "0133590b97752d0d4f7fb0fd4e045fb5ae7d4406",
       "mode": "100644"
     },
     {
@@ -2590,12 +2605,12 @@
     },
     {
       "path": ".agents/skills/om-review-prs/references/claim-pr.md",
-      "sha": "384df2d160c8fd79e9f0ead2101ae1db8d9c423d",
+      "sha": "25806ad93fe932770dc818259cdfa8a04d3a4a6e",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-review-prs/references/rules.md",
-      "sha": "d072559fad8a81146d1733097ad5c12e74ccccc6",
+      "sha": "1d04fd70a13282187abda81f7452e547971e4216",
       "mode": "100644"
     },
     {
@@ -2610,7 +2625,7 @@
     },
     {
       "path": ".agents/skills/om-root-cause/SKILL.md",
-      "sha": "869e9b0f743e4ac4a4093578a3b429e3c121c8a2",
+      "sha": "2487fd1a473eacfe6f00e279daef3913a6f37347",
       "mode": "100644"
     },
     {
@@ -2620,12 +2635,12 @@
     },
     {
       "path": ".agents/skills/om-root-cause/references/rules.md",
-      "sha": "74f3befe4ee0070d51b17c3047fddf640bb33902",
+      "sha": "48e934790160afcdbce0102a2766528eca585562",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-harness/SKILL.md",
-      "sha": "24d4750f8fb3526d93b0e4ff073dc0dea28b21b5",
+      "sha": "277a4a8230c8f508474088116cf8f0834cd39815",
       "mode": "100644"
     },
     {
@@ -2645,7 +2660,7 @@
     },
     {
       "path": ".agents/skills/om-setup-agent-harness/references/claim-pr.md",
-      "sha": "b2508a435220b9a82a410cf6c9c7c32b5d890bd1",
+      "sha": "31f804b932053e724323d221e3db13dfc15c0d06",
       "mode": "100644"
     },
     {
@@ -2660,12 +2675,12 @@
     },
     {
       "path": ".agents/skills/om-setup-agent-harness/references/rules.md",
-      "sha": "77aac645022d023978ecec1391822c6ea53772df",
+      "sha": "f779e2d232a89f7ca3528e062cc7be5100965e2a",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/SKILL.md",
-      "sha": "a22653cfa7834255ec842220460369ed81dcda6a",
+      "sha": "d8ad27bcacbc92d4d41acd87debf9826975ccdc7",
       "mode": "100644"
     },
     {
@@ -2715,12 +2730,12 @@
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/rules.md",
-      "sha": "aac5e3eba5edf449fbfac6eb2dff1ef6213adacd",
+      "sha": "0cb77d7a2d53f2f4c63512341214b902ab186f80",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/sdlc-template.md",
-      "sha": "4f34bdfde29f44be8bd050028bbbf260a7994867",
+      "sha": "f1e66df93da4227ea9c0131804fbf5fce3a5d057",
       "mode": "100644"
     },
     {
@@ -2730,37 +2745,37 @@
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/TEMPLATE.md",
-      "sha": "21b5c4d8033725cef7c24c5b7876c853d51c7155",
+      "sha": "bd1bb928e6b2c6527c93bb627f8e1c367d59a7e8",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/forgejo.md",
-      "sha": "d4d2242637ff9dcb846e8b4b5a049de8f8d7ff2b",
+      "sha": "168aa4dfb31897e924f69ee53a8376fff0ca0a76",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/github.md",
-      "sha": "b5e9a8e1be5b1b5d948e101d19b7c881ed3523a7",
+      "sha": "056e6716c966de31541f8580ad36974e9192249f",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/gitlab.md",
-      "sha": "8ef2999c8235124ba1bc8fb65e667df68d45ff74",
+      "sha": "5c4009ed925eb125203f62927c45e1b9ad074815",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/jira.md",
-      "sha": "163f4d0e238c51066f6a80ad1e083f4d90c7aeb0",
+      "sha": "ff70bf8e0d39f925238b47a3b5d8a258af4e7d2d",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-agent-pipeline/references/trackers/linear.md",
-      "sha": "989b6a12e09c2729fd27fb622856fe74591913b7",
+      "sha": "45d4d95575a3c09508546c4f5b905313e0cdfe5a",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-setup-discovery-pipeline/SKILL.md",
-      "sha": "c605c585995e0546461329e8437ece08c493410b",
+      "sha": "f27957aaf0a449e640080be1175ee6893d9ba8de",
       "mode": "100644"
     },
     {
@@ -2790,7 +2805,7 @@
     },
     {
       "path": ".agents/skills/om-setup-discovery-pipeline/references/sdlc-template.md",
-      "sha": "4f34bdfde29f44be8bd050028bbbf260a7994867",
+      "sha": "f1e66df93da4227ea9c0131804fbf5fce3a5d057",
       "mode": "100644"
     },
     {
@@ -2835,7 +2850,7 @@
     },
     {
       "path": ".agents/skills/om-share-this-session/references/rules.md",
-      "sha": "7e0b56601fdc4077c3fd6d5beb84528c9b828a1c",
+      "sha": "a1c682ee0755fd4780a08aed9db5e949f001ca42",
       "mode": "100644"
     },
     {
@@ -2877,7 +2892,7 @@
     },
     {
       "path": ".agents/skills/om-smart-test/references/rules.md",
-      "sha": "0ce7f871609fb2f1561c583a323d9887613be591",
+      "sha": "bb02272c8a8d0fc691f6d93abf1ff60bea59409c",
       "mode": "100644"
     },
     {
@@ -2897,7 +2912,7 @@
     },
     {
       "path": ".agents/skills/om-spec-writing/SKILL.md",
-      "sha": "8b54a28b92d385fa3838cc64bb8223ed9647a476",
+      "sha": "cc156df0abdaec76e4e898db67d322813769afc1",
       "mode": "100644"
     },
     {
@@ -2911,8 +2926,18 @@
       "mode": "100644"
     },
     {
+      "path": ".agents/skills/om-spec-writing/references/delta-format.md",
+      "sha": "b4d44b63b7d4c1f65de1369b2e4bba89ea3cdb2d",
+      "mode": "100644"
+    },
+    {
+      "path": ".agents/skills/om-spec-writing/references/prior-specs.md",
+      "sha": "28ac3a557ce6e307b51b2807b1baba604bb188e4",
+      "mode": "100644"
+    },
+    {
       "path": ".agents/skills/om-spec-writing/references/rules.md",
-      "sha": "b44dc2417e8aaa0ef5d8800d75209801443c7bab",
+      "sha": "120c9f4c6e1b4338b1c406da178509badb6cee53",
       "mode": "100644"
     },
     {
@@ -2962,7 +2987,7 @@
     },
     {
       "path": ".agents/skills/om-synthetic-users/references/rules.md",
-      "sha": "142527660ed70d905241512354758ad64ef15377",
+      "sha": "080b97abacedd413672b8bf7ed97c36352b495eb",
       "mode": "100644"
     },
     {
@@ -3002,7 +3027,7 @@
     },
     {
       "path": ".agents/skills/om-troubleshooter/references/rules.md",
-      "sha": "7c39bb2794e89071285ed8dc084b6d2c01efa977",
+      "sha": "f051ae288f9e16ae8ed39c4929da2d4de7c47f92",
       "mode": "100644"
     },
     {
@@ -3114,7 +3139,7 @@
     },
     {
       "path": ".agents/skills/om-ux-review-pr/SKILL.md",
-      "sha": "30ede9a2e6d22d274aa2067f0fe32c65872135bf",
+      "sha": "e72b64843367b4a67a4b9dfa0939b8f626cf4aa2",
       "mode": "100644"
     },
     {
@@ -3149,7 +3174,7 @@
     },
     {
       "path": ".agents/skills/om-ux-setup/SKILL.md",
-      "sha": "df50d9ab86bb6a5abc96f50dfbfe6a2c7b2a0768",
+      "sha": "8bb66fad5ff4a803cc07b1e7fb3d8aff43601925",
       "mode": "100644"
     },
     {
@@ -3244,7 +3269,7 @@
     },
     {
       "path": ".agents/skills/om-verify-in-repo/SKILL.md",
-      "sha": "c95ad23c984a4c5261e795087e58dbc65bb2109b",
+      "sha": "f16115798de87de489174e491db0b5facb4d1a83",
       "mode": "100644"
     },
     {
@@ -3254,12 +3279,12 @@
     },
     {
       "path": ".agents/skills/om-verify-in-repo/references/claim-pr.md",
-      "sha": "2c6755f09cd115bb1a9f0163a7473aec240389e3",
+      "sha": "cd4a5580c35a3b9c13523689dbfb9fcdc3ba75e8",
       "mode": "100644"
     },
     {
       "path": ".agents/skills/om-verify-in-repo/references/rules.md",
-      "sha": "1ac65428c4cbfcf5e5c1e5acfc4f72a59c3ab2fa",
+      "sha": "26a4f846775892bba7b03b535e989cdc385935a5",
       "mode": "100644"
     }
   ]

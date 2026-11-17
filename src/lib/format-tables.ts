@@ -49,7 +49,7 @@
  *   `grouping` states the CLDR `minimumGroupingDigits` rule outright.
  *
  * Chromium agreed with workerd on every one of those fields, which is why a
- * Chromium-only check catches none of them and `e2e/i18n-runtime-parity.spec.ts`
+ * Chromium-only check catches none of them and `e2e/native/i18n-runtime-parity.e2e.ts`
  * runs its comparison in WebKit.
  *
  * Three things are still *composed* by `Intl` rather than by a table: the

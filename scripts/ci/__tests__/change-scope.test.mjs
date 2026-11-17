@@ -24,7 +24,7 @@ describe('scope', () => {
     'docs/adr/0020-something.md',
     'docs/plans/diagram.svg',
     '.ai/cezar/config.json',
-    '.claude/skills/verifying-changes/SKILL.md',
+    '.agents/policies/verification.md',
     'CONTEXT.md',
     'scripts/worktree/README.md',
   ])('treats %s as documentation', (path) => {
@@ -33,7 +33,7 @@ describe('scope', () => {
 
   it.each([
     'src/routes/index.tsx',
-    'e2e/journeys.spec.ts',
+    'e2e/browser/journeys.e2e.ts',
     'public/robots.txt',
     'package.json',
     'pnpm-lock.yaml',

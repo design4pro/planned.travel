@@ -28,6 +28,14 @@
 > judgement is a blind A/B pair from `scripts/visual/capture.mjs` that a human reads at review. The
 > thirteen area plans are **not** rewritten for this - correcting ~230 dead references would be a
 > larger and less honest change than one banner.
+>
+> **The current E2E runner is e2e-inc.** Historical test paths and Playwright Test commands
+> in plan verification blocks use the vocabulary from when those plans were written. Resolve
+> existing scenarios through [`../testing/e2e-inventory.json`](../testing/e2e-inventory.json)
+> and use [`../testing/e2e.md`](../testing/e2e.md) for current commands, registration and CI.
+> A proposed test path does not establish existing coverage; new browser cases use
+> `e2e/browser/*.e2e.ts`, with the owned driver and `test.finish()`. This guidance does not
+> rewrite frozen plans or revive the removed visual gate.
 
 `docs/` is described in `docs/SPEC.md` §6 as "spec + architecture notes". This directory adds the
 third kind of document: **staged implementation plans**, one per product area, that carve the 89-row

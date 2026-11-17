@@ -1,0 +1,13 @@
+# om-prepare-test-env repository policy
+
+Always apply `.agents/policies/security.md` and the atomic ownership protocol in `.ai/trackers/github.md`.
+
+Extends the installed skill: read `.agents/skills/om-prepare-test-env/SKILL.md` and follow it. The generated `.ai/scripts/test-env-up.sh` and `test-env-down.sh` must keep these repo facts on any regeneration or repair:
+
+- Provisioning (deps, `.dev.vars`, local D1 + airports, basemap in local R2) belongs to `scripts/worktree/bootstrap.sh --profile worktree --no-seed`; the up script selects its port first and calls it with `--port "$PORT" --host 127.0.0.1` before every fresh boot, including a fully provisioned checkout, to reconcile owned `APP_URL`. A conflicting user-owned origin refuses startup without modifying the file. The up script never writes `.dev.vars` itself.
+- Port from **3030-3040 only**: `e2e.browser.config.ts` refuses anything else outside CI, so an automated run can never photograph another checkout's app. Bind `127.0.0.1`, never `localhost` (another checkout may sit on `[::1]`).
+- App start: `E2E=1 NODE_OPTIONS="--max-old-space-size=4096" node node_modules/vite/bin/vite.js dev --port $PORT --strictPort --host 127.0.0.1`, pid recorded in `.ai/qa/dev-server.pid`, identity in `.ai/qa/dev-server-process.json`, log in `dev-server.log`. Start Vite directly so the recorded PID is the server, not a pnpm wrapper. Both bootstrap and test-env use `.ai/scripts/dev-server-process.mjs` to verify cwd, command and start time before reuse or termination. Every fresh boot, including `--force`, stops its owned predecessor first; unknown processes and orphaned foreign checkouts are diagnosed, never killed.
+- Seed: `node scripts/seed/seed.mjs --url $BASE_URL` then `node scripts/seed/verify.mjs`. Demo identity `rafal@planned.travel` as a `passwordEnv` reference (`TEST_DEMO_PASSWORD` in `.ai/qa/test-env.env`, gitignored).
+- Descriptor `.ai/qa/test-env.json` with `baseUrl`, `browser.provider: playwright`, `testRunner.name: e2e-inc` (`e2e.config.ts`), with legacy `playwright.runner: e2e-inc` (`e2e.browser.config.ts`). Committed suite: `E2E_BASE_URL=$BASE_URL pnpm e2e` (both configurations; `.ai/scripts/e2e.sh` runs both on Chromium).
+- No Docker services: D1/KV/R2/DO are Miniflare simulators under `.wrangler/`.
+- `.ai/scripts/` holds the validation gate, so a run does not repair it in passing: since ADR 0025 no hook refuses the edit in a cezar run, but a run that rewrites the gate it is about to be judged by has graded its own paper. Regeneration or repair of the entrypoint happens in an interactive session and lands as a reviewed commit; an agent run that finds the script broken reports it as blocked instead of patching it.

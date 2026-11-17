@@ -22,15 +22,15 @@ a 500 on `/login` looks like a code defect and is a missing file.
 
 ## Flags
 
-| Flag                        | Effect                                                                              |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `--profile worktree\|cloud` | Which environment this is. Default `worktree`. See the table below.                 |
-| `--port N`                  | Serve on this port instead of the allocated one.                                    |
+| Flag                          | Effect                                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `--profile worktree\|cloud`   | Which environment this is. Default `worktree`. See the table below.                                            |
+| `--port N`                    | Serve on this port instead of the allocated one.                                                               |
 | `--host localhost\|127.0.0.1` | Local origin and bind host; defaults to `localhost`. Explicit host refuses a conflicting user-owned `APP_URL`. |
-| `--check`                   | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight. |
-| `--if-needed`               | Exit 0 immediately when nothing is missing. What the SessionStart hook passes.      |
-| `--no-seed`                 | Stop after the schema; start no server and seed nothing.                            |
-| `--force`                   | Redo every step even when its result is already on disk.                            |
+| `--check`                     | Report what is missing and exit 1. Writes nothing. Cheap enough for any pre-flight.                            |
+| `--if-needed`                 | Exit 0 immediately when nothing is missing. Useful for repeat explicit setup.                                  |
+| `--no-seed`                   | Stop after the schema; start no server and seed nothing.                                                       |
+| `--force`                     | Redo every step even when its result is already on disk.                                                       |
 
 Anything else is a hard error rather than a silently ignored typo.
 
@@ -38,22 +38,20 @@ Anything else is a hard error rather than a silently ignored typo.
 
 |             | `worktree`                                                      | `cloud`                     |
 | ----------- | --------------------------------------------------------------- | --------------------------- |
-| Who runs it | a person or an agent, locally                                   | a Claude Code session VM    |
+| Who runs it | a person or an agent, locally                                   | an ephemeral remote VM      |
 | Port        | first free in 3001-3009                                         | 3000                        |
 | `.dev.vars` | copied from the main checkout when it has one, else throwaway   | throwaway, always           |
 | Basemap     | APFS clone of the main checkout's local R2, else pulled from R2 | pulled from R2              |
 | Seeds       | yes                                                             | no; prints the two commands |
 
-`scripts/cloud/session-start.sh` picks the profile off `CLAUDE_CODE_REMOTE` and does nothing else,
-and in a cezar run (`CEZ_TASK_ID` is set), whose workflow bootstraps itself, only installs
-dependencies when `node_modules` is missing.
-`.claude/settings.json` runs it from the `SessionStart` hook on startup and on resume, with a
-generous timeout because the first run in a fresh worktree installs dependencies.
+`scripts/cloud/session-start.sh` remains a legacy compatibility helper, not an installed hook.
+New sessions select a bootstrap profile explicitly.
+Cezar workflows call the bootstrap explicitly. Codex has no implicit SessionStart hook; run `pnpm worktree:bootstrap` in a fresh checkout.
 
 ## Its relationship to `.ai/scripts/test-env-up.sh`
 
 That script is the third profile and deliberately stays separate. It starts the app for the
-validation gate's e2e step, takes a port from 3030-3040 because `playwright.config.ts` insists on
+validation gate's e2e step, takes a port from 3030-3040 because `e2e.browser.config.ts` insists on
 the reserved range outside CI, and passes its selected port and `127.0.0.1` host to this script
 before every fresh boot.
 That reconciles owned `APP_URL` even when all fixtures already exist; a conflicting user-owned
@@ -64,7 +62,7 @@ rounds, this one for working on the app.
 ## The port, and why not 3000
 
 `pnpm dev` hardcodes `--port 3000`: that is the main checkout's port and a second worktree cannot
-have it. The other end is fenced too, and harder: `playwright.config.ts` refuses to run non-CI
+have it. The other end is fenced too, and harder: `e2e.browser.config.ts` refuses to run non-CI
 against anything outside 3030-3040, a guard added after a round photographed a different
 worktree's application. That leaves 3001-3009, which is what this script allocates from, and it
 starts Vite directly with `node node_modules/vite/bin/vite.js dev --port N --strictPort`,
@@ -110,5 +108,5 @@ other port use the password form. `/sign-in/email` allows ten attempts a minute.
 ## Expected noise
 
 After the seed's sign-ups the queue consumer logs `TaskConfigurationError`, because a local
-`.dev.vars` has no `EMAIL_API_KEY`. Environmental, documented in the `verifying-changes` skill,
+`.dev.vars` has no `EMAIL_API_KEY`. Environmental, documented in `.agents/policies/verification.md`,
 and not something `--check` reports.
