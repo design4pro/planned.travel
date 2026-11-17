@@ -663,6 +663,7 @@ const releaseAuditSchema = z.strictObject({
   action: z.enum(RELEASE_ACTIONS),
   entityId: identifierSchema,
   operationId: identifierSchema,
+  operationHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   versionId: identifierSchema.optional(),
   locale: z.enum(LOCALE_TAGS).optional(),
   sourceHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
@@ -692,6 +693,35 @@ export function preparePlatformAudit(
     action, entityId, entityType: entityTypeForAction(action),
     changes: { before: null, after: metadata },
   })
+}
+
+/** Bounded operation receipt, consumed only after fresh release permission in the content repository. */
+export async function findReleaseOperation(db: Database, operationId: string) {
+  identifierSchema.parse(operationId)
+  const [row] = await db
+    .select({
+      action: platformAuditLog.action,
+      entityType: platformAuditLog.entityType,
+      changes: platformAuditLog.changes,
+    })
+    .from(platformAuditLog)
+    .where(eq(platformAuditLog.id, operationId))
+    .limit(1)
+  if (!row) return null
+  if (
+    row.entityType !== 'release' ||
+    !RELEASE_ACTIONS.some((action) => action === row.action)
+  )
+    return { action: 'conflict', metadata: null }
+  const metadata = z
+    .object({
+      operationHash: z.string().optional(),
+      versionId: z.string().optional(),
+      sourceHash: z.string().optional(),
+      generation: z.number().optional(),
+    })
+    .parse(row.changes?.after)
+  return { action: row.action, metadata }
 }
 
 /* -------------------------------------------------------------------------------------------------
