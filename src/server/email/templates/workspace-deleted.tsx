@@ -19,7 +19,11 @@ export function WorkspaceDeletedEmail(props: {
       eyebrow={props.heading}
       footer={props.footer}
     >
-      <EmailParagraph>{props.body}</EmailParagraph>
+      <EmailParagraph>
+        <span style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+          {props.body}
+        </span>
+      </EmailParagraph>
     </EmailShell>
   )
 }

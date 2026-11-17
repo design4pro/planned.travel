@@ -805,20 +805,19 @@ const messages = {
     'Atualize esta página para usar as novas verificações de segurança.',
   'twoFactor.security.unavailable':
     'As alterações de segurança estão indisponíveis. Recarregue para verificar novamente.',
-  'workspace.delete.email.deleted': 'Espaço de trabalho eliminado',
+  'workspace.delete.email.deleted': 'Espaço de trabalho excluído',
   'workspace.delete.email.receipt':
-    '{name} foi eliminado permanentemente. A tua conta continua ativa.',
-  'workspace.delete.email.refused': 'Eliminação do espaço recusada',
-  'workspace.delete.email.refusal':
-    'Não foi possível eliminar {name}. {reason}',
+    '{name} foi excluído permanentemente. Sua conta continua ativa.',
+  'workspace.delete.email.refused': 'Exclusão do espaço recusada',
+  'workspace.delete.email.refusal': 'Não foi possível excluir {name}. {reason}',
   'workspace.delete.email.billing-unavailable':
-    'Não foi possível verificar a faturação. Tenta novamente.',
+    'Não foi possível verificar o faturamento. Tente novamente.',
   'workspace.delete.email.live-subscription':
-    'Uma subscrição em vigor impede a eliminação.',
+    'Uma assinatura em vigor impede a exclusão.',
   'workspace.delete.email.has-other-members':
     'Ainda existem outros membros neste espaço.',
   'workspace.delete.email.footer':
-    'Pediste a eliminação deste espaço de trabalho.',
+    'Você solicitou a exclusão deste espaço de trabalho.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
