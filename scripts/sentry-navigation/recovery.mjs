@@ -160,6 +160,8 @@ window.probe={
     'settled',
     'scope-changed',
     'sensitive',
+    'accept-invitation',
+    'accept-invitation-cold',
     'cancelled-beforeunload',
     'cancelled-beforeunload-warm',
   ].filter((timing) => !process.argv[3] || timing === process.argv[3]))
@@ -225,9 +227,16 @@ window.probe={
               .catch(() => {})
           }
         })
-        await page.goto(origin)
+        await page.goto(
+          timing === 'accept-invitation-cold'
+            ? origin + '/accept-invitation/synthetic'
+            : origin,
+        )
         await page.waitForFunction(() => window.probe !== undefined)
-        if (timing === 'provisional') {
+        if (timing === 'accept-invitation-cold') {
+          trial.selected = await page.evaluate(() => window.probe.send(100))
+          assert.equal(trial.selected.admitted, false)
+        } else if (timing === 'provisional') {
           await page.evaluate(() =>
             setTimeout(() => window.probe.send(235000), 100),
           )
@@ -293,6 +302,8 @@ window.probe={
         } else {
           let destination = '/destination'
           if (timing === 'scope-changed') destination += '?changed=1'
+          if (timing === 'accept-invitation')
+            destination = '/accept-invitation/synthetic'
           if (timing === 'sensitive')
             destination = '/join/synthetic?token=synthetic'
           trial.selected = await page.evaluate(
@@ -302,9 +313,20 @@ window.probe={
           await page.waitForURL(origin + destination)
         }
         trial.navigation = 'complete'
-        assert.equal(trial.selected.admitted, true)
+        assert.equal(
+          trial.selected.admitted,
+          timing !== 'accept-invitation-cold',
+        )
         await page.waitForFunction(() => window.probe !== undefined)
-        if (['scope-changed', 'sensitive'].includes(timing)) {
+        if (timing === 'accept-invitation-cold') {
+          assert.equal(await page.evaluate(() => window.probe.retained()), 0)
+          assert.equal(
+            events.filter((event) => event.kind === 'register').length,
+            0,
+          )
+        } else if (
+          ['scope-changed', 'sensitive', 'accept-invitation'].includes(timing)
+        ) {
           await wait(1500)
           assert.equal(await page.evaluate(() => window.probe.retained()), 0)
           assert.equal(

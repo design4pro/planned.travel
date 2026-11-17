@@ -19,7 +19,7 @@ import type { TransportOptions } from './transaction'
 function eligibleLocation(): boolean {
   return (
     !holdsSensitiveLocation(window.location.href) &&
-    !/^\/(?:login|register|reset-password|forgot-password|two-factor|verify-email|join)(?:\/|$)/.test(
+    !/^\/(?:login|register|reset-password|forgot-password|two-factor|verify-email|accept-invitation|join)(?:\/|$)/.test(
       window.location.pathname,
     )
   )
