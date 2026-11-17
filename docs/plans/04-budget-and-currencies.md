@@ -151,7 +151,7 @@ the tables that already exist in `src/server/db/schema.ts`.
 ## One shared file inside this plan, and the rule it follows
 
 `12-verification-protocol.md` §4 fixes one visual spec file per plan file —
-`e2e/budget-and-currencies.visual.spec.ts` — and says stages within a plan share it, told apart by a
+`e2e/browser/budget-and-currencies.visual.e2e.ts` — and says stages within a plan share it, told apart by a
 `test.describe` block named for the stage. `README.md` also says two stages in one wave may not name
 the same file, and `04-S1` and `04-S2` are both wave 1.
 
@@ -164,7 +164,7 @@ cannot write the same PNG.
 
 **Both paths are listed under Owned paths by every stage, not only by the one that creates them.**
 The spec file and `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` travel together:
-`playwright.config.ts:49-50` derives the baseline directory from the spec's file name, so a stage
+`e2e.browser.config.ts:49-50` derives the baseline directory from the spec's file name, so a stage
 that runs `--update-snapshots` for its own `describe` block writes PNGs into that directory whether
 it named it or not. A stage that writes into a path it did not declare fails `docs/SPEC.md` §7 item 6
 however good the pixels are, and an auditor diffs the actual changes against the list. So each of the
@@ -191,7 +191,7 @@ form every stage below repeats with its own route, stage id and declared states 
 invocation nobody quoted is an invocation nobody ran, and a plan that asserts visual verification
 without one has asserted something unfalsifiable.
 
-**The port is resolved, never assumed.** `playwright.config.ts:9-10` reads `PLAYWRIGHT_BASE_URL` and
+**The port is resolved, never assumed.** `e2e.browser.config.ts:9-10` reads `PLAYWRIGHT_BASE_URL` and
 falls back to `http://localhost:3000`, starting its own `webServer` when the variable is unset. Port
 3000 is not guaranteed to be this application on a developer machine, and a suite pointed at a
 stranger's server reports failures that look like product defects.
@@ -206,19 +206,19 @@ invocation out in full:
 
 ```sh
 # once, and again whenever an authenticated route starts redirecting to /login
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
 
 # this plan's spec, both browser projects — chromium at 1440x900 and mobile-safari at 393x659
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
 
 # record only the running stage's own baselines, selected by its describe-block name
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S1'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S1'
 ```
 
 `--update-snapshots` writes into `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`, which
-`playwright.config.ts:49-50` derives from the spec's file name. That is why every stage in this file
+`e2e.browser.config.ts:49-50` derives from the spec's file name. That is why every stage in this file
 lists that directory under **Owned paths**. `maxDiffPixelRatio` stays at `0.002` and `threshold` at
 `0.2`: `12-verification-protocol.md` §5 forbids raising either, globally, per project or per call,
 and no stage here does.
@@ -227,7 +227,7 @@ and no stage here does.
 writes nothing under `e2e/__screenshots__`. The clock pin is not a default — the header interceptor
 is installed only `if (serverToday)` (`scripts/ultrabuild/capture.mjs:168-169`) — and `2026-08-20` is
 not a free choice: it is `BASELINE_DAY` in `e2e/helpers/shoot.ts` and the same string
-`playwright.config.ts` sends, so a stage that omits it photographs one day next to baselines recorded
+`e2e.browser.config.ts` sends, so a stage that omits it photographs one day next to baselines recorded
 on another.
 
 ```sh
@@ -264,7 +264,7 @@ file uses both by that measurement rather than by preference:
 - a state needing **two steps, a keyboard focus ring** — `:focus-visible` does not appear on a mouse
   click, so a clicked frame is not evidence about it — **or a failed request** is reached inside this
   plan's own spec, and its frame is written with `page.screenshot({ path: testInfo.outputPath(name) })`
-  into `test-results/` (`playwright.config.ts:51`, already git-ignored) and then copied into the same
+  into `test-results/` (`e2e.browser.config.ts:51`, already git-ignored) and then copied into the same
   round and stage directory as the resting set. Both browsers write to a temporary path first, so the
   copy is a step that was being taken anyway.
 
@@ -344,7 +344,7 @@ Behaviour sourced from `wiki: Currencies`, restated in our own vocabulary.
 - `src/components/costs/__tests__/data.test.ts` — edit.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block that
   edits none of the existing ones.
-- `e2e/budget-and-currencies.visual.spec.ts` — new. This plan's spec file, per
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — new. This plan's spec file, per
   `12-verification-protocol.md` §4.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — new. Its baseline directory.
 
@@ -806,7 +806,7 @@ cannot be constructed by the module.
   1" and `getMemberBalances` still clears to zero on a trip that mixes converted and unconverted
   payments.
 
-**Browser evidence.** Spec file `e2e/budget-and-currencies.visual.spec.ts`, `describe` block named
+**Browser evidence.** Spec file `e2e/browser/budget-and-currencies.visual.e2e.ts`, `describe` block named
 `04-S1 — payment currency and display currency`. It imports `visit`, `settle`, `shoot`, `applyTheme`, `THEMES`,
 `useSession` and `watchConsole` from `./helpers/shoot.ts` and re-implements none of them, and it
 calls `auditServerClock(page, <this spec's own route table>)` once in a `describe` of its own,
@@ -854,11 +854,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S1'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S1'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -874,7 +874,7 @@ PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
 rate lookup, which no capture flag reaches. Both are therefore driven inside this plan's spec, the
 route `12-verification-protocol.md` §3 sanctions alongside the flags, and each frame is written with
 `page.screenshot({ path: testInfo.outputPath(name) })` — `name` being `foreign-payment-<width>-<theme>.png`
-— into `test-results/` (`playwright.config.ts:51`) and copied into the same round and stage directory
+— into `test-results/` (`e2e.browser.config.ts:51`) and copied into the same round and stage directory
 as the resting set. Six frames each, at the same three widths in both themes.
 
 ### Definition of done
@@ -1024,10 +1024,10 @@ Sourced from `wiki: Budget-Tracking`.
 - `src/routes/_app/trips/$tripId/-costs/actions.ts` — edit.
 - `src/routes/_app/trips/$tripId/-costs/skeleton.tsx` — edit.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block, added at
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block, added at
   the end and editing nobody else's.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S2'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -1254,7 +1254,7 @@ database already carrying `0000` and `0001`.
   first index, the last index and an index beyond the palette so no swatch loses its colour.
 
 **Browser evidence.** `describe` block `04-S2 — trip cost categories` in
-`e2e/budget-and-currencies.visual.spec.ts`, using the shared helpers and re-implementing none.
+`e2e/browser/budget-and-currencies.visual.e2e.ts`, using the shared helpers and re-implementing none.
 
 - Route: `/trips/$tripId/costs`.
 - Frame set: light and dark at **360px, 1280px and 2560px** at rest.
@@ -1285,11 +1285,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S2'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S2'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -1441,9 +1441,9 @@ Sourced from `wiki: Budget-Tracking`.
 - `src/components/costs/data.ts` — edit. The derivation helpers and the patch merge.
 - `src/components/costs/__tests__/data.test.ts` — edit.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S3'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -1608,11 +1608,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S3'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S3'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -1705,9 +1705,9 @@ Sourced from `wiki: Budget-Tracking`.
   reached the way the existing six are.
 - `src/routes/_app/trips/$tripId/-costs/rail.tsx` — edit.
 - `src/routes/_app/trips/$tripId/-costs/stat-tiles.tsx` — edit.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S4'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -1861,11 +1861,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S4'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S4'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -1978,9 +1978,9 @@ Sourced from `wiki: Currencies`.
 - `src/components/costs/costs-toolbar.tsx` — edit. The entry point.
 - `src/routes/_app/trips/$tripId/-costs/screen.tsx` — edit. Mounts the dialog and holds its state.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S5'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -2234,11 +2234,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S5'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S5'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -2357,9 +2357,9 @@ Sourced from `wiki: Budget-Tracking`.
   reader's own share (`expense-list.tsx:167-170`); it gains the marker that says when that share is
   recorded as paid.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. One new `describe` block.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S6'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -2716,11 +2716,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S6'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S6'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -2735,7 +2735,7 @@ lives inside the expense dialog, so `ticket` needs the dialog opened and then
 then `[data-part="share-paid-toggle"]`; `capture.mjs` applies one `--click` per invocation
 (`scripts/ultrabuild/capture.mjs:218-224`). Both are driven in this plan's spec and their frames
 written with `page.screenshot({ path: testInfo.outputPath(name) })` into `test-results/`
-(`playwright.config.ts:51`) and copied into the same round and stage directory as the resting set —
+(`e2e.browser.config.ts:51`) and copied into the same round and stage directory as the resting set —
 six frames each, three widths, both themes. The unbalanced-split error frame is reached the same way,
 by typing an unbalanced value rather than by mocking anything.
 
@@ -2817,9 +2817,9 @@ Four rows across three other plans wait on the same decision and become buildabl
 - `src/server/repos/__tests__/rates.test.ts` — edit.
 - `src/server/repos/__tests__/tenant-isolation.test.ts` — append. Its own new `describe` block for
   the cache-key rule below, editing none of the existing ones.
-- `e2e/budget-and-currencies.visual.spec.ts` — append. This stage's own `describe` block.
+- `e2e/browser/budget-and-currencies.visual.e2e.ts` — append. This stage's own `describe` block.
 - `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/` — append. The baseline directory
-  `playwright.config.ts:49-50` derives from that spec's file name, so
+  `e2e.browser.config.ts:49-50` derives from that spec's file name, so
   `--update-snapshots -g '04-S7'` writes this stage's own frames into it whether the stage
   names it or not. It is named because writing into a path a stage did not declare fails
   `docs/SPEC.md` §7 item 6. `append`, not `edit`: every frame name begins with the stage id, so
@@ -2950,11 +2950,11 @@ compares.
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
 
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
-  e2e/budget-and-currencies.visual.spec.ts --update-snapshots -g '04-S7'
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
+  e2e/browser/budget-and-currencies.visual.e2e.ts --update-snapshots -g '04-S7'
 
 PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
   --url "http://localhost:$PORT/trips/$TRIP_ID/costs" \
@@ -3128,7 +3128,7 @@ it was not free: reaching it changed four things.
 - **Every stage now names `e2e/__screenshots__/budget-and-currencies.visual.spec.ts/`, not only
   `04-S1`.** An earlier draft listed the baseline directory once, in the stage that creates it, while
   the other six each ran `--update-snapshots` for their own `describe` block —
-  `playwright.config.ts:49-50` derives that directory from the spec's file name, so all six wrote
+  `e2e.browser.config.ts:49-50` derives that directory from the spec's file name, so all six wrote
   PNGs into a path they had not declared, which is `docs/SPEC.md` §7 item 6 broken six times over.
   `04-S1` holds it `new` and `04-S2` through `04-S7` hold it `append`, which the check accepts
   because `append` is cooperative: the six do not appear in the collision list, and their frame names

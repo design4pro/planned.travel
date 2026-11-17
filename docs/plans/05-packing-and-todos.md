@@ -858,8 +858,8 @@ compared.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/packing-and-todos.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/packing-and-todos.visual.spec.ts
 ```
 
 The spec declares its own route table for `/trips/$tripId/lists` with no `relativeTime` flag — the
@@ -1351,8 +1351,8 @@ own edge behaviour — these two cover **this stage's composition of it**.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/packing-and-todos.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/packing-and-todos.visual.spec.ts
 ```
 
 The stage's `describe` block is named `05-S2` and appended to the file `05-S1` created; it edits no
@@ -1390,7 +1390,7 @@ The skeleton is reached in the spec with a `page.route()` that delays `loadListT
 response; the error state with one that fails it.
 
 `PT_SERVER_TODAY=2026-08-20` is `BASELINE_DAY` (`e2e/helpers/shoot.ts:1014`) and the same value
-`playwright.config.ts` sends. The trip id is resolved at runtime as `05-S1` describes; it is not a
+`e2e.browser.config.ts` sends. The trip id is resolved at runtime as `05-S1` describes; it is not a
 constant.
 
 **Layout shift** after the settle mark must be `0`, measured the way §6 of
@@ -1779,8 +1779,8 @@ rejected. Tenant isolation would allow it; correctness does not.
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/packing-and-todos.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/packing-and-todos.visual.spec.ts
 ```
 
 The stage's `describe` block is named `05-S3` and is appended; it edits no other block. `watchConsole`
@@ -2117,8 +2117,8 @@ null `dueDate` is never overdue; `mine` with no viewer id returns nothing rather
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/packing-and-todos.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/packing-and-todos.visual.spec.ts
 ```
 
 The `describe` block is named `05-S4` and appended. The route table still declares no `relativeTime`
@@ -2523,8 +2523,8 @@ here, because it is authorisation **within** a tenant and belongs with the other
 
 ```sh
 PORT=$(scripts/ultrabuild/resolve-port.sh)
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/packing-and-todos.visual.spec.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/packing-and-todos.visual.spec.ts
 ```
 
 The `describe` block is named `05-S5` and appended. `watchConsole` is attached before every navigation

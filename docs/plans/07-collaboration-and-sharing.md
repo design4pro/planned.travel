@@ -472,8 +472,8 @@ search parameter or a props path a caller could set.
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test \
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser \
     e2e/collaboration-and-sharing.visual.spec.ts
   ```
 

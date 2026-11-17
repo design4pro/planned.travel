@@ -80,7 +80,7 @@ function readableServerFnId({
  * An automated dev server outlives the checkout it was started for, and the port window is finite.
  *
  * `.ai/scripts/test-env-up.sh` starts this server with `nohup` on a port from 3030-3040 — the only
- * range `playwright.config.ts` accepts outside CI — and deliberately leaves it running so the next
+ * range `e2e.browser.config.ts` accepts outside CI — and deliberately leaves it running so the next
  * step of the same run reuses it. Nothing then ties its lifetime to the checkout: when the run's
  * worktree is removed (`git worktree remove`, or an `om-*` skill deleting its scratch directory),
  * the process keeps its deleted working directory open and keeps the port for as long as the host
@@ -182,11 +182,23 @@ const config = defineConfig({
      */
     cloudflare({ viteEnvironment: { name: 'ssr' }, remoteBindings: false }),
     tailwindcss(),
-    tanstackStart(
-      isE2EBuild
+    tanstackStart({
+      router: {
+        codeSplittingOptions: {
+          defaultBehavior: [
+            [
+              'component',
+              'pendingComponent',
+              'errorComponent',
+              'notFoundComponent',
+            ],
+          ],
+        },
+      },
+      ...(isE2EBuild
         ? { serverFns: { generateFunctionId: readableServerFnId } }
-        : undefined,
-    ),
+        : {}),
+    }),
     viteReact(),
     // Last on purpose: it reads the bundle other plugins produced, so it has to run after them.
     // Inert without a token - `disable` short-circuits it before it looks for anything to upload.

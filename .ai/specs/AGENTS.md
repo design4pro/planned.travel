@@ -9,6 +9,22 @@ and `om-auto-write-spec` skills plus `.ai/skills/om-auto-write-spec/SKILL.md`, w
 sections this repository requires of every spec; the workflow that builds one is
 `om-auto-implement-spec` plus `.ai/skills/om-auto-implement-spec/SKILL.md`.
 
+## Current E2E verification
+
+Dated specification bodies retain their historical runner commands and test paths.
+All product E2E scenarios now execute through e2e-inc. Resolve an old
+`e2e/*.spec.ts` reference through [the current owner inventory](../../docs/testing/e2e-inventory.json),
+and use [the execution guide](../../docs/testing/e2e.md) for current commands and CI.
+An absent inventory entry or a proposed test path does not establish existing coverage;
+future cases remain planned until implemented and executed. Historical visual-test
+proposals never restore the removed screenshot-baseline gate.
+
+New custom-browser cases belong in `e2e/browser/*.e2e.ts`, use `browserTest()` from
+`e2e/driver/test.ts` and register `test.finish()`. Portable cases belong in
+`e2e/native/*.e2e.ts`. The owned `.ai/scripts/e2e.sh` entrypoint selects their
+configuration. This directory-level guidance changes no specification body,
+implementation status, metadata, runtime authorization or security gate.
+
 ## Where a spec lives
 
 The directory **is** the state. Nothing else in this repository records it.

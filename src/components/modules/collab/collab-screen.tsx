@@ -31,6 +31,7 @@ export interface CollabScreenData {
   readonly people: ReadonlyArray<CollabPerson>
   readonly viewerUserId: string
   readonly timeZone: string
+  readonly todayKey: string
 }
 
 /** Owns draft retention and focus as the stored record changes under a traveller. */
@@ -250,6 +251,7 @@ export function CollabScreen({
                 canWrite={canWrite}
                 canModerate={canWrite && canModerate}
                 timeZone={data.timeZone}
+                todayKey={data.todayKey}
                 onDirtyChange={conversationDirty}
                 turnedOff={!data.sections.conversation}
               />

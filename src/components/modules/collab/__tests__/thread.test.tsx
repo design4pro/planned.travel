@@ -92,6 +92,7 @@ function mount(
           viewerUserId="user-1"
           canModerate={false}
           timeZone="UTC"
+          todayKey="2026-06-15"
         />
       </TooltipProvider>
     </I18nProvider>,
@@ -193,6 +194,42 @@ describe('jumbo glyph hydration', () => {
       expect(screen.getByText(En['collab.message.edited'])).toBeTruthy()
     }
   })
+})
+
+describe('day heading hydration', () => {
+  it.each(['2026-06-22', '2026-06-23'])(
+    'retains the server day snapshot %s when the client crosses midnight',
+    async (todayKey) => {
+      const warnings = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const recoverable = vi.fn()
+      const host = document.createElement('div')
+      document.body.appendChild(host)
+      const rows = [message('m1', 'user-2', '2026-06-23T09:00:00Z', 'Hello')]
+      const expected =
+        todayKey === '2026-06-23'
+          ? En['collab.thread.today']
+          : formatWeekday('2026-06-23', 'en')!
+      const tree = () => composerTree(rows, vi.fn(), todayKey)
+      let root: ReturnType<typeof hydrateRoot> | undefined
+      vi.useFakeTimers({ toFake: ['Date'] })
+      try {
+        vi.setSystemTime(new Date('2026-06-22T23:59:59Z'))
+        host.innerHTML = renderToString(tree())
+        expect(host.textContent).toContain(expected)
+        vi.setSystemTime(new Date('2026-06-23T00:00:01Z'))
+        await act(async () => {
+          root = hydrateRoot(host, tree(), { onRecoverableError: recoverable })
+        })
+        expect(host.textContent).toContain(expected)
+        expect(recoverable).not.toHaveBeenCalled()
+        expect(warnings).not.toHaveBeenCalled()
+      } finally {
+        await act(async () => root?.unmount())
+        host.remove()
+        vi.useRealTimers()
+      }
+    },
+  )
 })
 
 describe('the transcript', () => {
@@ -336,6 +373,7 @@ function deferred<T>() {
 function composerTree(
   messages: ReadonlyArray<MessageData> = [],
   onDirtyChange = vi.fn(),
+  todayKey = '2026-06-15',
 ) {
   return (
     <I18nProvider locale="en" messages={namespaceCatalogue('modules', En)}>
@@ -348,6 +386,7 @@ function composerTree(
           viewerUserId="user-1"
           canModerate={false}
           timeZone="UTC"
+          todayKey={todayKey}
           onDirtyChange={onDirtyChange}
         />
       </TooltipProvider>
@@ -673,6 +712,7 @@ describe('the viewers own actions on held history', () => {
             viewerUserId="user-1"
             canModerate={false}
             timeZone="UTC"
+            todayKey="2026-06-15"
           />
         </TooltipProvider>
       </I18nProvider>

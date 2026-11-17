@@ -14,7 +14,7 @@
  * as an instant):
  *
  * - In development the caller may pin it with a request header, which is how
- *   `playwright.config.ts` holds the whole suite on the day the baselines were
+ *   both e2e-inc engine configurations hold the suite on the day the baselines were
  *   recorded. The pin travels on the browser context, so the SSR document and
  *   every server-function RPC that follows it agree — a page cannot render half
  *   on one day and half on another.
@@ -85,8 +85,8 @@ function pinnedDay(): string | null {
   if (import.meta.env.DEV) {
     let header: string | null
     try {
-      // `x-pt-server-today`, mirrored by `SERVER_TODAY_HEADER` in
-      // `playwright.config.ts`. Namespaced so it cannot collide with a proxy
+      // `x-pt-server-today`, mirrored by both e2e-inc engines in development.
+      // Namespaced so it cannot collide with a proxy
       // header, read nowhere else, and folded out of the production build with
       // the branch it sits in.
       header = getRequest().headers.get('x-pt-server-today')

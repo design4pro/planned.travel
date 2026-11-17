@@ -58,6 +58,7 @@ import { BasemapNotice, MapEngineNotice } from './basemap-notice'
 import { useAtlasCopy } from './copy'
 import { MapAttribution } from './map-attribution'
 
+import { mapCanvasLimit } from '#/lib/map/canvas-limit'
 import type { MapOptions } from 'maplibre-gl'
 import type { BasemapId } from '#/lib/map/basemap'
 import type { EdgePadding, LngLat, MapBounds } from '#/lib/map/bounds'
@@ -200,6 +201,7 @@ const DEFAULT_ZOOM = 1.3
  * refusal can be a GPU process that has since recovered.
  */
 let webgl2Confirmed = false
+let maxCanvasSize: [number, number] = [4096, 4096]
 
 /**
  * True only when this browser claims WebGL2 and then refuses to give us one.
@@ -227,7 +229,15 @@ function webgl2Refused(): boolean {
   try {
     const context = document.createElement('canvas').getContext('webgl2')
     if (context === null) return true
-    context.getExtension('WEBGL_lose_context')?.loseContext()
+    try {
+      const limit = mapCanvasLimit(
+        context.getParameter(context.MAX_TEXTURE_SIZE),
+        context.getParameter(context.MAX_RENDERBUFFER_SIZE),
+      )
+      maxCanvasSize = [limit, limit]
+    } finally {
+      context.getExtension('WEBGL_lose_context')?.loseContext()
+    }
     webgl2Confirmed = true
     return false
   } catch {
@@ -491,6 +501,7 @@ export function MapCanvas({
         minZoom: zoomRangeRef.current.minZoom,
         maxZoom: zoomRangeRef.current.maxZoom,
         interactive,
+        maxCanvasSize,
         // The canvas is a focusable element, and MapLibre names it from this
         // string. Left at its default it announces as "Map", which on a screen
         // with one map is no name at all and on a screen with two is a trap.

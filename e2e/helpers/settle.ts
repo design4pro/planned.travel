@@ -53,7 +53,7 @@ import type { RouteCase } from './routes'
  *
  * This fixes the clock *in the browser*, and only there. What the Worker rendered
  * into the HTML before the browser existed is seam 3's, pinned by a request
- * header from `playwright.config.ts`; the two are deliberately separate.
+ * header from `e2e.browser.config.ts`; the two are deliberately separate.
  */
 export const FROZEN_NOW = '2026-06-15T12:00:00.000Z'
 
@@ -82,12 +82,12 @@ export const MAP_READY_TIMEOUT_MS = 15_000
  * How long a route that mounts a live map gets for React to claim its tree.
  *
  * Every other route hydrates inside Playwright's flat `actionTimeout` (10 s in
- * `playwright.config.ts`). `/atlas` did not, on the 2-vCPU CI runner: MAP-05
+ * `e2e.browser.config.ts`). `/atlas` did not, on the 2-vCPU CI runner: MAP-05
  * failed there with the page rendered and the hydration wait out of time
  * (issue #477, run 34760110795). The extra budget is named on every route that
  * declares `map: true`, not only `/atlas`, rather than absorbed by a suite-wide
  * raise, which would hide a slow-hydration regression on every other screen —
- * the argument `ATLAS_JOURNEY_TIMEOUT_MS` makes in `journeys.spec.ts`.
+ * the argument `ATLAS_JOURNEY_TIMEOUT_MS` makes in `journeys.e2e.ts`.
  *
  * A ceiling, not an expectation: a page that hydrates waits for none of it.
  */

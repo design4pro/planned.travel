@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { CurrencyConverter } from './-ui/currency-converter'
 import { DashboardMascot } from './-ui/dashboard-mascot'
+import { useDashboardRetryFocus } from './-ui/use-dashboard-retry-focus'
 import {
   DashboardRefreshError,
   DashboardRefreshErrorPanel,
@@ -179,12 +180,19 @@ function DashboardPage() {
   })
   const widgets = useDashboardWidgets()
   const inSheet = useWidgetsInSheet()
+  const recovery = useDashboardRetryFocus({
+    identity: initial,
+    workspaceId: shell.session.organization?.id ?? null,
+    recovered: refreshFailure?.initial !== initial,
+    onRetry: refreshMascot,
+  })
   if (refreshFailure?.initial === initial)
     return (
       <AppFrame>
         <DashboardRefreshErrorPanel
           error={refreshFailure.error}
-          onRetry={refreshMascot}
+          onRetry={recovery.retry}
+          containerRef={recovery.containerRef}
         />
       </AppFrame>
     )
