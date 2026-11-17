@@ -32,6 +32,7 @@ import { parseVisitorLocaleCookie } from '#/lib/i18n/visitor-locale'
 import { getSession } from '#/server/auth/session'
 import { getEffectiveSettings } from '#/server/repos'
 import { appScope } from './context'
+import { deriveTransactionDeliveryScope } from '#/server/observability/delivery-scope'
 import { writeVisitorLocaleCookie } from './-lib/visitor-locale'
 
 import type { Direction, Locale } from '#/lib/i18n'
@@ -45,6 +46,8 @@ export interface NegotiatedLocale {
   readonly dir: Direction
   /** Presentation hint only, never an authorisation decision. */
   readonly signedIn: boolean
+  /** Optional local recovery partition; never an authentication capability. */
+  readonly telemetryScope?: string | null
 }
 
 /**
@@ -52,6 +55,9 @@ export interface NegotiatedLocale {
  * expensive one stays unevaluated when the cheap one has already answered.
  */
 export interface LocaleRequestSource {
+  readonly deliveryScope?: (
+    session: AuthSession | null,
+  ) => Promise<string | null>
   /** The caller's session, or `null` when the request is anonymous. */
   readonly session: () => Promise<AuthSession | null>
   /**
@@ -88,7 +94,14 @@ export async function negotiateLocaleFrom(
     visitor: source.visitorLocale(),
     acceptLanguage: source.acceptLanguage(),
   })
-  return { locale, dir: directionOf(locale), signedIn: session !== null }
+  const result = {
+    locale,
+    dir: directionOf(locale),
+    signedIn: session !== null,
+  }
+  if (source.deliveryScope)
+    return { ...result, telemetryScope: await source.deliveryScope(session) }
+  return result
 }
 
 /** The caller's stored preference, or `null` for anyone who has none. */
@@ -107,13 +120,27 @@ async function storedLocaleForCaller(
 }
 
 /** Production's wiring: the real session, the real merge, the real header. */
-const requestSource: LocaleRequestSource = {
-  session: getSession,
-  storedLocale: async () =>
-    (await getEffectiveSettings(await appScope())).locale,
-  acceptLanguage: () => getRequestHeader('accept-language') ?? null,
-  visitorLocale: () =>
-    parseVisitorLocaleCookie(getRequestHeader('cookie') ?? null),
+function requestSource(): LocaleRequestSource {
+  let confirmed: { userId: string; organizationId: string } | null = null
+  return {
+    session: getSession,
+    storedLocale: async () => {
+      const scope = await appScope()
+      confirmed = {
+        userId: scope.ctx.userId,
+        organizationId: scope.ctx.organizationId,
+      }
+      return (await getEffectiveSettings(scope)).locale
+    },
+    acceptLanguage: () => getRequestHeader('accept-language') ?? null,
+    visitorLocale: () =>
+      parseVisitorLocaleCookie(getRequestHeader('cookie') ?? null),
+    deliveryScope: async (session) => {
+      const dsn = import.meta.env.VITE_SENTRY_DSN
+      if (typeof dsn !== 'string' || dsn.length === 0) return null
+      return deriveTransactionDeliveryScope(session, confirmed)
+    },
+  }
 }
 
 /**
@@ -122,7 +149,7 @@ const requestSource: LocaleRequestSource = {
  * session cookie and the request headers, both of which the server owns.
  */
 export const negotiateRequestLocale = createServerFn({ method: 'GET' }).handler(
-  async (): Promise<NegotiatedLocale> => negotiateLocaleFrom(requestSource),
+  async (): Promise<NegotiatedLocale> => negotiateLocaleFrom(requestSource()),
 )
 
 /** Only anonymous requests write; stale signed-out tabs cannot change preferences after sign-in. */

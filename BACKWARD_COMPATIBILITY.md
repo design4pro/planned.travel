@@ -170,3 +170,14 @@ queue shapes: no person-erasure kind/handler, producer or engine is registered. 
 adapters and #1060 activation remain separately gated.
 
 No request input, queue envelope, physical schema or locale shape changes for this fence.
+
+## Browser transaction recovery (issue #1849)
+
+Locale negotiation adds only an optional `telemetryScope` response field. Old clients ignore it;
+new clients with an older server or absent scope use native delivery. The HTML meta value is
+opaque diagnostic scope, never an authorization capability, and is blocked from Replay. No
+server-function input, database schema or auth contract changes. The versioned session-storage
+queue additionally binds endpoint path and release, and discards mismatches. An older bundle
+continues native delivery; rollback does not ingest a newer queue. Physical storage cleanup
+requires executing a compatible document or closing the tab. See ADR 0052 for bounded dispatch
+expiry, unknown-outcome duplication and retirement conditions.

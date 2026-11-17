@@ -2390,6 +2390,23 @@ the SDK is tree-shaken out of the client bundle entirely.
 | Session replay      | browser                         | 10% of sessions, 100% of sessions that hit an error                                                             |
 | User feedback       | browser                         | A floating "Report a problem" button on every page, with an optional screenshot                                 |
 
+**Browser transaction recovery:** the browser uses a narrow module ServiceWorker for admitted
+single JSON transactions and tab-local session storage before asynchronous registration.
+The worker has no fetch interceptor and accepts only the configured DSN target. It sends with
+credentials omitted, redirects refused and keepalive disabled. Other envelope types, including
+Replay, retain the installed SDK transport. The server supplies an opaque, Replay-blocked scope
+for the confirmed effective workspace; unknown scope or unavailable storage means native-only
+admission. Auth/session changes, workspace changes, sensitive pages, cross-tab invalidation and
+BFCache restoration retire recovery. Stale server results cannot reactivate it.
+
+Limits: 40 records, 512 KiB UTF-8/body, 2 MiB serialized UTF-16 including metadata, 30-second
+send eligibility, three attempts, 10-second worker and 12-second document deadlines. Actual
+HTTP responses (including 413/429/5xx) are returned to the SDK and never retried by recovery;
+rate-limit delays survive document replacement. Unknown outcomes may duplicate the same event
+ID, without relying on ingestion deduplication. Suspended pages/storage errors can delay
+physical deletion. No production migration or new credential is required. A disabled DSN
+adds no recovery bootstrap. See [ADR 0052](adr/0052-bounded-browser-transaction-recovery.md).
+
 **Session replay masks everything by default and that is deliberate.** A replay records the DOM,
 and this DOM holds trip contents, member lists and billing state. `maskAllText`, `maskAllInputs` and
 `blockAllMedia` are set in `src/lib/sentry-replay.ts`, so what is recorded is layout, timing and

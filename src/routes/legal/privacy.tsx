@@ -9,8 +9,8 @@ const DESCRIPTION =
   'The plain-English privacy notice template for planned.travel: what we collect, what we refuse to do with it, where it is stored on Cloudflare, which third parties touch it, how long we keep it and how to get it back.'
 const URL = 'https://planned.travel/legal/privacy'
 
-const UPDATED = '19 August 2026'
-const VERSION = '1.0 (template)'
+const UPDATED = '17 November 2026'
+const VERSION = '1.1 (template)'
 
 export const Route = createFileRoute('/legal/privacy')({
   head: () => ({
@@ -28,7 +28,7 @@ export const Route = createFileRoute('/legal/privacy')({
 
 const SUMMARY: ReadonlyArray<string> = [
   'We collect what the product needs to work: your account details, the trips you create, and technical logs.',
-  'We do not sell or rent your data, we run no advertising, and we load no third-party analytics or tracking scripts.',
+  'We do not sell or rent your data, we run no advertising, and we use diagnostics to investigate failures.',
   'Your trips live in a Cloudflare database and object store scoped to your workspace. Polar, our merchant of record, sells and invoices the subscription, so we never hold your card number.',
   'You can export your trips at any time, and deleting your account deletes your content.',
   'We hold no security certification today. When we are audited against a standard, we will name the standard here — and not before.',
@@ -156,9 +156,9 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
             identifiers.
           </li>
           <li>
-            We load no third-party analytics, session-recording or tracking
-            scripts. Usage measurement, where we do it, comes from our own
-            server logs.
+            We use Sentry for error reports, performance diagnostics and masked
+            session replay. Diagnostic collection is restricted on sensitive
+            pages; it is not advertising measurement.
           </li>
           <li>
             We do not use your trips, photographs or messages to train
@@ -178,9 +178,9 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
     body: (
       <>
         <p>
-          We use no advertising or analytics cookies, so there is no consent
-          banner to dismiss. The cookies we set are small and used only to make
-          the product work as you have set it up:
+          We use cookies and browser storage for sessions, preferences, maps and
+          diagnostics. This template describes technical behavior; it does not
+          determine any consent requirements:
         </p>
         <ul>
           <li>
@@ -195,6 +195,15 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
           <li>
             A <strong>theme preference</strong> stored in your browser, so the
             light or dark choice survives a reload. It never leaves your device.
+          </li>
+          <li>
+            <strong>Diagnostic transaction recovery</strong> uses this tab's
+            session storage when Sentry is enabled, up to 40 scrubbed records
+            and 2 MiB including metadata. Records stop being eligible for
+            sending after 30 seconds and are cleared on confirmed context
+            changes and sensitive pages. Suspended pages or storage failures can
+            delay physical deletion. Session replay is not retained in this
+            queue.
           </li>
           <li>
             <strong>Cached map tiles</strong> in your browser, so panning a map
@@ -240,6 +249,12 @@ const SECTIONS: ReadonlyArray<LegalSection> = [
           <dd>
             Hosting, database, object storage, caching and network delivery.
             Sees everything that passes through the service.
+          </dd>
+          <dt>Sentry</dt>
+          <dd>
+            Receives scrubbed error and performance diagnostics and masked
+            session replay when configured. Browser transaction recovery uses
+            the same configured diagnostic endpoint.
           </dd>
           <dt>Polar</dt>
           <dd>

@@ -1,3 +1,4 @@
+import { withTransactionRecoveryRetired } from '#/lib/sentry-delivery/control'
 import { requestCollectionExit } from '#/lib/collection-exit'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
@@ -281,7 +282,9 @@ function ImpersonatedSessionBar({
     // somebody holding their own credential that they are still holding
     // somebody else's, which is the more dangerous of the two wrong answers.
     try {
-      await endImpersonationFn({ data: {} })
+      await withTransactionRecoveryRetired(() =>
+        endImpersonationFn({ data: {} }),
+      )
     } catch (cause) {
       setEnding(false)
       toast.error('Could not end impersonation', {

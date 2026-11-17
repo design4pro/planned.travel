@@ -14,6 +14,7 @@
  * Nothing here imports from `src/server`: this file ships to the browser.
  */
 import { z } from 'zod'
+import { identityMutationFetch } from '#/lib/sentry-delivery/control'
 import { createAuthClient } from 'better-auth/react'
 import { organizationClient, twoFactorClient } from 'better-auth/client/plugins'
 
@@ -30,6 +31,9 @@ export const AUTH_BASE_PATH = '/api/auth'
  */
 export const authClient = createAuthClient({
   basePath: AUTH_BASE_PATH,
+  fetchOptions: {
+    customFetchImpl: identityMutationFetch,
+  },
   plugins: [twoFactorClient(), organizationClient()],
 })
 
@@ -192,7 +196,7 @@ async function requestAuth(
   path: string,
   body?: unknown,
 ): Promise<unknown> {
-  const response = await fetch(`${AUTH_BASE_PATH}${path}`, {
+  const response = await identityMutationFetch(`${AUTH_BASE_PATH}${path}`, {
     method,
     credentials: 'include',
     ...(path.startsWith('/account-security/')

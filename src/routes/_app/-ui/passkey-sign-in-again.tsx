@@ -1,3 +1,4 @@
+import { identityMutationFetch } from '#/lib/sentry-delivery/control'
 import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 import { useState } from 'react'
 
@@ -26,7 +27,7 @@ export function SignInAgain({
   async function signInAgain(): Promise<void> {
     setPending(true)
     try {
-      const response = await fetch(SIGN_OUT_ENDPOINT, {
+      const response = await identityMutationFetch(SIGN_OUT_ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',

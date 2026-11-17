@@ -21,6 +21,7 @@ import { StrictMode } from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
 import { scrubEvent, scrubOtherEvent, scrubTelemetry } from '#/lib/sentry-scrub'
+import { makeNavigationTransport } from '#/lib/sentry-delivery/browser'
 
 /**
  * A DSN is public by design - it ships in this bundle and is visible to anyone who reads it. It is
@@ -37,6 +38,7 @@ if (typeof dsn === 'string' && dsn.length > 0) {
     // halves. See `src/server/observability/sentry.ts`.
     release: import.meta.env.VITE_SENTRY_RELEASE,
     sendDefaultPii: false,
+    transport: makeNavigationTransport,
     beforeSend: scrubEvent,
     beforeSendTransaction: scrubEvent,
     beforeSendSpan: scrubTelemetry,

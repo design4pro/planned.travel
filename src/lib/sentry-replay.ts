@@ -19,6 +19,7 @@
 import { addIntegration, replayIntegration } from '@sentry/react'
 
 import { holdsSensitiveLocation, scrubTelemetry } from '#/lib/sentry-scrub'
+import { watchLocation } from '#/lib/location-watch'
 
 /**
  * Nothing about a join URL is recorded beyond its (redacted) address. No request detail is captured
@@ -28,25 +29,6 @@ import { holdsSensitiveLocation, scrubTelemetry } from '#/lib/sentry-scrub'
 const JOIN_URL = /\/join\//i
 
 const onSensitiveLocation = () => holdsSensitiveLocation(window.location.href)
-
-/**
- * Calls `listener` after every change of the address, router navigations included: they use
- * `pushState` and `replaceState`, which fire no event of their own.
- */
-function watchLocation(listener: () => void): void {
-  for (const method of ['pushState', 'replaceState'] as const) {
-    const original = window.history[method]
-    window.history[method] = function patched(
-      this: History,
-      ...args: Parameters<History[typeof method]>
-    ) {
-      original.apply(this, args)
-      listener()
-    }
-  }
-  window.addEventListener('popstate', listener)
-  window.addEventListener('hashchange', listener)
-}
 
 /**
  * The recorder never runs on a credential-query or join location, including one whose `redirect`

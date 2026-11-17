@@ -1,3 +1,4 @@
+import { identityMutationFetch } from '#/lib/sentry-delivery/control'
 import { requestCollectionExit } from '#/lib/collection-exit'
 import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 import { useId, useRef, useState } from 'react'
@@ -78,7 +79,7 @@ export function UserMenu({ session }: { session: ShellSession }) {
     if (!(await requestCollectionExit())) return
     setSigningOut(true)
     try {
-      const response = await fetch(SIGN_OUT_ENDPOINT, {
+      const response = await identityMutationFetch(SIGN_OUT_ENDPOINT, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: '{}',

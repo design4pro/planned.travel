@@ -20,6 +20,12 @@ import {
   RECOVERY_CATALOGUES,
 } from '#/lib/i18n'
 import { themeBootstrapScript } from '#/lib/theme'
+import {
+  confirmTransactionDeliveryScope,
+  transactionScopeGeneration,
+  deliveryBootstrapScript,
+  DELIVERY_SCOPE_META,
+} from '#/lib/sentry-delivery/control'
 import { wideLayoutBootstrapScript } from '#/lib/wide-layout'
 import { takeWorkspaceDocumentFetch } from '#/lib/workspace-claim-store'
 import { negotiateRequestLocale } from '#/server/fns/locale'
@@ -58,6 +64,7 @@ interface ShellData {
   readonly signedIn: boolean
   readonly dir: TextDirection
   readonly messages: Catalogue
+  readonly telemetryScope?: string | null
 }
 
 /** The language every request falls back to when negotiation cannot answer. */
@@ -92,14 +99,19 @@ export const Route = createRootRouteWithContext<RouterContext>()({
    * messages still signal an unsuccessful refresh to the language picker.
    */
   loader: async (): Promise<ShellData> => {
+    const scopeGeneration = transactionScopeGeneration()
     let recovery = SOURCE_LANGUAGE
     try {
-      const { locale, dir, signedIn } = await negotiateRequestLocale({
-        fetch: takeWorkspaceDocumentFetch(),
-      })
+      const { locale, dir, signedIn, telemetryScope } =
+        await negotiateRequestLocale({
+          fetch: takeWorkspaceDocumentFetch(),
+        })
       recovery = { locale, dir, signedIn: false, messages: {} }
-      return { locale, dir, signedIn, messages: await loadCatalogue(locale) }
+      const messages = await loadCatalogue(locale)
+      confirmTransactionDeliveryScope(telemetryScope ?? null, scopeGeneration)
+      return { locale, dir, signedIn, messages, telemetryScope }
     } catch {
+      confirmTransactionDeliveryScope(null, scopeGeneration)
       return recovery
     }
   },
@@ -182,7 +194,7 @@ export function RootDocument({ children }: { children: ReactNode }) {
   // The shell renders outside `matchContext`, so the route-relative
   // `useLoaderData()` has no match to read and throws here. `Route.useLoaderData`
   // names the root route explicitly and works.
-  const { locale, dir, messages } = Route.useLoaderData()
+  const { locale, dir, messages, telemetryScope } = Route.useLoaderData()
 
   return (
     // The bootstrap script below writes `data-theme`/`color-scheme` onto <html>
@@ -199,6 +211,18 @@ export function RootDocument({ children }: { children: ReactNode }) {
         <script
           dangerouslySetInnerHTML={{ __html: wideLayoutBootstrapScript }}
         />
+        <meta
+          name={DELIVERY_SCOPE_META}
+          content={telemetryScope ?? ''}
+          className="sentry-block"
+          data-sentry-block=""
+        />
+        {typeof import.meta.env.VITE_SENTRY_DSN === 'string' &&
+        import.meta.env.VITE_SENTRY_DSN.length > 0 ? (
+          <script
+            dangerouslySetInnerHTML={{ __html: deliveryBootstrapScript }}
+          />
+        ) : null}
         <HeadContent />
       </head>
       <body>

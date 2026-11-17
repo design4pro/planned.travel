@@ -1,3 +1,4 @@
+import { retireTransactionRecovery } from '#/lib/sentry-delivery/control'
 /**
  * The tab's own record of the workspace it is showing (see `./workspace-claim`).
  *
@@ -220,6 +221,7 @@ export function workspaceCallClaim(
 
 export function beginWorkspaceSwitch(): WorkspaceSwitch {
   if (activeSwitch) throw workspaceSwitchCancelled()
+  retireTransactionRecovery()
   const token: WorkspaceSwitch = {
     id: ++nextSwitchId,
     organizationId: state.organizationId,

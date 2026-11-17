@@ -159,6 +159,12 @@ policy: any package outside these two is still a finding you report in your resu
 `pnpm add`, and nothing here grants a precedent, a category, or a "while we are in there"
 install.
 
+Browser transaction delivery uses the bounded recovery contract in
+[ADR 0052](adr/0052-bounded-browser-transaction-recovery.md): synchronous tab-local retention
+before worker dispatch, fresh session/effective-workspace confirmation, mandatory retirement
+and unchanged SDK response/buffer semantics. Replay and unsupported envelopes retain native
+transport. Logical dispatch expiry does not promise physical deletion in suspended documents.
+
 **Second named exception: three packages, once — spent.** `@sentry/cloudflare` and `@sentry/react`
 are **dependencies**; `@sentry/vite-plugin` is a **devDependency**. `@sentry/cli` is added to
 `pnpm.onlyBuiltDependencies` because the plugin's binary arrives through its postinstall, and

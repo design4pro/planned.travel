@@ -1,3 +1,4 @@
+import { identityMutationFetch } from '#/lib/sentry-delivery/control'
 import { clearBrowserSuppression } from '#/lib/mascot-suppression'
 /**
  * Every state `/join/<secret>` can be in, one card each.
@@ -392,7 +393,7 @@ function NeedsWorkspaceCard({
   async function signInAsSomeoneElse(): Promise<void> {
     setFailed(false)
     setPending(true)
-    const ended = await fetch(SIGN_OUT_ENDPOINT, {
+    const ended = await identityMutationFetch(SIGN_OUT_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{}',

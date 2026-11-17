@@ -1,6 +1,6 @@
 import { globSync, readFileSync } from 'node:fs'
 import { requestHandler } from '@tanstack/react-start/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ZodType } from 'zod'
 import type * as StartModule from '@tanstack/react-start'
 import type * as ReposModule from '#/server/repos'
@@ -57,7 +57,10 @@ async function request(
   return { response, result }
 }
 
+afterEach(() => vi.unstubAllEnvs())
+
 beforeEach(() => {
+  vi.stubEnv('VITE_SENTRY_DSN', '')
   state.session.mockReset().mockResolvedValue(null)
   state.update
     .mockReset()
@@ -136,8 +139,27 @@ describe('visitor save', () => {
       () => negotiateRequestLocale(),
       { cookie: 'planned.locale=pl', 'accept-language': 'de' },
     )
-    expect(result).toEqual({ locale: 'pl', dir: 'ltr', signedIn: false })
+    expect(result).toEqual({
+      locale: 'pl',
+      dir: 'ltr',
+      signedIn: false,
+      telemetryScope: null,
+    })
     expect(state.session).toHaveBeenCalledTimes(1)
+    expect(state.effective).not.toHaveBeenCalled()
+  })
+})
+
+describe('diagnostic scope negotiation', () => {
+  it('confirms anonymous scope without accessing tenant settings', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://public@ingest.example/1')
+    const { result } = await request('https://planned.travel/', () =>
+      negotiateRequestLocale(),
+    )
+    expect(result).toMatchObject({
+      signedIn: false,
+      telemetryScope: 'anonymous',
+    })
     expect(state.effective).not.toHaveBeenCalled()
   })
 })

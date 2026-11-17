@@ -1,3 +1,4 @@
+import { withTransactionRecoveryRetired } from '#/lib/sentry-delivery/control'
 /**
  * Every platform action an operator can aim at one account, behind one control.
  *
@@ -261,7 +262,9 @@ export function UserActions({
   }, [password, settle, t, user.id, user.name])
 
   const impersonate = useCallback(async (): Promise<void> => {
-    await startImpersonationFn({ data: { userId: user.id } })
+    await withTransactionRecoveryRetired(() =>
+      startImpersonationFn({ data: { userId: user.id } }),
+    )
     // The session cookie now belongs to somebody else, so every loader result the router is holding
     // was resolved for the operator and has to go before the shell renders again.
     await router.invalidate()
