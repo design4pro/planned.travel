@@ -2583,3 +2583,74 @@ execution before activation. Apply the additive receipt-locale migration first. 
 without supported locale require explicit repair before delivery; no language is guessed.
 No production deployment or activation has been performed by this implementation. See ADR 0048
 and BACKWARD_COMPATIBILITY.md for the delivery and rollback contract.
+
+## Release history import and editorial review
+
+The #1874 operator slice supplies local preview, tested import/review logic and an authenticated
+transport. **Deployed sync remains disabled:** `/api/releases/sync` has neither a trusted Git
+adapter nor a write capability. An authenticated platform admin receives `pending-evidence`;
+no flag enables production writes. No deployment receipts or main promotion are authorized here.
+Local tests assemble fake Git with local atomic D1 storage through the same publication module.
+
+Preview an immutable local revision (replace placeholders with actual values):
+
+```sh
+pnpm exec tsx scripts/releases/sync.mts --commit <full-commit-sha> --version <X.Y.Z>
+```
+
+Preview never sends a mutation. Its `diff.before: null` means no persisted baseline was queried;
+its `after` is the validated local projection. The publication module's authenticated preview
+compares the stored body to that exact Git revision when a trusted source adapter is available.
+Git remains authoritative for all original contributor credits and cutoff metadata. The command
+resolves the cutoff to a full ancestor SHA, preserving existing heading and housekeeping rules.
+
+The restricted grammar admits exactly `# X.Y.Z (YYYY-MM-DD)`, `## Highlights` paragraphs,
+flat `## ✨ Features` / `## 🐛 Fixes` lists (plain headings also accepted), optional unnested plain
+emphasis and validated HTTPS or root-relative links. `## 👥 Contributors` / `## Contributors`,
+trailing `*(@author, via @reviewer)*` credits and PR references are separate provenance.
+A standalone `<!-- changelog-cutoff: <sha> -->` or `> **Cutoff: \`<sha>\` (#N, timestamp)**`records the enumeration cutoff. Provenance remains in the exact Git revision; it is never silently
+converted to display prose. Additional prose, nested lists, blockquotes, HTML, images, embeds,
+code and unsafe links fail with`CHANGELOG.md:line:column`, before any write. Correct historical
+entries in a reviewed Git commit; the seed entry's extended blockquote is deliberately refused.
+The parser bounds the whole source to 1,000,000 UTF-8 bytes and the normalized body to 64,000
+characters, 20 summary paragraphs, 100 features and 100 fixes of at most 4,000 characters each.
+Accepted emphasis and links are stored as inert strings, never HTML or executable Markdown.
+
+Before any future authorized import, the administrator must inspect the exact revision for
+secrets, identifiers, tenant/customer information, exploit details and unreleased security work.
+Syntax screening cannot establish semantic privacy. `--screened <exact-source-hash>` explicitly
+attests this pre-import screening; it does **not** approve the entry. Editorial approval separately
+requires plain language, accuracy, safe links, privacy and security checks, acknowledged with
+`--reviewed <exact-source-hash>`. Never derive either attestation from an issue body or add either
+flag automatically. New source hashes and translations require their own review.
+
+Explicit headless operations are `import`, `approve` and `inspect`. Import/approve additionally
+require `--operation-id`, `--generation` and `--hash`. They use `--server <origin>` and the
+operator process's `RELEASE_OPERATOR_COOKIE` session, supplied by the administrator without
+printing it or putting it in a file/command argument. HTTPS is required except loopback HTTP.
+The transport sends JSON with a matching Origin, forbids redirects, times out after 15 seconds,
+and accepts no request role, workspace selector, uploaded prose or deployment fixture.
+User/curator/workspace roles, banned accounts and impersonation are denied by fresh primary
+platform authorization, including retries. Approval alone never makes a release visible.
+
+Recovery:
+
+1. **Inspect result.** Keep the original operation id, exact source commit/hash, version and
+   expected generation. `applied` committed; `unchanged` is an identical persisted result;
+   `conflict` requires inspecting state, never a blind overwrite. `refused` requires correcting
+   the input or authority; `pending-evidence` means no write capability/evidence is available.
+2. **Re-fetch evidence.** Re-read the exact Git revision, cutoff ancestry and current persisted
+   generation using `--operation inspect` with the same identity. The admin-only projection
+   includes bounded operation metadata, never audit actor identity or a tenant selector.
+3. **Retry the same operation.** After a lost response, inspect first and resend the identical
+   request and operation id. Changed inputs need a new reviewed operation; never reuse an id
+   for different content, generation or action. Audit receipts follow the existing 400-day
+   retention; an absent receipt is not proof that a prior request never applied. Compare the
+   persisted revision/generation and fail closed on uncertainty rather than guessing.
+4. **Withdraw.** If already published content is sensitive/inaccurate, use the separately
+   authorized `withdrawRelease` publication path with fresh `release:publish`, current generation,
+   stable operation id and bounded reason. This CLI deliberately exposes no withdrawal or
+   deployment fixture bypass. Withdrawal hides content without deleting Git or retained history.
+5. **Disable sync.** Leave the deployed Git/write capabilities absent (the default). If a later
+   approved adapter fails, remove its activation through that adapter's reviewed rollback
+   procedure. Retain content and audit; do not roll back production, edit the cutoff or promote main.
