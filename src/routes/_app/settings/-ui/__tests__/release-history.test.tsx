@@ -140,3 +140,33 @@ it('does not announce a previous append as successful when a later page fails', 
   await screen.findByRole('button', { name: 'Retry' })
   expect(screen.getByRole('status').textContent).toBe('')
 })
+
+it('moves focus to recovery when a pending pagination request rejects', async () => {
+  let rejectPage: (reason: Error) => void = () => {
+    throw new Error('Pagination request has not started')
+  }
+  const load = vi
+    .fn()
+    .mockResolvedValueOnce({ items: [entry], nextCursor: 'page-2' })
+    .mockImplementationOnce(
+      () =>
+        new Promise<ReleaseHistoryPage>((_resolve, reject) => {
+          rejectPage = reject
+        }),
+    )
+    .mockRejectedValueOnce(new Error('still unavailable'))
+  mount(load)
+  const older = await screen.findByRole('button', {
+    name: 'Show older releases',
+  })
+  older.focus()
+  fireEvent.click(older)
+  rejectPage(new Error('unavailable'))
+  const retry = await screen.findByRole('button', { name: 'Retry' })
+  await waitFor(() => expect(document.activeElement).toBe(retry))
+  expect(screen.getAllByRole('article')).toHaveLength(1)
+  fireEvent.click(retry)
+  await waitFor(() => expect(retry.getAttribute('disabled')).toBeNull())
+  expect(document.activeElement).toBe(retry)
+  expect(screen.getAllByRole('article')).toHaveLength(1)
+})

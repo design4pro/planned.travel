@@ -22,8 +22,9 @@ export function ReleaseHistory({ load }: { load: Load }) {
   const [loaded, setLoaded] = useState<number | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const older = useRef<HTMLButtonElement>(null)
+  const retry = useRef<HTMLButtonElement>(null)
   const appended = useRef<HTMLHeadingElement>(null)
-  const focus = useRef<'heading' | 'older' | 'appended' | null>(null)
+  const focus = useRef<'heading' | 'older' | 'appended' | 'retry' | null>(null)
   const firstAppended = useRef<string | null>(null)
   const busy = useRef(false)
   const generation = useRef(0)
@@ -58,7 +59,8 @@ export function ReleaseHistory({ load }: { load: Load }) {
     if (pending || !focus.current) return
     const target = focus.current
     focus.current = null
-    if (target === 'appended') appended.current?.focus()
+    if (target === 'retry') retry.current?.focus()
+    else if (target === 'appended') appended.current?.focus()
     else if (target === 'older') older.current?.focus()
     else heading.current?.focus()
   }, [pending, page])
@@ -86,7 +88,10 @@ export function ReleaseHistory({ load }: { load: Load }) {
         if (result.nextCursor) focus.current = 'older'
       } else if (retry) focus.current = 'heading'
     } catch {
-      if (current === generation.current) setFailed(true)
+      if (current === generation.current) {
+        focus.current = 'retry'
+        setFailed(true)
+      }
     } finally {
       if (current === generation.current) {
         busy.current = false
@@ -250,6 +255,7 @@ export function ReleaseHistory({ load }: { load: Load }) {
             )}
           </p>
           <Button
+            ref={retry}
             variant="secondary"
             disabled={pending}
             onClick={() => void readMore(true)}

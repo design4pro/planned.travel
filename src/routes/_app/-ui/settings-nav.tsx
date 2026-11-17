@@ -177,7 +177,7 @@ export interface SettingsSectionProps {
   className?: string
 }
 
-/** The card every settings section sits in, so all seven are framed identically. */
+/** The card every settings section sits in, so every section is framed identically. */
 export function SettingsSection({
   title,
   description,
