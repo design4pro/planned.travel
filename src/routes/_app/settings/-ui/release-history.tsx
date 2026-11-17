@@ -65,7 +65,7 @@ export function ReleaseHistory({ load }: { load: Load }) {
     else heading.current?.focus()
   }, [pending, page])
 
-  async function readMore(retry: boolean) {
+  async function readMore(isRetry: boolean) {
     if (busy.current) return
     busy.current = true
     const current = generation.current
@@ -86,7 +86,7 @@ export function ReleaseHistory({ load }: { load: Load }) {
         focus.current = 'heading'
         if (result.items.length) focus.current = 'appended'
         if (result.nextCursor) focus.current = 'older'
-      } else if (retry) focus.current = 'heading'
+      } else if (isRetry) focus.current = 'heading'
     } catch {
       if (current === generation.current) {
         focus.current = 'retry'
@@ -190,7 +190,7 @@ export function ReleaseHistory({ load }: { load: Load }) {
                   {t('settings.releases.fallback')}
                 </p>
               )}
-              <h4 className="mt-4 text-label font-semibold text-ink">
+              <h4 className="mt-4 wrap-anywhere text-label font-semibold text-ink">
                 {item.title}
               </h4>
               <div className="mt-2 space-y-3 text-body leading-relaxed text-ink-2">

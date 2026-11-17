@@ -112,3 +112,61 @@ it('restores exact local rows and the immutable trigger, including rollback afte
     rmSync(directory, { recursive: true, force: true })
   }
 })
+
+it('validates bounded single-entry long-content fixtures before writing and restores them', () => {
+  const base = resolve('.wrangler/state')
+  mkdirSync(base, { recursive: true })
+  const directory = mkdtempSync(join(base, 'release-browser-test-'))
+  const db = new DatabaseSync(join(directory, 'fixture.sqlite'))
+  try {
+    db.exec(readFileSync('drizzle/0030_release_content.sql', 'utf8'))
+    for (const visibleCount of [0, 23, 1.5])
+      expect(() =>
+        seedReleaseBrowserFixture(directory, { visibleCount }),
+      ).toThrow()
+    const body = {
+      title: 'W'.repeat(240),
+      summary: ['A long summary. '.repeat(100)],
+      features: [],
+      fixes: [],
+    }
+    expect(() =>
+      seedReleaseBrowserFixture(directory, {
+        body: { ...body, title: 'W'.repeat(241) },
+      }),
+    ).toThrow()
+    expect(
+      db.prepare('SELECT count(*) AS n FROM content_entries').get()?.n,
+    ).toBe(0)
+    const fixture = seedReleaseBrowserFixture(directory, {
+      visibleCount: 1,
+      body,
+    })
+    expect(
+      db.prepare('SELECT count(*) AS n FROM release_publications').get()?.n,
+    ).toBe(1)
+    expect(
+      JSON.parse(
+        String(
+          db
+            .prepare('SELECT body FROM content_versions WHERE id=?')
+            .get(fixture.ids[0])?.body,
+        ),
+      ),
+    ).toEqual(body)
+    fixture.cleanup()
+    expect(
+      db.prepare('SELECT count(*) AS n FROM content_entries').get()?.n,
+    ).toBe(0)
+    expect(
+      db
+        .prepare(
+          "SELECT sql FROM sqlite_master WHERE name='content_versions_no_delete'",
+        )
+        .get()?.sql,
+    ).toBeTruthy()
+  } finally {
+    db.close()
+    rmSync(directory, { recursive: true, force: true })
+  }
+})

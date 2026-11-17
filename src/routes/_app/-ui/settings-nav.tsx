@@ -136,7 +136,15 @@ export function SettingsNav() {
   const { shell } = useRouteContext({ from: '/_app' })
 
   return (
-    <nav aria-label={t('settings.nav.label')} className="min-w-0">
+    <nav
+      aria-label={t('settings.nav.label')}
+      className="min-w-0"
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement) {
+          event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        }
+      }}
+    >
       <ul className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
         {SECTIONS.map((section) => (
           <li key={section.to} className="shrink-0 lg:min-w-0 lg:shrink">

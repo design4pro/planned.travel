@@ -3,6 +3,8 @@ import { DatabaseSync } from 'node:sqlite'
 import { readdirSync, realpathSync, lstatSync } from 'node:fs'
 import { resolve, join, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { releaseBodySchema } from '../../content/collections'
+import type { ReleaseBody } from '../../content/collections'
 
 /** Fixed worktree-local D1 discovery; no URL, remote flag, request input or credential. */
 export function openLocalReleaseFixture(
@@ -34,7 +36,21 @@ export function openLocalReleaseFixture(
   throw new Error('Migrated local release fixture database is missing')
 }
 
-export function seedReleaseBrowserFixture(directory?: string) {
+export function seedReleaseBrowserFixture(
+  directory?: string,
+  options: { visibleCount?: number; body?: ReleaseBody } = {},
+) {
+  const visibleCount = options.visibleCount ?? 22
+  if (!Number.isInteger(visibleCount) || visibleCount < 1 || visibleCount > 22)
+    throw new Error('Fixture visible count must be between 1 and 22')
+  const body = releaseBodySchema.parse(
+    options.body ?? {
+      title: 'More time for the journey',
+      summary: ['Plan together with clearer details and fewer interruptions.'],
+      features: ['Keep your group’s plans in one place.'],
+      fixes: ['Enjoy more reliable trip updates.'],
+    },
+  )
   const db = openLocalReleaseFixture(directory)
   const prefix = `browser-release-${randomUUID()}`
   const ids: string[] = []
@@ -42,12 +58,6 @@ export function seedReleaseBrowserFixture(directory?: string) {
   const major = 800000 + Math.floor(Math.random() * 100000)
   const hash = 'a'.repeat(64)
   const sha = 'b'.repeat(40)
-  const body = {
-    title: 'More time for the journey',
-    summary: ['Plan together with clearer details and fewer interruptions.'],
-    features: ['Keep your group’s plans in one place.'],
-    fixes: ['Enjoy more reliable trip updates.'],
-  }
   const trigger = db
     .prepare(
       "SELECT sql FROM sqlite_master WHERE type='trigger' AND name='content_versions_no_delete'",
@@ -70,7 +80,7 @@ export function seedReleaseBrowserFixture(directory?: string) {
       db.prepare(
         'INSERT INTO content_versions (id,entry_id,revision,body,source_commit,source_hash,cutoff_sha,created_at) VALUES (?,?,1,?,?,?,?,?)',
       ).run(id, id, JSON.stringify(body), sha, hash, sha, shipped)
-      if (i === 22) continue
+      if (i >= visibleCount) continue
       db.prepare(
         "UPDATE content_entries SET status='published',published_version_id=? WHERE id=?",
       ).run(id, id)
