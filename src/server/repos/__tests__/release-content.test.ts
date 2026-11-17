@@ -1288,3 +1288,38 @@ it('does not return an unreserved unchanged identity when an initial operator im
   expect(inspect.receipt?.metadata?.sourceHash).toBe(preview.sourceHash)
   expect(await db.select().from(contentVersions)).toHaveLength(1)
 })
+
+it('refuses PEM source before persistence even with an explicit screening attestation', async () => {
+  const { runReleaseOperation } = await import('#/server/content/publication')
+  const { markdown } = await import('#/server/content/__tests__/fixtures')
+  const runtime = {
+    db,
+    authority,
+    git: {
+      readChangelog: async () =>
+        markdown.replace(
+          'Plan a **better** trip with [help](/help).',
+          '-----BEGIN PRIVATE KEY-----',
+        ),
+      resolveCutoff: async () => 'a'.repeat(40),
+    },
+    writeAuthorization: 'local-fixture' as const,
+  }
+  const input = {
+    version: '1.2.0',
+    sourceCommit: 'b'.repeat(40),
+    expectedGeneration: 0,
+    operationId: 'pem-screening',
+  }
+  const preview = await runReleaseOperation(runtime, input)
+  const result = await runReleaseOperation(runtime, {
+    ...input,
+    operation: 'import',
+    sourceHash: preview.sourceHash ?? 'c'.repeat(64),
+    screened: true,
+  })
+  expect(result.status).toBe('refused')
+  expect(result.reason).toMatch(/CHANGELOG.md:7:/)
+  expect(await db.select().from(contentVersions)).toEqual([])
+  expect(await db.select().from(platformAuditLog)).toEqual([])
+})

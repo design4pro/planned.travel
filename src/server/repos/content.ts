@@ -89,7 +89,7 @@ async function findSourceVersion(
   )
 }
 
-/** Admin-only recovery projection. No draft body, audit actor or tenant selector is returned. */
+/** Admin-only preview/recovery projection, including the draft body; no audit actor or tenant selector. */
 export async function inspectRelease(
   db: Database,
   authority: ReleaseAuthority,

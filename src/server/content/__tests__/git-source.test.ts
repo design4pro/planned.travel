@@ -38,6 +38,8 @@ it.each([
   '## Unknown',
   'Raw customer@example.test',
   'workspace_id=private',
+  '-----BEGIN PRIVATE KEY-----',
+  '-----BEGIN RSA PRIVATE KEY-----',
 ])('refuses unsupported or sensitive source with a location: %s', (line) => {
   expect(() =>
     parseReleaseSource(

@@ -6,9 +6,10 @@ export function validateReleaseProse(value: string): boolean {
     )
   )
     return false
+  if (/-----BEGIN/i.test(value)) return false
   if (/[<>`\\]|!\[|&(?:#\w+|\w+);/.test(value)) return false
   if (
-    /\b(?:[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:workspace|tenant|customer|user)[_-]?(?:id|token)\s*[:=]|(?:password|secret|api[_ -]?key|bearer)\s*[:=]|-----BEGIN|gh[pousr]_|sk_live_)/i.test(
+    /\b(?:[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:workspace|tenant|customer|user)[_-]?(?:id|token)\s*[:=]|(?:password|secret|api[_ -]?key|bearer)\s*[:=]|gh[pousr]_|sk_live_)/i.test(
       value,
     )
   )
