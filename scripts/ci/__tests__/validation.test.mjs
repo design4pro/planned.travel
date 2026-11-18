@@ -14,6 +14,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   executeGate,
   gateFingerprint,
+  hasCommitValidation,
+  hasDeliveryValidation,
   runGate,
   runValidationCommand,
 } from '../validation.mjs'
@@ -648,5 +650,50 @@ describe('configured validation execution', () => {
     expect(readFileSync(join(cwd, '.ai/tmp/calls'), 'utf8')).toBe('xx')
     await runGate({ cwd, commands, resume: true })
     expect(readFileSync(join(cwd, '.ai/tmp/calls'), 'utf8')).toBe('xx')
+  })
+})
+
+describe('commit validation', () => {
+  it('binds a successful fresh gate to the exact staged tree and installed manifest', async () => {
+    const cwd = fixture()
+    mkdirSync(join(cwd, '.ai'), { recursive: true })
+    mkdirSync(join(cwd, 'node_modules'))
+    writeFileSync(
+      join(cwd, '.ai/agentic.config.json'),
+      JSON.stringify({ validation: { commands: ['true'] } }),
+    )
+    writeFileSync(join(cwd, 'node_modules/.modules.yaml'), 'installed')
+    execFileSync('git', ['add', '.ai/agentic.config.json'], {
+      cwd,
+      env: localEnv,
+    })
+    expect(hasCommitValidation(cwd)).toBe(false)
+    expect((await runGate({ cwd, forCommit: true })).exitCode).toBe(0)
+    expect(hasCommitValidation(cwd)).toBe(true)
+    expect(hasDeliveryValidation(cwd)).toBe(false)
+    const receiptPath = join(cwd, '.ai/tmp/validation/commit.json')
+    const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'))
+    writeFileSync(
+      receiptPath,
+      JSON.stringify({ ...receipt, finishedAt: Date.now() - 3_600_001 }),
+    )
+    expect(hasCommitValidation(cwd)).toBe(false)
+
+    writeFileSync(join(cwd, 'input'), 'changed')
+    expect(hasCommitValidation(cwd)).toBe(false)
+    execFileSync('git', ['add', 'input'], { cwd, env: localEnv })
+    expect(hasCommitValidation(cwd)).toBe(false)
+    expect((await runGate({ cwd, forCommit: true })).exitCode).toBe(0)
+    writeFileSync(join(cwd, 'node_modules/.modules.yaml'), 'reinstalled')
+    expect(hasCommitValidation(cwd)).toBe(false)
+    await expect(
+      runGate({ cwd, forCommit: true, resume: true }),
+    ).rejects.toThrow('fresh')
+    execFileSync('git', ['commit', '-m', 'validated tree'], {
+      cwd,
+      env: localEnv,
+    })
+    expect(hasDeliveryValidation(cwd)).toBe(true)
+    expect(hasCommitValidation(cwd)).toBe(false)
   })
 })

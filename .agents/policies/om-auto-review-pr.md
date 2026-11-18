@@ -27,6 +27,11 @@ Extends the installed skill: read `.agents/skills/om-auto-review-pr/SKILL.md` an
 
 Run review in a separate context from implementation. Capture the PR head SHA before reading the diff and include `Reviewed SHA: <full SHA>` in the submitted report. Re-read the head before publishing; a changed head invalidates the verdict and requires reviewing the new diff.
 
+For the installed skill's validation step, run the primary checkout's
+`node scripts/ci/validation.mjs --check-delivery` from the exact candidate worktree. A matching fresh result satisfies that step, including the first review
+in another worktree. Otherwise run the full configured gate once with `--for-commit`.
+Independent review of the diff and any applicable targeted review checks still apply.
+
 Before starting, inspect completed independent reviews for the current head. Reuse the existing report and validation for that exact SHA, unless the user explicitly requests another opinion or there is a concrete unresolved concern. Missing validation or a changed code SHA requires the applicable gate; unchanged SHA alone does not justify another full suite. A reused report is not a new review. Never count an implementation self-check as the independent review.
 
 Additional opinions are on demand through Cezar or `@codex review`. No bot finding starts an automatic repair loop. Preserve unresolved findings for assessment; removal of a bot integration never resolves its threads.
@@ -51,6 +56,7 @@ and current findings/revocations. Reuse only completed passing coverage for its 
 and policy. Missing evidence or new concrete findings require fresh work. After publishing a
 passing report for the head actually inspected, verify the head and base have not moved and run
 `node .ai/scripts/pipeline-control.mjs record-evidence review <pr> <report-url> <reviewed-head-sha> <reviewed-base-sha>`.
+For native delivery, put `Cezar gate: review <full-head-sha> approved` on its own line in the passing report before recording it.
 Never record a failed, partial or waived stage as passed.
 
 Outside Cezar, use the published report and exact current head/base/policy checks directly; the local run-store commands require a Cezar run identity.
