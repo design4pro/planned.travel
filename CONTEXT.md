@@ -128,3 +128,6 @@ A glossary and nothing else. No implementation details, no file paths, no comman
 - **Wide layout** - a browser-local appearance choice that expands authenticated app content and aligns desktop dashboard widgets with the upcoming trip. It changes presentation across workspaces in that browser and grants no access.
 
 - **Release deployment receipt** - restricted evidence linking a verified application deployment to the exact content revisions it shipped. A local preview fixture is not proof of a production deployment.
+
+- **Release source revision** - an immutable Git changelog revision identified by its commit, normalized display-content hash and enumeration cutoff. Importing it does not approve or publish it.
+- **Release operation identity** - the stable identifier reused to inspect and retry one exact import or review request after a lost response.

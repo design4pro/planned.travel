@@ -31,7 +31,9 @@ import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
  * size: the usual reading fits inside it, and the rare wide one (two signed digits each, or a
  * three-digit Fahrenheit high) widens the box instead of painting over the day's header button.
  */
-const BOX = 'flex h-7 min-w-20 shrink-0 items-center justify-end'
+// A normal two-temperature reading is 80.484px with the shipped font; reserve
+// the next spacing step while allowing unusually wide readings to grow.
+const BOX = 'flex h-7 min-w-21 shrink-0 items-center justify-end'
 
 /**
  * What a reading that is only temperatures is called, by what it is and by which of its two

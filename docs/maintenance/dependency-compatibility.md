@@ -14,13 +14,17 @@ compatibility proof.
 | TanStack routing and Start | React Start 1.168.49, React Router 1.170.32, Router Devtools 1.167.1, Router CLI 1.167.31                        | Typecheck, framework request-context tests, generated routes and production build. Start 1.169.5 removed the consumed `requestHandler` export and the grouped update changed route/error typing.                                                                                    |
 | Authentication             | Better Auth 1.7.1                                                                                                | Real sign-up, sessions, passkeys, account authority and tenant isolation tests. 1.7.18 failed account creation and changed the upstream access dictionary from the documented 27 statements to 28. Preserve fail-closed authority; an auth migration needs its own security review. |
 | React and primitives       | React/React DOM 19.2.8, React types 19.2.18/19.2.4, Radix UI 1.6.7                                               | Dialog accessible names and descriptions, keyboard interaction and the full UI suite. The proposed set produced invalid expense-dialog description references.                                                                                                                      |
-| Worker build               | Vite 8.2.1, Cloudflare Vite plugin 1.53.0, Wrangler 4.124.0, Workers types 5.20260818.1, React Vite plugin 6.0.5 | Production and E2E builds. The grouped update failed to resolve `cloudflare:workers`; do not hide this by externalizing Worker bindings into client code.                                                                                                                           |
+| Worker build               | Vite 8.2.4, Cloudflare Vite plugin 1.53.0, Wrangler 4.124.0, Workers types 5.20260818.1, React Vite plugin 6.0.5 | Production and E2E builds. The grouped update failed to resolve `cloudflare:workers`; do not hide this by externalizing Worker bindings into client code.                                                                                                                           |
 | Development tools          | React Devtools 0.10.12, Devtools Vite 0.8.5                                                                      | Retain with the framework/build set until separately validated.                                                                                                                                                                                                                     |
 
 PR #1939 retains ten direct updates: Query and Query Devtools 5.107.1, Tailwind
 and its Vite plugin 4.3.5, MapLibre 6.18.0, Lucide 1.72.0, Testing Library
 user-event 14.6.10, Oxlint 1.93.0, Prettier 3.10.1 and React Email 6.11.12.
-Virtual, Drizzle, Zod and Playwright keep their existing versions.
+The resumed branch also preserves the current develop tooling: Vite 8.2.4,
+Vitest/Coverage 5.1.0, Playwright 1.65.1 and the e2e-inc runners. The lockfile
+conflict is resolved from the accepted develop graph, then pnpm applies the ten
+updates above; unrelated transitive versions are retained. Virtual, Drizzle and
+Zod keep their existing versions.
 These pins do not change the dependency freeze, authorization boundaries, access
 policy or acceptance gates. A future upgrade must pass the complete configured
 gate and native required CI, followed by independent review and applicable QA.

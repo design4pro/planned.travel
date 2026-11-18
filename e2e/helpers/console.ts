@@ -100,7 +100,7 @@ const fontsUnblocked = new WeakSet<Page>()
 /**
  * Take the webfont requests out of the browser's CORS path.
  *
- * Seam 4's pin (`playwright.config.ts`) rides on `extraHTTPHeaders`, and a
+ * Seam 4's pin (`e2e.browser.config.ts`) rides on `extraHTTPHeaders`, and a
  * context header is sent to *every* origin the page touches — including the
  * font CDN. A font file is fetched in CORS mode, so a request carrying one
  * header outside the CORS safelist stops being a simple request and earns a
@@ -119,6 +119,8 @@ const fontsUnblocked = new WeakSet<Page>()
  * given.
  */
 export async function unblockCrossOriginFonts(page: Page): Promise<void> {
+  // Preview has the fixture date compiled in and sends no cross-origin clock header.
+  if (process.env.E2E_PREVIEW === '1') return
   if (fontsUnblocked.has(page)) {
     return
   }

@@ -1,3 +1,4 @@
+import { validationWorkerLimit } from './scripts/ci/worker-limit.ts'
 import { availableParallelism } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
@@ -41,7 +42,10 @@ export default defineConfig({
     // Node 24 reads the container CPU quota through availableParallelism().
     // Two, not four: the 4-vCPU VPS runs several agent gates side by side, and
     // three workers per run pushed it into swap.
-    maxWorkers: Math.max(1, Math.min(2, availableParallelism() - 1)),
+    maxWorkers: validationWorkerLimit(
+      Math.max(1, Math.min(2, availableParallelism() - 1)),
+      process.env.VALIDATION_MAX_WORKERS,
+    ),
     projects: [
       {
         extends: true,

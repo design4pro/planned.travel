@@ -8,10 +8,11 @@ import {
   writeFileSync,
   existsSync,
   unlinkSync,
+  realpathSync,
 } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { dirname, join } from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { runStore, isAlive } from './backlog-status.mjs'
 import { parseCloseLinks } from '../../scripts/agents/close-fixed-issues.mjs'
@@ -120,6 +121,51 @@ export function mayContinue(handoff) {
   return true
 }
 
+function deliveryRun(store, id) {
+  const runs = JSON.parse(readFileSync(join(store, 'runs.json'), 'utf8'))
+  const matching = runs.filter((run) => run.id === id)
+  if (matching.length !== 1)
+    throw new Error('Current Cezar run is missing or ambiguous')
+  return matching[0]
+}
+
+function existingPrNumber(run) {
+  if (run.workflow === 'implement-ticket') return null
+  if (run.workflow !== 'pr-autopilot')
+    throw new Error('Unsupported Cezar delivery workflow')
+  const task =
+    typeof run.task === 'string' ? run.task.split('\n')[0].trim() : ''
+  const match = /^#?([1-9]\d*)$/.exec(task)
+  const number = Number(match?.[1])
+  if (!Number.isSafeInteger(number))
+    throw new Error('pr-autopilot requires an exact PR number')
+  return number
+}
+
+function confirmMerge({ handoff, store, id, pr, head, source }) {
+  appendFileSync(
+    handoff,
+    `\nOUTCOME: ${JSON.stringify({ outcome: 'merged', runId: id, pr: pr.number, head, policy: policyDigest(), at: new Date().toISOString() })}\n`,
+  )
+  const issue = /^ISSUE: #([1-9]\d*)\s*$/m.exec(
+    readFileSync(handoff, 'utf8'),
+  )?.[1]
+  for (const key of [`pr-${pr.number}`, ...(issue ? [`issue-${issue}`] : [])]) {
+    const path = join(store, 'claims', `${key}.json`)
+    if (existsSync(path) && JSON.parse(readFileSync(path, 'utf8')).runId === id)
+      unlinkSync(path)
+  }
+  execFileSync(
+    process.execPath,
+    [
+      join(source, 'scripts/agents/close-fixed-issues.mjs'),
+      '--pr',
+      String(pr.number),
+    ],
+    { stdio: 'inherit', timeout: 120_000 },
+  )
+}
+
 function main(mode) {
   const id = process.env.CEZ_RUN_ID
   if (!/^[a-zA-Z0-9-]+$/.test(id ?? ''))
@@ -142,36 +188,119 @@ function main(mode) {
     return
   }
   const handoff = join(store, 'runs', `${id}.handoff.md`)
-  const config = JSON.parse(readFileSync('.ai/agentic.config.json', 'utf8'))
+  const deliveryModes = ['pr-preflight', 'ci-preflight', 'ci', 'confirm-merge']
+  const source = fileURLToPath(new URL('../../', import.meta.url))
+  const delivery = deliveryModes.includes(mode)
+  if (
+    delivery &&
+    realpathSync(source) !== realpathSync(dirname(dirname(store)))
+  )
+    throw new Error('Delivery helper must come from the primary Cezar checkout')
+  const config = JSON.parse(
+    readFileSync(
+      delivery
+        ? join(source, '.ai/agentic.config.json')
+        : '.ai/agentic.config.json',
+      'utf8',
+    ),
+  )
   const read = (args) =>
     JSON.parse(
       execFileSync('gh', args, {
         encoding: 'utf8',
         timeout: 120_000,
         maxBuffer: 32 * 1024 * 1024,
+        ...(delivery ? { cwd: source } : {}),
       }),
     )
-  if (mode === 'ci') {
-    const branch = execFileSync('git', ['branch', '--show-current'], {
+  if (['ci-preflight', 'ci', 'confirm-merge'].includes(mode)) {
+    const run = deliveryRun(store, id)
+    const repo = read(['repo', 'view', '--json', 'nameWithOwner']).nameWithOwner
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))
+      throw new Error('Cannot establish the project repository')
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], {
       encoding: 'utf8',
     }).trim()
-    const prs = read([
+    let number = existingPrNumber(run)
+    if (number === null) {
+      const branch = execFileSync('git', ['branch', '--show-current'], {
+        encoding: 'utf8',
+      }).trim()
+      if (!branch) throw new Error('An issue delivery requires a named branch')
+      const prs = read([
+        'pr',
+        'list',
+        '--repo',
+        repo,
+        '--head',
+        branch,
+        '--state',
+        mode === 'confirm-merge' ? 'merged' : 'open',
+        '--limit',
+        '100',
+        '--json',
+        'number,headRefName,headRefOid,baseRefName,isCrossRepository',
+      ]).filter(
+        (pr) =>
+          pr.isCrossRepository === false &&
+          pr.headRefName === branch &&
+          pr.headRefOid === head &&
+          pr.baseRefName === config.baseBranch,
+      )
+      if (
+        prs.length !== 1 ||
+        !Number.isSafeInteger(prs[0].number) ||
+        prs[0].number < 1
+      )
+        throw new Error(
+          'Expected one same-repository PR for this branch, head and base',
+        )
+      number = prs[0].number
+    }
+    const expectedState = mode === 'confirm-merge' ? 'MERGED' : 'OPEN'
+    const pr = read([
       'pr',
-      'list',
-      '--head',
-      branch,
-      '--state',
-      'open',
+      'view',
+      String(number),
+      '--repo',
+      repo,
       '--json',
-      'number',
+      'number,state,isDraft,headRefOid,baseRefName,mergeCommit',
     ])
-    if (prs.length !== 1)
-      throw new Error('Expected one open PR for this branch')
-    const repo = read(['repo', 'view', '--json', 'nameWithOwner']).nameWithOwner
-    const state = readPrState(repo, prs[0].number, read)
-    if (state.ci.state !== 'green' || state.base !== config.baseBranch)
-      throw new Error('Incomplete CI or wrong merge base')
-    console.log(JSON.stringify(state))
+    if (
+      pr.number !== number ||
+      pr.state !== expectedState ||
+      pr.headRefOid !== head ||
+      pr.baseRefName !== config.baseBranch
+    )
+      throw new Error(
+        `PR #${number} must be ${expectedState} at the exact worktree head and configured base`,
+      )
+    if (mode === 'ci-preflight') {
+      if (pr.isDraft !== false)
+        throw new Error(
+          `PR #${number} must be Ready for review before Cezar waits for CI`,
+        )
+      console.log(`PR #${number} is ready for CI at ${head}`)
+    } else if (mode === 'ci') {
+      const state = readPrState(repo, number, read)
+      if (
+        state.number !== number ||
+        state.state !== 'OPEN' ||
+        state.head !== head ||
+        state.base !== config.baseBranch ||
+        state.draft !== false ||
+        state.ci.state !== 'green'
+      )
+        throw new Error(
+          'CI verification requires passing checks on the exact open, non-draft PR',
+        )
+      console.log(JSON.stringify(state))
+    } else {
+      if (!pr.mergeCommit?.oid)
+        throw new Error(`PR #${number} has no confirmed merge commit`)
+      confirmMerge({ handoff, store, id, pr, head, source })
+    }
     return
   }
   if (mode === 'record-evidence' || mode === 'evidence') {
@@ -223,58 +352,6 @@ function main(mode) {
     }
     return
   }
-  if (mode === 'confirm-merge') {
-    const branch = execFileSync('git', ['branch', '--show-current'], {
-      encoding: 'utf8',
-    }).trim()
-    const prs = read([
-      'pr',
-      'list',
-      '--head',
-      branch,
-      '--state',
-      'all',
-      '--json',
-      'number,state,baseRefName,headRefOid,mergeCommit',
-    ])
-    const head = execFileSync('git', ['rev-parse', 'HEAD'], {
-      encoding: 'utf8',
-    }).trim()
-    const pr = prs.find(
-      (pr) =>
-        pr.state === 'MERGED' &&
-        pr.baseRefName === config.baseBranch &&
-        pr.headRefOid === head,
-    )
-    if (!pr)
-      throw new Error(
-        'No confirmed merge of this head into the configured base',
-      )
-    appendFileSync(
-      handoff,
-      `\nOUTCOME: ${JSON.stringify({ outcome: 'merged', runId: id, pr: pr.number, head, policy: policyDigest(), at: new Date().toISOString() })}\n`,
-    )
-    const issue = /^ISSUE: #([1-9]\d*)\s*$/m.exec(
-      readFileSync(handoff, 'utf8'),
-    )?.[1]
-    for (const key of [
-      `pr-${pr.number}`,
-      ...(issue ? [`issue-${issue}`] : []),
-    ]) {
-      const path = join(store, 'claims', `${key}.json`)
-      if (
-        existsSync(path) &&
-        JSON.parse(readFileSync(path, 'utf8')).runId === id
-      )
-        unlinkSync(path)
-    }
-    execFileSync(
-      process.execPath,
-      ['scripts/agents/close-fixed-issues.mjs', '--pr', String(pr.number)],
-      { stdio: 'inherit', timeout: 120_000 },
-    )
-    return
-  }
   if (mode === 'continue' || mode === 'implemented') {
     if (mode === 'implemented' && mayContinue(readFileSync(handoff, 'utf8'))) {
       appendFileSync(
@@ -293,12 +370,17 @@ function main(mode) {
   const run = runs.find((row) => row.id === id)
   if (!run) throw new Error('Current run not found')
   if (mode === 'pr-preflight') {
-    const number = issueFromTask(run.task.split('\n')[0])
-    if (!number) throw new Error('PR number is required')
+    const number = existingPrNumber(deliveryRun(store, id))
+    if (number === null) throw new Error('PR preflight requires pr-autopilot')
+    const repo = read(['repo', 'view', '--json', 'nameWithOwner']).nameWithOwner
+    if (!/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))
+      throw new Error('Cannot establish the project repository')
     const pr = read([
       'pr',
       'view',
       String(number),
+      '--repo',
+      repo,
       '--json',
       'number,title,body,baseRefName,headRefName,state',
     ])
@@ -324,6 +406,7 @@ function main(mode) {
         )
       })
     const ready =
+      pr.number === number &&
       pr.baseRefName === config.baseBranch &&
       pr.state === 'OPEN' &&
       !owned &&

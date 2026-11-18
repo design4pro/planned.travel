@@ -10,7 +10,9 @@ basemap.
 pnpm worktree:bootstrap   # fresh checkout or worktree: everything below, once
 pnpm dev                  # http://localhost:3000
 pnpm test                 # unit tests (Vitest)
-pnpm e2e                  # critical journeys (Playwright); no screenshots
+pnpm e2e:native           # portable e2e-inc scenarios; no model required
+pnpm e2e                  # both e2e-inc configurations, including browser regressions
+pnpm e2e:all              # both e2e-inc configurations, sequentially
 ```
 
 Four fixtures are gitignored and per-checkout: `node_modules`, `.dev.vars`, a
@@ -24,6 +26,9 @@ cloud sessions and CI the same steps are automated (see below).
 
 Doing it by hand instead: copy `.dev.vars.example` to `.dev.vars` and fill it
 in, then `pnpm db:migrate:local`, load the basemap, and seed.
+
+The runner split, migration inventory, Codex MCP workflow and optional integrations
+are documented in [End-to-end testing](docs/testing/e2e.md).
 
 ## Branch model
 

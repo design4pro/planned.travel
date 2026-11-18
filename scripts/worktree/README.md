@@ -51,7 +51,7 @@ Cezar workflows call the bootstrap explicitly. Codex has no implicit SessionStar
 ## Its relationship to `.ai/scripts/test-env-up.sh`
 
 That script is the third profile and deliberately stays separate. It starts the app for the
-validation gate's e2e step, takes a port from 3030-3040 because `playwright.config.ts` insists on
+validation gate's e2e step, takes a port from 3030-3040 because `e2e.browser.config.ts` insists on
 the reserved range outside CI, and passes its selected port and `127.0.0.1` host to this script
 before every fresh boot.
 That reconciles owned `APP_URL` even when all fixtures already exist; a conflicting user-owned
@@ -62,7 +62,7 @@ rounds, this one for working on the app.
 ## The port, and why not 3000
 
 `pnpm dev` hardcodes `--port 3000`: that is the main checkout's port and a second worktree cannot
-have it. The other end is fenced too, and harder: `playwright.config.ts` refuses to run non-CI
+have it. The other end is fenced too, and harder: `e2e.browser.config.ts` refuses to run non-CI
 against anything outside 3030-3040, a guard added after a round photographed a different
 worktree's application. That leaves 3001-3009, which is what this script allocates from, and it
 starts Vite directly with `node node_modules/vite/bin/vite.js dev --port N --strictPort`,

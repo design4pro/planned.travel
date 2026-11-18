@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { shardStats } from './test-report.mjs'
 
 /** Preserve evidence for failures, recovered failures and incomplete reports. */
 export function keepDiagnostics(outcome, report) {
+  const stats = shardStats(report)
   return (
-    outcome !== 'success' ||
-    !report?.stats ||
-    typeof report.stats.flaky !== 'number' ||
-    report.stats.flaky > 0 ||
-    typeof report.stats.unexpected !== 'number' ||
-    report.stats.unexpected > 0
+    outcome !== 'success' || !stats || stats.flaky !== 0 || stats.failed !== 0
   )
 }
 
@@ -20,10 +17,10 @@ if (
 ) {
   let report
   try {
-    report = JSON.parse(readFileSync('test-results/results.json', 'utf8'))
+    report = JSON.parse(readFileSync('.e2e/browser/report.json', 'utf8'))
   } catch {
     console.error(
-      '::warning::Playwright JSON is unavailable; retaining available diagnostics.',
+      '::warning::e2e-inc JSON is unavailable; retaining available diagnostics.',
     )
   }
   console.log(`upload=${keepDiagnostics(process.env.TEST_OUTCOME, report)}`)

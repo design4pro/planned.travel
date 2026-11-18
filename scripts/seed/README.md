@@ -59,7 +59,7 @@ three-clock proof run without it writes nothing twice and proves nothing three t
 ### Always pass `--url`, and the reason is not tidiness
 
 **Ports 3030–3040 are reserved for automated rounds.** The reservation is enforced in
-`playwright.config.ts`, which throws rather than run the visual suite against a port outside that
+`e2e.browser.config.ts`, which throws rather than run the visual suite against a port outside that
 range — a rule added after four consecutive rounds photographed the wrong server, one of them a
 different worktree's application. That file also names the only sanctioned way to start a server
 for those rounds:
@@ -142,7 +142,7 @@ scripts/seed/verify.mjs             read-back and consistency checks
 ### The weather cache
 
 After the rows are written the route also writes the weather the planner reads from KV
-(`-seed/weather-cache.ts`), so the weather journey (`e2e/trip-weather.spec.ts`) needs no provider stub:
+(`-seed/weather-cache.ts`), so the weather journey (`e2e/browser/trip-weather.e2e.ts`) needs no provider stub:
 Lisbon day 1 is a recorded day, days 4 and 5 are forecasts, Tokyo day 1 is an estimate, and the
 workspace's weather allowance for the fixture month is spent, so every other located day is
 unavailable without a call going out. The report's `weather` field counts what was written (`entries`, `allowanceWindow`, `allowance`).
@@ -299,7 +299,7 @@ writes that follow still pass through the same quota guard rather than around it
 | Patagonia traverse    | `draft`     | —              | USD      | 1          |
 | Porto, one long lunch | `planning`  | —              | EUR      | 1          |
 
-Lisbon is the one trip with all three trip roles: Rafal owns it, Priya edits it and Jonas only views it. The costs-tab role journeys (`e2e/costs-roles.spec.ts`) sign in as Jonas for the viewer case and, for the editor case, as Jonas again on Dolomites, where he is an editor: Priya is suspended and cannot sign in.
+Lisbon is the one trip with all three trip roles: Rafal owns it, Priya edits it and Jonas only views it. The costs-tab role journeys (`e2e/browser/costs-roles.e2e.ts`) sign in as Jonas for the viewer case and, for the editor case, as Jonas again on Dolomites, where he is an editor: Priya is suspended and cannot sign in.
 
 The flagship carries 12 days (each with a title, notes and an accommodation covering it), 38 places
 across nine categories with real coordinates, addresses, opening hours and ratings, 38 stops in

@@ -43,8 +43,9 @@ credentials. Decision 2 records why the exception stays.
 **1. The e2e environment installs its browsers unconditionally.** `.github/actions/e2e-env` gains a
 `browsers` input (default `chromium`; `e2e-webkit.yml` passes `chromium webkit`, because its
 `mobile-safari` project depends on `setup`, and `setup` signs in through Desktop Chrome) and runs
-`playwright install` on every runner, at the version `pnpm install` has just resolved from the
-lockfile.
+both `pnpm exec e2e-web install` and `pnpm exec playwright install` on every runner,
+using each owner's version resolved by `pnpm install` from the lockfile. The portable
+and custom engines can require different browser builds.
 
 Gating that on the runner would be a latent bug rather than an optimisation. Exactly one image in
 play carries the browsers - the pool's, built `FROM mcr.microsoft.com/playwright` - and no context

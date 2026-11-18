@@ -34,9 +34,9 @@ self-hosted pool, and the most visible return lately was a timeout rather than a
 
 **`mobile-safari` comes off the pull-request path. It is not deleted.**
 
-1. `playwright.config.ts` declares the project behind `runsWebKit` - `!isCI || E2E_WEBKIT === '1'`.
+1. `e2e.browser.config.ts` declares the project behind `runsWebKit` - `!isCI || E2E_WEBKIT === '1'`.
    A local run is unchanged and still carries both projects. A CI run that did not ask for WebKit
-   does not get it, and `--project=mobile-safari` there fails loudly rather than matching nothing.
+   does not get it, and `--target mobile-safari` there fails loudly rather than matching nothing.
 2. `.github/workflows/e2e-webkit.yml` runs the project nightly at 03:30 UTC against `develop`, in
    two shards, with `workflow_dispatch` for an on-demand run against any ref. Both of those triggers
    are read from the repository's default branch, so neither is available until this file reaches
@@ -47,10 +47,10 @@ self-hosted pool, and the most visible return lately was a timeout rather than a
 
 **This is a move, not a retirement.** WebKit has caught defects Chromium cannot see, and the four
 comments naming the project say so in their own words: an `Intl` divergence between WebKit 26.5 and
-workerd across the locale catalogue (`e2e/i18n-runtime-parity.spec.ts`), a date-heading hydration
-mismatch (`e2e/trips-core.spec.ts`), a module-import page error on every console route
+workerd across the locale catalogue (`e2e/native/i18n-runtime-parity.e2e.ts`), a date-heading hydration
+mismatch (`e2e/browser/trips-core.e2e.ts`), a module-import page error on every console route
 (`e2e/helpers/admin.ts`), and journey 7, which exists for the pinned 393x659 composition alone
-(`e2e/journeys.spec.ts`). Each of those comments now also says where the project runs.
+(`e2e/browser/journeys.e2e.ts`). Each of those comments now also says where the project runs.
 
 ## Consequences
 
@@ -67,7 +67,7 @@ not proportional.
 reads `schedule` from the default branch alone and offers `workflow_dispatch` only for a workflow
 file already present there. So `e2e-webkit.yml` stays inert until a `develop` -> `main` promotion
 carries it across, and for that window the project runs in no CI job at all: not on a pull request,
-not nightly, and not on demand. `pnpm e2e --project=mobile-safari` locally is the only way to ask
+not nightly, and not on demand. `pnpm e2e:browser --target mobile-safari` locally is the only way to ask
 for it meanwhile. The window is bounded by the promotion cadence, and what it suspends was largely
 not being collected anyway - shard 2 was dying on `globalTimeout` before it reached most of these
 tests (#466). It is written down here so the promotion is understood as the step that arms the net,
@@ -79,7 +79,7 @@ without repository activity. Nothing in this decision makes a red WebKit night s
 nothing should be read as if it did.
 
 **A locale, date-format or phone-width change is now the developer's own responsibility to check.**
-`pnpm e2e --project=mobile-safari` is the direct way, and it is named in the comment on each of the
+`pnpm e2e:browser --target mobile-safari` is the direct way, and it is named in the comment on each of the
 four sites where it matters.
 
 ### The cost, honestly
@@ -113,12 +113,12 @@ Measured while making this change, on `develop` at `521d329b`, against the local
 `CI=true` (one worker, two retries, the runner's timeouts): **37 passed, 4 flaky, 2 failed, 9
 skipped, 7.0 min.** The same suite under `chromium` was 50 passed, 2 skipped, exit 0.
 
-- `e2e/trips-core.spec.ts:348` - `the delete dialog asks as hard as the server says it must`. Three
+- `e2e/browser/trips-core.e2e.ts:348` - `the delete dialog asks as hard as the server says it must`. Three
   attempts out of three. The test asserts the confirm button is disabled at rest, and under WebKit
   at 393px it resolves enabled; the trip the phone layout puts first is not the one the desktop
   layout puts first, so the unconditional assertion above the branch does not hold. **Reproduced on
   unmodified `develop` with this change stashed**, so it predates it.
-- `e2e/journeys.spec.ts:2046` - `a calendar is read, pruned and written to the desk as unchecked imports`.
+- `e2e/browser/journeys.e2e.ts:2046` - `a calendar is read, pruned and written to the desk as unchecked imports`.
   Three attempts out of three in the full run, and green when run alone: the import widget's toast,
   fixed at `bottom-[calc(var(--safe-bottom)+8.5rem)]`, and `#sentry-feedback` both intercept the
   pointer at phone width. Order-dependent, and a real interception rather than a timeout.
@@ -142,7 +142,7 @@ coverage it relocates is currently green.
 - **Delete the project outright** (the original shape of issue #552). It is a smaller change and it
   forces a decision on four assertions that have each caught something real. Retiring coverage
   because it is slow, when moving it costs one workflow file, is the wrong order of operations.
-- **Filter the CI job with `--project=chromium`** and leave the config alone. Identical arithmetic
+- **Filter the CI job with `--target chromium`** and leave the config alone. Identical arithmetic
   and slightly smaller. Rejected because it leaves the project running by default everywhere except
   one job's command line, which is the kind of behaviour a reader finds last; the config is where
   somebody looks for what a project does.

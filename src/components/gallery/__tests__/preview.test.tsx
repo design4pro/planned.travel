@@ -1,5 +1,12 @@
 import '#/components/ui/__tests__/test-env'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { I18nProvider } from '#/lib/i18n'
@@ -142,8 +149,10 @@ it('keeps fields and accessible focus after a failed preview, and allows retry',
   expect(
     await screen.findByText(/We could not prepare this preview/),
   ).toBeDefined()
-  expect(document.activeElement).toBe(
-    screen.getByRole('status', { name: 'Gallery preview' }),
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByRole('status', { name: 'Gallery preview' }),
+    ),
   )
   expect(
     (screen.getByRole('textbox', { name: 'Public title' }) as HTMLInputElement)

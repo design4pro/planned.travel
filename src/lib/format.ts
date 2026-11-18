@@ -36,7 +36,7 @@
  * numbering system (through the `-u-nu-latn` tag) and its `useGrouping` rule,
  * because the linux WebKit the CI container ships answers `arab` for `ar` and
  * groups Italian's four digits where workerd does neither.
- * `e2e/i18n-runtime-parity.spec.ts` re-proves the whole surface on every run by
+ * `e2e/native/i18n-runtime-parity.e2e.ts` re-proves the whole surface on every run by
  * rendering it in WebKit and comparing it against what the Worker produced, and
  * fails the run on any difference.
  *
