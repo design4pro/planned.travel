@@ -99,15 +99,15 @@ describe('free-port.mjs', { timeout: 15_000 }, () => {
 })
 
 describe('the reserved port pool', () => {
-  // playwright.config.ts refuses a base URL outside the pool, so a pool that drifts from its guard
+  // e2e.config.ts refuses a base URL outside the pool, so a pool that drifts from its guard
   // turns every gate run red for a reason that has nothing to do with the diff.
-  it('is the same range in test-env-up.sh and playwright.config.ts', () => {
+  it('is the same range in test-env-up.sh and e2e.config.ts', () => {
     const up = read('../test-env-up.sh')
     const min = up.match(/^PORT_MIN=(\d+)$/m)?.[1]
     const max = up.match(/^PORT_MAX=(\d+)$/m)?.[1]
     expect(min).toBeDefined()
     expect(max).toBeDefined()
-    expect(read('../../../playwright.config.ts')).toContain(
+    expect(read('../../../e2e.config.ts')).toContain(
       `port < ${min} || port > ${max}`,
     )
   })

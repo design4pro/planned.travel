@@ -22,7 +22,7 @@ import {
 import { mirrorToRoom, patch } from '#/server/fns/context'
 import type { OrAbsent } from '#/lib/absence'
 import type { CollabSections } from '#/lib/collab-sections'
-import { resolveTimeZone } from '#/lib/time'
+import { resolveTimeZone, todayKeyIn } from '#/lib/time'
 import {
   notesPayload,
   pollsPayload,
@@ -62,6 +62,8 @@ export interface CollabPayload {
    * hydrates without a mismatch.
    */
   readonly timeZone: string
+  /** Destination day captured once for identical server and hydration headings. */
+  readonly todayKey: string
 }
 
 export const loadTripCollab = createServerFn({ method: 'GET' })
@@ -73,6 +75,8 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
 
     const sections = resolveCollabSections(trip.collabModules)
     const role = await tripRoleFor(scope, trip.id, scope.ctx.userId)
+    const timeZone = resolveTimeZone(trip.timezone)
+    const todayKey = todayKeyIn(timeZone)
 
     const [messages, messageCount, notes, polls, people] = await Promise.all([
       threadPayload(scope, trip),
@@ -90,7 +94,8 @@ export const loadTripCollab = createServerFn({ method: 'GET' })
       isArchived: trip.isArchived,
       people,
       viewerUserId: scope.ctx.userId,
-      timeZone: resolveTimeZone(trip.timezone),
+      timeZone,
+      todayKey,
       messages,
       messageCount,
       notes,

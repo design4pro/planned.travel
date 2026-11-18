@@ -23,8 +23,8 @@ import { serverNow, serverToday } from '../clock'
  * The wire name of the pin, duplicated on purpose.
  *
  * `src/server/clock.ts` keeps the literal inside its dev-only branch so the
- * production build drops it, and `playwright.config.ts` cannot import from
- * `src/` at all. Three copies of a string is the price of that; the last case in
+ * production build drops it. Both e2e engines send that name with the shared
+ * fixture day in development. The last case in
  * this file is what stops them drifting apart in silence.
  */
 const PIN_HEADER = 'x-pt-server-today'
@@ -144,11 +144,9 @@ describe('serverToday', () => {
     await expect(duringRequest({}, serverToday)).resolves.toBe('2029-03-02')
   })
 
-  it('agrees with the header the e2e suite actually sends', () => {
-    // `playwright.config.ts` writes the name and the day as literals because a
-    // Playwright config cannot resolve the `#/` alias into `src/`. Two files, one
-    // wire: this is what stops them drifting apart in silence, which they would
-    // otherwise do as a green run reading the wrong day.
+  it('keeps both e2e engines and the built preview on the fixture day', () => {
+    // Both engines share a day and the development wire name. Preview compiles
+    // that same day rather than sending a redundant cross-origin header.
     //
     // There used to be a third copy in the e2e helpers, for a calendar
     // audit that measured the screenshot baselines against it. The baselines are
@@ -156,10 +154,16 @@ describe('serverToday', () => {
     // drains without it.
     const read = (file: string): string =>
       readFileSync(new URL(`../../../${file}`, import.meta.url), 'utf8')
-    const config = read('playwright.config.ts')
-    expect(config).toContain(`const SERVER_TODAY_HEADER = '${PIN_HEADER}'`)
-
-    expect(config).toContain(`import { FIXTURE_DAY } from './e2e/fixture-day'`)
+    for (const [file, fixtureImport, headers] of [
+      ['e2e.config.ts', './e2e/fixture-day', 'headers'],
+      ['e2e/driver/engine.ts', '../fixture-day', 'extraHTTPHeaders'],
+    ]) {
+      const config = read(file)
+      expect(config).toContain(`import { FIXTURE_DAY } from '${fixtureImport}'`)
+      expect(config).toContain(`'${PIN_HEADER}': FIXTURE_DAY`)
+      expect(config).toContain(headers)
+      expect(config).toContain("process.env.E2E_PREVIEW === '1'")
+    }
 
     const pinned = /const FIXTURE_DAY = '(\d{4}-\d{2}-\d{2})'/.exec(
       read('e2e/fixture-day.ts'),

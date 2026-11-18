@@ -1,6 +1,12 @@
 import '#/components/ui/__tests__/test-env'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
@@ -58,6 +64,19 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 describe('invite link panel', () => {
+  it('focuses the recovery heading when a pointer click did not focus the removed switch', async () => {
+    show(active)
+    await screen.findByRole('button', { name: 'Copy link' })
+    rpc.update.mockRejectedValue(new Error('offline'))
+    rpc.reveal.mockRejectedValue(new Error('offline'))
+    fireEvent.click(screen.getByRole('switch'))
+    await screen.findByRole('alert')
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: 'Invite link' }),
+      ),
+    )
+  })
   it('creates by keyboard and moves focus to Copy; announces copy success', async () => {
     const user = userEvent.setup()
     show()

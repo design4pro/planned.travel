@@ -1,0 +1,3188 @@
+{
+  "date": "2026-11-17",
+  "baseline": "Playwright --list --project=chromium before migration; one setup excluded; extended with five landing locale cases from develop f57442b5 (#1926), collected before their migration",
+  "originalFiles": 32,
+  "originalChromiumInstances": 240,
+  "nativeOriginalInstances": 11,
+  "retainedPlaywrightInstances": 0,
+  "notes": [
+    "Counts include loop-generated instances, not merely literal test declarations.",
+    "apiMigrationSignals are mechanical search hints; actual and transitive API use was reviewed separately.",
+    "This inventory is a dated migration record, not a promise that future test counts remain fixed.",
+    "No skipped or deleted assertion is justified by an unsupported runner API.",
+    "All 32 original files now execute through e2e-inc. Playwright remains the browser driver and standalone assertion library only."
+  ],
+  "files": [
+    {
+      "originalFile": "e2e/account-and-settings.spec.ts",
+      "tests": [
+        {
+          "title": "hydrates, names itself and says nothing in the console",
+          "line": 96,
+          "tags": []
+        },
+        {
+          "title": "is reached from Security, which was a dead link",
+          "line": 123,
+          "tags": []
+        },
+        {
+          "title": "does not move when the list resolves into rows",
+          "line": 133,
+          "tags": []
+        },
+        {
+          "title": "adds a passkey with a virtual authenticator, names and renames it, keeps it across a reload and removes it with the password",
+          "line": 261,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/account-and-settings.e2e.ts",
+      "originalInstances": 4,
+      "apiMigrationSignals": {
+        "newCDPSession": 1,
+        "info": 2,
+        "configure": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "ACC-03 - the passkeys page answers for a signed-in member",
+            "hydrates, names itself and says nothing in the console"
+          ]
+        },
+        {
+          "titlePath": [
+            "ACC-03 - the passkeys page answers for a signed-in member",
+            "is reached from Security, which was a dead link"
+          ]
+        },
+        {
+          "titlePath": [
+            "ACC-03 - the passkeys page answers for a signed-in member",
+            "does not move when the list resolves into rows"
+          ]
+        },
+        {
+          "titlePath": [
+            "ACC-03 - a member adds a passkey on this device, names it and takes it away",
+            "adds a passkey with a virtual authenticator, names and renames it, keeps it across a reload and removes it with the password"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/app-manifest.spec.ts",
+      "tests": [
+        {
+          "title": "the dashboard announces a valid installed-app manifest @chromium-only",
+          "line": 9,
+          "tags": ["chromium-only"]
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/app-manifest.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "newCDPSession": 1,
+        "use": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "the dashboard announces a valid installed-app manifest @chromium-only"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/atlas-visit-edit.spec.ts",
+      "tests": [
+        {
+          "title": "edits, clears and restores a visit at 360 in light",
+          "line": 29,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "edits, clears and restores a visit at 360 in dark",
+          "line": 29,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "edits, clears and restores a visit at 1280 in light",
+          "line": 29,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "edits, clears and restores a visit at 1280 in dark",
+          "line": 29,
+          "tags": ["chromium-only"]
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/atlas-visit-edit.e2e.ts",
+      "originalInstances": 4,
+      "apiMigrationSignals": {
+        "configure": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "Atlas visit corrections @chromium-only",
+            "edits, clears and restores a visit at 360 in light"
+          ]
+        },
+        {
+          "titlePath": [
+            "Atlas visit corrections @chromium-only",
+            "edits, clears and restores a visit at 360 in dark"
+          ]
+        },
+        {
+          "titlePath": [
+            "Atlas visit corrections @chromium-only",
+            "edits, clears and restores a visit at 1280 in light"
+          ]
+        },
+        {
+          "titlePath": [
+            "Atlas visit corrections @chromium-only",
+            "edits, clears and restores a visit at 1280 in dark"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/basemap-preference.spec.ts",
+      "tests": [
+        {
+          "title": "the picker publishes every entry under its catalogue id",
+          "line": 113,
+          "tags": []
+        },
+        {
+          "title": "Charcoal paints the canvas dark under a light chrome, and Follow the workspace gives the workspace’s cartography back",
+          "line": 129,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/basemap-preference.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {
+        "info": 2,
+        "setTimeout": 1,
+        "configure": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "MAP-05 — the basemap a member picks is the basemap they get",
+            "the picker publishes every entry under its catalogue id"
+          ]
+        },
+        {
+          "titlePath": [
+            "MAP-05 — the basemap a member picks is the basemap they get",
+            "Charcoal paints the canvas dark under a light chrome, and Follow the workspace gives the workspace’s cartography back"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/billing-return.spec.ts",
+      "tests": [
+        {
+          "title": "checkout automatic and manual local reads never send a Referer",
+          "line": 5,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/billing-return.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "on": 1,
+        "waitForRequest": 1,
+        "info": 1
+      },
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "billing checkout return",
+            "automatic local reads never send a Referer"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "billing checkout return",
+            "manual local reads never send a Referer"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/book-medallion-spacing.spec.ts",
+      "tests": [
+        {
+          "title": "Book centres both date lines together inside the responsive medallion",
+          "line": 6,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/book-medallion-spacing.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "setTimeout": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "Book centres both date lines together inside the responsive medallion"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/budget-and-currencies.visual.spec.ts",
+      "tests": [
+        {
+          "title": "a payment in pounds reveals the converted field and the rate it implies",
+          "line": 69,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, light, 360px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, light, 1280px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, light, 2560px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, dark, 360px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, dark, 1280px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the foreign-currency payment dialog, dark, 2560px",
+          "line": 98,
+          "tags": []
+        },
+        {
+          "title": "the toolbar offers three kinds of choice and says why the others cannot be picked",
+          "line": 183,
+          "tags": []
+        },
+        {
+          "title": "a currency no recorded rate answers for marks the rows and says which pair, never 1:1",
+          "line": 224,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, light, 360px",
+          "line": 254,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, light, 1280px",
+          "line": 254,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, light, 2560px",
+          "line": 254,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, dark, 360px",
+          "line": 254,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, dark, 1280px",
+          "line": 254,
+          "tags": []
+        },
+        {
+          "title": "the display-currency fallback, dark, 2560px",
+          "line": 254,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/budget-and-currencies.visual.e2e.ts",
+      "originalInstances": 15,
+      "apiMigrationSignals": {
+        "setTimeout": 2
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "a payment in pounds reveals the converted field and the rate it implies"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, light, 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, light, 1280px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, light, 2560px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, dark, 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, dark, 1280px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — payment currency",
+            "the foreign-currency payment dialog, dark, 2560px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the toolbar offers three kinds of choice and says why the others cannot be picked"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "a currency no recorded rate answers for marks the rows and says which pair, never 1:1"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, light, 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, light, 1280px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, light, 2560px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, dark, 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, dark, 1280px"
+          ]
+        },
+        {
+          "titlePath": [
+            "04-S1 — display currency",
+            "the display-currency fallback, dark, 2560px"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/collaboration-and-sharing.spec.ts",
+      "tests": [
+        {
+          "title": "keeps only enabled tabs on a phone and shows every panel at xl",
+          "line": 11,
+          "tags": []
+        },
+        {
+          "title": "creates by keyboard, keeps member counts, invites anonymously and revokes old copies",
+          "line": 116,
+          "tags": []
+        },
+        {
+          "title": "keeps recovery headings visible below sticky navigation",
+          "line": 345,
+          "tags": []
+        },
+        {
+          "title": "reauthorizes after room and person close and refuses removed or deleted access @chromium-only",
+          "line": 453,
+          "tags": ["chromium-only"]
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/collaboration-and-sharing.e2e.ts",
+      "originalInstances": 4,
+      "apiMigrationSignals": {
+        "on": 5,
+        "newContext": 2,
+        "info": 2,
+        "setTimeout": 3,
+        "use": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "07-S2 - Collaboration sections follow the viewport",
+            "keeps only enabled tabs on a phone and shows every panel at xl"
+          ]
+        },
+        {
+          "titlePath": [
+            "07-S10 - The owner controls the trip invite link",
+            "creates by keyboard, keeps member counts, invites anonymously and revokes old copies"
+          ]
+        },
+        {
+          "titlePath": [
+            "07-S10 - The owner controls the trip invite link",
+            "keeps recovery headings visible below sticky navigation"
+          ]
+        },
+        {
+          "titlePath": [
+            "trip-room revocation lifecycle",
+            "reauthorizes after room and person close and refuses removed or deleted access @chromium-only"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/costs-roles.spec.ts",
+      "tests": [
+        {
+          "title": "a trip viewer reads the costs, sees the notice and can export, but cannot write",
+          "line": 48,
+          "tags": []
+        },
+        {
+          "title": "a trip editor sees every write control and no read-only notice",
+          "line": 80,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/costs-roles.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {
+        "waitForEvent": 1,
+        "setTimeout": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "the costs tab by trip role",
+            "a trip viewer reads the costs, sees the notice and can export, but cannot write"
+          ]
+        },
+        {
+          "titlePath": [
+            "the costs tab by trip role",
+            "a trip editor sees every write control and no read-only notice"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/costs-toolbar.spec.ts",
+      "tests": [
+        {
+          "title": "every control is inside a 360px viewport, light",
+          "line": 127,
+          "tags": []
+        },
+        {
+          "title": "every control is inside a 360px viewport, dark",
+          "line": 127,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/costs-toolbar.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {
+        "info": 1,
+        "setTimeout": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "the costs filter bar on a phone",
+            "every control is inside a 360px viewport, light"
+          ]
+        },
+        {
+          "titlePath": [
+            "the costs filter bar on a phone",
+            "every control is inside a 360px viewport, dark"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/csrf.spec.ts",
+      "tests": [
+        {
+          "title": "refuses a cross-site POST to a server function",
+          "line": 47,
+          "tags": []
+        },
+        {
+          "title": "leaves API routes and document navigation alone",
+          "line": 81,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/csrf.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {},
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "the CSRF boundary",
+            "refuses a server-function POST with a foreign Origin"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "the CSRF boundary",
+            "refuses a server-function POST with Sec-Fetch-Site: cross-site"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "the CSRF boundary",
+            "refuses a server-function POST with no origin proof"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "the CSRF boundary",
+            "leaves API authentication to its own origin policy"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "the CSRF boundary",
+            "allows a cross-site link to a public document"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/currency-converter.spec.ts",
+      "tests": [
+        {
+          "title": "reference currency conversion remains local and responsive at 1440px",
+          "line": 7,
+          "tags": []
+        },
+        {
+          "title": "reference currency conversion remains local and responsive at 360px",
+          "line": 7,
+          "tags": []
+        },
+        {
+          "title": "keeps stale rates honest and preserves keyboard recovery in dark mobile presentation",
+          "line": 147,
+          "tags": []
+        },
+        {
+          "title": "keeps blocked rates honest and preserves keyboard recovery in dark mobile presentation",
+          "line": 147,
+          "tags": []
+        },
+        {
+          "title": "keeps failure rates honest and preserves keyboard recovery in dark mobile presentation",
+          "line": 147,
+          "tags": []
+        },
+        {
+          "title": "reserves the asynchronous converter footprint through the first response",
+          "line": 227,
+          "tags": []
+        },
+        {
+          "title": "returns focus after a cross-tab hide: picker=false, last=false",
+          "line": 370,
+          "tags": []
+        },
+        {
+          "title": "returns focus after a cross-tab hide: picker=true, last=false",
+          "line": 370,
+          "tags": []
+        },
+        {
+          "title": "returns focus after a cross-tab hide: picker=true, last=true",
+          "line": 370,
+          "tags": []
+        },
+        {
+          "title": "compact unavailable recovery preserves input and focus at 1440px",
+          "line": 451,
+          "tags": []
+        },
+        {
+          "title": "compact rejected recovery preserves input and focus at 1440px",
+          "line": 451,
+          "tags": []
+        },
+        {
+          "title": "compact unavailable recovery preserves input and focus at 360px",
+          "line": 451,
+          "tags": []
+        },
+        {
+          "title": "compact rejected recovery preserves input and focus at 360px",
+          "line": 451,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/currency-converter.e2e.ts",
+      "originalInstances": 13,
+      "apiMigrationSignals": {
+        "clock": 1,
+        "setTimeout": 4,
+        "toPass": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "reference currency conversion remains local and responsive at 1440px"
+          ]
+        },
+        {
+          "titlePath": [
+            "reference currency conversion remains local and responsive at 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "keeps stale rates honest and preserves keyboard recovery in dark mobile presentation"
+          ]
+        },
+        {
+          "titlePath": [
+            "keeps blocked rates honest and preserves keyboard recovery in dark mobile presentation"
+          ]
+        },
+        {
+          "titlePath": [
+            "keeps failure rates honest and preserves keyboard recovery in dark mobile presentation"
+          ]
+        },
+        {
+          "titlePath": [
+            "reserves the asynchronous converter footprint through the first response"
+          ]
+        },
+        {
+          "titlePath": [
+            "returns focus after a cross-tab hide: picker=false, last=false"
+          ]
+        },
+        {
+          "titlePath": [
+            "returns focus after a cross-tab hide: picker=true, last=false"
+          ]
+        },
+        {
+          "titlePath": [
+            "returns focus after a cross-tab hide: picker=true, last=true"
+          ]
+        },
+        {
+          "titlePath": [
+            "compact unavailable recovery preserves input and focus at 1440px"
+          ]
+        },
+        {
+          "titlePath": [
+            "compact rejected recovery preserves input and focus at 1440px"
+          ]
+        },
+        {
+          "titlePath": [
+            "compact unavailable recovery preserves input and focus at 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "compact rejected recovery preserves input and focus at 360px"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/dashboard-mascot.spec.ts",
+      "tests": [
+        {
+          "title": "dashboard refresh failure focuses recovery and retry rechecks access",
+          "line": 69,
+          "tags": []
+        },
+        {
+          "title": "a delayed failed retry does not take focus back from the shell",
+          "line": 115,
+          "tags": []
+        },
+        {
+          "title": "a delayed successful retry respects a click outside recovery",
+          "line": 162,
+          "tags": []
+        },
+        {
+          "title": "dashboard chat and layout remain usable on small screens",
+          "line": 211,
+          "tags": []
+        },
+        {
+          "title": "an empty featured-trip slot has no mascot stage or controls",
+          "line": 297,
+          "tags": []
+        },
+        {
+          "title": "losing the last featured trip removes its panel and recovers keyboard focus",
+          "line": 318,
+          "tags": []
+        },
+        {
+          "title": "Nomi travels inside a stationary target and freezes for keyboard activation",
+          "line": 341,
+          "tags": []
+        },
+        {
+          "title": "live motion preferences and hidden tabs stop both illustration loops",
+          "line": 436,
+          "tags": []
+        },
+        {
+          "title": "restores the stored paused preference before starting motion",
+          "line": 481,
+          "tags": []
+        },
+        {
+          "title": "restores the stored playing preference before starting motion",
+          "line": 481,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/dashboard-mascot.e2e.ts",
+      "originalInstances": 10,
+      "apiMigrationSignals": {
+        "setTimeout": 1,
+        "toHaveCSS": 14,
+        "dispatchEvent": 6,
+        "waitForLoadState": 3
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "dashboard refresh failure focuses recovery and retry rechecks access"
+          ]
+        },
+        {
+          "titlePath": [
+            "a delayed failed retry does not take focus back from the shell"
+          ]
+        },
+        {
+          "titlePath": [
+            "a delayed successful retry respects a click outside recovery"
+          ]
+        },
+        {
+          "titlePath": [
+            "dashboard chat and layout remain usable on small screens"
+          ]
+        },
+        {
+          "titlePath": [
+            "an empty featured-trip slot has no mascot stage or controls"
+          ]
+        },
+        {
+          "titlePath": [
+            "losing the last featured trip removes its panel and recovers keyboard focus"
+          ]
+        },
+        {
+          "titlePath": [
+            "Nomi travels inside a stationary target and freezes for keyboard activation"
+          ]
+        },
+        {
+          "titlePath": [
+            "live motion preferences and hidden tabs stop both illustration loops"
+          ]
+        },
+        {
+          "titlePath": [
+            "restores the stored paused preference before starting motion"
+          ]
+        },
+        {
+          "titlePath": [
+            "restores the stored playing preference before starting motion"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/documents-and-media.spec.ts",
+      "tests": [
+        {
+          "title": "an XML file is refused in the traveller’s words, on its own row and in the toast, without a request",
+          "line": 209,
+          "tags": []
+        },
+        {
+          "title": "a pasted screenshot enters the queue under a dated name and the queue is brought into view",
+          "line": 252,
+          "tags": []
+        },
+        {
+          "title": "outside file drops preserve the active upload and queue",
+          "line": 320,
+          "tags": []
+        },
+        {
+          "title": "a pasted queue stays below the sticky chrome through upload completion and refresh",
+          "line": 390,
+          "tags": []
+        },
+        {
+          "title": "a paste of text into the details dialog uploads nothing and is not cancelled",
+          "line": 450,
+          "tags": []
+        },
+        {
+          "title": "a real keyboard paste of an image reaches the library with focus on Choose files",
+          "line": 487,
+          "tags": []
+        },
+        {
+          "title": "the hint reads key caps first, is absent on touch and moves nothing when it fades in",
+          "line": 524,
+          "tags": []
+        },
+        {
+          "title": "the drop zone turns active for a drag carrying files only, and holds over its own children",
+          "line": 554,
+          "tags": []
+        },
+        {
+          "title": "the drag-over fill moves opacity only and shifts nothing; a refusal adds one bounded row",
+          "line": 593,
+          "tags": []
+        },
+        {
+          "title": "the zone filling and a refusal are framed at three widths in both themes",
+          "line": 653,
+          "tags": []
+        },
+        {
+          "title": "the Files screen offers the trip as a calendar file, and the server answers it as one",
+          "line": 792,
+          "tags": []
+        },
+        {
+          "title": "the action is reachable and fits at 320px, light",
+          "line": 822,
+          "tags": []
+        },
+        {
+          "title": "the action is reachable and fits at 360px, light",
+          "line": 822,
+          "tags": []
+        },
+        {
+          "title": "the action is reachable and fits at 320px, dark",
+          "line": 822,
+          "tags": []
+        },
+        {
+          "title": "the action is reachable and fits at 360px, dark",
+          "line": 822,
+          "tags": []
+        },
+        {
+          "title": "a trip with no exports reads once as a plain GET and offers one request",
+          "line": 873,
+          "tags": []
+        },
+        {
+          "title": "a skeleton holds the place while the list is in flight, and the list replaces it",
+          "line": 912,
+          "tags": []
+        },
+        {
+          "title": "a failed list says so with a retry, and the retry puts focus on the heading and reads again",
+          "line": 939,
+          "tags": []
+        },
+        {
+          "title": "the panel fits a 320 px screen, left to right and right to left",
+          "line": 962,
+          "tags": []
+        },
+        {
+          "title": "sends only request flags, supports Space and keeps focus after a refused network request",
+          "line": 1001,
+          "tags": []
+        },
+        {
+          "title": "the warning and create control fit a 360px phone, light",
+          "line": 1086,
+          "tags": []
+        },
+        {
+          "title": "the warning and create control fit a 360px phone, dark",
+          "line": 1086,
+          "tags": []
+        },
+        {
+          "title": "recovers both calendar scopes after link creation is interrupted",
+          "line": 1176,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "a keyboard-created link rotates, invalidates the old URL and ends revoked",
+          "line": 1222,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "marks a linked row below the headers, announces it and focuses the jump destination",
+          "line": 1410,
+          "tags": []
+        },
+        {
+          "title": "handles missing and malformed email links and restores a pending row on reload",
+          "line": 1498,
+          "tags": []
+        },
+        {
+          "title": "complete dates fit before hydration and after hydration without crowding filenames or actions",
+          "line": 1563,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/documents-and-media.e2e.ts",
+      "originalInstances": 27,
+      "apiMigrationSignals": {
+        "on": 4,
+        "waitForEvent": 1,
+        "waitForRequest": 2,
+        "newContext": 3,
+        "clock": 2,
+        "setTimeout": 2,
+        "configure": 1,
+        "toHaveCSS": 6,
+        "dispatchEvent": 3
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "an XML file is refused in the traveller’s words, on its own row and in the toast, without a request"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "a pasted screenshot enters the queue under a dated name and the queue is brought into view"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "outside file drops preserve the active upload and queue"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "a pasted queue stays below the sticky chrome through upload completion and refresh"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "a paste of text into the details dialog uploads nothing and is not cancelled"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "a real keyboard paste of an image reaches the library with focus on Choose files"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "the hint reads key caps first, is absent on touch and moves nothing when it fades in"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "the drop zone turns active for a drag carrying files only, and holds over its own children"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "the drag-over fill moves opacity only and shifts nothing; a refusal adds one bounded row"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S1 — Every way a file gets in",
+            "the zone filling and a refusal are framed at three widths in both themes"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5 — a calendar that keeps up with the trip",
+            "the Files screen offers the trip as a calendar file, and the server answers it as one"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5 — a calendar that keeps up with the trip",
+            "the action is reachable and fits at 320px, light"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5 — a calendar that keeps up with the trip",
+            "the action is reachable and fits at 360px, light"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5 — a calendar that keeps up with the trip",
+            "the action is reachable and fits at 320px, dark"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5 — a calendar that keeps up with the trip",
+            "the action is reachable and fits at 360px, dark"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3b — Everyone on a trip sees its exports",
+            "a trip with no exports reads once as a plain GET and offers one request"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3b — Everyone on a trip sees its exports",
+            "a skeleton holds the place while the list is in flight, and the list replaces it"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3b — Everyone on a trip sees its exports",
+            "a failed list says so with a retry, and the retry puts focus on the heading and reads again"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3b — Everyone on a trip sees its exports",
+            "the panel fits a 320 px screen, left to right and right to left"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3b - Requesting a trip export",
+            "sends only request flags, supports Space and keeps focus after a refused network request"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5b — live calendar link",
+            "the warning and create control fit a 360px phone, light"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5b — live calendar link",
+            "the warning and create control fit a 360px phone, dark"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5b — live calendar link",
+            "recovers both calendar scopes after link creation is interrupted"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S5b — live calendar link",
+            "a keyboard-created link rotates, invalidates the old URL and ends revoked"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3c - Export links and remaining allowance",
+            "marks a linked row below the headers, announces it and focuses the jump destination"
+          ]
+        },
+        {
+          "titlePath": [
+            "06-S3c - Export links and remaining allowance",
+            "handles missing and malformed email links and restores a pending row on reload"
+          ]
+        },
+        {
+          "titlePath": [
+            "Files date layout",
+            "complete dates fit before hydration and after hydration without crowding filenames or actions"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/file-preview.spec.ts",
+      "tests": [
+        {
+          "title": "Files preview and adjacent download",
+          "line": 7,
+          "tags": []
+        },
+        {
+          "title": "Escape closes a focused text preview",
+          "line": 102,
+          "tags": []
+        },
+        {
+          "title": "Escape closes a focused pdf preview",
+          "line": 102,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/file-preview.e2e.ts",
+      "originalInstances": 3,
+      "apiMigrationSignals": {
+        "waitForEvent": 2,
+        "info": 4,
+        "setTimeout": 2,
+        "use": 2,
+        "toHaveCSS": 4
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": ["Files preview and adjacent download"]
+        },
+        {
+          "titlePath": ["Escape closes a focused text preview"]
+        },
+        {
+          "titlePath": ["Escape closes a focused pdf preview"]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/i18n-runtime-parity.spec.ts",
+      "tests": [
+        {
+          "title": "every formatted field is byte-identical in both runtimes",
+          "line": 263,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/i18n-runtime-parity.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "setTimeout": 1
+      },
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "locale formatting agrees between the Worker and the browser",
+            "every formatted field is byte-identical in both runtimes"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/journeys.spec.ts",
+      "tests": [
+        {
+          "title": "a stranger reaches every public screen",
+          "line": 160,
+          "tags": []
+        },
+        {
+          "title": "the reset-link actions stack inside the panel",
+          "line": 199,
+          "tags": []
+        },
+        {
+          "title": "two-factor separates signed-in settings from the sign-in challenge",
+          "line": 2963,
+          "tags": []
+        },
+        {
+          "title": "a visitor chooses Polish on the sign-in screen and keeps it",
+          "line": 3018,
+          "tags": []
+        },
+        {
+          "title": "a half-filled sign-up form keeps its values through a language switch",
+          "line": 3077,
+          "tags": []
+        },
+        {
+          "title": "a visitor switches language from the marketing header with the keyboard",
+          "line": 3112,
+          "tags": []
+        },
+        {
+          "title": "deep links, room navigation and history retain the workspace console",
+          "line": 247,
+          "tags": []
+        },
+        {
+          "title": "a member reaches every screen behind the session",
+          "line": 360,
+          "tags": []
+        },
+        {
+          "title": "the atlas figures follow the selected year",
+          "line": 437,
+          "tags": []
+        },
+        {
+          "title": "a country opens on the map and can be acted on",
+          "line": 540,
+          "tags": []
+        },
+        {
+          "title": "a finger reaches the same facts on a phone",
+          "line": 829,
+          "tags": []
+        },
+        {
+          "title": "the click surface survives its country leaving the map",
+          "line": 1046,
+          "tags": []
+        },
+        {
+          "title": "the click surface never takes the reader's input",
+          "line": 1198,
+          "tags": []
+        },
+        {
+          "title": "the transports tab arrives composed the same way twice",
+          "line": 1476,
+          "tags": []
+        },
+        {
+          "title": "the book tab arrives composed the same way twice",
+          "line": 1476,
+          "tags": []
+        },
+        {
+          "title": "a day draws its journeys inside its own sequence",
+          "line": 1521,
+          "tags": []
+        },
+        {
+          "title": "a stay states the nights between the days it is given",
+          "line": 1618,
+          "tags": []
+        },
+        {
+          "title": "a stay booked from a day of the plan heads every day it covers",
+          "line": 1661,
+          "tags": []
+        },
+        {
+          "title": "an operator reaches every console screen",
+          "line": 1925,
+          "tags": []
+        },
+        {
+          "title": "an acting operator is told whose session this is",
+          "line": 1978,
+          "tags": []
+        },
+        {
+          "title": "the console is closed to an impersonated session",
+          "line": 2011,
+          "tags": []
+        },
+        {
+          "title": "the console watcher splits the browser's advisories from the app's own mistakes",
+          "line": 2047,
+          "tags": []
+        },
+        {
+          "title": "the engine writes the preload advisory this gate tolerates, and not the one it does not",
+          "line": 2114,
+          "tags": []
+        },
+        {
+          "title": "a live map holds the shutter until it has finished drawing",
+          "line": 2176,
+          "tags": []
+        },
+        {
+          "title": "a map that never finishes drawing fails rather than being photographed",
+          "line": 2195,
+          "tags": []
+        },
+        {
+          "title": "the map declaration is audited in both directions",
+          "line": 2213,
+          "tags": []
+        },
+        {
+          "title": "a calendar is read, pruned and written to the desk as unchecked imports",
+          "line": 2395,
+          "tags": []
+        },
+        {
+          "title": "a file the import cannot read is refused by name, and nothing uploads",
+          "line": 2467,
+          "tags": []
+        },
+        {
+          "title": "a workspace past its reading allowance is told so in its own words",
+          "line": 2521,
+          "tags": []
+        },
+        {
+          "title": "a reader sees only the workspace they are in, and gets the first one back",
+          "line": 2616,
+          "tags": []
+        },
+        {
+          "title": "the open account menu keeps its roles, states and announcement through a switch",
+          "line": 2751,
+          "tags": []
+        },
+        {
+          "title": "a paid workspace creates another and lands in it empty",
+          "line": 2874,
+          "tags": []
+        },
+        {
+          "title": "a free workspace is shown the upgrade and gains no workspace",
+          "line": 2910,
+          "tags": []
+        },
+        {
+          "title": "a signed-in visit shows no switcher, and a settings choice outlives sign-out",
+          "line": 3162,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/journeys.e2e.ts",
+      "originalInstances": 34,
+      "apiMigrationSignals": {
+        "on": 1,
+        "newContext": 4,
+        "clock": 1,
+        "info": 2,
+        "setTimeout": 20,
+        "configure": 1,
+        "toHaveCSS": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": ["a stranger reaches every public screen"]
+        },
+        {
+          "titlePath": ["the reset-link actions stack inside the panel"]
+        },
+        {
+          "titlePath": [
+            "workspace console rooms",
+            "deep links, room navigation and history retain the workspace console"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "a member reaches every screen behind the session"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "the atlas figures follow the selected year"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "a country opens on the map and can be acted on"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "a finger reaches the same facts on a phone"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "the click surface survives its country leaving the map"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "the click surface never takes the reader's input"
+          ]
+        },
+        {
+          "titlePath": [
+            "the trip sections behind a route parameter",
+            "the transports tab arrives composed the same way twice"
+          ]
+        },
+        {
+          "titlePath": [
+            "the trip sections behind a route parameter",
+            "the book tab arrives composed the same way twice"
+          ]
+        },
+        {
+          "titlePath": [
+            "the trip sections behind a route parameter",
+            "a day draws its journeys inside its own sequence"
+          ]
+        },
+        {
+          "titlePath": [
+            "the trip sections behind a route parameter",
+            "a stay states the nights between the days it is given"
+          ]
+        },
+        {
+          "titlePath": [
+            "the trip sections behind a route parameter",
+            "a stay booked from a day of the plan heads every day it covers"
+          ]
+        },
+        {
+          "titlePath": [
+            "platform console",
+            "an operator reaches every console screen"
+          ]
+        },
+        {
+          "titlePath": [
+            "the impersonation warning bar",
+            "an acting operator is told whose session this is"
+          ]
+        },
+        {
+          "titlePath": [
+            "the impersonation warning bar",
+            "the console is closed to an impersonated session"
+          ]
+        },
+        {
+          "titlePath": [
+            "the harness itself",
+            "the console watcher splits the browser's advisories from the app's own mistakes"
+          ]
+        },
+        {
+          "titlePath": [
+            "the harness itself",
+            "the engine writes the preload advisory this gate tolerates, and not the one it does not"
+          ]
+        },
+        {
+          "titlePath": [
+            "the harness itself",
+            "a live map holds the shutter until it has finished drawing"
+          ]
+        },
+        {
+          "titlePath": [
+            "the harness itself",
+            "a map that never finishes drawing fails rather than being photographed"
+          ]
+        },
+        {
+          "titlePath": [
+            "the harness itself",
+            "the map declaration is audited in both directions"
+          ]
+        },
+        {
+          "titlePath": [
+            "a confirmation file read into the booking desk",
+            "a calendar is read, pruned and written to the desk as unchecked imports"
+          ]
+        },
+        {
+          "titlePath": [
+            "a confirmation file read into the booking desk",
+            "a file the import cannot read is refused by name, and nothing uploads"
+          ]
+        },
+        {
+          "titlePath": [
+            "a confirmation file read into the booking desk",
+            "a workspace past its reading allowance is told so in its own words"
+          ]
+        },
+        {
+          "titlePath": [
+            "switching workspace",
+            "a reader sees only the workspace they are in, and gets the first one back"
+          ]
+        },
+        {
+          "titlePath": [
+            "switching workspace",
+            "the open account menu keeps its roles, states and announcement through a switch"
+          ]
+        },
+        {
+          "titlePath": [
+            "switching workspace",
+            "a paid workspace creates another and lands in it empty"
+          ]
+        },
+        {
+          "titlePath": [
+            "switching workspace",
+            "a free workspace is shown the upgrade and gains no workspace"
+          ]
+        },
+        {
+          "titlePath": [
+            "two-factor separates signed-in settings from the sign-in challenge"
+          ]
+        },
+        {
+          "titlePath": [
+            "a visitor chooses Polish on the sign-in screen and keeps it"
+          ]
+        },
+        {
+          "titlePath": [
+            "a half-filled sign-up form keeps its values through a language switch"
+          ]
+        },
+        {
+          "titlePath": [
+            "a visitor switches language from the marketing header with the keyboard"
+          ]
+        },
+        {
+          "titlePath": [
+            "the visitor language after a signed-in choice",
+            "a signed-in visit shows no switcher, and a settings choice outlives sign-out"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/masked-code.spec.ts",
+      "tests": [
+        {
+          "title": "a click reveals, a held press keeps it, moving on masks it",
+          "line": 85,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/masked-code.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "setTimeout": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "a masked code reveals in place and masks again",
+            "a click reveals, a held press keeps it, moving on masks it"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/places-and-maps.spec.ts",
+      "tests": [
+        {
+          "title": "/atlas opens on the whole world at its own floor zoom",
+          "line": 82,
+          "tags": []
+        },
+        {
+          "title": "a trip that spans a country opens on every place it holds",
+          "line": 110,
+          "tags": []
+        },
+        {
+          "title": "a trip with one place opens at a readable zoom, not the ceiling",
+          "line": 137,
+          "tags": []
+        },
+        {
+          "title": "a trip with no coordinates opens on the world",
+          "line": 172,
+          "tags": []
+        },
+        {
+          "title": "the planner does not shift after it settles, across a resize and a theme change",
+          "line": 192,
+          "tags": []
+        },
+        {
+          "title": "publishes one add control, one menu and one map option",
+          "line": 274,
+          "tags": []
+        },
+        {
+          "title": "a context-click on the map opens the form at that point",
+          "line": 291,
+          "tags": []
+        },
+        {
+          "title": "the keyboard arms the map from the menu and drops in the middle",
+          "line": 310,
+          "tags": []
+        },
+        {
+          "title": "fills both fields from a geo: URI without moving the dialog",
+          "line": 372,
+          "tags": []
+        },
+        {
+          "title": "947 — a viewer gets map links without write controls",
+          "line": 449,
+          "tags": []
+        },
+        {
+          "title": "a day offers directions and a stop offers both services",
+          "line": 521,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/places-and-maps.e2e.ts",
+      "originalInstances": 11,
+      "apiMigrationSignals": {
+        "newContext": 1,
+        "info": 1,
+        "setTimeout": 5,
+        "dispatchEvent": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "02-S3 — the opening camera",
+            "/atlas opens on the whole world at its own floor zoom"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S3 — the opening camera",
+            "a trip that spans a country opens on every place it holds"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S3 — the opening camera",
+            "a trip with one place opens at a readable zoom, not the ceiling"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S3 — the opening camera",
+            "a trip with no coordinates opens on the world"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S3 — the opening camera",
+            "the planner does not shift after it settles, across a resize and a theme change"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S4 — drop a pin on the map",
+            "publishes one add control, one menu and one map option"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S4 — drop a pin on the map",
+            "a context-click on the map opens the form at that point"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S4 — drop a pin on the map",
+            "the keyboard arms the map from the menu and drops in the middle"
+          ]
+        },
+        {
+          "titlePath": [
+            "02-S5 — paste a position",
+            "fills both fields from a geo: URI without moving the dialog"
+          ]
+        },
+        {
+          "titlePath": [
+            "663 — the map hand-off",
+            "947 — a viewer gets map links without write controls"
+          ]
+        },
+        {
+          "titlePath": [
+            "663 — the map hand-off",
+            "a day offers directions and a stop offers both services"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/product-modules.spec.ts",
+      "tests": [
+        {
+          "title": "08-S5b follows a Sunday-first workspace @chromium-only",
+          "line": 195,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a logs and clears a day with the keyboard @chromium-only",
+          "line": 274,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a failure recovery at 360px @chromium-only",
+          "line": 315,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a failure recovery at 1280px @chromium-only",
+          "line": 315,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a month headings fit in ar @chromium-only",
+          "line": 348,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a month headings fit in pl @chromium-only",
+          "line": 348,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a month headings fit in vi @chromium-only",
+          "line": 348,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "08-S5a month headings fit in zh-Hans @chromium-only",
+          "line": 348,
+          "tags": ["chromium-only"]
+        },
+        {
+          "title": "opens the editor, refuses a bad value, cancels, saves with Enter and puts the figure back",
+          "line": 396,
+          "tags": []
+        },
+        {
+          "title": "opens and cancels in the dark theme without overflowing, and writes nothing",
+          "line": 478,
+          "tags": []
+        },
+        {
+          "title": "shows the default caption full width, and a failed write keeps the value and offers a retry",
+          "line": 499,
+          "tags": []
+        },
+        {
+          "title": "shows the pinned year’s carried figure as the previous year’s leftover, in plain text",
+          "line": 546,
+          "tags": []
+        },
+        {
+          "title": "edits the opening balance, sees the next year follow it, and puts it back",
+          "line": 560,
+          "tags": []
+        },
+        {
+          "title": "shows a year without a row the leftover of the year before",
+          "line": 613,
+          "tags": []
+        },
+        {
+          "title": "switches carry-over off and on without losing the carried figure, and puts the settings back",
+          "line": 632,
+          "tags": []
+        },
+        {
+          "title": "changes the default allowance for a year without a row, and puts it back",
+          "line": 681,
+          "tags": []
+        },
+        {
+          "title": "refuses an invalid default, keeps the dialog open and lands on the field",
+          "line": 707,
+          "tags": []
+        },
+        {
+          "title": "keeps the settings button tall enough to touch at 360px, and Save in view with the keyboard up",
+          "line": 734,
+          "tags": []
+        },
+        {
+          "title": "opens the dialog in both themes at 360, 1280 and 2560 without overflowing, and writes nothing",
+          "line": 767,
+          "tags": []
+        },
+        {
+          "title": "keeps the dialog open with the values on a failed save and moves focus to the alert",
+          "line": 787,
+          "tags": []
+        },
+        {
+          "title": "1442 - protects collection drafts across Back, reload and logout",
+          "line": 812,
+          "tags": []
+        },
+        {
+          "title": "1442 - closed collection draft survives Stay and is discarded by a workspace switch",
+          "line": 910,
+          "tags": []
+        },
+        {
+          "title": "08-S4a - renames a collection and changes a saved place status, then restores both",
+          "line": 1014,
+          "tags": []
+        },
+        {
+          "title": "adds and removes a region in light",
+          "line": 1137,
+          "tags": []
+        },
+        {
+          "title": "adds and removes a region in dark",
+          "line": 1137,
+          "tags": []
+        },
+        {
+          "title": "keeps loading stable and all controls reachable at 360",
+          "line": 1220,
+          "tags": []
+        },
+        {
+          "title": "keeps loading stable and all controls reachable at 1280",
+          "line": 1220,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/product-modules.e2e.ts",
+      "originalInstances": 27,
+      "apiMigrationSignals": {
+        "on": 1,
+        "info": 1,
+        "setTimeout": 8,
+        "configure": 2
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5b follows a Sunday-first workspace @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a logs and clears a day with the keyboard @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a failure recovery at 360px @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a failure recovery at 1280px @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a month headings fit in ar @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a month headings fit in pl @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a month headings fit in vi @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S5a month headings fit in zh-Hans @chromium-only"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "opens the editor, refuses a bad value, cancels, saves with Enter and puts the figure back"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "opens and cancels in the dark theme without overflowing, and writes nothing"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "shows the default caption full width, and a failed write keeps the value and offers a retry"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "shows the pinned year’s carried figure as the previous year’s leftover, in plain text"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "edits the opening balance, sees the next year follow it, and puts it back"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "shows a year without a row the leftover of the year before"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "switches carry-over off and on without losing the carried figure, and puts the settings back"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "changes the default allowance for a year without a row, and puts it back"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "refuses an invalid default, keeps the dialog open and lands on the field"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "keeps the settings button tall enough to touch at 360px, and Save in view with the keyboard up"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "opens the dialog in both themes at 360, 1280 and 2560 without overflowing, and writes nothing"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "keeps the dialog open with the values on a failed save and moves focus to the alert"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "1442 - protects collection drafts across Back, reload and logout"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "1442 - closed collection draft survives Stay and is discarded by a workspace switch"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S1 - a traveller sets their own allowance",
+            "08-S4a - renames a collection and changes a saved place status, then restores both"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S2a - a traveller records regions",
+            "adds and removes a region in light"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S2a - a traveller records regions",
+            "adds and removes a region in dark"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S2a - region loading and both hosts",
+            "keeps loading stable and all controls reachable at 360"
+          ]
+        },
+        {
+          "titlePath": [
+            "08-S2a - region loading and both hosts",
+            "keeps loading stable and all controls reachable at 1280"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/shell-safe-gutter.spec.ts",
+      "tests": [
+        {
+          "title": "the nav row and the content well clear a notched phone in landscape",
+          "line": 36,
+          "tags": []
+        },
+        {
+          "title": "the marketing header and footer rows clear a notched phone in landscape",
+          "line": 61,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/shell-safe-gutter.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {
+        "addStyleTag": 1,
+        "use": 2
+      },
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "shell safe-area gutters",
+            "signed-in navigation and content clear a notched phone"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "shell safe-area gutters",
+            "marketing header and footer clear a notched phone"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/stop-menu-reflow.spec.ts",
+      "tests": [
+        {
+          "title": "stop destinations reflow, scroll and accept keyboard selection in pl",
+          "line": 46,
+          "tags": []
+        },
+        {
+          "title": "stop destinations reflow, scroll and accept keyboard selection in de",
+          "line": 46,
+          "tags": []
+        },
+        {
+          "title": "stop destinations reflow, scroll and accept keyboard selection in ar",
+          "line": 46,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/stop-menu-reflow.e2e.ts",
+      "originalInstances": 3,
+      "apiMigrationSignals": {
+        "waitForEvent": 1,
+        "waitForRequest": 1,
+        "setTimeout": 1,
+        "configure": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "Ordered browser journeys",
+            "stop destinations reflow, scroll and accept keyboard selection in pl"
+          ]
+        },
+        {
+          "titlePath": [
+            "Ordered browser journeys",
+            "stop destinations reflow, scroll and accept keyboard selection in de"
+          ]
+        },
+        {
+          "titlePath": [
+            "Ordered browser journeys",
+            "stop destinations reflow, scroll and accept keyboard selection in ar"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/switch-contrast.spec.ts",
+      "tests": [
+        {
+          "title": "unchecked Switch boundary clears 3:1 in light",
+          "line": 8,
+          "tags": []
+        },
+        {
+          "title": "unchecked Switch boundary clears 3:1 in dark",
+          "line": 8,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/switch-contrast.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {},
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "unchecked Switch contrast",
+            "clears 3:1 on every adjacent surface in light at rest"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "unchecked Switch contrast",
+            "clears 3:1 on every adjacent surface in light at hover"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "unchecked Switch contrast",
+            "clears 3:1 on every adjacent surface in dark at rest"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "unchecked Switch contrast",
+            "clears 3:1 on every adjacent surface in dark at hover"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/trip-invite-link.spec.ts",
+      "tests": [
+        {
+          "title": "answers 404 with the headers that keep the secret out of caches, referrers and indexes",
+          "line": 20,
+          "tags": []
+        },
+        {
+          "title": "turns a run of misses from one address into a 429 with Retry-After, still not cacheable or indexable",
+          "line": 38,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/trip-invite-link.e2e.ts",
+      "originalInstances": 2,
+      "apiMigrationSignals": {},
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "a trip invite link that does not work",
+            "returns 404 without caching, referring or indexing its secret"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "a trip invite link that does not work",
+            "rate-limits repeated misses without caching or indexing the refusal"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/trip-room-sign-out.spec.ts",
+      "tests": [
+        {
+          "title": "signing out on one device reconnects the other without losing its draft @chromium-only",
+          "line": 14,
+          "tags": ["chromium-only"]
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/trip-room-sign-out.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {
+        "on": 3,
+        "newContext": 2,
+        "setTimeout": 1,
+        "use": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "signing out on one device reconnects the other without losing its draft @chromium-only"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/trip-weather.spec.ts",
+      "tests": [
+        {
+          "title": "every state of a day is drawn as what it is, and nothing moves when the answer arrives",
+          "line": 78,
+          "tags": []
+        },
+        {
+          "title": "a day beyond the forecast is an estimate, marked and named as one",
+          "line": 151,
+          "tags": []
+        },
+        {
+          "title": "the badge opens from the keyboard and closes back onto itself",
+          "line": 175,
+          "tags": []
+        },
+        {
+          "title": "every state, light and dark, at 360, 1280 and 2560",
+          "line": 227,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/trip-weather.e2e.ts",
+      "originalInstances": 4,
+      "apiMigrationSignals": {
+        "info": 1,
+        "setTimeout": 2
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "DOC-08 — the weather of a day",
+            "every state of a day is drawn as what it is, and nothing moves when the answer arrives"
+          ]
+        },
+        {
+          "titlePath": [
+            "DOC-08 — the weather of a day",
+            "a day beyond the forecast is an estimate, marked and named as one"
+          ]
+        },
+        {
+          "titlePath": [
+            "DOC-08 — the weather of a day",
+            "the badge opens from the keyboard and closes back onto itself"
+          ]
+        },
+        {
+          "titlePath": [
+            "DOC-08 — evidence",
+            "every state, light and dark, at 360, 1280 and 2560"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/trips-core.spec.ts",
+      "tests": [
+        {
+          "title": "a trip reopens on the tab it was left on",
+          "line": 103,
+          "tags": []
+        },
+        {
+          "title": "the Worker answers a trip address with the plan",
+          "line": 152,
+          "tags": []
+        },
+        {
+          "title": "the memory outlives the tab that made it",
+          "line": 179,
+          "tags": []
+        },
+        {
+          "title": "the trigger on an owned tile names its own trip",
+          "line": 249,
+          "tags": []
+        },
+        {
+          "title": "the menu offers the owner Edit and Archive, and the sheet opens on the trip",
+          "line": 265,
+          "tags": []
+        },
+        {
+          "title": "the trigger is reachable by keyboard",
+          "line": 309,
+          "tags": []
+        },
+        {
+          "title": "the favourites scope answers from the reader’s own bookmarks, not the trip’s flag",
+          "line": 328,
+          "tags": []
+        },
+        {
+          "title": "the delete dialog asks as hard as the server says it must",
+          "line": 352,
+          "tags": []
+        },
+        {
+          "title": "every tile offers the star, labelled by what a press would do",
+          "line": 419,
+          "tags": []
+        },
+        {
+          "title": "Copy leads the menu and opens a dialog rather than starting a write",
+          "line": 583,
+          "tags": []
+        },
+        {
+          "title": "the short-range note is earned by shortening the range, and withdrawn with it",
+          "line": 618,
+          "tags": []
+        },
+        {
+          "title": "the submit is disarmed by an empty name and by a half-picked range",
+          "line": 661,
+          "tags": []
+        },
+        {
+          "title": "a note is written with an icon and a detail, then swept away",
+          "line": 772,
+          "tags": []
+        },
+        {
+          "title": "a note drags among the stops, and a timed drop asks first",
+          "line": 972,
+          "tags": []
+        },
+        {
+          "title": "the phone opens the widgets in a sheet, and the clock reads the pinned minute",
+          "line": 1095,
+          "tags": []
+        },
+        {
+          "title": "the reference column stands beside the trips, and folds away when every widget is off",
+          "line": 1134,
+          "tags": []
+        },
+        {
+          "title": "the Share button in the sub-navigation opens the people route",
+          "line": 1266,
+          "tags": []
+        },
+        {
+          "title": "the route lists the trip’s people and says who can find it",
+          "line": 1291,
+          "tags": []
+        },
+        {
+          "title": "the invite control offers somebody in the workspace who is not on the trip",
+          "line": 1323,
+          "tags": []
+        },
+        {
+          "title": "a reader who is not the owner is offered no control at all",
+          "line": 1367,
+          "tags": []
+        },
+        {
+          "title": "a trip’s sole owner is offered neither verb, and is told why",
+          "line": 1422,
+          "tags": []
+        },
+        {
+          "title": "an owner adds a guest, opens the merge dialog without committing, and removes them",
+          "line": 1480,
+          "tags": []
+        },
+        {
+          "title": "the switch lays the same trips out as rows, in the URL, without asking the server again",
+          "line": 1564,
+          "tags": []
+        },
+        {
+          "title": "a remembered list is the default for an in-app arrival, never for a cold visit",
+          "line": 1614,
+          "tags": []
+        },
+        {
+          "title": "an archived trip waits in a closed fold at the foot of the index, and opens on request",
+          "line": 1661,
+          "tags": []
+        },
+        {
+          "title": "the create dialog derives the duration from two dates, keeps it when the start moves, and offers the whole currency list",
+          "line": 1732,
+          "tags": []
+        },
+        {
+          "title": "the save button is in view on a 360-pixel phone, without scrolling the form",
+          "line": 1793,
+          "tags": []
+        },
+        {
+          "title": "the edit sheet renders the same field set, the reminder as the owner’s, seeded from the trip",
+          "line": 1815,
+          "tags": []
+        },
+        {
+          "title": "the create dialog offers the cover region first, previews a picked image and refuses a document",
+          "line": 1876,
+          "tags": []
+        },
+        {
+          "title": "the edit sheet offers the cover region to the owner",
+          "line": 1919,
+          "tags": []
+        },
+        {
+          "title": "resizes and restores a rail, then keeps narrow overlays usable at 360px",
+          "line": 1943,
+          "tags": []
+        },
+        {
+          "title": "a trip created with an editor and a viewer lists both on its People screen",
+          "line": 2053,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/trips-core.e2e.ts",
+      "originalInstances": 32,
+      "apiMigrationSignals": {
+        "on": 1,
+        "setTimeout": 2,
+        "toPass": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "01-S3 — A trip reopens on the tab you left it on",
+            "a trip reopens on the tab it was left on"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S3 — A trip reopens on the tab you left it on",
+            "the Worker answers a trip address with the plan"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S3 — A trip reopens on the tab you left it on",
+            "the memory outlives the tab that made it"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "the trigger on an owned tile names its own trip"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "the menu offers the owner Edit and Archive, and the sheet opens on the trip"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "the trigger is reachable by keyboard"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "the favourites scope answers from the reader’s own bookmarks, not the trip’s flag"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "the delete dialog asks as hard as the server says it must"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1 — Who may see a trip and who may change it",
+            "every tile offers the star, labelled by what a press would do"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1d — Copying a trip is asked for before it is started",
+            "Copy leads the menu and opens a dialog rather than starting a write"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1d — Copying a trip is asked for before it is started",
+            "the short-range note is earned by shortening the range, and withdrawn with it"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S1d — Copying a trip is asked for before it is started",
+            "the submit is disarmed by an empty name and by a half-picked range"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S2 — A day note you can write",
+            "a note is written with an icon and a detail, then swept away"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S4b — The day is one sequence on screen",
+            "a note drags among the stops, and a timed drop asks first"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S5 — The dashboard’s reference column, and the clock in it",
+            "the phone opens the widgets in a sheet, and the clock reads the pinned minute"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S5 — The dashboard’s reference column, and the clock in it",
+            "the reference column stands beside the trips, and folds away when every widget is off"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6a — Who is on this trip",
+            "the Share button in the sub-navigation opens the people route"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6a — Who is on this trip",
+            "the route lists the trip’s people and says who can find it"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6a — Who is on this trip",
+            "the invite control offers somebody in the workspace who is not on the trip"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6a — Who is on this trip",
+            "a reader who is not the owner is offered no control at all"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6a — Who is on this trip",
+            "a trip’s sole owner is offered neither verb, and is told why"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S6b — A guest on a trip",
+            "an owner adds a guest, opens the merge dialog without committing, and removes them"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S7 — Reading a list of trips two ways, and finding the archived ones",
+            "the switch lays the same trips out as rows, in the URL, without asking the server again"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S7 — Reading a list of trips two ways, and finding the archived ones",
+            "a remembered list is the default for an in-app arrival, never for a cold visit"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S7 — Reading a list of trips two ways, and finding the archived ones",
+            "an archived trip waits in a closed fold at the foot of the index, and opens on request"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8a — One trip form for creating and editing",
+            "the create dialog derives the duration from two dates, keeps it when the start moves, and offers the whole currency list"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8a — One trip form for creating and editing",
+            "the save button is in view on a 360-pixel phone, without scrolling the form"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8a — One trip form for creating and editing",
+            "the edit sheet renders the same field set, the reminder as the owner’s, seeded from the trip"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8b — A cover image by drop, paste and picker",
+            "the create dialog offers the cover region first, previews a picked image and refuses a document"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8b — A cover image by drop, paste and picker",
+            "the edit sheet offers the cover region to the owner"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S9a - Adjustable planner workspace",
+            "resizes and restores a rail, then keeps narrow overlays usable at 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "01-S8c — Initial members on trip creation",
+            "a trip created with an editor and a viewer lists both on its People screen"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/wide-layout.spec.ts",
+      "tests": [
+        {
+          "title": "appearance keyboard switch widens the authenticated shell and restores its cap",
+          "line": 58,
+          "tags": []
+        },
+        {
+          "title": "saved wide mode aligns populated dashboard widgets through reload without hydration errors",
+          "line": 79,
+          "tags": []
+        },
+        {
+          "title": "same-origin tabs update both layout effects and keep the widget restoration menu",
+          "line": 104,
+          "tags": []
+        },
+        {
+          "title": "storage denied still permits reversible switching for the current page",
+          "line": 133,
+          "tags": []
+        },
+        {
+          "title": "wide dashboard remains reachable in dark mode at 360px",
+          "line": 152,
+          "tags": []
+        },
+        {
+          "title": "wide dashboard remains reachable in dark mode at 1280px",
+          "line": 152,
+          "tags": []
+        },
+        {
+          "title": "wide dashboard remains reachable in dark mode at 2560px",
+          "line": 152,
+          "tags": []
+        },
+        {
+          "title": "wide preference leaves public reading widths and full-bleed atlas geometry unchanged",
+          "line": 184,
+          "tags": []
+        },
+        {
+          "title": "saved composition is already applied while application hydration is held",
+          "line": 202,
+          "tags": []
+        },
+        {
+          "title": "wide dashboard controls follow the Arabic catalogue at all three widths",
+          "line": 240,
+          "tags": []
+        },
+        {
+          "title": "empty upcoming-trip state keeps the wide composition",
+          "line": 293,
+          "tags": []
+        },
+        {
+          "title": "client navigation reserves the wide pending composition before the payload arrives",
+          "line": 331,
+          "tags": []
+        },
+        {
+          "title": "the stacked tablet widgets retain their existing gap above trips",
+          "line": 363,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/wide-layout.e2e.ts",
+      "originalInstances": 13,
+      "apiMigrationSignals": {
+        "on": 2,
+        "toHaveCSS": 2,
+        "waitForLoadState": 2
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "appearance keyboard switch widens the authenticated shell and restores its cap"
+          ]
+        },
+        {
+          "titlePath": [
+            "saved wide mode aligns populated dashboard widgets through reload without hydration errors"
+          ]
+        },
+        {
+          "titlePath": [
+            "same-origin tabs update both layout effects and keep the widget restoration menu"
+          ]
+        },
+        {
+          "titlePath": [
+            "storage denied still permits reversible switching for the current page"
+          ]
+        },
+        {
+          "titlePath": [
+            "wide dashboard remains reachable in dark mode at 360px"
+          ]
+        },
+        {
+          "titlePath": [
+            "wide dashboard remains reachable in dark mode at 1280px"
+          ]
+        },
+        {
+          "titlePath": [
+            "wide dashboard remains reachable in dark mode at 2560px"
+          ]
+        },
+        {
+          "titlePath": [
+            "wide preference leaves public reading widths and full-bleed atlas geometry unchanged"
+          ]
+        },
+        {
+          "titlePath": [
+            "saved composition is already applied while application hydration is held"
+          ]
+        },
+        {
+          "titlePath": [
+            "wide dashboard controls follow the Arabic catalogue at all three widths"
+          ]
+        },
+        {
+          "titlePath": ["empty upcoming-trip state keeps the wide composition"]
+        },
+        {
+          "titlePath": [
+            "client navigation reserves the wide pending composition before the payload arrives"
+          ]
+        },
+        {
+          "titlePath": [
+            "the stacked tablet widgets retain their existing gap above trips"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/workspace-claim.spec.ts",
+      "tests": [
+        {
+          "title": "a tab that is showing the previous workspace is refused, writes nothing, and offers the current one",
+          "line": 53,
+          "tags": []
+        },
+        {
+          "title": "a trip tab whose workspace changed says why live updates stopped and stops retrying",
+          "line": 146,
+          "tags": []
+        },
+        {
+          "title": "a room commit preserves a stale tab's mounted draft until explicit recovery",
+          "line": 234,
+          "tags": []
+        },
+        {
+          "title": "a room catch-up preserves a stale tab's mounted draft until explicit recovery",
+          "line": 234,
+          "tags": []
+        },
+        {
+          "title": "a room room-close preserves a stale tab's mounted draft until explicit recovery",
+          "line": 234,
+          "tags": []
+        },
+        {
+          "title": "a stale tab can verify its original workspace in place after another tab switches back",
+          "line": 336,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/workspace-claim.e2e.ts",
+      "originalInstances": 6,
+      "apiMigrationSignals": {
+        "on": 2,
+        "setTimeout": 4,
+        "toPass": 5
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "a tab that is showing the previous workspace is refused, writes nothing, and offers the current one"
+          ]
+        },
+        {
+          "titlePath": [
+            "a trip tab whose workspace changed says why live updates stopped and stops retrying"
+          ]
+        },
+        {
+          "titlePath": [
+            "a room commit preserves a stale tab's mounted draft until explicit recovery"
+          ]
+        },
+        {
+          "titlePath": [
+            "a room catch-up preserves a stale tab's mounted draft until explicit recovery"
+          ]
+        },
+        {
+          "titlePath": [
+            "a room room-close preserves a stale tab's mounted draft until explicit recovery"
+          ]
+        },
+        {
+          "titlePath": [
+            "a stale tab can verify its original workspace in place after another tab switches back"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/workspace-departure.spec.ts",
+      "tests": [
+        {
+          "title": "workspace membership confirmation cancels and explains the last-owner refusal",
+          "line": 17,
+          "tags": []
+        },
+        {
+          "title": "a member leaves and reaches their remaining recovery workspace dashboard",
+          "line": 61,
+          "tags": []
+        },
+        {
+          "title": "a member leaves and reaches their personal recovery workspace dashboard",
+          "line": 61,
+          "tags": []
+        },
+        {
+          "title": "a member leaves and reaches their unknown recovery workspace dashboard",
+          "line": 61,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/workspace-departure.e2e.ts",
+      "originalInstances": 4,
+      "apiMigrationSignals": {
+        "newContext": 2,
+        "info": 1,
+        "use": 1
+      },
+      "reason": "Public e2e-inc custom engine preserves exact browser assertions, independent contexts and device capabilities.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "workspace membership confirmation cancels and explains the last-owner refusal"
+          ]
+        },
+        {
+          "titlePath": [
+            "a member leaves and reaches their remaining recovery workspace dashboard"
+          ]
+        },
+        {
+          "titlePath": [
+            "a member leaves and reaches their personal recovery workspace dashboard"
+          ]
+        },
+        {
+          "titlePath": [
+            "a member leaves and reaches their unknown recovery workspace dashboard"
+          ]
+        }
+      ]
+    },
+    {
+      "originalFile": "e2e/workspace-invitations.spec.ts",
+      "tests": [
+        {
+          "title": "workspace invitation create, duplicate refusal, resend recovery and revoke",
+          "line": 5,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/native/workspace-invitations.e2e.ts",
+      "originalInstances": 1,
+      "apiMigrationSignals": {},
+      "reason": "Native assertions preserve the original behavior; compound cases were split into independently reported outcomes.",
+      "nativeTests": [
+        {
+          "titlePath": [
+            "workspace invitations",
+            "creates an actionable invitation"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "workspace invitations",
+            "refuses a duplicate pending invitation"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "workspace invitations",
+            "keeps a resent invitation actionable when local delivery recovers"
+          ],
+          "tags": []
+        },
+        {
+          "titlePath": [
+            "workspace invitations",
+            "removes a revoked invitation after confirmation"
+          ],
+          "tags": []
+        }
+      ],
+      "engine": "web"
+    },
+    {
+      "originalFile": "e2e/landing-comparison-overflow.spec.ts",
+      "tests": [
+        {
+          "title": "landing comparison remains readable and usable in uk",
+          "line": 41,
+          "tags": []
+        },
+        {
+          "title": "landing comparison remains readable and usable in en",
+          "line": 41,
+          "tags": []
+        },
+        {
+          "title": "landing comparison remains readable and usable in fr",
+          "line": 41,
+          "tags": []
+        },
+        {
+          "title": "landing comparison remains readable and usable in de",
+          "line": 41,
+          "tags": []
+        },
+        {
+          "title": "landing comparison remains readable and usable in ar",
+          "line": 41,
+          "tags": []
+        }
+      ],
+      "runner": "e2e-inc",
+      "currentFile": "e2e/browser/landing-comparison-overflow.e2e.ts",
+      "originalInstances": 5,
+      "apiMigrationSignals": {
+        "newCDPSession": 1,
+        "newContext": 1,
+        "attach": 3
+      },
+      "reason": "Preserve every locale, Unicode and actual glyph font check, responsive text geometry, pointer and keyboard activation, focus visibility, independent context and teardown from the newly merged landing regression.",
+      "engine": "browser-journey",
+      "nativeTests": [
+        {
+          "titlePath": ["landing comparison remains readable and usable in uk"]
+        },
+        {
+          "titlePath": ["landing comparison remains readable and usable in en"]
+        },
+        {
+          "titlePath": ["landing comparison remains readable and usable in fr"]
+        },
+        {
+          "titlePath": ["landing comparison remains readable and usable in de"]
+        },
+        {
+          "titlePath": ["landing comparison remains readable and usable in ar"]
+        }
+      ]
+    }
+  ],
+  "browserJourneyOriginalInstances": 224,
+  "baselineUpdates": [
+    {
+      "date": "2026-11-17",
+      "sourceRef": "f57442b5ccfc0ec9cf4e64c470023bc4ee1540de",
+      "pullRequest": 1926,
+      "originalFile": "e2e/landing-comparison-overflow.spec.ts",
+      "chromiumInstances": 5
+    }
+  ]
+}

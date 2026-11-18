@@ -13,10 +13,10 @@ name: e2e · webkit
 #
 # The coverage is not being retired, only moved off the pull-request path (issue #552).
 # WebKit has caught defects Chromium cannot see — an `Intl` divergence between WebKit
-# and workerd across the locale catalogue (`e2e/i18n-runtime-parity.spec.ts`), a date
-# heading hydration mismatch (`e2e/trips-core.spec.ts`), a module-import page error on
+# and workerd across the locale catalogue (`e2e/native/i18n-runtime-parity.e2e.ts`), a date
+# heading hydration mismatch (`e2e/browser/trips-core.e2e.ts`), a module-import page error on
 # every console route (`e2e/helpers/admin.ts`) — and journey 7 exists for the 393px
-# composition alone (`e2e/journeys.spec.ts`). What changed is when the answer arrives:
+# composition alone (`e2e/browser/journeys.e2e.ts`). What changed is when the answer arrives:
 # within a day, against `develop`, instead of within the hour, against a branch.
 #
 # It could not live in `ci.yml` as a post-merge job. `deploy-staging` and
@@ -29,7 +29,7 @@ name: e2e · webkit
 #     from there, and `workflow_dispatch` is only offered for a workflow file already
 #     present there. So this file has to reach `main` before either one works, and until a
 #     `develop` -> `main` promotion carries it across, `mobile-safari` runs in no CI job at
-#     all — `pnpm e2e --project=mobile-safari` locally is the only way to ask for it
+#     all — `pnpm e2e:browser --target mobile-safari` locally is the way to ask for it
 #     meanwhile (ADR 0022). Once the cron does fire, the run checks out `develop`
 #     explicitly (below) because that is where a regression lands first.
 #   - GitHub disables a schedule after 60 days without repository activity, and a failed
@@ -58,8 +58,8 @@ permissions:
 
 env:
   CI: 'true'
-  # What takes `mobile-safari` out of `playwright.config.ts` on every other CI run, and
-  # puts it back here. Without it `--project=mobile-safari` below fails with "project not
+  # What takes `mobile-safari` out of `e2e.browser.config.ts` on every other CI run, and
+  # puts it back here. Without it `--target mobile-safari` below fails with "project not
   # found", which is deliberate: a silent empty run is the failure mode worth refusing.
   E2E_WEBKIT: '1'
   # Inlined into the bundle by Vite, exactly as in ci.yml — the build the journeys walk
@@ -70,15 +70,14 @@ env:
   VITE_POLAR_PRODUCT_CREW_YEARLY: ${{ vars.VITE_POLAR_PRODUCT_CREW_YEARLY }}
 
 jobs:
-  # Two shards, the same count `ci.yml` uses and for the same reason: one Playwright
-  # worker a shard on a 2-vCPU runner, and 51 declarations do not divide usefully past
-  # two. The arithmetic that sizes it: the project's 51 tests cost more than 900 s
-  # whole, so half of them is the change that brings a shard back inside `globalTimeout`
-  # — which is why this job needs no timeout of its own beyond ci.yml's 35 minutes.
+  # Two shards, as in ci.yml, with one e2e-inc worker per seeded database.
+  # Both engine configurations are required. The 50-minute outer budget covers
+  # setup, engine probes, the bounded browser/native runs and diagnostics.
   e2e-webkit:
     name: e2e · webkit (${{ matrix.shard }}/2)
     runs-on: ${{ fromJSON(vars.RUNNER_CI || '["self-hosted","linux","X64","ci"]') }}
-    timeout-minutes: 35
+    # Both bounded runners must finish before the job-level deadline.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -102,12 +101,41 @@ jobs:
           # enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
 
+      - name: Verify the browser engine contract
+        run: pnpm e2e:verify-engine
+
       - name: Run this shard of the WebKit journeys
         id: tests
         env:
-          PLAYWRIGHT_BASE_URL: http://localhost:3000
-          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
-        run: pnpm exec playwright test --project=mobile-safari --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
+          E2E_BASE_URL: http://localhost:3000
+        run: pnpm exec e2e run --config e2e.browser.config.ts --target mobile-safari --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Run this shard of the native WebKit suite
+        id: native-tests
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: pnpm exec e2e run --target webkit --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Publish the native e2e summary
+        if: ${{ !cancelled() && steps.native-tests.outcome != 'skipped' }}
+        continue-on-error: true
+        run: cat .e2e/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload native e2e failure diagnostics
+        if: ${{ !cancelled() && steps.native-tests.outcome == 'failure' }}
+        continue-on-error: true
+        uses: design4pro/.github/actions/artifact-upload@main
+        with:
+          name: e2e-native-webkit-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          retention-days: 2
+          if-no-files-found: ignore
+          path: |
+            .e2e/report.json
+            .e2e/junit.xml
+            .e2e/summary.md
+            .e2e/results/**/trace.md
+            .e2e/results/**/*.png
 
       - name: Select failure and flaky diagnostics
         id: diagnostics
@@ -126,10 +154,13 @@ jobs:
           retention-days: 2
           if-no-files-found: ignore
           path: |
-            test-results/results.json
-            test-results/**/trace.zip
-            test-results/**/*.png
-            test-results/**/error-context.md
+            .e2e/browser/report.json
+            .e2e/browser/junit.xml
+            .e2e/browser/summary.md
+            .e2e/browser/results/**/trace.md
+            .e2e/browser/results/**/*.png
+            .e2e/browser/results/**/attachments/*.json
+            .e2e/browser/results/**/screenshots/pages.json
             e2e-runtime.log
             dev-server.log
             preview-server.log

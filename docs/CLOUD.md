@@ -15,8 +15,10 @@ account, installs a global CLI or starts an allocator.
 ## 2. Provisioning
 
 Use Node 24.x, matching `.github/actions/setup/action.yml`, and the package manager version
-in `package.json`. Install the browsers required by the selected Playwright journeys using
-the repository's installed Playwright version. The host needs package registry, GitHub and
+in `package.json`. Install the browsers required by both e2e-inc engines using the repository's installed
+`pnpm exec e2e-web install chromium webkit` and `pnpm exec playwright install chromium webkit`
+commands. The portable and custom engines have independent lockfile-resolved Playwright
+owners whose browser builds may differ. The host needs package registry, GitHub and
 browser download access; grant provider access only when the task requires it.
 
 For ordinary development, run `pnpm worktree:bootstrap` from the checkout. For an ephemeral
@@ -49,7 +51,10 @@ an old object is small from its name alone.
 Run the configured gate with `node scripts/ci/validation.mjs`. Use Node 24 directly on PATH;
 a shell wrapper around `node` can change process identities used by lifecycle tests.
 UI changes also require the applicable journeys and visual evidence in
-`.agents/policies/verification.md`. Run only against the environment owned by this checkout.
+`.agents/policies/verification.md`. Run only against the environment owned by this checkout. During the e2e-inc migration,
+`pnpm e2e:all` executes both required runners; `E2E_BASE_URL` and
+`PLAYWRIGHT_BASE_URL` must name that same server. See [End-to-end testing](testing/e2e.md)
+for native scenarios, the retained browser assertions and Codex MCP/Actions usage.
 
 A remote result does not bypass review, QA, CI or merge ownership. Preserve the `develop`
 base and existing production promotion rules. Do not run a second allocator alongside a

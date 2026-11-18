@@ -67,6 +67,7 @@ it.each([
       people: [],
       viewerUserId: 'reader',
       timeZone: 'UTC',
+      todayKey: '2026-06-15',
     })
     vi.spyOn(Route, 'useParams').mockReturnValue({ tripId: 'trip' })
     const Component = Route.options.component as ComponentType

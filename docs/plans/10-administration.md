@@ -490,8 +490,8 @@ Functions covered: `listMemberProfiles`, `listInvitationsWithInviter`, `getInvit
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/administration.visual.spec.ts
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin" \
@@ -858,7 +858,7 @@ Functions covered: `listAuditLog`, `listAuditActors`, `countAuditActions`, `coun
     renders its heading, its explanation and a link to `/dashboard`, and renders no workspace data
     of any kind. That is the assertion the inline markup could never carry.
   - **What cannot be photographed today, measured rather than assumed.** The harness holds exactly
-    one session, the demo owner's: `e2e/auth.setup.ts` caches `DEMO_EMAIL`
+    one session, the demo owner's: `e2e/browser/auth.setup.e2e.ts` caches `DEMO_EMAIL`
     (`e2e/helpers/shoot.ts:136`) and the seeder mints a signable password for the owner alone —
     `src/routes/api/dev/-seed/bootstrap.ts:11-15` says so in as many words ("the collaborators are
     deliberately created without a credential account … cannot sign in"), so no member-role account
@@ -875,8 +875,8 @@ Functions covered: `listAuditLog`, `listAuditActors`, `countAuditActions`, `coun
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/administration.visual.spec.ts
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin" \
@@ -977,7 +977,7 @@ harness precondition:
   keeps, and that `10-S3` mounts in the console layout, cannot be photographed by anyone: the seeder
   creates the four collaborators without a credential account on purpose
   (`src/routes/api/dev/-seed/bootstrap.ts:11-15`) and the suite caches one session, the owner's
-  (`e2e/auth.setup.ts`). One seeded person with a signable password and the `member` role, plus a
+  (`e2e/browser/auth.setup.e2e.ts`). One seeded person with a signable password and the `member` role, plus a
   second cached storage state, would make the state photographable in this plan and in every other
   plan that hides an affordance behind a role. Both files belong to the seeder and the harness, which
   this plan does not own, so it is recorded here and carried out of the file as a contract extension
@@ -1241,8 +1241,8 @@ case that would restate another stage's.
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/administration.visual.spec.ts
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin/members" \
@@ -1763,8 +1763,8 @@ Functions covered: `getPermissionMatrix`, `savePermissionMatrix`, `resetPermissi
 
   ```sh
   PORT=$(scripts/ultrabuild/resolve-port.sh)
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test --project=setup
-  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm exec playwright test e2e/administration.visual.spec.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser --target chromium e2e/browser/auth.setup.e2e.ts
+  PLAYWRIGHT_BASE_URL=http://localhost:$PORT pnpm e2e:browser e2e/administration.visual.spec.ts
 
   PT_SERVER_TODAY=2026-08-20 node scripts/ultrabuild/capture.mjs \
     --url "http://localhost:$PORT/admin/permissions" \
@@ -1891,7 +1891,7 @@ Reading them:
   `09-S8`, `02-S10`, `01-S1`, `01-S5`, `01-S7`, `04-S2`, `11-S1`–`11-S3` and this file's own four.
   The check is also what proves the four stages this file names as unparseable still exist under the
   ids it gives them. And it reports no plan missing a Playwright invocation, which for this file is
-  the four `pnpm exec playwright test` blocks under the four **Verification** headings.
+  the four `pnpm e2e:browser` blocks under the four **Verification** headings.
 - **No same-wave exclusive collision involves this plan.** No stage here shares an exclusive
   disposition on a file with another stage in the same wave, inside this plan or across the thirteen
   plans the check now reads. Note the shape of that guarantee: the check is over stages that state a

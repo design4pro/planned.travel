@@ -197,10 +197,19 @@ export function readPrState(repo, number, read = gh) {
     current.head.sha !== pr.head.sha ||
     current.base.sha !== pr.base.sha ||
     current.base.ref !== pr.base.ref ||
-    current.state !== pr.state
+    current.state !== pr.state ||
+    current.draft !== pr.draft
   ) {
     ci.state = 'pending'
-    warnings.push('PR head, base or state changed during snapshot; read again')
+    warnings.push(
+      'PR head, base, state or draft status changed during snapshot; read again',
+    )
+  }
+  if (current.state === 'open' && current.draft === true) {
+    if (ci.state === 'green') ci.state = 'pending'
+    warnings.push(
+      'PR is a draft; repository CI starts when it is marked ready for review',
+    )
   }
   const labels = current.labels.map((l) => l.name)
   let review = 'none'
@@ -240,7 +249,8 @@ export async function waitForPr(
   const deadline = now() + timeoutMs
   for (;;) {
     const state = await snapshot()
-    if (state.state !== 'OPEN' || state.ci.state !== 'pending') return state
+    if (state.state !== 'OPEN' || state.draft || state.ci.state !== 'pending')
+      return state
     if (now() >= deadline) return { ...state, timedOut: true }
     await pause(Math.min(pollMs, deadline - now()))
   }

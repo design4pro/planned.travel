@@ -2,7 +2,10 @@
 import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { requireReleasePermission } from '#/server/auth/release-authority'
-import { preparePlatformAudit } from '#/server/catalog/audit'
+import {
+  preparePlatformAudit,
+  findReleaseOperation,
+} from '#/server/catalog/audit'
 import {
   generationSchema,
   releaseBodySchema,
@@ -31,6 +34,9 @@ const importSchema = z.strictObject({
   sourceCommit: sourceShaSchema,
   cutoffSha: sourceShaSchema,
   body: releaseBodySchema,
+  expectedGeneration: generationSchema.optional(),
+  sourceHash: sourceHashSchema.optional(),
+  operationHash: sourceHashSchema.optional(),
 })
 export const releaseApprovalSchema = z.strictObject({
   operationId: releaseIdSchema,
@@ -38,6 +44,7 @@ export const releaseApprovalSchema = z.strictObject({
   versionId: releaseIdSchema,
   sourceHash: sourceHashSchema,
   expectedGeneration: generationSchema,
+  operationHash: sourceHashSchema.optional(),
 })
 
 /** Only known CAS/identity conflicts become results; storage errors still fail visibly. */
@@ -82,6 +89,60 @@ async function findSourceVersion(
   )
 }
 
+/** Admin-only preview/recovery projection, including the draft body; no audit actor or tenant selector. */
+export async function inspectRelease(
+  db: Database,
+  authority: ReleaseAuthority,
+  version: string,
+  operationId: string,
+) {
+  releaseVersionSchema.parse(version)
+  releaseIdSchema.parse(operationId)
+  await requireReleasePermission(authority, 'review')
+  const [row] = await db
+    .select({
+      currentVersionId: releasePublications.currentVersionId,
+      generation: releasePublications.generation,
+      approvedHash: releasePublications.approvedHash,
+      currentBody: contentVersions.body,
+    })
+    .from(releasePublications)
+    .leftJoin(
+      contentVersions,
+      eq(contentVersions.id, releasePublications.currentVersionId),
+    )
+    .where(eq(releasePublications.releaseVersion, version))
+  return {
+    currentBody: row?.currentBody ?? null,
+    currentVersionId: row?.currentVersionId ?? null,
+    generation: row?.generation ?? 0,
+    approvedHash: row?.approvedHash ?? null,
+    operation: await findReleaseOperation(db, operationId),
+  }
+}
+
+async function retryOperation(
+  db: Database,
+  authority: ReleaseAuthority,
+  data: { operationId: string; operationHash?: string },
+  action: string,
+) {
+  if (!data.operationHash) return null
+  await requireReleasePermission(authority, 'review')
+  const receipt = await findReleaseOperation(db, data.operationId)
+  if (!receipt) return null
+  if (
+    receipt.action !== action ||
+    receipt.metadata?.operationHash !== data.operationHash
+  )
+    return { status: 'conflict' as const, versionId: '', sourceHash: '' }
+  return {
+    status: 'unchanged' as const,
+    versionId: receipt.metadata.versionId ?? '',
+    sourceHash: receipt.metadata.sourceHash ?? '',
+  }
+}
+
 export async function importRelease(
   db: Database,
   authority: ReleaseAuthority,
@@ -89,6 +150,12 @@ export async function importRelease(
 ) {
   const data = importSchema.parse(input)
   const sourceHash = await hashSecret(JSON.stringify(data.body))
+  if (data.sourceHash !== undefined && data.sourceHash !== sourceHash) {
+    await requireReleasePermission(authority, 'review')
+    return { status: 'conflict' as const, versionId: '', sourceHash }
+  }
+  const retry = await retryOperation(db, authority, data, 'release.imported')
+  if (retry) return retry
   const [publication] = await db
     .select()
     .from(releasePublications)
@@ -102,6 +169,13 @@ export async function importRelease(
     await requireReleasePermission(authority, 'review')
     return { ...base, status: 'conflict' as const }
   }
+  if (
+    data.expectedGeneration !== undefined &&
+    data.expectedGeneration !== (publication?.generation ?? 0)
+  ) {
+    await requireReleasePermission(authority, 'review')
+    return { ...base, status: 'conflict' as const }
+  }
   if (publication) {
     const match = await findSourceVersion(
       db,
@@ -111,11 +185,51 @@ export async function importRelease(
     )
     const existing = match?.version
     if (existing) {
-      await requireReleasePermission(authority, 'review')
+      const actor = await requireReleasePermission(authority, 'review')
       const identical =
         existing.sourceHash === sourceHash &&
         existing.cutoffSha === data.cutoffSha &&
         JSON.stringify(existing.body) === JSON.stringify(data.body)
+      if (identical && data.operationHash) {
+        // A no-op still consumes its identity; otherwise changed input could reuse it later.
+        const claimId = newId()
+        try {
+          await runAtomicDatabaseBatch(db, [
+            db
+              .update(releasePublications)
+              .set({ operationId: data.operationId, claimId })
+              .where(
+                and(
+                  eq(releasePublications.id, publication.id),
+                  eq(releasePublications.generation, publication.generation),
+                ),
+              ),
+            db
+              .select({
+                assertion: sql`case when exists(select 1 from ${releasePublications} where id = ${publication.id} and generation = ${publication.generation} and operation_id = ${data.operationId} and claim_id = ${claimId}) then 1 else abs(-9223372036854775808) end`,
+              })
+              .from(sql`(select 1)`),
+            preparePlatformAudit(db, actor, {
+              action: 'release.imported',
+              entityId: publication.id,
+              operationId: data.operationId,
+              operationHash: data.operationHash,
+              versionId: existing.id,
+              sourceHash,
+              generation: publication.generation,
+            }),
+          ])
+        } catch (error) {
+          if (!isReleaseConflict(error)) throw error
+          const recovered = await retryOperation(
+            db,
+            authority,
+            data,
+            'release.imported',
+          )
+          return recovered ?? { ...base, status: 'conflict' as const }
+        }
+      }
       return {
         versionId: existing.id,
         sourceHash: existing.sourceHash,
@@ -136,6 +250,8 @@ export async function importRelease(
   const actor = await requireReleasePermission(authority, 'review')
   const audit = preparePlatformAudit(db, actor, {
     action: 'release.imported',
+    operationHash: data.operationHash,
+    generation: publication ? publication.generation + 1 : 0,
     entityId: publicationId,
     operationId: data.operationId,
     versionId,
@@ -198,6 +314,15 @@ export async function importRelease(
     }
   } catch (error) {
     if (!isReleaseConflict(error)) throw error
+    const recovered = await retryOperation(
+      db,
+      authority,
+      data,
+      'release.imported',
+    )
+    if (recovered) return recovered
+    // A different operation won. Retry through the no-op receipt path to reserve this identity.
+    if (data.operationHash) return { ...base, status: 'conflict' as const }
     // A concurrent identical import returns the same persisted version after the losing batch rolls back.
     const winner = await findSourceVersion(
       db,
@@ -228,6 +353,8 @@ export async function approveRelease(
   input: z.input<typeof releaseApprovalSchema>,
 ) {
   const data = releaseApprovalSchema.parse(input)
+  const retry = await retryOperation(db, authority, data, 'release.reviewed')
+  if (retry) return retry
   const [row] = await db
     .select({ publication: releasePublications, version: contentVersions })
     .from(releasePublications)
@@ -281,6 +408,7 @@ export async function approveRelease(
         .from(sql`(select 1)`),
       preparePlatformAudit(db, actor, {
         action: 'release.reviewed',
+        operationHash: data.operationHash,
         entityId: p.id,
         operationId: data.operationId,
         versionId: data.versionId,

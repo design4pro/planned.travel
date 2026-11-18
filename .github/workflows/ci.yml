@@ -233,10 +233,10 @@ jobs:
           git diff --no-renames --name-only HEAD^1 HEAD > changed-files.txt
           node scripts/ci/change-scope.mjs < changed-files.txt >> "$GITHUB_OUTPUT"
 
-  # The end-to-end journeys: fourteen declarations in `journeys.spec.ts`, three
-  # in `trips-core.spec.ts` and two browser-free HTTP claims in `csrf.spec.ts`,
+  # Native e2e-inc behaviors and custom browser engine assertions run
+  # together in each required Chromium shard (docs/testing/e2e.md).
   # over the `chromium` project alone. `mobile-safari` is still declared and still
-  # runnable by name, but `playwright.config.ts` leaves it out of a CI run that did
+  # runnable by name, but `e2e.browser.config.ts` leaves it out of a CI run that did
   # not set `E2E_WEBKIT` - it runs nightly in `e2e-webkit.yml` instead, because it
   # was the larger half of every event here and the half that ran out of wall clock
   # (issues #552, #466). Not a visual gate
@@ -244,14 +244,14 @@ jobs:
   # is that every screen answers, renders, hydrates, says nothing in the console,
   # and lets a reader act on it.
   #
-  # Two shards on the standard 2-vCPU runner, one Playwright worker each (two
-  # starved the map tests into timeouts - see `workers` in playwright.config),
+  # Two shards on the standard 2-vCPU runner, one e2e worker each (two
+  # starved the map tests into timeouts - see `workers` in e2e.browser.config),
   # started alongside `verify` rather than behind it: every job pays ~2 min of
   # fixed cost (image pull, install, migrations, seed) that no worker count
   # shortens, and a `needs: verify` in front of it (5-7 min of vitest coverage)
   # would double the wall clock. Twelve shards were sized for eighty-seven test
-  # instances a project; nineteen declarations do not divide usefully past two -
-  # four shards would halve the test time and pay the fixed cost twice more, for
+  # instances a project. The two-shard count is retained during the native
+  # migration; remeasure before increasing it. More shards repeat setup, for
   # about the same total.
   # Each shard is its own container with its own D1, so shards never share
   # state; `e2e-report` below checks the aggregate test outcome.
@@ -305,10 +305,11 @@ jobs:
     # 32% and 26% of the budget spent - roughly 70% of it unspent, where shard 1
     # used to sit at 98% and shard 2 past 100%. `--shard` still splits by count,
     # not by duration, so the next thing to make them uneven will be one heavy
-    # journey rather than one heavy engine; Playwright offers no duration split,
+    # journey rather than one heavy engine; the runner offers no duration split,
     # and moving
     # a journey by hand drifts.
-    timeout-minutes: 35
+    # 30 browser + 10 native + 5 engine probes + 5 setup/diagnostics.
+    timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
@@ -334,12 +335,43 @@ jobs:
           # proof enough, and 25 s off the other shard's critical path.
           verify-seed: ${{ matrix.shard == 1 }}
 
+      - name: Verify the browser engine contract
+        run: pnpm e2e:verify-engine
+
       - name: Run this shard of the suite
         id: tests
         env:
-          PLAYWRIGHT_BASE_URL: http://localhost:3000
-          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
-        run: pnpm exec playwright test --shard=${{ matrix.shard }}/${{ strategy.job-total }} --reporter=list,github,json
+          E2E_BASE_URL: http://localhost:3000
+        run: pnpm exec e2e run --config e2e.browser.config.ts --target chromium --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      # Both e2e engine suites are required. The job aggregates both outcomes.
+      - name: Run this shard of the native e2e suite
+        id: native-tests
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        env:
+          E2E_BASE_URL: http://localhost:3000
+        run: pnpm exec e2e run --target chromium --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+      - name: Publish the native e2e summary
+        if: ${{ !cancelled() && steps.native-tests.outcome != 'skipped' }}
+        continue-on-error: true
+        run: cat .e2e/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload native e2e failure diagnostics
+        if: ${{ !cancelled() && steps.native-tests.outcome == 'failure' }}
+        continue-on-error: true
+        uses: design4pro/.github/actions/artifact-upload@main
+        with:
+          name: e2e-native-chromium-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          retention-days: 2
+          if-no-files-found: ignore
+          # Never include .e2e/sessions, cache, downloads or credential files.
+          path: |
+            .e2e/report.json
+            .e2e/junit.xml
+            .e2e/summary.md
+            .e2e/results/**/trace.md
+            .e2e/results/**/*.png
 
       # The shard's totals, a few bytes, for the pull request comment `e2e-report` writes.
       - name: Keep the shard totals
@@ -374,10 +406,13 @@ jobs:
           retention-days: 2
           if-no-files-found: ignore
           path: |
-            test-results/results.json
-            test-results/**/trace.zip
-            test-results/**/*.png
-            test-results/**/error-context.md
+            .e2e/browser/report.json
+            .e2e/browser/junit.xml
+            .e2e/browser/summary.md
+            .e2e/browser/results/**/trace.md
+            .e2e/browser/results/**/*.png
+            .e2e/browser/results/**/attachments/*.json
+            .e2e/browser/results/**/screenshots/pages.json
             e2e-runtime.log
             dev-server.log
             preview-server.log
@@ -466,6 +501,7 @@ jobs:
           VERIFY: ${{ needs.verify.result }}
           TEST: ${{ needs.test.result }}
           E2E: ${{ needs.e2e.result }}
+          EXPECTED_SHARDS: 2
         run: |
           set -euo pipefail
           mkdir -p e2e-stats

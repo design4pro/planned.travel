@@ -12,7 +12,6 @@ import {
   menuItemBase,
   menuLabelBase,
   menuSeparatorBase,
-  popMotion,
   transitionBase,
   useControllableState,
 } from './shared'
@@ -149,7 +148,9 @@ export const SelectContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           layerSurface,
-          popMotion,
+          // Unmount on close before a selected value can move the anchor. An
+          // exiting Popper otherwise keeps observing that changing layout.
+          'origin-(--radix-popper-transform-origin) data-[state=open]:animate-pop-in',
           'z-popover max-h-(--radix-select-content-available-height) min-w-(--radix-select-trigger-width) overflow-hidden p-1',
           className,
         )}

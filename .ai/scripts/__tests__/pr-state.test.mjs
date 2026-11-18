@@ -20,6 +20,8 @@ describe('PR CI evidence', () => {
   const reader = ({
     changeHead = false,
     changeBase = false,
+    draft = false,
+    markReady = false,
     hiddenApps = false,
     requiredApp = 1,
     hiddenRules = false,
@@ -43,7 +45,7 @@ describe('PR CI evidence', () => {
           },
           state: 'open',
           labels: [],
-          draft: false,
+          draft: draft && !(markReady && refreshed),
           mergeable: true,
         }
       }
@@ -109,6 +111,27 @@ describe('PR CI evidence', () => {
     expect(
       readPrState('owner/repo', 7, reader({ requiredApp: 2 }).read).ci.state,
     ).toBe('pending')
+  })
+
+  it('reports why CI waits on a draft even when the check results look green', async () => {
+    const { read } = reader({ draft: true })
+    const snapshot = () => readPrState('owner/repo', 7, read)
+    const sleep = () => {
+      throw new Error('Waiting cannot start CI on a draft')
+    }
+    const result = await waitForPr(snapshot, { sleep })
+    expect(result.draft).toBe(true)
+    expect(result.ci.state).toBe('pending')
+    expect(result.warnings).toContain(
+      'PR is a draft; repository CI starts when it is marked ready for review',
+    )
+  })
+
+  it('refreshes CI evidence if a draft was marked ready during the read', () => {
+    const { read } = reader({ draft: true, markReady: true })
+    const result = readPrState('owner/repo', 7, read)
+    expect(result.draft).toBe(false)
+    expect(result.ci.state).toBe('pending')
   })
 
   it('refuses green on a changed head, hidden app checks or unknown requirements', () => {

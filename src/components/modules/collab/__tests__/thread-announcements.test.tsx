@@ -63,6 +63,7 @@ function tree(messages: ReadonlyArray<MessageData>) {
           viewerUserId="user-1"
           canModerate={false}
           timeZone="UTC"
+          todayKey="2026-06-15"
         />
       </TooltipProvider>
     </I18nProvider>

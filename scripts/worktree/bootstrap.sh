@@ -117,7 +117,7 @@ fi
 #
 # 3000 is the developer's port and `pnpm dev` hardcodes it, so a second worktree
 # on the same machine cannot have it. 3030-3040 is off limits in the other
-# direction: playwright.config.ts refuses to run against anything outside that
+# direction: e2e.browser.config.ts refuses to run against anything outside that
 # range, precisely so an automated round cannot photograph another branch's app,
 # and 3010-3020 belongs to money-tracker on the same host. That leaves 3001-3009
 # for parallel worktrees.

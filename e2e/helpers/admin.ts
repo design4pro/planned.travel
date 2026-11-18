@@ -139,9 +139,14 @@ export async function hasPlatformConsole(page: Page): Promise<boolean> {
  * matching rule stays as it is anyway. It was never a workaround for the duplicate - it is the only
  * rule that says what this function means, and proximity would go wrong again the first time
  * anything else in a row carried the same string.
+ *
+ * Search by name before reading the anchor. The accounts document is paginated,
+ * so newly provisioned test accounts must not push the seeded collaborator off
+ * the page this lookup reads. The screen still supplies the actual account id.
  */
 export async function consoleAccountPath(page: Page): Promise<string | null> {
   const response = await page.request.get(CONSOLE_ACCOUNTS_ROUTE.path, {
+    params: { in: 'name', q: CONSOLE_ACCOUNT_NAME },
     failOnStatusCode: false,
   })
   if (!response.ok()) {
@@ -187,7 +192,14 @@ export async function beginImpersonation(page: Page): Promise<boolean> {
   if (!(await hasPlatformConsole(page))) {
     return false
   }
-  await page.goto(CONSOLE_ACCOUNTS_ROUTE.path, {
+  // Fresh fixture accounts can move this seeded person off the first page.
+  // Use the screen's real search while retaining its explicit sort and row action.
+  const search = new URLSearchParams({
+    in: 'name',
+    q: IMPERSONATION_TARGET_NAME,
+  })
+  const separator = CONSOLE_ACCOUNTS_ROUTE.path.includes('?') ? '&' : '?'
+  await page.goto(`${CONSOLE_ACCOUNTS_ROUTE.path}${separator}${search}`, {
     waitUntil: 'domcontentloaded',
   })
   // Settled, not merely loaded. The row menu is a Radix trigger, so it does nothing at all until

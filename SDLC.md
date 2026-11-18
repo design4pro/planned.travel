@@ -199,6 +199,13 @@ Ignored fixtures, services and changes inside installed packages are outside tha
 is a local interruption-recovery convenience, never trusted CI evidence. After those inputs change,
 run fresh. Attestation always invokes the same executor fresh and refuses a checkout that changed.
 
+The E2E gate includes both portable and custom-browser e2e-inc scenarios.
+Both configuration outcomes are required inside each shard;
+`e2e · merged report` remains the required check. Deterministic Actions runs need
+no Codex/model login. Codex authors and diagnoses through local MCP; ACP and
+model-driven exploration are separate opt-in integrations. The coverage inventory
+and execution contract are in `docs/testing/e2e.md`.
+
 ### Agent attestation (ADR 0045)
 
 With `pipeline.requireExecutedCi: true`, required CI jobs must execute; attestations do not skip them and the `attest` command publishes no skip record. The native wait checks their actual results. For projects without that policy, when the gate is green on the commit an agent is about to hand over, it records that with `node scripts/ci/attestation.mjs attest --pr <n>`: the script runs the committed head's gate from a clean tree and posts the result as a PR comment bound to the tree. CI's `attestation` job accepts it, and `lint · typecheck · build` and `unit tests` then report skipped (which counts as passed) instead of repeating the run. Do it **after the last push**: another commit changes the tree and voids the record, and the full jobs run as before. A diff that touches the gate itself or a `risk-high` path never rides on an attestation, and the e2e journeys always run. The push to `develop` runs everything and gates the deploy.
