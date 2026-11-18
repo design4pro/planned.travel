@@ -72,7 +72,7 @@ nodes:
 
       End with CEZ:VERDICT skipped when an anchored progress-log line starts with `STOP:`.
       Otherwise inspect every PR state for this branch (`gh pr list --head "$(git branch --show-current)" --state all`).
-      No PR in any state means skipped/no work, not issue completion: end with CEZ:VERDICT skipped.
+      If publication produced no PR and there is no anchored STOP, emit CEZ:VERDICT blocked.
       A closed, unmerged PR or a PR merged into another base means CEZ:VERDICT blocked.
       A PR already merged into `develop` means CEZ:VERDICT merged only after fresh GitHub confirmation.
 
@@ -80,6 +80,7 @@ nodes:
       - Before QA needs the app, provision the worktree with `bash .ai/scripts/bootstrap.sh --profile worktree --no-seed`.
       - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
       - The PR is a draft: keep it so through review, QA and fix rounds, and after the last push run `gh pr ready <number>` before waiting on CI or merging (SDLC.md § Draft until the last push).
+      - Before emitting ready, report the PR reference and keep the worktree at the exact published head.
       - Merge only into `develop`.
       Already merged work ends with CEZ:VERDICT merged only after fresh GitHub confirmation.
       Otherwise end with CEZ:VERDICT blocked, naming the unmet gate. Never waive QA/security or remove a hold to finish.
@@ -101,13 +102,16 @@ nodes:
   - id: before-merge-ready
     type: if
     condition: { kind: output, ref: before-merge.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
+  - id: ci-preflight
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci-preflight
   - id: ci
     type: github.wait-ci
     timeoutMs: 2400000
     pollMs: 60000
   - id: verify-ci
     type: check
-    command: node .ai/scripts/pipeline-control.mjs ci
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci
   - id: approve
     type: agent
     verdicts: [merged, blocked]
@@ -118,7 +122,7 @@ nodes:
       Emit CEZ:VERDICT merged only after GitHub confirms merge; otherwise blocked.
   - id: confirm-merge
     type: check
-    command: node .ai/scripts/pipeline-control.mjs confirm-merge
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" confirm-merge
   - id: reconcile-issues
     type: agent
     verdicts: [reconciled, blocked]
@@ -173,7 +177,9 @@ edges:
   - { from: merge.failed, to: failed }
   - { from: confirm-merge.pass, to: reconcile-issues }
   - { from: confirm-merge.fail, to: failed }
-  - { from: merge.ready, to: ci }
+  - { from: merge.ready, to: ci-preflight }
+  - { from: ci-preflight.pass, to: ci }
+  - { from: ci-preflight.fail, to: failed }
   - { from: ci.green, to: verify-ci }
   - { from: ci.red, to: failed }
   - { from: ci.timeout, to: failed }

@@ -74,8 +74,8 @@ export const SUPERSEDED_FIELD = 'Superseded by'
  * The optional row a spec written from a plan stage carries, ahead of {@link SUPERSEDED_FIELD}:
  * `04-S3 (docs/plans/04-budget-and-currencies.md)`.
  *
- * A spec that `afk-plan-to-spec` writes is `ready` the moment its pull request merges and has no
- * issue yet: `afk-to-tickets` files the parent issue when it slices the spec, which is the next
+ * A spec that `plan-to-spec` writes is `ready` the moment its pull request merges and has no
+ * issue yet: `spec-to-tickets` files the parent issue when it slices the spec, which is the next
  * run. Requiring an `Issue` there would make the writer invent a ticket nobody asked for, or leave
  * the spec in `draft` for a person to flip. The stage names where the work is scheduled from
  * instead - `docs/plans/` is the backlog source - so a `Plan` row satisfies assertion 6 in the
