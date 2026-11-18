@@ -38,8 +38,20 @@ describe('both e2e engines remain a required CI verdict', () => {
 
   it('installs the browser version owned by each engine', () => {
     const source = read('.github/actions/e2e-env/action.yml')
-    expect(source).not.toContain('pnpm exec playwright install')
-    expect(source).toContain('pnpm exec e2e-web install')
+    const guard =
+      'if [ "$(id -u)" = 0 ] || command -v sudo >/dev/null 2>&1; then'
+    expect(source).toContain(guard)
+    const install = source.split(guard)[1].split('        fi')[0]
+    const [privileged, unprivileged] = install.split('        else')
+    for (const owner of ['e2e-web', 'playwright']) {
+      expect(privileged).toContain(
+        `pnpm exec ${owner} install --with-deps \${{ inputs.browsers }}`,
+      )
+      expect(unprivileged).toContain(
+        `pnpm exec ${owner} install \${{ inputs.browsers }}`,
+      )
+    }
+    expect(unprivileged).not.toContain('--with-deps')
   })
 
   it('preserves the protected aggregate check and its dependency on the shards', () => {
