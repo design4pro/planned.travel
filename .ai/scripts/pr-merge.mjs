@@ -157,6 +157,51 @@ function checkSpec(read, root, pr, paths, specPath, review) {
   }
 }
 
+function activeClaimComment(read, root, number, runId, actor, ref, lock) {
+  const fields = [
+    `Claim-Run: ${runId}`,
+    `Claim-Actor: ${actor}`,
+    'Claim-State: active',
+    `Claim-Lock: ${ref}`,
+    `Claim-Lock-SHA: ${lock}`,
+  ]
+  const pages = read([
+    'api',
+    '--paginate',
+    '--slurp',
+    `${root}/issues/${number}/comments?per_page=100`,
+  ])
+  requireGate(
+    Array.isArray(pages) && pages.every(Array.isArray),
+    'PR claim comments are unavailable',
+  )
+  const matches = pages.flat().flatMap((comment) => {
+    const lines = comment.body?.split(/\r?\n/) ?? []
+    if (comment.user?.login !== actor || !lines.includes(fields[0])) return []
+    const states = lines.filter((line) => line.startsWith('Claim-State:'))
+    if (
+      states.length === 1 &&
+      ['Claim-State: released', 'Claim-State: withdrawn'].includes(states[0])
+    )
+      return []
+    requireGate(
+      Number.isSafeInteger(comment.id) &&
+        comment.id > 0 &&
+        comment.issue_url ===
+          `https://api.github.com/${root}/issues/${number}` &&
+        fields.every((field) => {
+          const prefix = field.slice(0, field.indexOf(':') + 1)
+          const matching = lines.filter((line) => line.startsWith(prefix))
+          return matching.length === 1 && matching[0] === field
+        }),
+      'PR ownership comment metadata is inconsistent',
+    )
+    return [comment]
+  })
+  requireGate(matches.length <= 1, 'PR ownership comment is ambiguous')
+  return matches[0]
+}
+
 export function releaseFailedDelivery({
   read,
   releaseRef,
@@ -177,6 +222,16 @@ export function releaseFailedDelivery({
   )
   const lock = ownedLock(read, root, repo, number, runId, actor, true)
   if (!lock) return
+  const ref = `refs/om-locks/pr-${number}`
+  const comment = activeClaimComment(
+    read,
+    root,
+    number,
+    runId,
+    actor,
+    ref,
+    lock,
+  )
   if (pr.labels.some(({ name }) => name === 'in-progress'))
     read(
       ['api', '-X', 'DELETE', `${root}/issues/${number}/labels/in-progress`],
@@ -186,7 +241,35 @@ export function releaseFailedDelivery({
     ownedLock(read, root, repo, number, runId, actor) === lock,
     'Atomic PR lock changed before cleanup',
   )
-  releaseRef(`refs/om-locks/pr-${number}`, lock)
+  if (comment) {
+    const path = `${root}/issues/comments/${comment.id}`
+    const current = read(['api', path])
+    requireGate(
+      current.id === comment.id &&
+        current.user?.login === actor &&
+        current.issue_url ===
+          `https://api.github.com/${root}/issues/${number}` &&
+        current.body === comment.body,
+      'PR claim comment changed before cleanup',
+    )
+    const body = current.body.replace(
+      /^Claim-State: active(?=\r?$)/m,
+      'Claim-State: released',
+    )
+    read(['api', '-X', 'PATCH', path, '--input', '-'], true, { body })
+    const released = read(['api', path])
+    requireGate(
+      released.id === comment.id &&
+        released.user?.login === actor &&
+        released.body === body,
+      'PR claim comment release was not confirmed',
+    )
+    requireGate(
+      ownedLock(read, root, repo, number, runId, actor) === lock,
+      'Atomic PR lock changed after comment cleanup',
+    )
+  }
+  releaseRef(ref, lock)
   requireGate(
     !ownedLock(read, root, repo, number, runId, actor, true),
     'PR lock cleanup was not confirmed',

@@ -313,10 +313,11 @@ async function main(mode) {
       'utf8',
     ),
   )
-  const read = (args, json = true) => {
+  const read = (args, json = true, input) => {
     const output = execFileSync('gh', args, {
       encoding: 'utf8',
       timeout: 120_000,
+      ...(input === undefined ? {} : { input: JSON.stringify(input) }),
       maxBuffer: 32 * 1024 * 1024,
       ...(delivery ? { cwd: source } : {}),
     })

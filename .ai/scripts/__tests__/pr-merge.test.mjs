@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mergeVerifiedPr } from '../pr-merge.mjs'
+import { mergeVerifiedPr, releaseFailedDelivery } from '../pr-merge.mjs'
 
 const repo = 'design4pro/planned.travel'
 const root = `repos/${repo}`
@@ -249,5 +249,67 @@ describe('protected native squash merge', () => {
     const { input, writes } = fixture(options)
     expect(() => mergeVerifiedPr(input)).toThrow(message)
     expect(writes).toEqual([])
+  })
+})
+
+describe('failure cleanup', () => {
+  it('marks the exact own advisory released before compare-deleting its ref', () => {
+    const ref = 'refs/om-locks/pr-17'
+    const calls = []
+    let claimed = true
+    const comment = {
+      id: 91,
+      user: { login: actor },
+      issue_url: `https://api.github.com/${root}/issues/17`,
+      body: `🤖 om-pr-autopilot — in progress\nClaim-Run: ${runId}\nClaim-Actor: ${actor}\nClaim-State: active\nClaim-Lock: ${ref}\nClaim-Lock-SHA: ${lock}\n`,
+    }
+    const foreign = {
+      ...comment,
+      id: 92,
+      body: comment.body.replace(runId, 'other-run'),
+    }
+    const reads = {
+      user: () => ({ login: actor }),
+      [`${root}/pulls/17`]: () => ({
+        number: 17,
+        base: { ref: 'develop' },
+        labels: [{ name: 'in-progress' }],
+      }),
+      [`${root}/git/matching-refs/om-locks/pr-17`]: () =>
+        claimed ? [{ ref, object: { type: 'commit', sha: lock } }] : [],
+      [`${root}/git/commits/${lock}`]: () => ({
+        message:
+          'om-claim-v1\n' +
+          JSON.stringify({ repo, kind: 'pr', item: '17', runId, actor }),
+      }),
+      [`${root}/issues/17/comments?per_page=100`]: () => [
+        [structuredClone(comment), foreign],
+      ],
+      [`${root}/issues/comments/91`]: () => structuredClone(comment),
+    }
+    const read = (args, json, input) => {
+      if (args.includes('DELETE')) calls.push('label')
+      else if (args.includes('PATCH')) {
+        expect(args).toContain(`${root}/issues/comments/91`)
+        calls.push('comment')
+        comment.body = input.body
+        return structuredClone(comment)
+      } else {
+        const resource = args.find(
+          (arg) => arg === 'user' || arg.startsWith('repos/'),
+        )
+        return reads[resource]()
+      }
+    }
+    const releaseRef = (reference, expected) => {
+      expect(reference).toBe(ref)
+      expect(expected).toBe(lock)
+      expect(comment.body).toContain('Claim-State: released')
+      expect(foreign.body).toContain('Claim-State: active')
+      calls.push('ref')
+      claimed = false
+    }
+    releaseFailedDelivery({ read, releaseRef, repo, number: 17, runId })
+    expect(calls).toEqual(['label', 'comment', 'ref'])
   })
 })
