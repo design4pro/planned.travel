@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   issueFromTask,
+  liveDeliveryRun,
   mayContinue,
   claimWork,
   reusableEvidence,
@@ -22,6 +23,39 @@ import {
 } from '../pipeline-control.mjs'
 
 describe('pipeline control', () => {
+  it('uses live loopback state for the just-entered merge check', async () => {
+    const env = {
+      CEZ_API_URL: 'http://127.0.0.1:4321',
+      CEZ_PROJECT_ID: 'planned-travel',
+    }
+    const active = {
+      id: 'fixture',
+      status: 'running',
+      steps: [{ id: 'merge', status: 'running' }],
+    }
+    const request = async (url, options) => {
+      expect(url.href).toBe(
+        'http://127.0.0.1:4321/api/v1/p/planned-travel/runs/fixture',
+      )
+      expect(options.redirect).toBe('error')
+      return { ok: true, json: async () => active }
+    }
+    expect(await liveDeliveryRun('fixture', env, request)).toEqual(active)
+    await expect(
+      liveDeliveryRun(
+        'fixture',
+        { ...env, CEZ_API_URL: 'https://cezar.example' },
+        request,
+      ),
+    ).rejects.toThrow('loopback')
+    await expect(
+      liveDeliveryRun('fixture', env, async () => ({
+        ok: true,
+        json: async () => ({ id: 'foreign' }),
+      })),
+    ).rejects.toThrow('identity changed')
+  })
+
   it.each([
     'ready',
     'hold',
@@ -361,7 +395,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       error: 'Unsupported Cezar delivery workflow',
     },
     { mode: 'ci', snapshot: { ci: { state: 'green' } } },
-    { mode: 'merge', error: 'active autonomous Cezar graph' },
+    { mode: 'merge', error: 'loopback Cezar project context' },
     {
       mode: 'ci',
       snapshot: { head: 'changed', ci: { state: 'green' } },
@@ -484,6 +518,8 @@ esac
           env: {
             PATH: root,
             CEZ_RUN_ID: 'fixture',
+            CEZ_API_URL: '',
+            CEZ_PROJECT_ID: '',
             PR_FIXTURE_NUMBER: String(number),
             PR_FIXTURE: JSON.stringify({
               number,

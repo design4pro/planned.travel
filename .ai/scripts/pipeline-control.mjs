@@ -136,6 +136,34 @@ function deliveryRun(store, id) {
   return matching[0]
 }
 
+export async function liveDeliveryRun(id, env = process.env, request = fetch) {
+  if (!env.CEZ_API_URL)
+    throw new Error('Current loopback Cezar project context is required')
+  const origin = new URL(env.CEZ_API_URL)
+  const project = env.CEZ_PROJECT_ID
+  if (
+    origin.protocol !== 'http:' ||
+    !['127.0.0.1', '[::1]', 'localhost'].includes(origin.hostname) ||
+    origin.username ||
+    origin.password ||
+    origin.pathname !== '/' ||
+    origin.search ||
+    origin.hash ||
+    !/^[a-zA-Z0-9-]+$/.test(project ?? '') ||
+    !/^[a-zA-Z0-9-]+$/.test(id)
+  )
+    throw new Error('Current loopback Cezar project context is required')
+  const url = new URL(`/api/v1/p/${project}/runs/${id}`, origin)
+  const result = await request(url, {
+    redirect: 'error',
+    signal: AbortSignal.timeout(5000),
+  })
+  if (!result.ok) throw new Error('Current Cezar run is unavailable')
+  const run = await result.json()
+  if (run?.id !== id) throw new Error('Current Cezar run identity changed')
+  return run
+}
+
 function existingPrNumber(run) {
   if (run.workflow === 'implement-ticket') return null
   if (run.workflow !== 'pr-autopilot')
@@ -198,7 +226,7 @@ function confirmMerge({ handoff, store, id, pr, head, source }) {
   )
 }
 
-function main(mode) {
+async function main(mode) {
   if (mode === 'workspace-preflight') {
     const common = realpathSync(
       execFileSync(
@@ -502,29 +530,34 @@ function main(mode) {
         )
       console.log(JSON.stringify(state))
     } else if (mode === 'merge') {
+      const active = await liveDeliveryRun(id)
       const step = run.workflow === 'pr-autopilot' ? 'merge' : 'approve'
       if (
         process.env.CEZ_STEP_ID !== step ||
-        run.autonomous !== true ||
-        run.status !== 'running' ||
-        run.readOnly ||
-        run.enforceReadOnly ||
-        ![undefined, '', '0'].includes(process.env.CEZ_DRY_RUN) ||
-        !run.worktreePath ||
-        realpathSync(run.worktreePath) === realpathSync(source) ||
-        realpathSync(run.worktreePath) !== realpathSync(process.cwd()) ||
+        active.workflow !== run.workflow ||
         (run.workflow === 'pr-autopilot' &&
-          run.writeTarget &&
-          (run.writeTarget.repository !== repo ||
-            run.writeTarget.number !== number)) ||
+          existingPrNumber(active) !== number) ||
+        active.autonomous !== true ||
+        active.status !== 'running' ||
+        active.untrustedHead === true ||
+        active.readOnly ||
+        active.enforceReadOnly ||
+        ![undefined, '', '0'].includes(process.env.CEZ_DRY_RUN) ||
+        !active.worktreePath ||
+        realpathSync(active.worktreePath) === realpathSync(source) ||
+        realpathSync(active.worktreePath) !== realpathSync(process.cwd()) ||
+        (run.workflow === 'pr-autopilot' &&
+          active.writeTarget &&
+          (active.writeTarget.repository !== repo ||
+            active.writeTarget.number !== number)) ||
         !process.env.CEZ_WORKTREE ||
         realpathSync(process.env.CEZ_WORKTREE) !==
           realpathSync(process.cwd()) ||
-        !run.steps?.some(
+        !active.steps?.some(
           (entry) => entry.id === step && entry.status === 'running',
         ) ||
         !['ci', 'verify-ci'].every((node) =>
-          run.steps?.some(
+          active.steps?.some(
             (entry) => entry.id === node && entry.status === 'done',
           ),
         )
@@ -723,7 +756,7 @@ if (
   import.meta.url === pathToFileURL(process.argv[1]).href
 ) {
   try {
-    main(process.argv[2])
+    await main(process.argv[2])
   } catch (error) {
     console.error(`pipeline-control: ${error.message}`)
     process.exitCode = 1
