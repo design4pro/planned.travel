@@ -2,6 +2,11 @@
 import { execFileSync } from 'node:child_process'
 import {
   appendFileSync,
+  closeSync,
+  mkdtempSync,
+  rmSync,
+  fsyncSync,
+  openSync,
   readFileSync,
   readdirSync,
   mkdirSync,
@@ -12,11 +17,13 @@ import {
 } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { runStore, isAlive } from './backlog-status.mjs'
 import { parseCloseLinks } from '../../scripts/agents/close-fixed-issues.mjs'
 import { readPrState } from './pr-state.mjs'
+import { mergeVerifiedPr, releaseFailedDelivery } from './pr-merge.mjs'
 
 export function claimWork(store, key, runId) {
   if (!/^(issue|pr)-[1-9]\d*$/.test(key) || !/^[a-zA-Z0-9-]+$/.test(runId))
@@ -85,7 +92,7 @@ export function policyDigest(root = '.') {
 
 export function reusableEvidence(record, current) {
   return (
-    ['review', 'qa', 'ci'].includes(record?.kind) &&
+    ['review', 'qa', 'ci', 'security'].includes(record?.kind) &&
     record.result === 'passed' &&
     Boolean(record.source) &&
     ['head', 'base', 'policy'].every(
@@ -142,6 +149,31 @@ function existingPrNumber(run) {
   return number
 }
 
+function pendingMerge(store, id) {
+  const path = join(store, 'runs', `${id}.merge-intent.json`)
+  return {
+    readIntent() {
+      return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) : null
+    },
+    createIntent(intent) {
+      let fd
+      try {
+        fd = openSync(path, 'wx', 0o600)
+      } catch (error) {
+        if (error.code === 'EEXIST') return false
+        throw error
+      }
+      try {
+        writeFileSync(fd, JSON.stringify(intent))
+        fsyncSync(fd)
+      } finally {
+        closeSync(fd)
+      }
+      return true
+    },
+  }
+}
+
 function confirmMerge({ handoff, store, id, pr, head, source }) {
   appendFileSync(
     handoff,
@@ -167,7 +199,49 @@ function confirmMerge({ handoff, store, id, pr, head, source }) {
 }
 
 function main(mode) {
-  const id = process.env.CEZ_RUN_ID
+  if (mode === 'workspace-preflight') {
+    const common = realpathSync(
+      execFileSync(
+        'git',
+        ['rev-parse', '--path-format=absolute', '--git-common-dir'],
+        { encoding: 'utf8' },
+      ).trim(),
+    )
+    const primary = realpathSync(
+      fileURLToPath(new URL('../../', import.meta.url)),
+    )
+    const primaryTop = realpathSync(
+      execFileSync('git', ['-C', primary, 'rev-parse', '--show-toplevel'], {
+        encoding: 'utf8',
+      }).trim(),
+    )
+    const primaryCommon = realpathSync(
+      execFileSync(
+        'git',
+        [
+          '-C',
+          primary,
+          'rev-parse',
+          '--path-format=absolute',
+          '--git-common-dir',
+        ],
+        { encoding: 'utf8' },
+      ).trim(),
+    )
+    if (
+      primary !== dirname(common) ||
+      primaryTop !== primary ||
+      primaryCommon !== common
+    )
+      throw new Error(
+        'Workspace preflight source does not match the primary repository',
+      )
+    mode = 'preflight'
+  }
+  const evidenceMode = mode === 'record-evidence' || mode === 'evidence'
+  const id =
+    process.env.CEZ_RUN_ID ??
+    (evidenceMode ? process.env.CEZ_TASK_ID : undefined)
   if (!/^[a-zA-Z0-9-]+$/.test(id ?? ''))
     throw new Error('CEZ_RUN_ID is required')
   const store = runStore()
@@ -188,7 +262,14 @@ function main(mode) {
     return
   }
   const handoff = join(store, 'runs', `${id}.handoff.md`)
-  const deliveryModes = ['pr-preflight', 'ci-preflight', 'ci', 'confirm-merge']
+  const deliveryModes = [
+    'pr-preflight',
+    'ci-preflight',
+    'ci',
+    'merge',
+    'confirm-merge',
+    'cleanup',
+  ]
   const source = fileURLToPath(new URL('../../', import.meta.url))
   const delivery = deliveryModes.includes(mode)
   if (
@@ -204,16 +285,127 @@ function main(mode) {
       'utf8',
     ),
   )
-  const read = (args) =>
-    JSON.parse(
-      execFileSync('gh', args, {
-        encoding: 'utf8',
-        timeout: 120_000,
-        maxBuffer: 32 * 1024 * 1024,
-        ...(delivery ? { cwd: source } : {}),
-      }),
+  const read = (args, json = true) => {
+    const output = execFileSync('gh', args, {
+      encoding: 'utf8',
+      timeout: 120_000,
+      maxBuffer: 32 * 1024 * 1024,
+      ...(delivery ? { cwd: source } : {}),
+    })
+    return json ? JSON.parse(output) : output
+  }
+  if (mode === 'cleanup') {
+    const run = deliveryRun(store, id)
+    if (
+      run.status !== 'running' ||
+      run.readOnly ||
+      run.enforceReadOnly ||
+      !run.worktreePath ||
+      realpathSync(run.worktreePath) !== realpathSync(process.cwd()) ||
+      process.env.CEZ_STEP_ID !== 'cleanup' ||
+      ![undefined, '', '0'].includes(process.env.CEZ_DRY_RUN)
     )
-  if (['ci-preflight', 'ci', 'confirm-merge'].includes(mode)) {
+      throw new Error('Cleanup requires the active Cezar delivery worktree')
+    if (pendingMerge(store, id).readIntent())
+      throw new Error(
+        'Merge intent exists; retain the claim for reconciliation',
+      )
+    const repo = read(['repo', 'view', '--json', 'nameWithOwner']).nameWithOwner
+    if (
+      !/^[\w.-]+\/[\w.-]+$/.test(repo ?? '') ||
+      config.baseBranch !== 'develop'
+    )
+      throw new Error('Cannot establish cleanup repository')
+    let number = existingPrNumber(run)
+    if (number === null) {
+      const branch = execFileSync('git', ['branch', '--show-current'], {
+        encoding: 'utf8',
+      }).trim()
+      if (!branch) throw new Error('Issue cleanup requires the PR branch')
+      const matches = read([
+        'pr',
+        'list',
+        '--repo',
+        repo,
+        '--head',
+        branch,
+        '--state',
+        'open',
+        '--json',
+        'number,headRefName,baseRefName,isCrossRepository',
+      ]).filter(
+        (pr) =>
+          pr.isCrossRepository === false &&
+          pr.baseRefName === 'develop' &&
+          pr.headRefName === branch,
+      )
+      if (!matches.length) return
+      if (
+        matches.length !== 1 ||
+        !Number.isSafeInteger(matches[0].number) ||
+        matches[0].number <= 0
+      )
+        throw new Error('Cleanup PR is ambiguous')
+      number = matches[0].number
+    } else if (
+      run.writeTarget &&
+      (run.writeTarget.repository !== repo || run.writeTarget.number !== number)
+    ) {
+      throw new Error('Cleanup target contradicts assigned PR')
+    }
+    releaseFailedDelivery({
+      read,
+      repo,
+      number,
+      runId: id,
+      releaseRef(ref, lock) {
+        const temporary = mkdtempSync(join(tmpdir(), 'cezar-claim-'))
+        const env = { ...process.env }
+        for (const key of [
+          'GIT_DIR',
+          'GIT_WORK_TREE',
+          'GIT_COMMON_DIR',
+          'GIT_INDEX_FILE',
+          'GIT_OBJECT_DIRECTORY',
+          'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+          'GIT_PREFIX',
+          'GIT_INTERNAL_SUPER_PREFIX',
+          'GIT_NAMESPACE',
+          'GIT_QUARANTINE_PATH',
+        ])
+          delete env[key]
+        const options = { cwd: temporary, env, timeout: 120_000 }
+        try {
+          execFileSync('git', ['init', '--bare', '-q'], options)
+          execFileSync(
+            'git',
+            [
+              '-c',
+              'credential.helper=',
+              '-c',
+              'credential.https://github.com.helper=!gh auth git-credential',
+              'push',
+              '--porcelain',
+              `--force-with-lease=${ref}:${lock}`,
+              `https://github.com/${repo}.git`,
+              `:${ref}`,
+            ],
+            options,
+          )
+        } finally {
+          rmSync(temporary, { recursive: true, force: true })
+        }
+      },
+    })
+    const claim = join(store, 'claims', `pr-${number}.json`)
+    if (
+      existsSync(claim) &&
+      JSON.parse(readFileSync(claim, 'utf8')).runId === id
+    )
+      unlinkSync(claim)
+    return
+  }
+  if (['ci-preflight', 'ci', 'merge', 'confirm-merge'].includes(mode)) {
     const run = deliveryRun(store, id)
     const repo = read(['repo', 'view', '--json', 'nameWithOwner']).nameWithOwner
     if (!/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))
@@ -221,7 +413,9 @@ function main(mode) {
     const head = execFileSync('git', ['rev-parse', 'HEAD'], {
       encoding: 'utf8',
     }).trim()
-    let number = existingPrNumber(run)
+    const mergeIntent = mode === 'merge' ? pendingMerge(store, id) : undefined
+    const priorIntent = mergeIntent?.readIntent()
+    let number = existingPrNumber(run) ?? priorIntent?.number ?? null
     if (number === null) {
       const branch = execFileSync('git', ['branch', '--show-current'], {
         encoding: 'utf8',
@@ -269,7 +463,7 @@ function main(mode) {
     ])
     if (
       pr.number !== number ||
-      pr.state !== expectedState ||
+      (pr.state !== expectedState && !(priorIntent && pr.state === 'MERGED')) ||
       pr.headRefOid !== head ||
       pr.baseRefName !== config.baseBranch
     )
@@ -281,6 +475,17 @@ function main(mode) {
         throw new Error(
           `PR #${number} must be Ready for review before Cezar waits for CI`,
         )
+      try {
+        execFileSync(
+          process.execPath,
+          [join(source, 'scripts/ci/validation.mjs'), '--check-delivery'],
+          { timeout: 30_000 },
+        )
+      } catch {
+        throw new Error(
+          'Exact worktree needs fresh full local delivery validation',
+        )
+      }
       console.log(`PR #${number} is ready for CI at ${head}`)
     } else if (mode === 'ci') {
       const state = readPrState(repo, number, read)
@@ -296,6 +501,61 @@ function main(mode) {
           'CI verification requires passing checks on the exact open, non-draft PR',
         )
       console.log(JSON.stringify(state))
+    } else if (mode === 'merge') {
+      const step = run.workflow === 'pr-autopilot' ? 'merge' : 'approve'
+      if (
+        process.env.CEZ_STEP_ID !== step ||
+        run.autonomous !== true ||
+        run.status !== 'running' ||
+        run.readOnly ||
+        run.enforceReadOnly ||
+        ![undefined, '', '0'].includes(process.env.CEZ_DRY_RUN) ||
+        !run.worktreePath ||
+        realpathSync(run.worktreePath) === realpathSync(source) ||
+        realpathSync(run.worktreePath) !== realpathSync(process.cwd()) ||
+        (run.workflow === 'pr-autopilot' &&
+          run.writeTarget &&
+          (run.writeTarget.repository !== repo ||
+            run.writeTarget.number !== number)) ||
+        !process.env.CEZ_WORKTREE ||
+        realpathSync(process.env.CEZ_WORKTREE) !==
+          realpathSync(process.cwd()) ||
+        !run.steps?.some(
+          (entry) => entry.id === step && entry.status === 'running',
+        ) ||
+        !['ci', 'verify-ci'].every((node) =>
+          run.steps?.some(
+            (entry) => entry.id === node && entry.status === 'done',
+          ),
+        )
+      )
+        throw new Error(
+          'Merge requires the active autonomous Cezar graph after verified CI',
+        )
+      if (run.workflow === 'pr-autopilot') {
+        const claim = JSON.parse(
+          readFileSync(join(store, 'claims', `pr-${number}.json`), 'utf8'),
+        )
+        if (claim.runId !== id)
+          throw new Error('Local PR claim belongs to another run')
+      }
+      const commit = mergeVerifiedPr({
+        read,
+        repo,
+        number,
+        head,
+        runId: id,
+        config,
+        policy: policyDigest(),
+        ...mergeIntent,
+        evidence(kind) {
+          const path = join(store, 'runs', `pr-${number}-${kind}.evidence.json`)
+          return existsSync(path)
+            ? JSON.parse(readFileSync(path, 'utf8'))
+            : null
+        },
+      })
+      console.log(JSON.stringify({ pr: number, head, commit }))
     } else {
       if (!pr.mergeCommit?.oid)
         throw new Error(`PR #${number} has no confirmed merge commit`)
@@ -307,7 +567,7 @@ function main(mode) {
     const [kind, number, source, expectedHead, expectedBase] =
       process.argv.slice(3)
     if (
-      !['review', 'qa', 'ci'].includes(kind) ||
+      !['review', 'qa', 'ci', 'security'].includes(kind) ||
       !/^[1-9]\d*$/.test(number ?? '')
     )
       throw new Error('Expected evidence kind and PR number')
@@ -421,7 +681,10 @@ function main(mode) {
   const readBacklog = (args) =>
     execFileSync(
       process.execPath,
-      ['.ai/scripts/backlog-status.mjs', ...args],
+      [
+        fileURLToPath(new URL('./backlog-status.mjs', import.meta.url)),
+        ...args,
+      ],
       {
         encoding: 'utf8',
         timeout: 120_000,

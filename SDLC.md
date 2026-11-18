@@ -165,7 +165,7 @@ The `om-auto-*` skills run this process unattended and are chainable: each accep
 
 Two properties bound the whole unattended loop, and both are worth stating plainly because they are what make it safe to leave running:
 
-- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` after `om-pr-autopilot` review/QA, native CI waiting and `om-approve-merge-pr`, behind the ruleset and the QA gate (ADR 0031), `risk-high` and `security` PRs on a security and tenancy reviewer's verdict (ADR 0035); the `develop` -> `main` promotion (it carries `do-not-merge`) and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a security reviewer that does not approve, or a verdict that escalates a case `decision protocol` § 5 lists, leaves it `blocked` for a person, while any other specialist's standing **revise** goes to a second specialist.
+- **The pipeline merges into `develop` only.** A reviewed PR is squash-merged into `develop` after `om-pr-autopilot` review/QA, native CI waiting and the protected Cezar merge check, behind the ruleset and the QA gate (ADR 0031), `risk-high` and `security` PRs on a security and tenancy reviewer's verdict (ADR 0035); the `develop` -> `main` promotion (it carries `do-not-merge`) and every spec PR but one stay with a person: the `om-auto-write-spec` flow, and the spec task `implement-ticket` writes. The one is a spec PR `plan-to-spec` wrote: it is reviewed by an independent specialist panel (§ Delegated decisions), its verdicts are recorded in the PR body, and the pipeline merges it once CI is green (ADR 0033); a security reviewer that does not approve, or a verdict that escalates a case `decision protocol` § 5 lists, leaves it `blocked` for a person, while any other specialist's standing **revise** goes to a second specialist.
 - **The cap is on inventory, not on rate.** `--next` and `--plan` start no implementation while three PRs wait for a person (`blocked`, or `changes-requested` untouched for 24 hours, which is an autopilot parked on a decision; QA and risk labels are the agents', ADR 0035), so a burst of intake cannot outrun the review only a person can give. Raising throughput means reviewing those PRs, not tuning the Reconciler.
 
 ## Unattended decisions
@@ -193,6 +193,9 @@ or killed project as all four shards. It emits a compact JSON result with full l
 After exit or verified timeout termination it is removed. An unverified termination instead fails
 closed as infrastructure/exit 1 without shard retry, retaining caller-owned diagnostics and group
 metadata in the receipt; see [retained diagnostic ownership](docs/agents/cezar.md).
+Stage the candidate and use `--for-commit` to bind one full run to the exact index,
+worktree and validation runtime. The normal commit hook runs lint-staged before checking this result.
+A fresh tree needs fresh validation, and an ordinary commit without the result follows its existing hook.
 `--resume` reuses successful local jobs only when the tracked content, command
 list, runtime, environment and installed manifest digest match; stage untracked inputs first.
 Ignored fixtures, services and changes inside installed packages are outside that digest, so resume

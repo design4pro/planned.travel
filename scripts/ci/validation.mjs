@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { spawn, execFileSync } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import {
   closeSync,
   mkdirSync,
+  renameSync,
   mkdtempSync,
   openSync,
   readFileSync,
@@ -13,7 +14,7 @@ import {
   rmdirSync,
   rmSync,
 } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const git = (cwd, args) =>
@@ -115,6 +116,109 @@ export function gateFingerprint(cwd, commands) {
   const modules = join(cwd, 'node_modules/.modules.yaml')
   if (existsSync(modules)) hash.update(readFileSync(modules))
   return hash.digest('hex')
+}
+
+function validationCommands(cwd) {
+  return JSON.parse(readFileSync(join(cwd, '.ai/agentic.config.json'), 'utf8'))
+    .validation.commands
+}
+
+export function commitFingerprint(cwd, commands = validationCommands(cwd)) {
+  if (
+    git(cwd, ['diff', '--name-only']) ||
+    git(cwd, ['ls-files', '--others', '--exclude-standard'])
+  )
+    return null
+  const hash = createHash('sha256')
+  for (const value of [
+    cwd,
+    git(cwd, ['rev-parse', 'HEAD']),
+    git(cwd, ['write-tree']),
+    JSON.stringify(commands),
+    JSON.stringify(process.versions),
+    process.platform,
+    process.arch,
+  ]) {
+    hash.update(value).update('\0')
+  }
+  hash.update(readFileSync(join(cwd, 'node_modules/.modules.yaml')))
+  return hash.digest('hex')
+}
+
+const maxCommitValidationAgeMs = 60 * 60_000
+
+function freshReceipt(receipt, fingerprint) {
+  const age = Date.now() - receipt.finishedAt
+  return (
+    receipt.version === 1 &&
+    Number.isSafeInteger(receipt.finishedAt) &&
+    age >= 0 &&
+    age <= maxCommitValidationAgeMs &&
+    typeof fingerprint === 'string' &&
+    receipt.fingerprint === fingerprint
+  )
+}
+
+export function hasCommitValidation(cwd = process.cwd()) {
+  try {
+    const receipt = JSON.parse(
+      readFileSync(join(cwd, '.ai/tmp/validation/commit.json'), 'utf8'),
+    )
+    return freshReceipt(receipt, commitFingerprint(cwd))
+  } catch {
+    return false
+  }
+}
+
+function deliveryReceipt(cwd, commands) {
+  const common = git(cwd, [
+    'rev-parse',
+    '--path-format=absolute',
+    '--git-common-dir',
+  ])
+  const tree = git(cwd, ['write-tree'])
+  const fingerprint = createHash('sha256')
+    .update(
+      JSON.stringify([common, tree, commands, process.platform, process.arch]),
+    )
+    .digest('hex')
+  return {
+    path: join(
+      dirname(common),
+      '.ai/tmp/validation/trees',
+      `${fingerprint}.json`,
+    ),
+    fingerprint,
+  }
+}
+
+export function hasDeliveryValidation(cwd = process.cwd()) {
+  try {
+    const commands = validationCommands(cwd)
+    if (
+      !commitFingerprint(cwd, commands) ||
+      git(cwd, ['write-tree']) !== git(cwd, ['rev-parse', 'HEAD^{tree}'])
+    )
+      return false
+    const delivery = deliveryReceipt(cwd, commands)
+    return freshReceipt(
+      JSON.parse(readFileSync(delivery.path, 'utf8')),
+      delivery.fingerprint,
+    )
+  } catch {
+    return false
+  }
+}
+
+function writeProof(path, fingerprint) {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
+  const temporary = `${path}.${randomUUID()}`
+  writeFileSync(
+    temporary,
+    JSON.stringify({ version: 1, fingerprint, finishedAt: Date.now() }),
+    { mode: 0o600, flag: 'wx' },
+  )
+  renameSync(temporary, path)
 }
 
 /**
@@ -239,11 +343,11 @@ export async function runGate({
   cwd = process.cwd(),
   resume = false,
   commands,
+  forCommit = false,
 } = {}) {
-  const configured =
-    commands ??
-    JSON.parse(readFileSync(join(cwd, '.ai/agentic.config.json'), 'utf8'))
-      .validation.commands
+  if (forCommit && (commands || resume))
+    throw new Error('Commit validation requires a fresh full configured gate')
+  const configured = commands ?? validationCommands(cwd)
   if (configured.includes('pnpm test')) {
     const config = readFileSync(join(cwd, 'vitest.config.ts'), 'utf8')
     const projects = [...config.matchAll(/name:\s*['"]([^'"]+)['"]/g)]
@@ -282,6 +386,11 @@ export async function runGate({
   }
   writeFileSync(join(lock, 'pid'), String(process.pid))
   try {
+    const commitReceipt = join(state, 'commit.json')
+    if (forCommit && existsSync(commitReceipt)) unlinkSync(commitReceipt)
+    const staged = forCommit ? commitFingerprint(cwd, configured) : null
+    if (forCommit && !staged)
+      throw new Error('Stage the complete change before validation')
     const fingerprint = gateFingerprint(cwd, configured)
     const receiptPath = join(state, 'receipt.json')
     let previous = {}
@@ -312,6 +421,17 @@ export async function runGate({
         'Validation inputs changed while the gate was running; run fresh'
       if (existsSync(receiptPath)) unlinkSync(receiptPath)
     }
+    if (forCommit && result.exitCode === 0) {
+      if (staged && commitFingerprint(cwd, configured) === staged) {
+        const delivery = deliveryReceipt(cwd, configured)
+        writeProof(delivery.path, delivery.fingerprint)
+        writeProof(commitReceipt, staged)
+      } else {
+        result.exitCode = 1
+        result.error =
+          'Commit validation requires only staged changes and an unchanged index'
+      }
+    }
     return {
       ...result,
       fingerprint,
@@ -329,11 +449,23 @@ if (
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href
 ) {
   const args = process.argv.slice(2)
-  if (args.some((a) => a !== '--resume') || args.length > 1) {
-    console.error('Usage: validation.mjs [--resume]')
+  if (args.length === 1 && args[0] === '--check-commit')
+    process.exitCode = hasCommitValidation() ? 0 : 1
+  else if (args.length === 1 && args[0] === '--check-delivery')
+    process.exitCode = hasDeliveryValidation() ? 0 : 1
+  else if (
+    args.some((a) => !['--resume', '--for-commit'].includes(a)) ||
+    args.length > 1
+  ) {
+    console.error(
+      'Usage: validation.mjs [--resume|--for-commit|--check-commit|--check-delivery]',
+    )
     process.exitCode = 2
   } else
-    runGate({ resume: args.includes('--resume') })
+    runGate({
+      resume: args.includes('--resume'),
+      forCommit: args.includes('--for-commit'),
+    })
       .then((result) => {
         process.stdout.write(`${JSON.stringify(result)}\n`)
         process.exitCode = result.exitCode === 0 ? 0 : 1

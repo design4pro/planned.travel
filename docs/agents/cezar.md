@@ -76,7 +76,7 @@ This migration grants no production writes, main promotion or permission bypass.
 | `pr-review`           | Explicit review through `om-auto-review-pr`.                                              |
 | `pr-fix`              | Address assessed review findings with `om-auto-fix-pr`.                                   |
 | `housekeeping`        | Report merged-issue candidates, then use `om-close-fixed-issues` with atomic claims.      |
-| `lessons`             | Evidence-based `om-pipeline-retro`; at most one draft repair PR.                          |
+| `lessons`             | Weekly delivery retrospective and at most one reviewed local repair.                      |
 | `skills-update`       | Review an installed update or resolve repair conflicts, then prepare one draft PR.        |
 | `context-maintenance` | Archive completed contexts with active-run protection.                                    |
 
@@ -117,11 +117,41 @@ the PR, published head, configured base and Ready for review state before native
 which releases the agent slot. They recheck executed CI before merging and confirm the exact
 head on GitHub before releasing the delivery claim. Linked worktrees execute these checks
 from the primary checkout, so older PR branches use the current delivery helper.
+The issue-admission check also reads the primary checkout's backlog implementation while keeping
+the task worktree as its current directory. For eligible PRs, the trusted primary-checkout merge check verifies the active run and exact
+head, atomic ownership, repository rules, independent verdicts, holds and executed CI.
+It submits a protected squash bound to that head and confirms the result on GitHub.
+The graph has no model turn between green CI and the merge.
 
 On a settled run, cockpit **Continue** opens another agent session and can show **Done** while
 graph nodes are still pending. **Open PR** opens the linked GitHub page. When repairing a settled
 run, its owner explicitly verifies and completes the outstanding delivery steps using the same
 claims protocol.
+
+### Local validation
+
+Stage the candidate and run `node scripts/ci/validation.mjs --for-commit`. The normal hook runs
+lint-staged and checks the local result against the resulting index. The result is specific to the
+worktree, branch head, staged tree, command list, Node runtime and installed manifest. The result expires after one hour. An ordinary
+commit without matching evidence uses the existing hook checks. Cezar issue delivery runs the same
+full configured gate in its graph. GitHub CI executes separately.
+
+## Weekly delivery improvement
+
+The existing Weekly lessons schedule runs `lessons`. The check step reads a bounded projection
+of terminal Cezar runs from the previous 14 days. It includes at most 30 records and only run IDs,
+workflow and step statuses, finish times, PR numbers and continuation counts. It never exports
+task text, command output or transcripts. A terminal agent continuation with pending CI or merge
+nodes needs fresh GitHub confirmation before anyone counts the delivery as complete.
+
+The retrospective uses the deterministic `om-pipeline-retro` ranking for finished PRs. It may
+judge an existing, verified and sanitized bundle through `om-judge-agent-session`; insufficient
+evidence leaves that lane unavailable. One reproducible and unowned failure may reach the
+separate repair stage. In this checkout, use the existing deterministic tooling tests for the
+regression. `om-evolve-harness` requires an explicitly configured eval harness and its command
+slots. A repair requires independent review, the full local gate and normal ownership. The
+workflow leaves one reviewed local patch and its evidence in the run's Assets. Publishing it
+requires a separate maintainer decision, so the delivery dispatcher cannot adopt it early.
 
 ## Automation cutover
 

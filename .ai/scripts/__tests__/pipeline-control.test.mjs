@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import {
   copyFileSync,
   readFileSync,
@@ -10,6 +10,7 @@ import {
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   issueFromTask,
@@ -21,6 +22,198 @@ import {
 } from '../pipeline-control.mjs'
 
 describe('pipeline control', () => {
+  it.each([
+    'ready',
+    'hold',
+    'foreign',
+    'incomplete',
+    'missing-primary',
+    'wrong-identity',
+  ])(
+    'uses the workspace preflight from a distinct task cwd and fences %s',
+    (scenario) => {
+      const scratch = realpathSync(
+        mkdtempSync(join(tmpdir(), 'workspace-preflight-')),
+      )
+      const primary = join(scratch, 'primary')
+      const task = join(scratch, 'task')
+      const env = {
+        PATH: process.env.PATH,
+        HOME: scratch,
+        GIT_CONFIG_GLOBAL: '/dev/null',
+        GIT_CONFIG_NOSYSTEM: '1',
+        CEZ_RUN_ID: 'fixture-run',
+      }
+      const git = (...args) =>
+        execFileSync('git', args, { env, encoding: 'utf8' })
+      try {
+        mkdirSync(primary)
+        git('init', '-q', primary)
+        git(
+          '-C',
+          primary,
+          '-c',
+          'user.name=Fixture',
+          '-c',
+          'user.email=fixture@example.invalid',
+          'commit',
+          '-q',
+          '--allow-empty',
+          '-m',
+          'Fixture',
+        )
+        git('-C', primary, 'worktree', 'add', '-q', '--detach', task)
+        for (const path of ['.ai/scripts', '.ai/cezar/runs', 'scripts/agents'])
+          mkdirSync(join(primary, path), { recursive: true })
+        mkdirSync(join(task, '.ai/scripts'), { recursive: true })
+        writeFileSync(
+          join(task, '.ai/agentic.config.json'),
+          JSON.stringify({ baseBranch: 'develop' }),
+        )
+        // A relative invocation would execute this old task-local helper instead.
+        writeFileSync(
+          join(task, '.ai/scripts/pipeline-control.mjs'),
+          'console.log("OLD_TASK_HELPER")',
+        )
+        writeFileSync(
+          join(task, '.ai/scripts/backlog-status.mjs'),
+          'throw new Error("OLD_TASK_BACKLOG")',
+        )
+        const source = readFileSync(
+          new URL('../pipeline-control.mjs', import.meta.url),
+          'utf8',
+        )
+        writeFileSync(join(primary, '.ai/scripts/pipeline-control.mjs'), source)
+        copyFileSync(
+          new URL('../pr-merge.mjs', import.meta.url),
+          join(primary, '.ai/scripts/pr-merge.mjs'),
+        )
+        writeFileSync(
+          join(primary, '.ai/scripts/pr-state.mjs'),
+          'export const readPrState = () => { throw new Error("Unexpected PR read") }',
+        )
+        writeFileSync(
+          join(primary, 'scripts/agents/close-fixed-issues.mjs'),
+          'export const parseCloseLinks = () => []',
+        )
+        const evidence =
+          scenario === 'incomplete'
+            ? { number: 42 }
+            : {
+                number: 42,
+                ready: scenario !== 'hold',
+                state: scenario === 'hold' ? 'BLOCKED' : 'READY',
+                reason: 'fixture human hold',
+              }
+        writeFileSync(
+          join(primary, '.ai/scripts/backlog-status.mjs'),
+          `
+import { writeFileSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+export const runStore = () => ${JSON.stringify(join(primary, '.ai/cezar'))}
+export const isAlive = () => false
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  writeFileSync(${JSON.stringify(join(primary, 'backlog-call.json'))}, JSON.stringify({ cwd: process.cwd(), runId: process.env.CEZ_RUN_ID }))
+  console.log(JSON.stringify(${JSON.stringify(evidence)}))
+}
+`,
+        )
+        writeFileSync(
+          join(primary, '.ai/cezar/runs.json'),
+          JSON.stringify([{ id: 'fixture-run', task: 'Implement issue #42.' }]),
+        )
+        writeFileSync(
+          join(primary, '.ai/cezar/runs/fixture-run.handoff.md'),
+          '',
+        )
+        if (scenario === 'foreign') {
+          mkdirSync(join(primary, '.ai/cezar/claims'))
+          writeFileSync(
+            join(primary, '.ai/cezar/claims/issue-42.json'),
+            JSON.stringify({ runId: 'foreign-owner' }),
+          )
+        }
+        if (scenario === 'missing-primary')
+          rmSync(join(primary, '.ai/scripts/pipeline-control.mjs'))
+        if (scenario === 'wrong-identity') {
+          // The common Git directory is valid, but a primary checkout is itself not a task.
+          // Place a linked module outside that common directory to exercise source identity fencing.
+          const outside = join(scratch, '.ai/scripts')
+          mkdirSync(outside, { recursive: true })
+          writeFileSync(join(outside, 'pipeline-control.mjs'), source)
+          writeFileSync(
+            join(outside, 'backlog-status.mjs'),
+            readFileSync(join(primary, '.ai/scripts/backlog-status.mjs')),
+          )
+          copyFileSync(
+            new URL('../pr-merge.mjs', import.meta.url),
+            join(outside, 'pr-merge.mjs'),
+          )
+          writeFileSync(
+            join(outside, 'pr-state.mjs'),
+            'export const readPrState = () => null',
+          )
+          mkdirSync(join(scratch, 'scripts/agents'), { recursive: true })
+          writeFileSync(
+            join(scratch, 'scripts/agents/close-fixed-issues.mjs'),
+            'export const parseCloseLinks = () => []',
+          )
+        }
+        const workflow = readFileSync(
+          new URL(
+            '../../cezar/workflows/implement-ticket.yml',
+            import.meta.url,
+          ),
+          'utf8',
+        )
+        const command = workflow
+          .split('  - id: preflight\n')[1]
+          .split('  - id: preflight-ready')[0]
+          .match(/command: (.+)/)[1]
+        const result =
+          scenario === 'wrong-identity'
+            ? spawnSync(
+                process.execPath,
+                [
+                  join(scratch, '.ai/scripts/pipeline-control.mjs'),
+                  'workspace-preflight',
+                ],
+                { cwd: task, env, encoding: 'utf8' },
+              )
+            : spawnSync('sh', ['-c', command], {
+                cwd: task,
+                env,
+                encoding: 'utf8',
+              })
+        if (
+          ['incomplete', 'missing-primary', 'wrong-identity'].includes(scenario)
+        ) {
+          expect(result.status).not.toBe(0)
+          expect(result.stdout).not.toContain('PIPELINE_CONTINUE=1')
+          return
+        }
+        expect(result.status, result.stderr).toBe(0)
+        expect(result.stdout).toContain(
+          `PIPELINE_CONTINUE=${scenario === 'ready' ? 1 : 0}`,
+        )
+        expect(
+          JSON.parse(readFileSync(join(primary, 'backlog-call.json'), 'utf8')),
+        ).toEqual({ cwd: task, runId: 'fixture-run' })
+        if (scenario === 'foreign')
+          expect(
+            JSON.parse(
+              readFileSync(
+                join(primary, '.ai/cezar/claims/issue-42.json'),
+                'utf8',
+              ),
+            ).runId,
+          ).toBe('foreign-owner')
+      } finally {
+        rmSync(scratch, { recursive: true, force: true })
+      }
+    },
+  )
+
   it('allows restart by the owner but refuses a second run and keeps stages separate', () => {
     const store = mkdtempSync(join(tmpdir(), 'pipeline-claim-'))
     try {
@@ -138,7 +331,7 @@ describe('pipeline control', () => {
     expect(workflow).toContain(`from: ${owner}.ready, to: ci-preflight`)
     expect(workflow).toContain('pipeline-control.mjs" ci-preflight')
     expect(workflow).toContain('from: ci-preflight.pass, to: ci')
-    expect(workflow).toContain('from: ci-preflight.fail, to: failed')
+    expect(workflow).toContain('from: ci-preflight.fail, to: cleanup')
     expect(workflow).toContain('from: ci.green, to: verify-ci')
   })
 
@@ -168,6 +361,7 @@ describe('pipeline control', () => {
       error: 'Unsupported Cezar delivery workflow',
     },
     { mode: 'ci', snapshot: { ci: { state: 'green' } } },
+    { mode: 'merge', error: 'active autonomous Cezar graph' },
     {
       mode: 'ci',
       snapshot: { head: 'changed', ci: { state: 'green' } },
@@ -198,10 +392,15 @@ describe('pipeline control', () => {
           join(primary, '.ai/scripts'),
           join(store, 'runs'),
           join(store, 'claims'),
+          join(primary, 'scripts/ci'),
           join(primary, 'scripts/agents'),
           task,
         ])
           mkdirSync(path, { recursive: true })
+        writeFileSync(
+          join(primary, 'scripts/ci/validation.mjs'),
+          "process.exitCode = process.argv[2] === '--check-delivery' ? 0 : 1\n",
+        )
         copyFileSync(
           new URL('../pipeline-control.mjs', import.meta.url),
           helper,
@@ -213,6 +412,10 @@ describe('pipeline control', () => {
         writeFileSync(
           join(primary, '.ai/scripts/backlog-status.mjs'),
           `export const runStore = () => ${JSON.stringify(store)}; export const isAlive = () => false`,
+        )
+        copyFileSync(
+          new URL('../pr-merge.mjs', import.meta.url),
+          join(primary, '.ai/scripts/pr-merge.mjs'),
         )
         writeFileSync(
           join(primary, '.ai/scripts/pr-state.mjs'),
@@ -325,6 +528,26 @@ esac
       } finally {
         rmSync(root, { recursive: true, force: true })
       }
+    },
+  )
+
+  it.each([
+    ['implement-ticket', 'approve', 'confirm-merge'],
+    ['pr-autopilot', 'merge', 'confirm'],
+  ])(
+    'executes the exact verified develop merge as a check in %s',
+    (name, merge, confirm) => {
+      const workflow = readFileSync(
+        new URL(`../../cezar/workflows/${name}.yml`, import.meta.url),
+        'utf8',
+      )
+      const node = workflow.split(`  - id: ${merge}\n`)[1].split('  - id: ')[0]
+      expect(node).toContain('type: check')
+      expect(node).toContain('pipeline-control.mjs" merge')
+      expect(workflow).toContain(`from: verify-ci.pass, to: ${merge}`)
+      expect(workflow).toContain(`from: ${merge}.pass, to: ${confirm}`)
+      expect(workflow).toContain(`from: ${merge}.fail, to: cleanup`)
+      expect(workflow).toContain(`from: ${confirm}.pass, to: reconcile-issues`)
     },
   )
 

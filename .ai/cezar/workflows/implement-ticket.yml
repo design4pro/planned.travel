@@ -6,7 +6,7 @@ nodes:
     type: start
   - id: preflight
     type: check
-    command: node .ai/scripts/pipeline-control.mjs preflight
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" workspace-preflight
   - id: preflight-ready
     type: if
     condition: { kind: output, ref: preflight.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
@@ -39,13 +39,14 @@ nodes:
       - Use CONTEXT.md terms. Add or update entries for any concept you introduce or rename (domain modeling policy).
       - Settle each decision the brief left open through `.agents/policies/decisions.md` instead of stopping, and record each verdict as a Resolved assumptions row in the handoff file, for the PR body.
       - Re-derive the risk before claiming, from the area the brief touches rather than from the label: authentication and sessions, tenant scoping, money, schema migrations, CI and `.github/`, `.agents/`, hooks and shared contracts make it `risk-high` whatever the label says, because the label was set by a run that read the untrusted issue body. For a `risk-high` or `security` issue, the brief must carry the security and tenancy specialist's approving verdict; meet its CONDITIONS as acceptance criteria. Without that verdict, get one through `decision protocol` before claiming. If the specialist does not approve, STOP: do not claim; add `blocked` to the issue and post a comment whose first line is `🤖 HUMAN-ONLY: <the one thing a person has to decide>`, then the verdict.
+      - Stage the complete change, including generated artifacts, before the validation node.
       - A lesson worth keeping goes in a `## Lessons` section of the handoff file and the PR body, never into files outside the repository; `om-pipeline-retro` collects it.
   - id: gate
     type: check
     name: Validation gate
     # bootstrap.sh installs with retries: a registry blip must not fail the run before the gate has
     # said anything about the change. It is a no-op when node_modules is current.
-    command: bash .ai/scripts/bootstrap.sh && node scripts/ci/validation.mjs
+    command: bash .ai/scripts/bootstrap.sh && node scripts/ci/validation.mjs --for-commit
   - id: retry
     type: loop
     max: 3
@@ -81,6 +82,8 @@ nodes:
       - Review reports the Standards axis and the Spec axis separately (CODE_REVIEW.md), and the Spec axis checks each acceptance criterion from the issue's Agent Brief.
       - The PR is a draft: keep it so through review, QA and fix rounds, and after the last push run `gh pr ready <number>` before waiting on CI or merging (SDLC.md § Draft until the last push).
       - Before emitting ready, report the PR reference and keep the worktree at the exact published head.
+      - Retain this run's atomic PR lock and in-progress label. Record the current independent
+        reports with the markers and commands in the repository autopilot policy.
       - Merge only into `develop`.
       Already merged work ends with CEZ:VERDICT merged only after fresh GitHub confirmation.
       Otherwise end with CEZ:VERDICT blocked, naming the unmet gate. Never waive QA/security or remove a hold to finish.
@@ -113,13 +116,8 @@ nodes:
     type: check
     command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci
   - id: approve
-    type: agent
-    verdicts: [merged, blocked]
-    prompt: |
-      The graph completed CI waiting. Re-read the current PR head and all merge gates.
-      Run om-approve-merge-pr for this branch's PR into develop only. Reuse passing
-      review/QA reports for the exact head and policy; new findings still block.
-      Emit CEZ:VERDICT merged only after GitHub confirms merge; otherwise blocked.
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" merge
   - id: confirm-merge
     type: check
     command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" confirm-merge
@@ -136,6 +134,9 @@ nodes:
       Verify each resulting issue state. Emit CEZ:VERDICT reconciled when all eligible issues
       are closed or there are no eligible closing links; otherwise emit CEZ:VERDICT blocked
       with an explicit handoff naming the unresolved issue and owner. A merge alone is not closure.
+  - id: cleanup
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" cleanup
   - id: done
     type: end
     status: success
@@ -179,16 +180,17 @@ edges:
   - { from: confirm-merge.fail, to: failed }
   - { from: merge.ready, to: ci-preflight }
   - { from: ci-preflight.pass, to: ci }
-  - { from: ci-preflight.fail, to: failed }
+  - { from: ci-preflight.fail, to: cleanup }
   - { from: ci.green, to: verify-ci }
-  - { from: ci.red, to: failed }
-  - { from: ci.timeout, to: failed }
-  - { from: ci.failed, to: failed }
+  - { from: ci.red, to: cleanup }
+  - { from: ci.timeout, to: cleanup }
+  - { from: ci.failed, to: cleanup }
   - { from: verify-ci.pass, to: approve }
-  - { from: verify-ci.fail, to: failed }
-  - { from: approve.merged, to: confirm-merge }
-  - { from: approve.blocked, to: failed }
-  - { from: approve.failed, to: failed }
+  - { from: verify-ci.fail, to: cleanup }
+  - { from: approve.pass, to: confirm-merge }
+  - { from: approve.fail, to: cleanup }
   - { from: reconcile-issues.reconciled, to: done }
   - { from: reconcile-issues.blocked, to: failed }
   - { from: reconcile-issues.failed, to: failed }
+  - { from: cleanup.pass, to: failed }
+  - { from: cleanup.fail, to: failed }
