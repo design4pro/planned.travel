@@ -6,7 +6,7 @@ nodes:
     type: start
   - id: preflight
     type: check
-    command: node .ai/scripts/pipeline-control.mjs pr-preflight
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" pr-preflight
   - id: ready
     type: if
     condition: { kind: output, ref: preflight.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
@@ -21,13 +21,19 @@ nodes:
       The graph owns CI waiting and final merge. Reuse current-head/policy evidence. Stop before
       CI waiting and emit CEZ:VERDICT ready when review and QA pass, otherwise blocked.
       Keep the existing three-round cap across runs; never remove a hold to finish.
+      After review, QA and the final push, mark an eligible draft ready per SDLC.md.
+      Before emitting ready, keep the worktree at the exact published head and emit the
+      PR reference for this task. The graph verifies these facts before waiting for CI.
+  - id: ci-preflight
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci-preflight
   - id: ci
     type: github.wait-ci
     timeoutMs: 2400000
     pollMs: 60000
   - id: verify-ci
     type: check
-    command: node .ai/scripts/pipeline-control.mjs ci
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci
   - id: merge
     type: agent
     verdicts: [merged, blocked]
@@ -37,7 +43,7 @@ nodes:
       otherwise emit blocked. Do not repeat a valid review just because this is another tick.
   - id: confirm
     type: check
-    command: node .ai/scripts/pipeline-control.mjs confirm-merge
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" confirm-merge
   - id: reconcile-issues
     type: agent
     verdicts: [reconciled, blocked]
@@ -65,7 +71,9 @@ edges:
   - { from: ready.true, to: bootstrap }
   - { from: bootstrap.pass, to: prepare }
   - { from: bootstrap.fail, to: failed }
-  - { from: prepare.ready, to: ci }
+  - { from: prepare.ready, to: ci-preflight }
+  - { from: ci-preflight.pass, to: ci }
+  - { from: ci-preflight.fail, to: failed }
   - { from: prepare.blocked, to: failed }
   - { from: prepare.failed, to: failed }
   - { from: ci.green, to: verify-ci }

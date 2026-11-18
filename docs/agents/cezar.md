@@ -44,10 +44,9 @@ Never recreate another tool's skill directory as a compatibility alias.
 
 ## Local execution
 
-Use the official CLI's `cezar run "<task>" --workflow <name>` in this repository, or invoke a
-named Open Mercato skill from Codex. The project default selects Codex. No workflow fixes a
-model from another provider. Agents read `AGENTS.md` and follow the named skill instructions;
-workflow prompts do not rely on Claude slash commands or a Claude `Skill` tool.
+Use `cezar` to open the project cockpit and select a delivery workflow. Use
+`cezar run "<task>" --workflow <name>` for standalone workflows that do not need a live cockpit.
+The project default selects Codex. Agents read `AGENTS.md` and follow the named skill instructions.
 
 A fresh checkout needs `pnpm worktree:bootstrap`. Workflows use the retrying
 `.ai/scripts/bootstrap.sh`; those needing the application select `--profile worktree --no-seed`.
@@ -108,7 +107,21 @@ checks, human holds and the QA gate. `needs-qa` requires current-head sign-off b
 reviewers; security/high-risk work also requires an independent security verdict. Rejections get
 at most three fix rounds. Agents merge only into `develop`; the `do-not-merge` promotion remains
 protected. `node .ai/scripts/pr-state.mjs <pr> [--wait]` provides compact paginated evidence;
-unknown or incomplete checks never pass. Native wait nodes release the agent execution slot.
+unknown or incomplete checks never pass. GitHub's aggregate can be green on a draft when
+repository jobs were skipped and an external app succeeded. The snapshot explains the draft
+status, and `--wait` returns immediately for an open draft.
+
+`implement-ticket` opens a draft for new work and resolves its published PR from the issue
+branch. `pr-autopilot` takes an existing PR by number from the Cezar task. Both graphs verify
+the PR, published head, configured base and Ready for review state before native CI waiting,
+which releases the agent slot. They recheck executed CI before merging and confirm the exact
+head on GitHub before releasing the delivery claim. Linked worktrees execute these checks
+from the primary checkout, so older PR branches use the current delivery helper.
+
+On a settled run, cockpit **Continue** opens another agent session and can show **Done** while
+graph nodes are still pending. **Open PR** opens the linked GitHub page. When repairing a settled
+run, its owner explicitly verifies and completes the outstanding delivery steps using the same
+claims protocol.
 
 ## Automation cutover
 
