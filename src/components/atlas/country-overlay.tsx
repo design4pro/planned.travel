@@ -926,7 +926,8 @@ export function surfaceAreas(
   column: number = Number.POSITIVE_INFINITY,
 ): ReadonlyArray<SurfaceArea> {
   const well = Math.min(box.width, Math.max(column, 0))
-  const wellLeft = box.x + (box.width - well) / 2
+  const wellMargin = (box.width - well) / 2
+  const wellLeft = box.x + wellMargin
   const wellRight = wellLeft + well
   const rtl = padding.direction === 'rtl'
   const leftEdge = rtl ? wellLeft : box.x
@@ -934,14 +935,21 @@ export function surfaceAreas(
 
   const sideLeft = padding.sideGutters?.left ?? padding.left
   const sideRight = padding.sideGutters?.right ?? padding.left
-  const left = leftEdge + padding.left
+  // The centred well spends its existing margin before adding inset clearance.
+  const leftCredit = rtl
+    ? Math.min(wellMargin, sideLeft - (padding.gutter ?? sideLeft))
+    : 0
+  const rightCredit = rtl
+    ? 0
+    : Math.min(wellMargin, sideRight - (padding.gutter ?? sideRight))
+  const left = leftEdge + padding.left - leftCredit
   const top = box.y + padding.top
   const clear = Math.max(box.height - padding.top - padding.bottom, 0)
   const strict: SurfaceArea = {
     kind: 'strict',
     x: left,
     y: top,
-    width: Math.max(rightEdge - padding.right - left, 0),
+    width: Math.max(rightEdge - padding.right + rightCredit - left, 0),
     height: clear,
   }
   // Below the width at which the cluster moves it is the map's *top* right
@@ -951,13 +959,14 @@ export function surfaceAreas(
   // gutter sheet was short of fitting above the shelf, which is why every phone
   // panel used to end up on top of it.
   const controlsAbove = box.width < CONTROLS_MOVE_AT
-  const gutterLeft = leftEdge + (controlsAbove ? sideLeft : padding.left)
+  const gutterLeft =
+    leftEdge + (controlsAbove ? sideLeft : padding.left) - leftCredit
   const right = controlsAbove ? sideRight : Math.max(padding.right, 0)
   const gutter: SurfaceArea = {
     kind: 'gutter',
     x: gutterLeft,
     y: top,
-    width: Math.max(rightEdge - right - gutterLeft, 0),
+    width: Math.max(rightEdge - right + rightCredit - gutterLeft, 0),
     height: clear,
   }
   const relaxed: SurfaceArea = {

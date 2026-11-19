@@ -192,7 +192,9 @@ const WELL = cn(
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
   // chrome floating over it. Symmetric, so it needs no logical form.
-  'end-px start-px',
+  'end-px start-px [--well-margin:max(1px,calc((100vw_-_var(--content-max))/2))]',
+  '[--well-start:max(var(--atlas-gutter),calc(var(--safe-start)_-_var(--well-margin)))]',
+  '[--well-end:max(var(--atlas-gutter),calc(var(--safe-end)_-_var(--well-margin)))]',
 )
 
 /**
@@ -253,7 +255,7 @@ const SEARCH_BOX = cn(
   // inline end, exactly as they do in `en`. The canvas under them is not
   // mirrored — a map is not a paragraph — so each of these states its own side
   // rather than inheriting one.
-  'pointer-events-auto absolute top-3 end-[calc(max(var(--atlas-gutter),var(--safe-end))+3.75rem)] start-[max(var(--atlas-gutter),var(--safe-start))] w-auto z-map-overlay',
+  'pointer-events-auto absolute top-3 end-[calc(var(--well-end)+3.75rem)] start-[var(--well-start)] w-auto z-map-overlay',
   'lg:top-4 lg:end-auto lg:w-88',
 )
 
@@ -276,12 +278,12 @@ const SEARCH_BOX = cn(
  */
 const CHROME = {
   controls: cn(
-    'pointer-events-auto top-3 end-[max(var(--atlas-gutter),var(--safe-end))] bottom-auto',
+    'pointer-events-auto top-3 end-[var(--well-end)] bottom-auto',
     'lg:top-auto lg:bottom-(--atlas-clear)',
   ),
   credit: cn(
-    'top-auto end-auto bottom-(--atlas-clear) start-[max(var(--atlas-gutter),var(--safe-start))]',
-    'lg:top-4 lg:end-[max(var(--atlas-gutter),var(--safe-end))] lg:bottom-auto lg:start-auto',
+    'top-auto end-auto bottom-(--atlas-clear) start-[var(--well-start)]',
+    'lg:top-4 lg:end-[var(--well-end)] lg:bottom-auto lg:start-auto',
   ),
 } as const
 
@@ -394,7 +396,7 @@ function AtlasChrome({
           // The 72px the pill gives up on a phone belongs to the zoom cluster.
           // With no cluster there is nothing to give it up for, and the gap
           // reads as a control that failed to draw.
-          failed && 'end-[max(var(--atlas-gutter),var(--safe-end))]',
+          failed && 'end-[var(--well-end)]',
         )}
       />
 

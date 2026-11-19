@@ -155,7 +155,7 @@ export const DialogHeader = React.forwardRef<
     ref={ref}
     className={cn(
       // Keep room for the close button even when it moves in from the edge.
-      'shrink-0 border-b border-edge-faint ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4 sm:py-5',
+      'shrink-0 panel-divider [--divider-bottom:-1px] border-b border-transparent ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4 sm:py-5',
       className,
     )}
     {...props}
@@ -214,7 +214,7 @@ export const DialogFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-t border-edge-faint bg-surface ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-end,0px)))] py-4',
+      'shrink-0 panel-divider [--divider-top:-1px] border-t border-transparent bg-surface ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-end,0px)))] py-4',
       'flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3',
       '[&>*]:w-full sm:[&>*]:w-auto',
       className,

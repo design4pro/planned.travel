@@ -106,6 +106,41 @@ describe('shell safe-area gutters', () => {
     )
   }
 
+  test(
+    'both trip navigation rows clear the safe rectangle',
+    { session: 'owner' },
+    async ({ app, browser }) => {
+      await app.open('/trips/demo-trip-01-tokyo-and-kyoto/plan')
+      const tabRow = 'div.gutter-x:has(> nav[aria-label])'
+      const titleRow = 'div.gutter-x:has(+ div.gutter-x > nav[aria-label])'
+      await browser.locator(tabRow).waitFor()
+      for (const [width, gutter] of [
+        [600, 16],
+        [800, 24],
+        [1100, 32],
+      ]) {
+        await browser.setViewport({ width, height: 520 })
+        const selectors = width < 1024 ? [titleRow, tabRow] : [tabRow]
+        for (const direction of ['ltr', 'rtl']) {
+          await browser.evaluate((dir) => {
+            document.documentElement.dir = dir
+            return null
+          }, direction)
+          for (const [left, right] of [
+            [0, 0],
+            [LEFT_INSET, RIGHT_INSET],
+          ]) {
+            await setInsets(browser, left, right)
+            for (const row of await readRows(browser, selectors)) {
+              expect(row.contentLeft).toBe(Math.max(gutter, left))
+              expect(row.contentRight).toBe(Math.max(gutter, right))
+            }
+          }
+        }
+      }
+    },
+  )
+
   test('feedback actor spends its existing SDK margin before adding clearance', async ({
     app,
     browser,
@@ -198,6 +233,38 @@ describe('shell safe-area gutters', () => {
           expect(baseline).toBe(14)
           await setInsets(browser, LEFT_INSET, RIGHT_INSET)
           const [after] = await readRows(browser, [close])
+          const content = await browser.evaluate(() => {
+            const dialog = document.querySelector('[role="dialog"]')
+            if (!dialog) throw new Error('Missing panel')
+            const elements = dialog.querySelectorAll(
+              'h2, input:not([type="hidden"],[aria-hidden="true"]), button:not([aria-label="Close"])',
+            )
+            return Array.from(elements, (element) => {
+              const { width, height, left, right } =
+                element.getBoundingClientRect()
+              return {
+                width,
+                height,
+                left,
+                right: innerWidth - right,
+                label:
+                  element.getAttribute('aria-label') ??
+                  element.getAttribute('type') ??
+                  element.textContent?.trim(),
+              }
+            }).filter(({ width, height }) => width > 1 && height > 1)
+          })
+          expect(content.length).toBeGreaterThan(1)
+          for (const bounds of content) {
+            expect(
+              bounds.left,
+              bounds.label ?? undefined,
+            ).toBeGreaterThanOrEqual(LEFT_INSET)
+            expect(
+              bounds.right,
+              bounds.label ?? undefined,
+            ).toBeGreaterThanOrEqual(RIGHT_INSET)
+          }
           const clearance =
             direction === 'ltr'
               ? after.contentRight - after.right
@@ -210,8 +277,29 @@ describe('shell safe-area gutters', () => {
           await setInsets(browser, 0, 0)
           expect(await readRows(browser, [close])).toEqual([before])
         }
+        await browser.setViewport({ width: 450, height: 400 })
+        await setInsets(browser, LEFT_INSET, RIGHT_INSET)
+        const canScroll = await browser.evaluate(() => {
+          const body = document.querySelector<HTMLElement>(
+            '[role="dialog"] .overflow-y-auto',
+          )
+          if (!body) throw new Error('Missing scrolling panel body')
+          body.scrollTop = 0
+          body.scrollTop = 60
+          return body.scrollTop > 0
+        })
+        expect(canScroll).toBe(true)
         await browser.locator(close).tap()
         await expect(browser.locator(close)).toHaveCount(0)
+        const focusIsRestored = await browser.evaluate((name) => {
+          const active = document.activeElement
+          return name === 'sheet'
+            ? (active?.matches('[data-part="dashboard-widgets-trigger"]') ??
+                false)
+            : active?.matches('button[aria-haspopup="dialog"]') === true &&
+                active.textContent?.includes('New trip') === true
+        }, panel.name)
+        expect(focusIsRestored).toBe(true)
       },
     )
   }

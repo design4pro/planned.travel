@@ -920,6 +920,29 @@ describe('surfaceAreas', () => {
       expect(strict.x + strict.width).toBe(2000 - 60)
     })
 
+    it.each(['ltr', 'rtl'] as const)(
+      'spends the well margin before adding the %s end inset',
+      (direction) => {
+        const map = { ...wide, width: 1500 }
+        const rtl = direction === 'rtl'
+        const [strict] = surfaceAreas(
+          map,
+          {
+            ...padding,
+            direction,
+            left: rtl ? 97 : 16,
+            right: rtl ? 16 : 97,
+            gutter: 16,
+            sideGutters: { left: rtl ? 53 : 16, right: rtl ? 16 : 53 },
+          },
+          1440,
+        )
+        expect(rtl ? strict.x : map.width - strict.x - strict.width).toBe(
+          53 + 44,
+        )
+      },
+    )
+
     it('offers the map beyond the column, where no chrome ever goes', () => {
       const areas = surfaceAreas(wide, padding, 1440)
       const outside = areas.find((area) => area.x === 2000)

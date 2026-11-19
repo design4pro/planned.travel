@@ -1340,6 +1340,11 @@
           "tags": []
         },
         {
+          "title": "Atlas chrome and selected actions spend the physical insets once",
+          "line": 531,
+          "tags": []
+        },
+        {
           "title": "a country opens on the map and can be acted on",
           "line": 540,
           "tags": []
@@ -1502,6 +1507,12 @@
           "titlePath": [
             "authenticated routes",
             "the atlas figures follow the selected year"
+          ]
+        },
+        {
+          "titlePath": [
+            "authenticated routes",
+            "Atlas chrome and selected actions spend the physical insets once"
           ]
         },
         {

@@ -852,6 +852,21 @@
   padding-left: var(--panel-left);
   padding-right: var(--panel-right);
 }
+/* Extend the divider across the panel's safe padding without moving its content. */
+@utility panel-divider {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(-1 * var(--panel-start, 0px));
+    inset-inline-end: calc(-1 * var(--panel-end, 0px));
+    top: var(--divider-top, auto);
+    bottom: var(--divider-bottom, auto);
+    height: 1px;
+    background-color: var(--color-edge-faint);
+    pointer-events: none;
+  }
+}
 /* The centred dialog already clears any inset that fits in its outer margin. */
 @utility dialog-safe-content {
   --dialog-margin: max(

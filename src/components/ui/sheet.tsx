@@ -227,7 +227,7 @@ export const SheetHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4',
+      'shrink-0 panel-divider [--divider-bottom:-1px] border-b border-transparent ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4',
       className,
     )}
     {...props}
@@ -281,7 +281,7 @@ export const SheetFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-t border-edge-faint bg-surface ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(0px,calc(1.25rem-var(--panel-end,0px)))] py-4',
+      'shrink-0 panel-divider [--divider-top:-1px] border-t border-transparent bg-surface ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(0px,calc(1.25rem-var(--panel-end,0px)))] py-4',
       'flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3',
       '[&>*]:w-full sm:[&>*]:w-auto',
       className,

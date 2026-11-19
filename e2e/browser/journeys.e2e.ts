@@ -526,6 +526,61 @@ test.describe('authenticated routes', () => {
     })
   }
 
+  test(
+    'Atlas chrome and selected actions spend the physical insets once',
+    { timeout: ATLAS_JOURNEY_TIMEOUT_MS },
+    async ({ page }) => {
+      if (ATLAS === undefined) throw new Error('Atlas route missing')
+      await page.setViewportSize({ width: 1500, height: 900 })
+      await visit(page, ATLAS, 'light')
+      await chooseCountry(page, 'France')
+      const panel = page.locator('[data-part="country-panel"]')
+      const zoom = page.getByRole('toolbar', { name: 'Map controls' })
+      const credit = page.locator(
+        'div:has(> span.sr-only:text-is("Map data from"))',
+      )
+      await expect(zoom).toBeVisible()
+      await expect(credit).toBeVisible()
+
+      for (const direction of ['ltr', 'rtl']) {
+        for (const [left, right] of [
+          [0, 0],
+          [53, 61],
+        ]) {
+          await page.evaluate(
+            (insets) => {
+              const root = document.documentElement
+              root.dir = insets.direction
+              root.style.setProperty('--safe-left', insets.left + 'px')
+              root.style.setProperty('--safe-right', insets.right + 'px')
+            },
+            { direction, left, right },
+          )
+          const end = direction === 'rtl' ? left : right
+          for (const control of [zoom, credit]) {
+            const bounds = await control.boundingBox()
+            if (!bounds) throw new Error('Missing Atlas chrome')
+            expect(
+              direction === 'rtl' ? bounds.x : 1500 - bounds.x - bounds.width,
+            ).toBeCloseTo(Math.max(46, end), 0)
+          }
+          const close = panel.getByRole('button', { name: 'Close France' })
+          await expect
+            .poll(async () => {
+              const bounds = await close.boundingBox()
+              return (
+                bounds !== null &&
+                bounds.x >= left &&
+                bounds.x + bounds.width <= 1500 - right
+              )
+            })
+            .toBe(true)
+          await close.click({ trial: true })
+        }
+      }
+    },
+  )
+
   /**
    * Journey 4: a country opens on the map, and the reader can act on it.
    *
@@ -2040,6 +2095,41 @@ test.describe('the impersonation warning bar', () => {
       await expect(
         bar.getByRole('button', { name: 'End impersonation' }),
       ).toBeEnabled()
+      for (const [width, gutter] of [
+        [600, 16],
+        [800, 24],
+        [1100, 32],
+      ]) {
+        await page.setViewportSize({ width, height: 520 })
+        for (const direction of ['ltr', 'rtl']) {
+          for (const [left, right] of [
+            [0, 0],
+            [53, 21],
+          ]) {
+            const bounds = await bar.evaluate(
+              (region, insets) => {
+                const root = document.documentElement
+                root.dir = insets.direction
+                root.style.setProperty('--safe-left', insets.left + 'px')
+                root.style.setProperty('--safe-right', insets.right + 'px')
+                const row = region.firstElementChild
+                if (!row) throw new Error('Missing impersonation row')
+                const box = row.getBoundingClientRect()
+                const style = getComputedStyle(row)
+                return [
+                  box.left + parseFloat(style.paddingLeft),
+                  innerWidth - box.right + parseFloat(style.paddingRight),
+                ]
+              },
+              { direction, left, right },
+            )
+            expect(bounds).toEqual([
+              Math.max(gutter, left),
+              Math.max(gutter, right),
+            ])
+          }
+        }
+      }
     } finally {
       await endImpersonationFixture(page)
     }
