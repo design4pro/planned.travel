@@ -2,7 +2,7 @@
  * The product's web fonts, declared once.
  *
  * `docs/SPEC.md` §4 pins two faces — MuseoModerno for display and Geist for UI
- * — and `docs/SPEC.md` §8 ships the product in 23 languages. Those two rules
+ * — and `docs/SPEC.md` §9 ships the product in 23 languages. Those two rules
  * collide: measured against the Google Fonts API on 2026-08-22, Geist serves
  * `latin`, `latin-ext`, `cyrillic`, `cyrillic-ext` and `vietnamese`, and
  * MuseoModerno serves `latin`, `latin-ext` and `vietnamese` only. Neither has a
@@ -11,8 +11,7 @@
  * would resolve to whatever the reader's platform happens to install, at a
  * different weight, a different optical size and a different baseline.
  *
- * The fix is six script-covering companions requested in the same stylesheet,
- * so one request carries every script the product can render:
+ * The six script-covering companions are requested alongside the main faces:
  *
  * - `Noto Sans` — Greek. It is also the only face in the set that draws the
  *   accented Greek vowels (ά, έ, ή …); nothing else requested here claims them.
@@ -26,29 +25,9 @@
  * `src/styles/styles.css` carries the metric-compensated `local()` faces that
  * hold the line while these download.
  *
- * WIRING. Nothing else in this file has an effect until the document shell
- * renders it. `src/routes/__root.tsx` is the only place that may, from its
- * `head()` `links` array, and it has to be all three entries in this order —
- * the two preconnects before the stylesheet, or the stylesheet opens its own
- * connections and the warm-up is wasted:
- *
- *     ...FONT_PRECONNECT_ORIGINS.map(({ href, crossOrigin }) => ({
- *       rel: 'preconnect', href, crossOrigin,
- *     })),
- *     { rel: 'stylesheet', href: FONT_STYLESHEET_HREF },
- *
- * That replaces the shell's own `FONTS_HREF` constant and its two hand-written
- * preconnect entries. There must be exactly one copy of the URL in the repo,
- * because it and the stacks in `tokens.css` have to name the same eight
- * families or a script silently loses its face.
- *
- * Cost, re-measured with a Chrome 150 user agent on 2026-08-23: the stylesheet
- * answers 200 with 465,919 bytes over 499 `@font-face` blocks, every one of
- * them carrying `font-display: swap`. It is that large because the four CJK
- * families are cut into ~100 `unicode-range` slices each. The slicing is also
- * what makes it affordable — a page with no Han on it downloads none of those
- * slices — but the CSS itself is on the critical path, so the shell should keep
- * this to a single `<link>` and never duplicate it.
+ * The document shell in `src/routes/__root.tsx` renders both preconnects
+ * before the stylesheet links. The companion families keep their unicode-range
+ * slices so visits only download font files for the characters they render.
  */
 
 /** One family as the Google Fonts CSS2 API wants it spelled. */
@@ -70,7 +49,7 @@ interface FontFamilyRequest {
  * instead, which serves the same four weights from one file per slice and cuts
  * the generated stylesheet from 1.4 MB to 466 KB.
  */
-const FONT_FAMILIES: readonly FontFamilyRequest[] = [
+const PRIMARY_FAMILIES: readonly FontFamilyRequest[] = [
   {
     family: 'Geist',
     weights: '400;500;600;700',
@@ -81,6 +60,9 @@ const FONT_FAMILIES: readonly FontFamilyRequest[] = [
     weights: '400;500;700;800',
     covers: 'Display — Latin, Vietnamese',
   },
+]
+
+const SCRIPT_FAMILIES: readonly FontFamilyRequest[] = [
   {
     family: 'Noto Sans',
     weights: '400..700',
@@ -93,15 +75,31 @@ const FONT_FAMILIES: readonly FontFamilyRequest[] = [
   { family: 'Noto Sans TC', weights: '400..700', covers: 'Han, Traditional' },
 ]
 
+function stylesheetHref(
+  families: readonly FontFamilyRequest[],
+  display: 'optional' | 'swap',
+): string {
+  const axes = families.map(
+    ({ family, weights }) =>
+      `family=${family.replaceAll(' ', '+')}:wght@${weights}`,
+  )
+  return `https://fonts.googleapis.com/css2?${axes.join('&')}&display=${display}`
+}
+
 /**
- * `display=swap` is a request-level parameter: the API stamps `font-display:
- * swap` onto every one of the 499 `@font-face` blocks it emits, so no script
- * can silently ship with a blocking period the others do not have.
+ * Keep the first painted fallback for the primary faces if their files are late.
+ * The script companions still replace fallback text when available so glyphs
+ * missing from a device's system fonts can render on that visit.
  */
-export const FONT_STYLESHEET_HREF = `https://fonts.googleapis.com/css2?${FONT_FAMILIES.map(
-  ({ family, weights }) =>
-    `family=${family.replaceAll(' ', '+')}:wght@${weights}`,
-).join('&')}&display=swap`
+export const APP_FONT_STYLESHEET_HREFS = [
+  stylesheetHref(PRIMARY_FAMILIES, 'optional'),
+  stylesheetHref(SCRIPT_FAMILIES, 'swap'),
+] as const
+
+export const PUBLIC_FONT_STYLESHEET_HREF = stylesheetHref(
+  [...PRIMARY_FAMILIES, ...SCRIPT_FAMILIES],
+  'swap',
+)
 
 /** A `<link rel="preconnect">` the document shell renders in `<head>`. */
 export interface FontPreconnectOrigin {

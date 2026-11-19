@@ -2,7 +2,11 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { FONT_PRECONNECT_ORIGINS, FONT_STYLESHEET_HREF } from '#/lib/fonts'
+import {
+  APP_FONT_STYLESHEET_HREFS,
+  FONT_PRECONNECT_ORIGINS,
+  PUBLIC_FONT_STYLESHEET_HREF,
+} from '#/lib/fonts'
 
 /**
  * `src/lib/fonts.ts` is data, not markup: it names the eight families the
@@ -33,13 +37,15 @@ const REQUESTED_FAMILIES = [
   'Noto Sans TC',
 ] as const
 
-describe('FONT_STYLESHEET_HREF', () => {
-  const url = new URL(FONT_STYLESHEET_HREF)
-  const families = url.searchParams.getAll('family')
+describe('APP_FONT_STYLESHEET_HREFS', () => {
+  const urls = APP_FONT_STYLESHEET_HREFS.map((href) => new URL(href))
+  const families = urls.flatMap((url) => url.searchParams.getAll('family'))
 
   it('asks fonts.googleapis.com for the CSS2 API', () => {
-    expect(url.origin).toBe('https://fonts.googleapis.com')
-    expect(url.pathname).toBe('/css2')
+    for (const url of urls) {
+      expect(url.origin).toBe('https://fonts.googleapis.com')
+      expect(url.pathname).toBe('/css2')
+    }
   })
 
   it('carries all eight families', () => {
@@ -56,13 +62,31 @@ describe('FONT_STYLESHEET_HREF', () => {
     expect(entry).toMatch(/:wght@[\d.;]+(\.\.[\d.]+)?$/)
   })
 
-  it('sets display=swap once, for every face in the response', () => {
-    expect(url.searchParams.getAll('display')).toEqual(['swap'])
+  it('keeps late primary faces from moving text and lets script faces replace fallback glyphs', () => {
+    const [primary, scripts] = urls
+    expect(primary.searchParams.getAll('display')).toEqual(['optional'])
+    expect(scripts.searchParams.getAll('display')).toEqual(['swap'])
+    expect(
+      primary.searchParams.getAll('family').map((entry) => entry.split(':')[0]),
+    ).toEqual(REQUESTED_FAMILIES.slice(0, 2))
+    expect(
+      scripts.searchParams.getAll('family').map((entry) => entry.split(':')[0]),
+    ).toEqual(REQUESTED_FAMILIES.slice(2))
   })
 
-  it('keeps the families alphabetical, which the CSS2 API answers 400 without', () => {
-    const names = families.map((entry) => entry.split(':')[0])
-    expect(names).toEqual([...names].sort())
+  it('retains one swap stylesheet with the same faces outside the app shell', () => {
+    const url = new URL(PUBLIC_FONT_STYLESHEET_HREF)
+    expect(url.searchParams.getAll('display')).toEqual(['swap'])
+    expect(url.searchParams.getAll('family')).toEqual(families)
+  })
+
+  it('lists the families alphabetically in each request', () => {
+    for (const url of urls) {
+      const names = url.searchParams
+        .getAll('family')
+        .map((entry) => entry.split(':')[0])
+      expect(names).toEqual([...names].sort())
+    }
   })
 })
 
@@ -76,7 +100,9 @@ describe('FONT_PRECONNECT_ORIGINS', () => {
 
   it('warms the origin the stylesheet is actually fetched from', () => {
     const origins = FONT_PRECONNECT_ORIGINS.map(({ href }) => href)
-    expect(origins).toContain(new URL(FONT_STYLESHEET_HREF).origin)
+    for (const href of APP_FONT_STYLESHEET_HREFS) {
+      expect(origins).toContain(new URL(href).origin)
+    }
   })
 })
 

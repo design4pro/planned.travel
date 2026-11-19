@@ -12,7 +12,11 @@ import { FeedbackWidget } from '#/components/layout/feedback-widget'
 import { TooltipProvider } from '#/components/ui'
 import { RootErrorBoundary } from '#/components/layout/error-state'
 import { RootNotFound } from '#/components/layout/not-found'
-import { FONT_PRECONNECT_ORIGINS, FONT_STYLESHEET_HREF } from '#/lib/fonts'
+import {
+  APP_FONT_STYLESHEET_HREFS,
+  FONT_PRECONNECT_ORIGINS,
+  PUBLIC_FONT_STYLESHEET_HREF,
+} from '#/lib/fonts'
 import {
   DEFAULT_LOCALE,
   I18nProvider,
@@ -112,7 +116,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   staleTime: Number.POSITIVE_INFINITY,
   /** The document carries one visitor's language; no shared cache may reuse it. */
   headers: () => ({ vary: 'accept-language, cookie' }),
-  head: ({ loaderData }) => ({
+  head: ({ loaderData, matches }) => ({
     meta: [
       { charSet: 'utf-8' },
       {
@@ -151,17 +155,18 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'twitter:description', content: DESCRIPTION },
     ],
     links: [
-      // Both origins warmed before the stylesheet is parsed, then the one
-      // request that carries every script the product can render. The URL and
-      // the origins are data in `src/lib/fonts.ts`; there is exactly one copy of
-      // them in the repo, because it and the stacks in `tokens.css` have to name
-      // the same eight families or a script silently loses its face.
+      // Warm both origins before requesting the primary and script faces.
       ...FONT_PRECONNECT_ORIGINS.map(({ href, crossOrigin }) => ({
         rel: 'preconnect',
         href,
         crossOrigin,
       })),
-      { rel: 'stylesheet', href: FONT_STYLESHEET_HREF },
+      ...(matches.some(
+        ({ routeId }: { routeId: string }) => routeId === '/_app',
+      )
+        ? APP_FONT_STYLESHEET_HREFS
+        : [PUBLIC_FONT_STYLESHEET_HREF]
+      ).map((href) => ({ rel: 'stylesheet', href })),
       { rel: 'stylesheet', href: appCss },
       { rel: 'icon', href: FAVICON_HREF, type: 'image/svg+xml' },
       {

@@ -288,6 +288,7 @@ async function serveDocument(
   locale: Locale,
   signedIn = false,
   failRoute = false,
+  appShell = false,
 ): Promise<string> {
   wire.negotiated = { locale, dir: directionOf(locale), signedIn }
 
@@ -301,10 +302,18 @@ async function serveDocument(
     errorComponent: rootRoute.options.errorComponent,
     component: DirectionProbe,
   })
+  const shell = createRoute({ getParentRoute: () => rootRoute, id: '_app' })
+  const appProbe = createRoute({
+    getParentRoute: () => shell,
+    path: '/app-probe',
+    component: DirectionProbe,
+  })
   const router = createRouter({
-    routeTree: rootRoute.addChildren([index]),
+    routeTree: rootRoute.addChildren([index, shell.addChildren([appProbe])]),
     context: { queryClient: createQueryClient() },
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({
+      initialEntries: [appShell ? '/app-probe' : '/'],
+    }),
   })
 
   await router.load()
@@ -416,10 +425,19 @@ describe('the served document', () => {
     )
   })
 
-  it('requests the fonts once, from the single copy of the URL', async () => {
+  it('requests one swap stylesheet outside the app shell', async () => {
     const html = await serveDocument('en')
-
     expect(html.split('fonts.googleapis.com/css2').length - 1).toBe(1)
+    expect(html).toContain('display=swap')
+    expect(html).not.toContain('display=optional')
+  })
+
+  it('requests the primary and script font stylesheets once each in the app shell', async () => {
+    const html = await serveDocument('en', true, false, true)
+
+    expect(html.split('fonts.googleapis.com/css2').length - 1).toBe(2)
+    expect(html).toContain('display=optional')
+    expect(html).toContain('display=swap')
     // The eight families `src/lib/fonts.ts` names — the four hand-written into
     // the shell before this covered Latin and nothing else.
     expect(html).toContain('Noto+Sans+Arabic')

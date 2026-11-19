@@ -221,18 +221,17 @@
 /* ==========================================================================
    Metric-compensated fallback faces
    --------------------------------------------------------------------------
-   Every web font in `src/lib/fonts.ts` is requested with `display=swap`, which
-   means a zero-second block period: the first frame is painted in whatever the
-   platform can supply, and the real face replaces it moments later. That second
-   moment is where layout shift comes from, and SPEC §2 allows none of it.
+   In the app shell, the primary faces keep the first painted fallback when
+   they are late. The script companions can still replace it to supply missing
+   glyphs. Compensating the fallback reduces the visual difference in both cases.
 
    So each script gets a named face that wraps the platform fonts most likely to
    own it and then *overrides their vertical metrics* with the metrics of the
    web font it stands in for. `ascent-override`, `descent-override` and
    `line-gap-override` are absolute — a percentage of the font size, not of the
    local font's own em — so the substituted line box and the baseline inside it
-   are identical whichever local font the reader happens to have, on any
-   platform. When the web font arrives, nothing moves.
+   stay close to the web font's metrics across local faces. These overrides
+   do not match glyph widths.
 
    Every number below was read out of the shipped font binaries (`head`,
    `hhea` and `OS/2`), all of which use a 1000-unit em:
