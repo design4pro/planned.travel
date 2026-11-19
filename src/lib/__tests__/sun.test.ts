@@ -120,19 +120,20 @@ describe('a day the sun does not cross the horizon', () => {
   it('has no sunrise at Tromsø in polar night', () => {
     const times = sunTimes(TROMSO.lat, TROMSO.lng, '2026-12-21', TROMSO.zone)
 
-    expect(times).toEqual({ sunrise: null, sunset: null })
+    expect(times).toEqual({ sunrise: null, sunset: null, sunsetNextDay: false })
   })
 
   it('has no sunset at Tromsø in midnight sun', () => {
     const times = sunTimes(TROMSO.lat, TROMSO.lng, '2026-06-21', TROMSO.zone)
 
-    expect(times).toEqual({ sunrise: null, sunset: null })
+    expect(times).toEqual({ sunrise: null, sunset: null, sunsetNextDay: false })
   })
 
   it('has neither side at the south pole in the southern winter', () => {
     expect(sunTimes(-90, 0, '2026-06-21', 'UTC')).toEqual({
       sunrise: null,
       sunset: null,
+      sunsetNextDay: false,
     })
   })
 })
@@ -148,6 +149,7 @@ describe('input that is not a place and a date', () => {
     expect(sunTimes(lat, lng, date, 'UTC')).toEqual({
       sunrise: null,
       sunset: null,
+      sunsetNextDay: false,
     })
   })
 
@@ -167,24 +169,93 @@ describe('input that is not a place and a date', () => {
 
     expect(sunset).toBe('00:04')
   })
+})
 
-  it('has no sunset on the one date a sunset first passes midnight, a known limit of the calendar-date rule', () => {
-    // Reykjavik is not in midnight sun, but around 15 June the evening sunset slips past 00:00:
-    // the 14th sets at 23:59, the 16th shows 00:00 (the 15th's evening, local date the 16th), and
-    // the 15th itself has none on its own date. Amendment 35 of the per-day-weather spec.
-    const sweep = ['2026-06-14', '2026-06-15', '2026-06-16'].map(
-      (date) => sunTimes(64.1466, -21.9426, date, 'Atlantic/Reykjavik').sunset,
+describe('sunset attribution', () => {
+  it('pairs consecutive Reykjavik sunsets with the sunrise they follow', () => {
+    const sweep = ['2026-06-14', '2026-06-15', '2026-06-16'].map((date) =>
+      sunTimes(64.1466, -21.9426, date, 'Atlantic/Reykjavik'),
     )
 
-    expect(sweep).toEqual(['23:59', null, '00:00'])
+    expect(
+      sweep.map(({ sunset, sunsetNextDay }) => [sunset, sunsetNextDay]),
+    ).toEqual([
+      ['23:59', false],
+      ['00:00', true],
+      ['00:01', true],
+    ])
   })
 
-  it('keeps a sunset that falls on the local date when the neighbouring anchor day has none', () => {
-    // Longyearbyen on 2026-04-18: the sun does not set on the 18th (UTC), but it set at 22:11Z on
-    // the 17th at about 22:12Z, which is 00:12 local on the 18th.
-    expect(sunTimes(78.22, 15.65, '2026-04-18', 'Europe/Oslo')).toEqual({
-      sunrise: '01:39',
+  it('keeps a sunset rounded across midnight on its actual date', () => {
+    expect(
+      sunTimes(64.1466, -21.84, '2026-06-15', 'Atlantic/Reykjavik'),
+    ).toMatchObject({
+      sunset: '23:59',
+      sunsetNextDay: false,
+    })
+    expect(
+      sunTimes(64.1466, -21.9426, '2026-06-15', 'Atlantic/Reykjavik'),
+    ).toMatchObject({
+      sunset: '00:00',
+      sunsetNextDay: true,
+    })
+  })
+
+  it('does not reuse a sunset on a sunrise-less date when the preceding day owns it', () => {
+    const times = (date: string) => sunTimes(75.4, 15.65, date, 'Etc/GMT+2')
+
+    expect(times('2026-04-25')).toEqual({
+      sunrise: '21:44',
+      sunset: '20:43',
+      sunsetNextDay: true,
+    })
+    expect(times('2026-04-26')).toEqual({
+      sunrise: null,
+      sunset: null,
+      sunsetNextDay: false,
+    })
+  })
+
+  it('keeps the evening sunset during a Fairbanks sweep around the solstice', () => {
+    const sweep = Array.from({ length: 61 }, (_, index) => {
+      const date = new Date(Date.UTC(2026, 4, 20 + index))
+        .toISOString()
+        .slice(0, 10)
+      return sunTimes(64.8378, -147.7164, date, 'America/Anchorage')
+    })
+
+    expect(
+      sweep.every(({ sunrise, sunset }) => sunrise !== null && sunset !== null),
+    ).toBe(true)
+    expect(sweep.some(({ sunsetNextDay }) => sunsetNextDay)).toBe(true)
+  })
+
+  it('assigns the last sunset before midnight sun once and does not borrow across the polar period', () => {
+    const times = (date: string) => sunTimes(78.22, 15.65, date, 'Europe/Oslo')
+
+    expect(times('2026-04-17')).toMatchObject({
       sunset: '00:12',
+      sunsetNextDay: true,
+    })
+    expect(times('2026-04-18')).toMatchObject({
+      sunrise: '01:39',
+      sunset: null,
+      sunsetNextDay: false,
+    })
+  })
+
+  it('keeps a local sunset without sunrise as midnight sun ends', () => {
+    const times = (date: string) => sunTimes(80.45, 15.65, date, 'Europe/Oslo')
+
+    expect(times('2026-08-30')).toEqual({
+      sunrise: null,
+      sunset: null,
+      sunsetNextDay: false,
+    })
+    expect(times('2026-08-31')).toEqual({
+      sunrise: null,
+      sunset: '23:55',
+      sunsetNextDay: false,
     })
   })
 })

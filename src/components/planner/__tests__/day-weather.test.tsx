@@ -804,13 +804,23 @@ describe('DayWeatherPanel', () => {
 describe('sunrise and sunset in the fuller forecast', () => {
   const openWith = async (sun: SunTimes) => {
     const user = userEvent.setup()
-    badge({ dayId: 'd1', status: 'ok', reading: READING, sun })
+    badge({
+      dayId: 'd1',
+      status: 'ok',
+      reading: READING,
+      sun: { sunrise: '02:57', sunset: null },
+      solarSun: sun,
+    })
     await user.click(screen.getByRole('button', { name: /^Forecast/ }))
     return within(await screen.findByRole('dialog'))
   }
 
   it('shows both as clock times in the trip’s zone', async () => {
-    const panel = await openWith({ sunrise: '06:12', sunset: '17:36' })
+    const panel = await openWith({
+      sunrise: '06:12',
+      sunset: '17:36',
+      sunsetNextDay: false,
+    })
 
     expect(panel.getByText('Sunrise')).toBeDefined()
     expect(panel.getByText('06:12')).toBeDefined()
@@ -818,8 +828,44 @@ describe('sunrise and sunset in the fuller forecast', () => {
     expect(panel.getByText('17:36')).toBeDefined()
   })
 
+  it.each(['00:00', '00:01'])(
+    'reads the Reykjavik sunset at %s as next day',
+    async (sunset) => {
+      const reading = { sunrise: '02:57', sunset, sunsetNextDay: true }
+      const panel = await openWith(reading)
+
+      expect(panel.getByText(sunset).closest('dd')?.textContent).toBe(
+        `${sunset} (next day)`,
+      )
+      expect(panel.queryByRole('img', { name: 'No sunset' })).toBeNull()
+    },
+  )
+
+  it('isolates the clock and the localized next-day qualifier in Arabic', async () => {
+    const arabic = await loadCatalogue('ar')
+    mount(
+      <I18nProvider locale="ar" messages={arabic}>
+        <DayWeatherPanel
+          reading={READING}
+          sun={{ sunrise: '02:57', sunset: '00:00', sunsetNextDay: true }}
+          unit="metric"
+        />
+      </I18nProvider>,
+    )
+
+    const clock = screen.getByText('00:00')
+    const qualifier = screen.getByText('(اليوم التالي)')
+    expect(clock.matches('bdi[dir="ltr"]')).toBe(true)
+    expect(qualifier.matches('bdi')).toBe(true)
+    expect(clock.closest('dd')).toBe(qualifier.closest('dd'))
+  })
+
   it('shows a dash named for each side in polar night, never a time', async () => {
-    const panel = await openWith({ sunrise: null, sunset: null })
+    const panel = await openWith({
+      sunrise: null,
+      sunset: null,
+      sunsetNextDay: false,
+    })
 
     expect(panel.getByRole('img', { name: 'No sunrise' }).textContent).toBe('—')
     expect(panel.getByRole('img', { name: 'No sunset' }).textContent).toBe('—')
@@ -830,7 +876,7 @@ describe('sunrise and sunset in the fuller forecast', () => {
     render(
       <DayWeatherPanel
         reading={READING}
-        sun={{ sunrise: '03:54', sunset: null }}
+        sun={{ sunrise: '03:54', sunset: null, sunsetNextDay: false }}
         unit="metric"
       />,
     )

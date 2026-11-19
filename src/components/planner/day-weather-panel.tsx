@@ -100,6 +100,11 @@ export function DayWeatherPanel({
               label={t('trips.plan.weather.panel.sunset')}
               missing={t('trips.plan.weather.panel.noSunset')}
               time={sun.sunset}
+              qualifier={
+                sun.sunsetNextDay
+                  ? t('trips.plan.weather.panel.sunsetNextDay')
+                  : undefined
+              }
             />
           </>
         )}
@@ -227,35 +232,45 @@ function temperatureText(
 function Row({
   label,
   children,
+  qualifier,
 }: {
   readonly label: string
   readonly children: ReactNode
+  readonly qualifier?: string
 }) {
   return (
     <>
       <dt className="text-ink-3">{label}</dt>
       <dd className="m-0 text-end font-semibold tabular-nums text-ink-2">
         <bdi dir="ltr">{children}</bdi>
+        {qualifier === undefined ? null : (
+          <>
+            {' '}
+            <bdi>{qualifier}</bdi>
+          </>
+        )}
       </dd>
     </>
   )
 }
 
 /**
- * Sunrise or sunset as the clock time in the trip's zone. A side the day does not have - polar
- * night, midnight sun - is a dash that names what is missing, never a blank and never `00:00`.
+ * Sunrise or sunset as the clock time in the trip's zone, with a qualifier for next-day sunsets.
+ * A missing side is a dash with an accessible name.
  */
 function SunRow({
   label,
   missing,
   time,
+  qualifier,
 }: {
   readonly label: string
   readonly missing: string
   readonly time: string | null
+  readonly qualifier?: string
 }) {
   return (
-    <Row label={label}>
+    <Row label={label} qualifier={time === null ? undefined : qualifier}>
       {time === null ? (
         <span role="img" aria-label={missing} className="text-ink-4">
           —
