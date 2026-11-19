@@ -483,6 +483,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Zonsondergang',
   'plan.weather.panel.noSunrise': 'Geen zonsopkomst',
   'plan.weather.panel.noSunset': 'Geen zonsondergang',
+  'plan.weather.panel.sunsetNextDay': '(de volgende dag)',
   'plan.weather.panel.slots': 'Gedurende de dag',
   'plan.weather.panel.slot.night': 'Nacht',
   'plan.weather.panel.slot.morning': 'Ochtend',

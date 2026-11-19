@@ -308,7 +308,11 @@ describe('loadTripWeather', () => {
       throw new Error('The last day has a stay and is inside the window.')
     }
     // Oslo on 10 October at UTC+2, as the NOAA Solar Calculator's own code works it out.
-    expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    expect(last.sun).toEqual({
+      sunrise: '07:44',
+      sunset: '18:23',
+      sunsetNextDay: false,
+    })
     expect(port.requested).toHaveLength(1)
   })
 
@@ -462,7 +466,11 @@ describe('loadTripWeather', () => {
       expect(await read(derived)).toEqual(await read(stored))
       const last = (await read(derived))[2]
       if (last.status !== 'ok') throw new Error('The last day has a stay.')
-      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+      expect(last.sun).toEqual({
+        sunrise: '07:44',
+        sunset: '18:23',
+        sunsetNextDay: false,
+      })
     })
 
     it('writes nothing: the trip still has no zone afterwards', async () => {
@@ -480,7 +488,11 @@ describe('loadTripWeather', () => {
 
       const last = (await read(id))[2]
       if (last.status !== 'ok') throw new Error('The last day has a stay.')
-      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+      expect(last.sun).toEqual({
+        sunrise: '07:44',
+        sunset: '18:23',
+        sunsetNextDay: false,
+      })
     })
 
     it.each([

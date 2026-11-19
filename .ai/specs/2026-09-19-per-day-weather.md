@@ -70,7 +70,8 @@ past, and that is a fourth KV shape and a change to this Data Model, not an impl
 
 Sunrise and sunset are **computed, not fetched**. `src/lib/sun.ts` (new, pure) runs the standard NOAA
 solar-position algorithm for a latitude, a longitude, a date and a time zone. That costs no request
-and works for every kind.
+and works for every kind. Sunrise stays on its local date. Sunset follows the sunrise of its
+daylight period and carries a next-day qualifier if its local date differs (amendment 35).
 
 The forecast window is not a constant. **Today is always a forecast day**, read from the hours still
 ahead; the timeseries starts at the current hour. The window ends on the last local date for which
@@ -318,8 +319,9 @@ interface DayReading {
 }
 
 interface SunTimes {
-  sunrise: string | null // 'HH:mm' in the trip's zone (see the multi-zone limitation); null for a side the sun does not cross the horizon for (amendment 30)
-  sunset: string | null
+  sunrise: string | null // 'HH:mm' on the day's local date in the trip's zone
+  sunset: string | null // 'HH:mm' in the trip's zone, attributed by amendment 35
+  sunsetNextDay: boolean // true only when sunset falls on the next local date
 }
 
 export const loadTripWeather: ServerFn<
@@ -497,6 +499,7 @@ locales in the same change (`i18n-messages` skill).
 | `plan.weather.condition.thunder`        | `Thunder`                                                  |
 | `plan.weather.panel.noSunrise`          | `No sunrise`                                               |
 | `plan.weather.panel.noSunset`           | `No sunset`                                                |
+| `plan.weather.panel.sunsetNextDay`      | `(next day)`                                               |
 
 The popover's temperature row takes `plan.weather.panel.temperature` for a `forecast` and a
 `recorded` day and `plan.weather.panel.temperatureTypical` for an `estimate`: the estimate is a
@@ -532,7 +535,7 @@ user reports a blank badge.
 | KV read or write fails                                             | Treated as a miss, with a logged event. The reading is still served from the provider.                                                                                                                                                                         |
 | Trip time zone missing or invalid                                  | A missing zone is derived at read time from the nearest airport when that can be said safely (amendment 33); with none derivable, `resolveTimeZone` falls back to UTC, which is the existing behaviour, and the trip shows no sun rows.                        |
 | Trip spanning two time zones                                       | Days are bucketed and sun times computed in the trip's single zone. Wrong by the offset for the far leg - the limitation recorded in the Data Model, not a defect to file.                                                                                     |
-| Polar day or polar night                                           | `sun.ts` returns `null` for rise/set. The popover says "No sunrise" or "No sunset", shown as a dash with that accessible name.                                                                                                                                 |
+| Full polar night, midnight sun or a polar transition               | A full polar period has neither crossing, while a transition can have one side. The popover shows each missing side as a dash named “No sunrise” or “No sunset”.                                                                                               |
 | Trip in the far future (for example next year)                     | Every day is an estimate with its marker.                                                                                                                                                                                                                      |
 | A recorded or estimated day                                        | No hourly strip at all. `slots` is `null` and the popover omits the region entirely - never empty columns, and never a value interpolated from the daily min/max.                                                                                              |
 | Two days at the same place                                         | One call; both days are served from the same entry.                                                                                                                                                                                                            |
@@ -647,7 +650,7 @@ Each phase is one pull request and leaves `develop` green.
 
 ### Phase 2 — server
 
-3. Write `src/lib/sun.ts` (`sunTimes(lat, lng, dateKey, timeZone): SunTimes | null` for each side).
+3. Write `src/lib/sun.ts` (`sunTimes(lat, lng, dateKey, timeZone): SunTimes`, with nullable sides).
    Tests against the NOAA Solar Calculator's (gml.noaa.gov/grad/solcalc) values, captured once into
    `src/lib/__tests__/sun.fixtures.ts` with date, coordinate, zone and expected `HH:mm`. Cases: Oslo on
    21 June and 21 December, Quito on the equinox, Tromsø on 21 December (no sunrise) and 21 June (no
@@ -814,12 +817,12 @@ What ships with the recorded kind (#823) differs from the design above in these 
 
 What ships with the sun times (#824, #1197) differs from the design above in these places.
 
-30. **`sunTimes` returns a `SunTimes`, not `SunTimes | null`, and a side is `null` when the sun does not cross the horizon for it on that local date.** On a full polar day that is both sides; on the first or last day of a polar period it can be one side alone, because each side is resolved on its own. A bad date or coordinate gives `{ sunrise: null, sunset: null }`; an unknown zone is read as UTC, as `resolveTimeZone` does everywhere else.
+30. **`sunTimes` always returns a `SunTimes`.** A missing side is `null`, and a missing sunset has `sunsetNextDay: false`. Full polar days have neither side, while polar transitions use the rule in amendment 35. A bad date or coordinate gives two missing sides. An unknown zone is read as UTC.
 31. **`sun` is optional on the wire type** (`sun?: SunTimes` on `DayWeather`'s `ok` member) and required on the server's `WeatherOutcome`, so an answer cached or served by a worker that predates it leaves the two rows out instead of breaking the panel.
 32. **The fixtures sit inside `src/lib/__tests__/sun.test.ts`**, not in a `sun.fixtures.ts`, and number seven for the within-two-minutes check (Oslo twice, Quito, Sydney, and Tokyo, Los Angeles and Apia, whose zones put the crossing on a neighbouring UTC day); Tromsø is asserted separately as `null`. The values are the output of NOAA's published `main.js`, run under node, rounded to the minute.
 33. **A trip with no effective time zone shows no sun times, and a trip with no stored zone is given one at read time (#1198).** `trips.timezone` is written by the seeds only, so a trip created through the UI has none. Without a zone the weather read falls back to UTC for day bucketing, and sunrise and sunset would be UTC clock times of a place elsewhere, up to hours off and sometimes a sunset before a sunrise, so the route leaves `sun` off those days and the panel draws neither row; the Data Model's `sun` is optional for the same reason. Since #1198 `loadTripWeather` resolves one **effective zone** per trip: the stored `trips.timezone` when there is one, else the zone `deriveTripZone` (`src/server/weather/trip-zone.ts`) derives, else none. The one effective zone feeds the day bucketing, `today` and the sun times, and the sun gate keys on "an effective zone exists", not on `trips.timezone` being set. **Nothing is stored**: no schema, `drizzle/`, write path or backfill, and `trips.timezone` stays null, so this is a weather-only fallback - the PDF export, booking import, collab and export-document readers still use the stored zone or UTC. The derived zone is that of the airport nearest to the coordinate of the trip's **first located day** (of the whole trip, not of the forecast window, so it does not drift as the dates pass), through `findNearestAirport` in `src/server/catalog/airports.ts`, and only when all of these hold: an airport lies within 100 km (great-circle, inclusive; ties by IATA code); the nearest airport **of any kind** has a zone - the catalogue zones an airport only when its country has exactly one zone, so taking the nearest zoned airport instead would let a place near a border take the neighbouring country's clock; the place's country code, when it has one, is the airport's (`DayLocation` carries an additive `countryCode`, from the place the day's location came from); and `Intl` accepts the zone name. A trip in a country with several zones (the US, Canada, Australia, Brazil, China, Russia, Indonesia, Mexico, Argentina, Germany and others) therefore still shows no sun rows; that is #1498. The nearest-airport read is a bounding window in SQL (the latitude margin from the radius, the longitude margin widened by 1/cos(latitude), the antimeridian as two ranges) and the exact distance in code, over the degrees the `lat`/`lng` columns hold; `airports` has no coordinate index and none was added, so each weather read of a trip with no stored zone costs one bounded scan of the table (about 9,000 rows) before the provider calls; a plan with no dated located day reads nothing. Two limits are accepted and tracked in #1498: the zone is the first located day's for every day, so on a trip that crosses zones the far leg's sun times are out by the offset (the Known limitation, now for derived zones too); and a place made in the planner records no country code, so the border guard is the nearest-of-any-kind rule alone and a place within 100 km of a neighbour's airport can take its clock. An index on `lat`/`lng` or a per-isolate memo of the answer is the follow-up if usage shows it matters.
 34. **A recorded day carries `sun` too.** `sun` rides on every `ok` outcome, so the `recorded` kind (#823), which has a popover of its own, gets the two rows as a forecast does; the sun is computed from the place and the date and needs nothing from NASA POWER. The badge model's `recorded` member carries `sun` beside `reading`, as the `forecast` one does.
-35. **A side belongs to the local calendar date its instant falls on, which leaves a gap where a sunset first passes midnight.** Where the evening sunset drifts past 00:00 (Reykjavik around 15 June, Fairbanks in late May, the days before a polar day in northern Norway) the one date whose sunset lands after midnight has `sunset: null`, and the next date shows `00:00`-ish, the evening before's sunset, ahead of its own sunrise. The panel names the missing side ("No sunset"), which is true of that calendar date and reads oddly in a city that has no polar day. Resolving a side against the solar day instead (a sunset after midnight shown for the day it follows, with a "+1" or the date) needs a display decision and is #1201; `sun.test.ts` pins the Reykjavik dates so a change of rule is deliberate.
+35. **Sunset belongs to the daylight period it ends (#1201).** Sunrise belongs to its local calendar date. A date with sunrise gets the first sunset after its sunrise and before the next sunrise, provided the sunset falls on the same or immediately following local date. A date without sunrise can show a sunset on that date only if the preceding date did not claim it. This preserves single crossings at polar transitions without duplicates or borrowing across a polar period. For a following-date sunset, the panel reads the local clock and a localized next-day qualifier together (for example, “00:00 (next day)” for Reykjavik on 15 June 2026).
 
 What ships with the estimate kind (#825) differs from the design above in these places.
 

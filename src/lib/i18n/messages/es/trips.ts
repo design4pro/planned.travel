@@ -496,6 +496,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Puesta del sol',
   'plan.weather.panel.noSunrise': 'Sin salida del sol',
   'plan.weather.panel.noSunset': 'Sin puesta del sol',
+  'plan.weather.panel.sunsetNextDay': '(al día siguiente)',
   'plan.weather.panel.slots': 'A lo largo del día',
   'plan.weather.panel.slot.night': 'Madrugada',
   'plan.weather.panel.slot.morning': 'Mañana',

@@ -437,6 +437,7 @@ const messages = {
   'plan.weather.panel.sunset': '日落',
   'plan.weather.panel.noSunrise': '无日出',
   'plan.weather.panel.noSunset': '无日落',
+  'plan.weather.panel.sunsetNextDay': '（次日）',
   'plan.weather.panel.slots': '全天概览',
   'plan.weather.panel.slot.night': '夜间',
   'plan.weather.panel.slot.morning': '上午',
