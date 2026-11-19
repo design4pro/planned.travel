@@ -504,6 +504,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Закат',
   'plan.weather.panel.noSunrise': 'Нет восхода',
   'plan.weather.panel.noSunset': 'Нет заката',
+  'plan.weather.panel.sunsetNextDay': '(на следующий день)',
   'plan.weather.panel.slots': 'В течение дня',
   'plan.weather.panel.slot.night': 'Ночь',
   'plan.weather.panel.slot.morning': 'Утро',

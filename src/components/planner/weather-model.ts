@@ -224,6 +224,10 @@ export function badgeModel(
       return { kind: 'notYetRecorded' }
     case 'ok': {
       const { reading } = weather
+      const sun =
+        weather.solarSun ??
+        (weather.sun && { ...weather.sun, sunsetNextDay: false }) ??
+        null
       if (reading.kind === 'recorded' || reading.kind === 'estimate') {
         return {
           kind: reading.kind,
@@ -231,7 +235,7 @@ export function badgeModel(
           min: optionalTemperatureIn(reading.tempMinC, unit),
           unit: unitSymbol(unit),
           reading,
-          sun: weather.sun ?? null,
+          sun,
         }
       }
       return {
@@ -241,7 +245,7 @@ export function badgeModel(
         min: temperatureIn(reading.tempMinC, unit),
         unit: unitSymbol(unit),
         reading,
-        sun: weather.sun ?? null,
+        sun,
       }
     }
   }

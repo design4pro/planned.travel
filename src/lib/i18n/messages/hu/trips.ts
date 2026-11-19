@@ -483,6 +483,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Napnyugta',
   'plan.weather.panel.noSunrise': 'Nincs napkelte',
   'plan.weather.panel.noSunset': 'Nincs napnyugta',
+  'plan.weather.panel.sunsetNextDay': '(másnap)',
   'plan.weather.panel.slots': 'A nap folyamán',
   'plan.weather.panel.slot.night': 'Éjszaka',
   'plan.weather.panel.slot.morning': 'Délelőtt',

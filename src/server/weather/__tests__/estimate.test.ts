@@ -289,7 +289,7 @@ describe('a trip that straddles all three kinds', () => {
         precipitationMm: 3.35,
         windMs: null,
       },
-      sun: { sunrise: '08:08', sunset: '17:54' },
+      sun: { sunrise: '08:08', sunset: '17:54', sunsetNextDay: false },
     })
   })
 

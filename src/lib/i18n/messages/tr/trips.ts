@@ -475,6 +475,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Gün batımı',
   'plan.weather.panel.noSunrise': 'Gün doğumu yok',
   'plan.weather.panel.noSunset': 'Gün batımı yok',
+  'plan.weather.panel.sunsetNextDay': '(ertesi gün)',
   'plan.weather.panel.slots': 'Gün boyunca',
   'plan.weather.panel.slot.night': 'Gece',
   'plan.weather.panel.slot.morning': 'Sabah',

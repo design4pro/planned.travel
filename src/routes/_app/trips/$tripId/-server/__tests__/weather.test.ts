@@ -30,6 +30,8 @@ import { OSLO_DAILY } from '#/server/weather/__tests__/nasa-power.fixture'
 import { OSLO_FORECAST_DETAIL } from '#/server/weather/__tests__/locationforecast-detail.fixture'
 import { OSLO_FORECAST } from '#/server/weather/__tests__/locationforecast.fixture'
 
+import { recordedCacheKey } from '#/server/weather/weather'
+
 import type { NewAirport } from '#/server/db/types'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { SeededTenant } from '#/server/repos/__tests__/harness'
@@ -84,11 +86,12 @@ function ports(
     readonly failing?: boolean
     readonly recording?: unknown
     readonly now?: Date
+    readonly cached?: ReadonlyArray<readonly [string, string]>
   } = {},
 ): Ports {
   const at = options.now ?? NOW
   const requested: Array<string> = []
-  const entries = new Map<string, string>()
+  const entries = new Map(options.cached)
   const store = {
     get: (key: string) => Promise.resolve(entries.get(key) ?? null),
     put: (key: string, value: string) => {
@@ -308,8 +311,69 @@ describe('loadTripWeather', () => {
       throw new Error('The last day has a stay and is inside the window.')
     }
     // Oslo on 10 October at UTC+2, as the NOAA Solar Calculator's own code works it out.
-    expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+    expect(last.solarSun).toEqual({
+      sunrise: '07:44',
+      sunset: '18:23',
+      sunsetNextDay: false,
+    })
     expect(port.requested).toHaveLength(1)
+  })
+
+  it('serves legacy calendar sunsets alongside solar-day sunsets during rollout', async () => {
+    const trip = await createTrip(owner, {
+      title: 'Reykjavik in June',
+      startDate: '2026-06-15',
+      endDate: '2026-06-16',
+      currency: 'ISK',
+      timezone: 'Atlantic/Reykjavik',
+    })
+    const days = await listTripDays(owner, trip.id)
+    const hotel = await createPlace(owner, {
+      tripId: trip.id,
+      name: 'Hotel',
+      lat: 64.1466,
+      lng: -21.9426,
+    })
+    await createAccommodation(owner, {
+      tripId: trip.id,
+      startDayId: days[0].id,
+      endDayId: days[1].id,
+      placeId: hotel.id,
+      name: 'Hotel',
+    })
+    const now = new Date('2026-06-23T12:00:00Z')
+    const cached = ['2026-06-15', '2026-06-16'].map(
+      (date) =>
+        [
+          recordedCacheKey(64.1466, -21.9426, date),
+          JSON.stringify({
+            v: 2,
+            fetchedAt: now.toISOString(),
+            day: { tempMinC: 9, tempMaxC: 14, windMs: 3, precipitationMm: 0 },
+          }),
+        ] as const,
+    )
+    const port = ports({ now, cached })
+
+    const result = await loadTripWeather(
+      owner,
+      { tripId: trip.id, recorded: true },
+      port,
+    )
+
+    expect(result.days).toMatchObject([
+      {
+        status: 'ok',
+        sun: { sunrise: '02:57', sunset: null },
+        solarSun: { sunrise: '02:57', sunset: '00:00', sunsetNextDay: true },
+      },
+      {
+        status: 'ok',
+        sun: { sunrise: '02:57', sunset: '00:00' },
+        solarSun: { sunrise: '02:57', sunset: '00:01', sunsetNextDay: true },
+      },
+    ])
+    expect(port.requested).toHaveLength(0)
   })
 
   it('lets a viewer of the trip read it', async () => {
@@ -462,7 +526,11 @@ describe('loadTripWeather', () => {
       expect(await read(derived)).toEqual(await read(stored))
       const last = (await read(derived))[2]
       if (last.status !== 'ok') throw new Error('The last day has a stay.')
-      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+      expect(last.solarSun).toEqual({
+        sunrise: '07:44',
+        sunset: '18:23',
+        sunsetNextDay: false,
+      })
     })
 
     it('writes nothing: the trip still has no zone afterwards', async () => {
@@ -480,7 +548,11 @@ describe('loadTripWeather', () => {
 
       const last = (await read(id))[2]
       if (last.status !== 'ok') throw new Error('The last day has a stay.')
-      expect(last.sun).toEqual({ sunrise: '07:44', sunset: '18:23' })
+      expect(last.solarSun).toEqual({
+        sunrise: '07:44',
+        sunset: '18:23',
+        sunsetNextDay: false,
+      })
     })
 
     it.each([

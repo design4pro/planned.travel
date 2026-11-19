@@ -490,6 +490,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Δύση ηλίου',
   'plan.weather.panel.noSunrise': 'Χωρίς ανατολή ηλίου',
   'plan.weather.panel.noSunset': 'Χωρίς δύση ηλίου',
+  'plan.weather.panel.sunsetNextDay': '(την επόμενη μέρα)',
   'plan.weather.panel.slots': 'Μέσα στην ημέρα',
   'plan.weather.panel.slot.night': 'Νύχτα',
   'plan.weather.panel.slot.morning': 'Πρωί',

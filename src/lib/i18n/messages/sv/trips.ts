@@ -477,6 +477,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Solnedgång',
   'plan.weather.panel.noSunrise': 'Ingen soluppgång',
   'plan.weather.panel.noSunset': 'Ingen solnedgång',
+  'plan.weather.panel.sunsetNextDay': '(nästa dag)',
   'plan.weather.panel.slots': 'Under dagen',
   'plan.weather.panel.slot.night': 'Natt',
   'plan.weather.panel.slot.morning': 'Förmiddag',
