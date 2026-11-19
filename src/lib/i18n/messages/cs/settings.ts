@@ -651,11 +651,20 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Odebrat {name}',
   'passkeys.delete.title': 'Odebrat tento přístupový klíč?',
-  'passkeys.delete.body': 'Pomocí {name} se už nebudete moci přihlásit.',
+  'passkeys.delete.body': 'Pomocí {name} se už k tomuto účtu nepřihlásíte.',
   'passkeys.delete.password': 'Heslo',
   'passkeys.delete.passwordHint': 'Pro potvrzení zadejte své heslo.',
+  'passkeys.delete.unnamed': 'tohoto přístupového klíče bez názvu',
+  'passkeys.delete.savedEntry':
+    'Uložená položka může zůstat v zařízení nebo ve správci hesel.',
   'passkeys.delete.confirmOnly':
-    'Váš účet nemá heslo. Potvrďte, že chcete tento přístupový klíč odebrat.',
+    'Ostatní nastavené způsoby přihlášení můžete dál používat. Odebrání přístupového klíče vyžaduje nedávné přihlášení. Pokud je relace starší, budete se muset přihlásit znovu.',
+  'passkeys.delete.impersonated':
+    'Při vystupování za jiný účet nelze odebrat přístupový klíč.',
+  'passkeys.delete.refreshed':
+    'Přístupový klíč nebyl dostupný. Seznam se obnovil.',
+  'passkeys.delete.unknown':
+    'Odebrání se nepodařilo potvrdit. Seznam přístupových klíčů byl obnoven.',
   'passkeys.delete.confirm': 'Odebrat přístupový klíč',
   'passkeys.delete.cancel': 'Zrušit',
   'passkeys.delete.wrongPassword': 'Toto heslo není správné.',

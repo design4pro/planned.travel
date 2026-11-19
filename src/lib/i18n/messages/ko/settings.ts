@@ -578,11 +578,20 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} 삭제',
   'passkeys.delete.title': '이 패스키를 삭제할까요?',
-  'passkeys.delete.body': '이제 {name}(으)로는 로그인할 수 없어요.',
+  'passkeys.delete.body': '더 이상 {name}(으)로 이 계정에 로그인할 수 없어요.',
   'passkeys.delete.password': '비밀번호',
   'passkeys.delete.passwordHint': '확인을 위해 비밀번호를 입력해 주세요.',
+  'passkeys.delete.unnamed': '이 이름 없는 패스키',
+  'passkeys.delete.savedEntry':
+    '기기나 비밀번호 관리자에 저장된 항목은 남아 있을 수 있습니다.',
   'passkeys.delete.confirmOnly':
-    '이 계정에는 비밀번호가 없어요. 이 패스키를 삭제하는 것이 맞는지 확인해 주세요.',
+    '설정한 다른 로그인 방법은 계속 사용할 수 있습니다. 패스키를 삭제하려면 최근에 로그인한 세션이 필요합니다. 로그인한 지 오래되었다면 다시 로그인해야 합니다.',
+  'passkeys.delete.impersonated':
+    '다른 계정으로 대신 작업하는 동안에는 패스키를 삭제할 수 없습니다.',
+  'passkeys.delete.refreshed':
+    '이 패스키를 사용할 수 없었습니다. 목록을 새로고침했습니다.',
+  'passkeys.delete.unknown':
+    '삭제 여부를 확인할 수 없습니다. 패스키 목록을 새로 고쳤습니다.',
   'passkeys.delete.confirm': '패스키 삭제',
   'passkeys.delete.cancel': '취소',
   'passkeys.delete.wrongPassword': '비밀번호가 맞지 않아요.',

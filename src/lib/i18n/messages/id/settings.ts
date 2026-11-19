@@ -632,12 +632,22 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Hapus {name}',
   'passkeys.delete.title': 'Hapus kunci sandi ini?',
-  'passkeys.delete.body': 'Anda tidak akan bisa lagi masuk dengan {name}.',
+  'passkeys.delete.body':
+    'Anda tidak bisa lagi masuk ke akun ini dengan {name}.',
   'passkeys.delete.password': 'Kata sandi',
   'passkeys.delete.passwordHint':
     'Masukkan kata sandi Anda untuk mengonfirmasi.',
+  'passkeys.delete.unnamed': 'kunci sandi tanpa nama ini',
+  'passkeys.delete.savedEntry':
+    'Entri yang tersimpan mungkin masih ada di perangkat atau pengelola kata sandi Anda.',
   'passkeys.delete.confirmOnly':
-    'Akun Anda tidak memiliki kata sandi. Konfirmasi bahwa Anda ingin menghapus kunci sandi ini.',
+    'Anda tetap dapat menggunakan metode masuk lain yang sudah disiapkan. Menghapus kunci sandi mengharuskan Anda baru saja masuk. Jika sesi sudah lama, Anda perlu masuk lagi.',
+  'passkeys.delete.impersonated':
+    'Anda tidak dapat menghapus kunci sandi saat bertindak sebagai akun lain.',
+  'passkeys.delete.refreshed':
+    'Kunci sandi itu tidak tersedia. Daftar telah diperbarui.',
+  'passkeys.delete.unknown':
+    'Penghapusan tidak dapat dikonfirmasi. Daftar kunci sandi telah dimuat ulang.',
   'passkeys.delete.confirm': 'Hapus kunci sandi',
   'passkeys.delete.cancel': 'Batal',
   'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',

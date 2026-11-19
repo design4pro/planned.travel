@@ -57,13 +57,13 @@ interface RenameState {
 
 /**
  * The passkey whose removal dialog is, or was just, on screen. The dialog stays mounted while it
- * closes so its exit and its focus hand-over run; `serial` gives each opening fresh state, and
- * `removed` tells the hand-over whether the opener row still exists.
+ * closes so its exit and its focus hand-over run; `serial` gives each opening fresh state.
  */
 interface Removal {
   readonly passkey: PasskeySummary
   readonly open: boolean
-  readonly removed: boolean
+  readonly outcome: 'cancelled' | 'removed' | 'unavailable' | 'unknown'
+  readonly requiresPassword: boolean
   readonly serial: number
 }
 
@@ -89,6 +89,18 @@ const REMOVED: PasskeyNotice = {
   signInAgain: false,
 }
 
+const REFRESHED: PasskeyNotice = {
+  key: 'settings.passkeys.delete.refreshed',
+  tone: 'neutral',
+  signInAgain: false,
+}
+
+const REMOVAL_UNKNOWN: PasskeyNotice = {
+  key: 'settings.passkeys.delete.unknown',
+  tone: 'neutral',
+  signInAgain: false,
+}
+
 const SAVING: PasskeyNotice = {
   key: 'settings.passkeys.rename.saving',
   tone: 'neutral',
@@ -104,7 +116,7 @@ const HINT_ID = 'passkey-add-hint'
 const HEADING_ID = 'passkey-list-heading'
 const SKELETON_ROWS = 3
 
-async function fetchList(): Promise<ListState> {
+async function fetchList(): Promise<Exclude<ListState, { status: 'loading' }>> {
   const result = await listPasskeys()
   return result.ok
     ? {
@@ -171,6 +183,7 @@ function focusIsInRenameField(): boolean {
 function PasskeyRow({
   passkey,
   rename,
+  removeDisabled,
   registerRenameButton,
   registerRemoveButton,
   onStartRename,
@@ -183,6 +196,7 @@ function PasskeyRow({
   passkey: PasskeySummary
   /** Set only on the row that is in rename mode. */
   rename: RenameState | null
+  removeDisabled: boolean
   registerRenameButton: (element: HTMLButtonElement | null) => void
   registerRemoveButton: (element: HTMLButtonElement | null) => void
   onStartRename: () => void
@@ -261,7 +275,6 @@ function PasskeyRow({
       <IconButton
         ref={registerRenameButton}
         data-part="passkey-rename"
-        size="sm"
         icon={<Pencil />}
         label={t('settings.passkeys.rename.action', { name: displayName })}
         onClick={onStartRename}
@@ -269,8 +282,8 @@ function PasskeyRow({
       <IconButton
         ref={registerRemoveButton}
         data-part="passkey-delete"
-        size="sm"
         variant="danger"
+        aria-disabled={removeDisabled || undefined}
         icon={<Trash2 />}
         label={t('settings.passkeys.delete.action', { name: displayName })}
         onClick={onStartRemove}
@@ -307,6 +320,11 @@ export function PasskeyManager() {
   const removeButtons = useRef(new Map<string, HTMLButtonElement>())
   const [removal, setRemoval] = useState<Removal | null>(null)
   const removalSerial = useRef(0)
+  // A full list replacement retires saves started against its predecessor.
+  const listGeneration = useRef(0)
+  // A write can make a list read that has already started stale.
+  const listMutation = useRef(0)
+  const pendingRenames = useRef(new Map<string, symbol>())
   // Read by a save that finishes after another row took over rename mode.
   const renameRef = useRef<RenameState | null>(null)
   const addRef = useRef<HTMLButtonElement>(null)
@@ -381,10 +399,16 @@ export function PasskeyManager() {
 
   async function addPasskey(): Promise<void> {
     // Counted before the ceremony, to tell a row it wrote from one already there.
+    const generation = listGeneration.current
+    listMutation.current += 1
     const before = list.status === 'ready' ? list.passkeys.length : null
     setStatus(null)
     setEnrolling(true)
     const result = await registerPasskey()
+    if (listGeneration.current !== generation) {
+      setEnrolling(false)
+      return
+    }
     // No answer reached us (status 0), so the row may or may not be written: the Add button stays
     // busy until the list says which, and the status and focus are set once, after that.
     const lostReply =
@@ -407,6 +431,8 @@ export function PasskeyManager() {
       // A list that never loaded cannot show the new row: read it again.
       if (list.status === 'failed') {
         void fetchList().then((next) => {
+          if (listGeneration.current !== generation) return
+          listGeneration.current += 1
           setList(next)
           // No row to open: rename mode would wait for nothing, and focus has nowhere to go.
           if (next.status !== 'ready') {
@@ -424,9 +450,20 @@ export function PasskeyManager() {
     // Whatever the server said, the list on screen may no longer match it (a reply lost after the
     // row was written, a second tab): read it again, and keep it when the read fails.
     if (lostReply) {
-      const next = await fetchList()
-      if (next.status === 'ready') setList(next)
+      let mutation = listMutation.current
+      let next = await fetchList()
+      // Rename stays available during enrollment. If it commits during a read, read again so the
+      // replacement reflects both writes. Remove and another Add stay inert during this recovery.
+      while (
+        listGeneration.current === generation &&
+        listMutation.current !== mutation
+      ) {
+        mutation = listMutation.current
+        next = await fetchList()
+      }
       setEnrolling(false)
+      if (listGeneration.current !== generation) return
+      if (next.status === 'ready') replaceReadyList(next)
       // The row is there: the write succeeded, so the status must not tell the person to try again.
       if (
         next.status === 'ready' &&
@@ -434,12 +471,21 @@ export function PasskeyManager() {
         next.passkeys.length > before
       ) {
         setStatus(ADDED)
+        // The new editor owns focus even when the replacement retired the focused row.
+        setFocusTarget(null)
         startRename(next.passkeys[0].id)
         return
       }
     } else if (!result.aborted) {
+      const mutation = listMutation.current
       void fetchList().then((next) => {
-        if (next.status === 'ready') setList(next)
+        if (
+          listGeneration.current !== generation ||
+          listMutation.current !== mutation ||
+          next.status !== 'ready'
+        )
+          return
+        replaceReadyList(next)
       })
     }
 
@@ -452,6 +498,33 @@ export function PasskeyManager() {
     }
     setStatus(outcome.notice)
     setFocusTarget(outcome.notice.signInAgain ? 'signIn' : 'add')
+  }
+
+  function replaceReadyList(
+    next: Extract<ListState, { status: 'ready' }>,
+  ): void {
+    listGeneration.current += 1
+    pendingRenames.current.clear()
+    setStatus((previous) => (previous === SAVING ? null : previous))
+    const remaining = new Set(next.passkeys.map(({ id }) => id))
+    const activeRow = document.activeElement?.closest(
+      '[data-part="passkey-row"]',
+    )
+    if (activeRow) {
+      const focused = [...removeButtons.current].find(([, button]) =>
+        activeRow.contains(button),
+      )
+      if (focused && !remaining.has(focused[0])) setFocusTarget('heading')
+    }
+    const editor = renameRef.current
+    if (editor !== null) {
+      if (remaining.has(editor.id)) {
+        if (editor.saving) setRename({ ...editor, saving: false })
+      } else {
+        setRename(null)
+      }
+    }
+    setList(next)
   }
 
   function startRename(id: string): void {
@@ -487,11 +560,18 @@ export function PasskeyManager() {
         : previous,
     )
     setStatus(SAVING)
+    const generation = listGeneration.current
+    const request = Symbol()
+    pendingRenames.current.set(id, request)
     const result = await renamePasskey(id, value)
+    if (pendingRenames.current.get(id) !== request) return
+    pendingRenames.current.delete(id)
+    if (listGeneration.current !== generation) return
     // Focus follows the person: a key started this save, but they may have clicked elsewhere since.
     const returnFocus = viaKey && focusIsInRenameField()
 
     if (result.ok) {
+      listMutation.current += 1
       setList((previous) =>
         previous.status === 'ready'
           ? {
@@ -534,11 +614,13 @@ export function PasskeyManager() {
   }
 
   function startRemove(passkey: PasskeySummary): void {
+    if (list.status !== 'ready' || enrolling) return
     removalSerial.current += 1
     setRemoval({
       passkey,
       open: true,
-      removed: false,
+      outcome: 'cancelled',
+      requiresPassword: list.requiresPassword,
       serial: removalSerial.current,
     })
   }
@@ -550,6 +632,8 @@ export function PasskeyManager() {
   }
 
   function passkeyRemoved(id: string): void {
+    listMutation.current += 1
+    pendingRenames.current.delete(id)
     setList((previous) =>
       previous.status === 'ready'
         ? {
@@ -565,26 +649,59 @@ export function PasskeyManager() {
     setRemoval((previous) =>
       previous === null
         ? previous
-        : { ...previous, open: false, removed: true },
+        : { ...previous, open: false, outcome: 'removed' },
     )
   }
 
-  // The dialog closes either by Cancel or Escape, which return to the row's Remove control, or by a
-  // removal, after which the row is gone: focus goes to the header Add button, or to the list
-  // heading when that is disabled, so it never falls to <body>.
+  function reconcileRemoval(outcome: 'unavailable' | 'unknown'): void {
+    listGeneration.current += 1
+    pendingRenames.current.clear()
+    setRename(null)
+    setRenameFocusId(null)
+    setStatus(null)
+    setLimitHit(false)
+    setList(LOADING)
+    setRemoval((previous) =>
+      previous === null ? previous : { ...previous, open: false, outcome },
+    )
+  }
+
+  async function refreshAfterRemoval(
+    outcome: 'unavailable' | 'unknown',
+  ): Promise<void> {
+    const generation = listGeneration.current
+    const next = await fetchList()
+    if (listGeneration.current !== generation) return
+    setList(next)
+    if (next.status === 'ready') {
+      setStatus(outcome === 'unknown' ? REMOVAL_UNKNOWN : REFRESHED)
+      setStatusTick((tick) => tick + 1)
+    } else if (
+      next.notice.signInAgain &&
+      document.activeElement === headingRef.current
+    ) {
+      setFocusTarget('signIn')
+    }
+  }
+
+  // Publish the outcome after the dialog releases focus and the page is accessible again.
   function returnFocusAfterRemove(event: Event): void {
     event.preventDefault()
     let target: HTMLElement | null = headingRef.current
-    if (removal?.removed === true) {
+    if (removal?.outcome === 'removed') {
       if (!addDisabled) target = addRef.current ?? target
-      // Said now, not when the row left: until the dialog is gone the page behind it is hidden
-      // from assistive technology, and a change inside a hidden region is not announced.
       setStatus(REMOVED)
       setStatusTick((tick) => tick + 1)
+    } else if (
+      removal?.outcome === 'unavailable' ||
+      removal?.outcome === 'unknown'
+    ) {
+      void refreshAfterRemoval(removal.outcome)
     } else {
       target = removeButtons.current.get(removal?.passkey.id ?? '') ?? target
     }
     target?.focus()
+    setRemoval(null)
   }
 
   function signOutFailed(): void {
@@ -594,6 +711,7 @@ export function PasskeyManager() {
   }
 
   function retry(): void {
+    listGeneration.current += 1
     setList(LOADING)
     void fetchList().then(setList)
     setFocusTarget('heading')
@@ -686,6 +804,7 @@ export function PasskeyManager() {
                   variant="secondary"
                   size="sm"
                   shape="pill"
+                  disabled={enrolling}
                   onClick={retry}
                 >
                   {t('settings.passkeys.error.retry')}
@@ -721,6 +840,7 @@ export function PasskeyManager() {
                 key={passkey.id}
                 passkey={passkey}
                 rename={rename?.id === passkey.id ? rename : null}
+                removeDisabled={enrolling}
                 registerRenameButton={(element) => {
                   if (element === null) renameButtons.current.delete(passkey.id)
                   else renameButtons.current.set(passkey.id, element)
@@ -762,19 +882,22 @@ export function PasskeyManager() {
         ) : null}
       </section>
 
-      {removal === null || list.status !== 'ready' ? null : (
+      {removal === null ? null : (
         <PasskeyDeleteDialog
           key={removal.serial}
           passkey={removal.passkey}
-          displayName={displayNameOf(removal.passkey, i18n)}
+          displayName={
+            removal.passkey.name ?? t('settings.passkeys.delete.unnamed')
+          }
           open={removal.open}
-          requiresPassword={list.requiresPassword}
+          requiresPassword={removal.requiresPassword}
           onOpenChange={(open) => {
             if (!open) cancelRemove()
           }}
           onRemoved={() => {
             passkeyRemoved(removal.passkey.id)
           }}
+          onReconcile={reconcileRemoval}
           onCloseAutoFocus={returnFocusAfterRemove}
         />
       )}

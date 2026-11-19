@@ -17,8 +17,9 @@ const {
   passwordRequired: PASSWORD_REQUIRED,
   invalidPassword: INVALID_PASSWORD,
   notFound,
+  impersonated: IMPERSONATED,
 } = PASSKEY_ERROR_CODES
-/** The passkey is not on the account (anymore): the removal's goal already holds. */
+/** The passkey is unavailable in the account addressed by the request. */
 export const PASSKEY_NOT_FOUND = notFound
 
 /** A sentence for the status region, and whether it comes with the Sign in again action. */
@@ -83,14 +84,22 @@ export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
  * A refused removal, and where it is shown. A password refusal belongs to the password field, which
  * takes focus; every other refusal (session not fresh or ended, rate limit, an impersonated session,
  * a dropped connection) is the one alert inside the dialog. A passkey that is gone is not a refusal:
- * the dialog treats `PASSKEY_NOT_FOUND` as removed before it asks for one.
+ * the dialog delegates `PASSKEY_NOT_FOUND` to list recovery.
  */
 export interface DeleteFailure {
   readonly target: 'password' | 'alert'
+  readonly dismissOnly?: boolean
   readonly notice: PasskeyNotice
 }
 
 export function deleteFailure(failure: AuthFailure): DeleteFailure {
+  if (failure.code === IMPERSONATED) {
+    return {
+      target: 'alert',
+      notice: notice('settings.passkeys.delete.impersonated', 'danger'),
+      dismissOnly: true,
+    }
+  }
   if (failure.code === 'PASSWORD_ATTEMPTS_RESULT_UNKNOWN') {
     return {
       target: 'alert',

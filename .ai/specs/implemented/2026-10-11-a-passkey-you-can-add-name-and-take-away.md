@@ -304,19 +304,11 @@ put in the verify body or any request body, and replaced by an aaguid-derived na
 
 ### Removing (09-S1c)
 
-A **Remove {name}** `IconButton` per row opens a `Dialog` that names the passkey; the sentence that names it is the `DialogDescription`. When
-`requiresPassword` is true it carries a password `Field` (`autocomplete="current-password"`, `required`, with `passkeys.delete.passwordHint` as its
-hint; `Field` sets neither `required` nor `aria-required` on the control, so the `Input` itself carries the native `required` attribute) and the
-confirm button; when false it asks for a plain confirmation (`passkeys.delete.confirmOnly`). The confirm button is `loading` with a loading label
-("Removing the passkey") and Cancel is disabled while the request runs. Refusals are inline and mapped from the codes: `PASSKEY_PASSWORD_REQUIRED`
-(`passkeys.delete.passwordRequired`) and `PASSKEY_INVALID_PASSWORD` (`passkeys.delete.wrongPassword`) through the password `Field`'s `error`;
-**every other refusal** is one `Alert` inside the dialog (focusable with `tabIndex={-1}`), in both variants: `PASSKEY_SESSION_NOT_FRESH`
-(`passkeys.delete.stale`, with the same **Sign in again** action), a `401` (`passkeys.error.sessionEnded`, same action), a `429`
-(`passkeys.error.rateLimited`), and `PASSKEY_IMPERSONATED` or a network failure (`passkeys.delete.failed`); the dialog stays
-open (`PASSKEY_NOT_FOUND` is not a refusal: the passkey is already gone, see Amendment 19). After any refusal focus moves to the password field, or to that alert, so it never rests on `<body>` after the button's `loading`. `Escape` cancels and focus returns to the row's trigger. After a successful removal, focus moves
-to the header Add button (never the empty state's duplicate; the list heading when that button is disabled), implemented with `onCloseAutoFocus` and
-`preventDefault()` because the opener row is gone, and the status region announces "Passkey removed". If the last passkey of a person who also has no password is removed, nothing else
-changes: sign-in by social provider still works, and the stage does not invent a password for a passwordless account.
+A **Remove {name}** `IconButton` per row opens a `Dialog`. The description names the passkey in a `bdi`, explains that it can no longer sign in to this account, and notes that a saved entry may remain on the device or in a password manager. An unnamed passkey uses a short fallback in the sentence.
+
+When `requiresPassword` is true, the dialog uses `PasswordInput` with native required validation, current-password autocomplete, password reveal and a link to password recovery. Otherwise the plain confirmation explains that other configured sign-in methods remain available and that an older session requires signing in again. The server decides whether a password or a recent sign-in is required. The dialog blocks dismissal while the request runs and announces pending removal and each password refusal in a persistent live region. An inline error remains associated with the password field, which takes focus after a password refusal.
+
+Other refusals appear in a single alert. A stale session or 401 offers **Sign in again**. The impersonation refusal explains the restriction and offers **Close**. Escape and Cancel restore focus to the row's Remove control. After genuine success, focus moves to the header Add button or, if disabled, to the list heading. The status region announces “Passkey removed” after the dialog closes. For `PASSKEY_NOT_FOUND`, the dialog clears the password and closes, the stale list is hidden, and a fresh list and password requirement replace it. If that read fails, the list shows recovery, with **Sign in again** for 401. A lost removal reply also refreshes the list and explains that removal could not be confirmed. Neither refresh announces removal. Rename replies from a removed row or a replaced list generation cannot change the current rows, focus or feedback.
 
 ### Motion and tokens
 
@@ -379,10 +371,15 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.rename.failed`           | The name was not saved                                                                                     | b      |
 | `passkeys.delete.action`           | Remove {name}                                                                                              | c      |
 | `passkeys.delete.title`            | Remove this passkey?                                                                                       | c      |
-| `passkeys.delete.body`             | You will no longer be able to sign in with {name}.                                                         | c      |
+| `passkeys.delete.body`             | You will no longer be able to sign in to this account with {name}.                                                                                             | c      |
 | `passkeys.delete.password`         | Password                                                                                                   | c      |
 | `passkeys.delete.passwordHint`     | Enter your password to confirm.                                                                            | c      |
-| `passkeys.delete.confirmOnly`      | Your account has no password. Confirm that you want to remove this passkey.                                | c      |
+| `passkeys.delete.confirmOnly`      | You can still use your other configured sign-in methods. Removing a passkey requires a recent sign-in. If your session is older, you’ll need to sign in again. | c      |
+| `passkeys.delete.unnamed`          | this unnamed passkey                                                                                                                                           | c      |
+| `passkeys.delete.savedEntry`       | A saved entry may remain on your device or in your password manager.                                                                                           | c      |
+| `passkeys.delete.impersonated`     | You can’t remove a passkey while impersonating another account.                                                                                                | c      |
+| `passkeys.delete.refreshed`        | That passkey was unavailable. The list was refreshed.                                                                                                          | c      |
+| `passkeys.delete.unknown`          | Removal could not be confirmed. The passkey list was refreshed.                                                                                                | c      |
 | `passkeys.delete.confirm`          | Remove passkey                                                                                             | c      |
 | `passkeys.delete.cancel`           | Cancel                                                                                                     | c      |
 | `passkeys.delete.wrongPassword`    | That password is not right.                                                                                | c      |
@@ -422,7 +419,7 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 | Delete of another person's credential id                              | `NOT_FOUND` whatever else was sent; the other row is unchanged.                                                                                         |
 | Delete the passkey just used to sign in                               | Allowed; the session stays valid, the next sign-in uses another factor.                                                                                 |
 | Session expired while the page is open                                | The list or an action answers 401; the screen shows `passkeys.error.sessionEnded` and the Sign in again action (not the "for your safety" line).        |
-| Operator impersonating the member                                     | Registration, rename and delete answer `PASSKEY_IMPERSONATED`; the screen shows `add.failed`, `rename.failed` and `delete.failed` respectively.         |
+| Operator impersonating the member                                     | Registration, rename and delete answer `PASSKEY_IMPERSONATED`; the screen shows `add.failed`, `rename.failed` and `delete.impersonated` respectively.   |
 | Registration on a session older than `freshAge`                       | `PASSKEY_SESSION_NOT_FRESH`; the screen offers Sign in again (sign-out, then `/login?redirect=/passkeys`).                                              |
 | Removing a passkey that already opened sessions                       | Those sessions stay: a session does not record the credential that created it. A lost device's sessions are ended through session revocation, not here. |
 | 23 locales, Arabic                                                    | All keys exist in every locale; logical CSS properties; `data-mirror-rtl` on directional icons.                                                         |
@@ -657,4 +654,4 @@ Phase 3 (09-S1c, #1146) differs from the design in these places:
 16. **A missing hint asks for the password.** The client reads `requiresPassword !== false`, so a list reply without the field draws the password field; the server decides what it needs either way.
 17. **The delete dialog is its own module** (`passkey-delete-dialog.tsx`) and owns the request, the password and the refusals; the manager owns the list and where focus goes once it has closed. `SignInAgain` moved to `passkey-sign-in-again.tsx` so both read it. The passkey's name sits in a `bdi dir="auto"` inside the translated sentence (a sentinel character is split out of the message, because the catalogue has no markup). The copy gate walks both new files.
 18. **Removing lifts the ceiling line.** A removed passkey clears the standing "limit reached" line, so "Remove one to add another" holds without a reload.
-19. **Removal answers that are not refusals.** `PASSKEY_NOT_FOUND` on delete (another tab removed it, or a reply was lost and the retry reached the server) counts as removed: the row leaves, the dialog closes and "Passkey removed" is announced, because retrying could never succeed. A password refusal with no field drawn (the list's hint was stale) switches the dialog to password mode and draws the field. "Passkey removed" is written from `onCloseAutoFocus`, after the dialog has gone, because until then the page behind it is `aria-hidden` and the change would not be announced.
+19. **Removal outcomes.** `PASSKEY_NOT_FOUND` can indicate a missing row or a passkey outside the current account. The dialog dismisses and the list refreshes with neutral feedback or list recovery. A password refusal with no field drawn switches the dialog to password mode. Only a successful delete response announces “Passkey removed”, from `onCloseAutoFocus` after the page behind the dialog becomes accessible.

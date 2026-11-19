@@ -643,11 +643,21 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} eltávolítása',
   'passkeys.delete.title': 'Eltávolítja ezt a belépési kulcsot?',
-  'passkeys.delete.body': 'Ezzel többé nem tud bejelentkezni: {name}.',
+  'passkeys.delete.body':
+    'Ebbe a fiókba többé nem tudsz bejelentkezni ezzel: {name}.',
   'passkeys.delete.password': 'Jelszó',
   'passkeys.delete.passwordHint': 'A megerősítéshez adja meg a jelszavát.',
+  'passkeys.delete.unnamed': 'ez a névtelen hozzáférési kulcs',
+  'passkeys.delete.savedEntry':
+    'A mentett bejegyzés az eszközödön vagy a jelszókezelőben maradhat.',
   'passkeys.delete.confirmOnly':
-    'A fiókjának nincs jelszava. Erősítse meg, hogy el szeretné távolítani ezt a belépési kulcsot.',
+    'A többi beállított bejelentkezési módot továbbra is használhatod. Az eltávolításhoz friss bejelentkezés szükséges. Ha régebben jelentkeztél be, jelentkezz be újra.',
+  'passkeys.delete.impersonated':
+    'Másik fiók nevében nem távolíthatsz el hozzáférési kulcsot.',
+  'passkeys.delete.refreshed':
+    'Ez a hozzáférési kulcs nem volt elérhető. A lista frissült.',
+  'passkeys.delete.unknown':
+    'Az eltávolítást nem sikerült megerősíteni. A hozzáférési kulcsok listája frissült.',
   'passkeys.delete.confirm': 'Belépési kulcs eltávolítása',
   'passkeys.delete.cancel': 'Mégse',
   'passkeys.delete.wrongPassword': 'Ez a jelszó nem helyes.',

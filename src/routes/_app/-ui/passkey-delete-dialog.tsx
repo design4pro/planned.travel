@@ -11,10 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
   Field,
-  Input,
 } from '#/components/ui'
 import { deletePasskey } from '#/lib/auth/client'
 import { useI18n } from '#/lib/i18n'
+import { PasswordInput } from '../../(auth)/-ui/form'
 import {
   PASSKEY_NOT_FOUND,
   SIGN_OUT_FAILED,
@@ -55,6 +55,7 @@ function NamedSentence({ sentence, name }: { sentence: string; name: string }) {
 /** A refusal on screen, and which element takes focus because of it. */
 interface Refusal {
   readonly notice: PasskeyNotice
+  readonly dismissOnly?: boolean
   readonly focus: 'password' | 'alert' | 'signIn'
 }
 
@@ -74,6 +75,7 @@ export function PasskeyDeleteDialog({
   requiresPassword,
   onOpenChange,
   onRemoved,
+  onReconcile,
   onCloseAutoFocus,
 }: {
   passkey: PasskeySummary
@@ -83,12 +85,15 @@ export function PasskeyDeleteDialog({
   requiresPassword: boolean
   onOpenChange: (open: boolean) => void
   onRemoved: () => void
+  onReconcile: (outcome: 'unavailable' | 'unknown') => void
   onCloseAutoFocus: (event: Event) => void
 }) {
   const { t } = useI18n()
   const formId = useId()
   const [password, setPassword] = useState('')
   const [pending, setPending] = useState(false)
+  const requestInFlight = useRef(false)
+  const [announcement, setAnnouncement] = useState(0)
   const [refusal, setRefusal] = useState<Refusal | null>(null)
   // The list's hint can be stale (a password set in another tab): a password refusal draws the
   // field instead of leaving the person with a refusal and nowhere to answer it.
@@ -111,35 +116,54 @@ export function PasskeyDeleteDialog({
 
   async function submit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
-    if (pending) return
+    if (requestInFlight.current || refusal?.dismissOnly) return
+    requestInFlight.current = true
     setPending(true)
     setRefusal(null)
     const result = await deletePasskey(
       passkey.id,
       askPassword ? password : undefined,
     )
+    requestInFlight.current = false
     setPending(false)
-    // A passkey that is already gone (another tab, or a removal whose reply was lost) is what was
-    // asked for: the row leaves instead of a "not removed" that every retry would repeat.
-    if (result.ok || result.failure.code === PASSKEY_NOT_FOUND) {
+    if (result.ok) {
+      setPassword('')
       onRemoved()
       return
     }
+    if (
+      result.failure.status === 0 ||
+      result.failure.code === PASSKEY_NOT_FOUND
+    ) {
+      setPassword('')
+      onReconcile(result.failure.status === 0 ? 'unknown' : 'unavailable')
+      return
+    }
     const refused = deleteFailure(result.failure)
-    if (refused.target === 'password') setAskPassword(true)
-    setRefusal({ notice: refused.notice, focus: refused.target })
+    if (refused.target === 'password') {
+      setAskPassword(true)
+      setAnnouncement((current) => current + 1)
+    }
+    if (refused.dismissOnly) setPassword('')
+    setRefusal({
+      notice: refused.notice,
+      focus: refused.target,
+      dismissOnly: refused.dismissOnly,
+    })
   }
 
   const passwordRefusal = refusal?.focus === 'password' ? refusal : null
   const alertRefusal =
     refusal !== null && passwordRefusal === null ? refusal : null
+  const showPassword = !refusal?.dismissOnly && askPassword
+  const hasVisibleBody = showPassword || alertRefusal !== null
 
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         // A request in flight owns the dialog: dismissing it would hide the answer.
-        if (pending) return
+        if (requestInFlight.current) return
         onOpenChange(next)
       }}
     >
@@ -149,16 +173,26 @@ export function PasskeyDeleteDialog({
         data-part="passkey-delete-dialog"
         onCloseAutoFocus={onCloseAutoFocus}
       >
-        <DialogHeader>
+        <DialogHeader
+          className={
+            hasVisibleBody ? 'pe-5 sm:pe-6' : 'border-b-0 pe-5 sm:pe-6'
+          }
+        >
           <DialogTitle>{t('settings.passkeys.delete.title')}</DialogTitle>
           <DialogDescription>
             <NamedSentence
               sentence={t('settings.passkeys.delete.body', { name: NAME_SLOT })}
               name={displayName}
-            />
+            />{' '}
+            {t('settings.passkeys.delete.savedEntry')}
+            {!refusal?.dismissOnly && !askPassword ? (
+              <span className="mt-2 block text-body text-ink-2">
+                {t('settings.passkeys.delete.confirmOnly')}
+              </span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
-        <DialogBody>
+        <DialogBody className={hasVisibleBody ? undefined : 'py-0'}>
           <form
             id={formId}
             className="flex flex-col gap-4"
@@ -166,33 +200,52 @@ export function PasskeyDeleteDialog({
               void submit(event)
             }}
           >
-            {askPassword ? (
-              <Field
-                label={t('settings.passkeys.delete.password')}
-                hint={t('settings.passkeys.delete.passwordHint')}
-                error={
-                  passwordRefusal === null
-                    ? null
-                    : t(passwordRefusal.notice.key)
-                }
-              >
-                <Input
-                  ref={passwordRef}
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  readOnly={pending}
-                  value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value)
-                  }}
-                />
-              </Field>
-            ) : (
-              <p className="text-body text-ink-2">
-                {t('settings.passkeys.delete.confirmOnly')}
-              </p>
-            )}
+            <p role="status" aria-atomic="true" className="sr-only">
+              {pending ? (
+                <span>{t('settings.passkeys.delete.removing')}</span>
+              ) : null}
+              {passwordRefusal === null ? null : (
+                <span key={announcement}>{t(passwordRefusal.notice.key)}</span>
+              )}
+            </p>
+            {showPassword ? (
+              <>
+                <Field
+                  label={t('settings.passkeys.delete.password')}
+                  announceError={false}
+                  hint={
+                    passwordRefusal === null
+                      ? t('settings.passkeys.delete.passwordHint')
+                      : undefined
+                  }
+                  error={
+                    passwordRefusal === null
+                      ? null
+                      : t(passwordRefusal.notice.key)
+                  }
+                >
+                  <PasswordInput
+                    ref={passwordRef}
+                    showLabel={t('auth.password.show')}
+                    hideLabel={t('auth.password.hide')}
+                    enterKeyHint="done"
+                    required
+                    autoComplete="current-password"
+                    readOnly={pending}
+                    value={password}
+                    onChange={(event) => {
+                      setPassword(event.target.value)
+                    }}
+                  />
+                </Field>
+                <a
+                  href={pending ? undefined : '/forgot-password'}
+                  className="self-start rounded-sm text-label font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
+                >
+                  {t('auth.login.forgot')}
+                </a>
+              </>
+            ) : null}
             {alertRefusal === null ? null : (
               <Alert
                 ref={alertRef}
@@ -223,17 +276,21 @@ export function PasskeyDeleteDialog({
               onOpenChange(false)
             }}
           >
-            {t('settings.passkeys.delete.cancel')}
+            {refusal?.dismissOnly
+              ? t('ui.action.close')
+              : t('settings.passkeys.delete.cancel')}
           </Button>
-          <Button
-            type="submit"
-            form={formId}
-            variant="danger"
-            loading={pending}
-            loadingLabel={t('settings.passkeys.delete.removing')}
-          >
-            {t('settings.passkeys.delete.confirm')}
-          </Button>
+          {refusal?.dismissOnly ? null : (
+            <Button
+              type="submit"
+              form={formId}
+              variant="danger"
+              loading={pending}
+              loadingLabel={t('settings.passkeys.delete.removing')}
+            >
+              {t('settings.passkeys.delete.confirm')}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

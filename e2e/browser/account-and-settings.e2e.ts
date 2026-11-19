@@ -1,6 +1,8 @@
 import { expect, browserTest } from '../driver/test'
 import type { Page } from '@playwright/test'
 import { visit, watchConsole } from '../helpers/console.ts'
+import { callsServerFn } from '../helpers/server-fn'
+import arabicSettings from '../../src/lib/i18n/messages/ar/settings'
 import type { RouteCase } from '../helpers/routes.ts'
 import {
   DEMO_EMAIL,
@@ -123,13 +125,101 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
   })
 
   test('is reached from Security, which was a dead link', async ({ page }) => {
+    const name = 'Work laptop'
+    await page.route(LIST_ENDPOINT, (route) =>
+      route.fulfill({
+        json: { passkeys: [listed('pk_a', { name })], requiresPassword: false },
+      }),
+    )
+    await page.route(`**${DELETE_ENDPOINT}`, (route) =>
+      route.fulfill({
+        status: 400,
+        json: { code: 'PASSKEY_SESSION_NOT_FRESH' },
+      }),
+    )
+    await page.setViewportSize({ width: 360, height: 780 })
     await page.goto('/settings/security', { waitUntil: 'domcontentloaded' })
     await page.getByRole('link', { name: 'Manage passkeys' }).click()
-
     await expect(page).toHaveURL(/\/passkeys$/)
     await expect(
       page.getByRole('heading', { level: 1, name: 'Passkeys' }),
     ).toBeVisible()
+
+    const dialog = page.getByRole('dialog')
+    const remove = page.locator('[data-part="passkey-delete"]')
+    const confirm = dialog.locator('button[type="submit"]')
+    const namedPasskey = dialog.locator('bdi')
+    async function expectDialogFits() {
+      await expect(namedPasskey).toHaveText(name)
+      await expect(namedPasskey).toHaveAttribute('dir', 'auto')
+      await expect(confirm).toBeInViewport()
+      expect(
+        await dialog.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true)
+    }
+
+    await remove.focus()
+    await page.keyboard.press('Enter')
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+    await expect(dialog).toContainText(
+      'Removing a passkey requires a recent sign-in.',
+    )
+    await expectDialogFits()
+
+    await page.setViewportSize({ width: 2560, height: 1000 })
+    await expectDialogFits()
+    await page.keyboard.press('Escape')
+    await expect(remove).toBeFocused()
+
+    await page.setViewportSize({ width: 360, height: 780 })
+    await page.keyboard.press('Enter')
+    await confirm.focus()
+    await page.keyboard.press('Enter')
+    await expect(dialog.getByRole('alert')).toBeVisible()
+    await expect(
+      dialog.getByRole('button', { name: 'Sign in again' }),
+    ).toBeInViewport()
+    await expect(dialog.getByRole('alert')).toBeFocused()
+    await page.setViewportSize({ width: 2560, height: 1000 })
+    await expect(
+      dialog.getByRole('button', { name: 'Sign in again' }),
+    ).toBeInViewport()
+    await page.keyboard.press('Escape')
+    await expect(remove).toBeFocused()
+    await page.setViewportSize({ width: 360, height: 780 })
+
+    // Change only the browser context's locale; the demo account is shared across tests.
+    await page.route('**/_serverFn/**', (route) => {
+      const url = new URL(route.request().url())
+      if (callsServerFn(url, 'saveLanguagePreference')) {
+        return route.fulfill({ json: { result: { locale: 'ar' } } })
+      }
+      if (callsServerFn(url, 'negotiateRequestLocale')) {
+        return route.fulfill({
+          json: { result: { locale: 'ar', dir: 'rtl', signedIn: true } },
+        })
+      }
+      return route.continue()
+    })
+    await page.goto('/settings/language', { waitUntil: 'networkidle' })
+    await page.getByTestId('locale-chip-ar').click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar')
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+    await page.evaluate(() => {
+      window.history.pushState(window.history.state, '', '/passkeys')
+    })
+    await remove.click()
+    await expect(dialog).toHaveAccessibleName(
+      arabicSettings['passkeys.delete.title'],
+    )
+    await expectDialogFits()
+    await confirm.click()
+    await expect(dialog.getByRole('alert')).toContainText(
+      arabicSettings['passkeys.delete.stale'],
+    )
+    await expect(dialog.getByRole('alert')).toBeFocused()
   })
 
   test('does not move when the list resolves into rows', async ({
@@ -358,19 +448,33 @@ test.describe('ACC-03 - a member adds a passkey on this device, names it and tak
         'the name is stored, not only drawn',
       ).toBeVisible()
 
-      // Taking it away: the demo member has a password, so the dialog asks for it. A wrong one is
-      // refused on the field and the row stays; the right one removes it.
+      // Exercise a refusal at the client seam before the real removal. A simulated wrong password
+      // leaves the server's per-IP attempt budget available for the real ceremony.
+      await page.route(
+        `**${DELETE_ENDPOINT}`,
+        (route) =>
+          route.fulfill({
+            status: 400,
+            json: { code: 'PASSKEY_INVALID_PASSWORD' },
+          }),
+        { times: 1 },
+      )
       await page.getByRole('button', { name: 'Remove Laptop' }).click()
       const dialog = page.getByRole('dialog', { name: 'Remove this passkey?' })
-      const password = dialog.getByLabel('Password')
+      const password = dialog.getByLabel('Password', { exact: true })
       await expect(password).toBeFocused()
       await password.fill(`${DEMO_PASSWORD}-wrong`)
       const refused = deleteReply(page)
       await dialog.getByRole('button', { name: 'Remove passkey' }).click()
       expect((await refused).status(), 'a wrong password is refused').toBe(400)
       await expect(
-        dialog.getByText('That password is not right.'),
+        dialog
+          .locator('[data-invalid]')
+          .getByText('That password is not right.'),
       ).toBeVisible()
+      await expect(dialog.getByRole('status')).toHaveText(
+        'That password is not right.',
+      )
       await expect(password, 'focus goes back to the password').toBeFocused()
       await expect(rowsBehindDialog(page), 'the row survives').toHaveCount(
         before + 1,

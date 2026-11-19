@@ -670,11 +670,21 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Usuń: {name}',
   'passkeys.delete.title': 'Usunąć ten klucz dostępu?',
-  'passkeys.delete.body': 'Nie zalogujesz się już przy użyciu: {name}.',
+  'passkeys.delete.body':
+    'Nie zalogujesz się już na to konto przy użyciu {name}.',
   'passkeys.delete.password': 'Hasło',
   'passkeys.delete.passwordHint': 'Wpisz hasło, aby potwierdzić.',
+  'passkeys.delete.unnamed': 'tego klucza dostępu bez nazwy',
+  'passkeys.delete.savedEntry':
+    'Zapis klucza może pozostać na urządzeniu lub w menedżerze haseł.',
   'passkeys.delete.confirmOnly':
-    'Twoje konto nie ma hasła. Potwierdź, że chcesz usunąć ten klucz dostępu.',
+    'Nadal możesz korzystać z innych skonfigurowanych metod logowania. Usunięcie klucza dostępu wymaga niedawnego logowania. Jeśli sesja trwa dłużej, zaloguj się ponownie.',
+  'passkeys.delete.impersonated':
+    'Nie możesz usunąć klucza dostępu podczas działania w imieniu innego konta.',
+  'passkeys.delete.refreshed':
+    'Ten klucz dostępu był niedostępny. Lista została odświeżona.',
+  'passkeys.delete.unknown':
+    'Nie udało się potwierdzić usunięcia. Lista kluczy dostępu została odświeżona.',
   'passkeys.delete.confirm': 'Usuń klucz dostępu',
   'passkeys.delete.cancel': 'Anuluj',
   'passkeys.delete.wrongPassword': 'To hasło jest nieprawidłowe.',

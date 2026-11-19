@@ -657,11 +657,21 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Видалити: {name}',
   'passkeys.delete.title': 'Видалити цей ключ доступу?',
-  'passkeys.delete.body': 'Ви більше не зможете входити за допомогою: {name}.',
+  'passkeys.delete.body':
+    'Ви більше не зможете входити в цей обліковий запис за допомогою {name}.',
   'passkeys.delete.password': 'Пароль',
   'passkeys.delete.passwordHint': 'Введіть пароль для підтвердження.',
+  'passkeys.delete.unnamed': 'цього ключа доступу без назви',
+  'passkeys.delete.savedEntry':
+    'Збережений запис може залишитися на пристрої або в менеджері паролів.',
   'passkeys.delete.confirmOnly':
-    'Ваш обліковий запис не має пароля. Підтвердьте, що хочете видалити цей ключ доступу.',
+    'Ви й надалі можете користуватися іншими налаштованими способами входу. Щоб видалити ключ доступу, потрібно ввійти нещодавно. Якщо сеанс розпочався давно, увійдіть знову.',
+  'passkeys.delete.impersonated':
+    'Ви не можете видалити ключ доступу, діючи від імені іншого облікового запису.',
+  'passkeys.delete.refreshed':
+    'Цей ключ доступу був недоступний. Список оновлено.',
+  'passkeys.delete.unknown':
+    'Не вдалося підтвердити видалення. Список ключів доступу оновлено.',
   'passkeys.delete.confirm': 'Видалити ключ доступу',
   'passkeys.delete.cancel': 'Скасувати',
   'passkeys.delete.wrongPassword': 'Цей пароль неправильний.',

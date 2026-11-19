@@ -68,6 +68,8 @@ export type FieldProps = Omit<
   hint?: React.ReactNode
   /** Validation message. Its presence is what makes the control invalid. */
   error?: React.ReactNode
+  /** Disable the inline announcement when the form owns a persistent live region. */
+  announceError?: boolean
   /** Marks the label and sets `aria-required` on the control. */
   required?: boolean
   /** Dims the whole row and disables the nested control. */
@@ -88,6 +90,7 @@ export const Field = React.forwardRef<HTMLDivElement, FieldProps>(
       label,
       hint,
       error,
+      announceError = true,
       required = false,
       disabled = false,
       action,
@@ -145,7 +148,9 @@ export const Field = React.forwardRef<HTMLDivElement, FieldProps>(
           {children}
 
           {invalid ? (
-            <FieldError id={value.errorId}>{error}</FieldError>
+            <FieldError id={value.errorId} announce={announceError}>
+              {error}
+            </FieldError>
           ) : hint ? (
             <FieldHint id={value.hintId}>{hint}</FieldHint>
           ) : null}
@@ -202,12 +207,12 @@ FieldHint.displayName = 'FieldHint'
  */
 export const FieldError = React.forwardRef<
   HTMLParagraphElement,
-  React.ComponentPropsWithoutRef<'p'>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<'p'> & { announce?: boolean }
+>(({ className, announce = true, ...props }, ref) => (
   <p
     ref={ref}
-    role="status"
-    aria-live="polite"
+    role={announce ? 'status' : undefined}
+    aria-live={announce ? 'polite' : undefined}
     className={cn('text-caption font-medium text-danger', className)}
     {...props}
   />

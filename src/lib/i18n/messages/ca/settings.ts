@@ -657,11 +657,21 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Elimina {name}',
   'passkeys.delete.title': 'Vols eliminar aquesta clau d’accés?',
-  'passkeys.delete.body': 'Ja no podràs iniciar la sessió amb {name}.',
+  'passkeys.delete.body':
+    'Ja no podràs iniciar sessió en aquest compte amb {name}.',
   'passkeys.delete.password': 'Contrasenya',
   'passkeys.delete.passwordHint': 'Introdueix la contrasenya per confirmar-ho.',
+  'passkeys.delete.unnamed': 'aquesta clau d’accés sense nom',
+  'passkeys.delete.savedEntry':
+    'És possible que en quedi una còpia al dispositiu o al gestor de contrasenyes.',
   'passkeys.delete.confirmOnly':
-    'El teu compte no té contrasenya. Confirma que vols eliminar aquesta clau d’accés.',
+    'Pots continuar fent servir els altres mètodes d’inici de sessió que hagis configurat. Per eliminar una clau d’accés, cal haver iniciat sessió fa poc. Si la sessió és antiga, hauràs de tornar a iniciar-la.',
+  'passkeys.delete.impersonated':
+    'No pots eliminar una clau d’accés mentre actues en nom d’un altre compte.',
+  'passkeys.delete.refreshed':
+    'Aquesta clau d’accés no estava disponible. S’ha actualitzat la llista.',
+  'passkeys.delete.unknown':
+    'No s’ha pogut confirmar l’eliminació. S’ha actualitzat la llista de claus d’accés.',
   'passkeys.delete.confirm': 'Elimina la clau d’accés',
   'passkeys.delete.cancel': 'Cancel·la',
   'passkeys.delete.wrongPassword': 'Aquesta contrasenya no és correcta.',

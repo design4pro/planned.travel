@@ -720,11 +720,21 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Remove {name}',
   'passkeys.delete.title': 'Remove this passkey?',
-  'passkeys.delete.body': 'You will no longer be able to sign in with {name}.',
+  'passkeys.delete.body':
+    'You will no longer be able to sign in to this account with {name}.',
   'passkeys.delete.password': 'Password',
   'passkeys.delete.passwordHint': 'Enter your password to confirm.',
+  'passkeys.delete.unnamed': 'this unnamed passkey',
+  'passkeys.delete.savedEntry':
+    'A saved entry may remain on your device or in your password manager.',
   'passkeys.delete.confirmOnly':
-    'Your account has no password. Confirm that you want to remove this passkey.',
+    'You can still use your other configured sign-in methods. Removing a passkey requires a recent sign-in. If your session is older, you’ll need to sign in again.',
+  'passkeys.delete.impersonated':
+    'You can’t remove a passkey while impersonating another account.',
+  'passkeys.delete.refreshed':
+    'That passkey was unavailable. The list was refreshed.',
+  'passkeys.delete.unknown':
+    'Removal could not be confirmed. The passkey list was refreshed.',
   'passkeys.delete.confirm': 'Remove passkey',
   'passkeys.delete.cancel': 'Cancel',
   'passkeys.delete.wrongPassword': 'That password is not right.',

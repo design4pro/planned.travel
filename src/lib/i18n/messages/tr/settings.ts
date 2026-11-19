@@ -634,11 +634,20 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Kaldır: {name}',
   'passkeys.delete.title': 'Bu geçiş anahtarı kaldırılsın mı?',
-  'passkeys.delete.body': 'Artık şununla giriş yapamayacaksınız: {name}.',
+  'passkeys.delete.body': 'Artık bu hesaba {name} ile giriş yapamayacaksınız.',
   'passkeys.delete.password': 'Şifre',
   'passkeys.delete.passwordHint': 'Onaylamak için şifrenizi girin.',
+  'passkeys.delete.unnamed': 'bu adsız geçiş anahtarı',
+  'passkeys.delete.savedEntry':
+    'Kayıtlı giriş cihazınızda veya parola yöneticinizde kalabilir.',
   'passkeys.delete.confirmOnly':
-    'Hesabınızın şifresi yok. Bu geçiş anahtarını kaldırmak istediğinizi onaylayın.',
+    'Ayarladığınız diğer oturum açma yöntemlerini kullanmaya devam edebilirsiniz. Geçiş anahtarını kaldırmak için kısa süre önce oturum açmış olmanız gerekir. Oturumunuz eskiyse tekrar oturum açmanız gerekir.',
+  'passkeys.delete.impersonated':
+    'Başka bir hesap adına işlem yaparken geçiş anahtarı kaldıramazsınız.',
+  'passkeys.delete.refreshed':
+    'Bu geçiş anahtarı kullanılamıyordu. Liste yenilendi.',
+  'passkeys.delete.unknown':
+    'Kaldırma işlemi doğrulanamadı. Geçiş anahtarı listesi yenilendi.',
   'passkeys.delete.confirm': 'Geçiş anahtarını kaldır',
   'passkeys.delete.cancel': 'İptal',
   'passkeys.delete.wrongPassword': 'Bu şifre doğru değil.',
