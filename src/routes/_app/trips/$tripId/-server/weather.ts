@@ -20,6 +20,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
+import { calendarSunTimes } from '#/lib/sun'
 import { resolveLimitsFromRow } from '#/server/billing/limits'
 import {
   getEffectiveSettings,
@@ -35,7 +36,7 @@ import { appScope } from '../../../-server/context'
 import type { TripWeather } from '#/lib/weather'
 import type { WeatherRuntimeOptions } from '#/server/weather/bindings'
 import type { WeatherOutcome, WeatherRuntime } from '#/server/weather/weather'
-import type { TenantScope } from '#/server/repos'
+import type { DayLocation, TenantScope } from '#/server/repos'
 
 const id = z.string().trim().min(1).max(64)
 
@@ -66,14 +67,27 @@ export interface TripWeatherPorts {
  * the place, so its days carry no `sun`: the panel then draws neither row rather than a time that
  * can be hours off.
  */
-function withSunOf(outcome: WeatherOutcome | undefined, hasZone: boolean) {
+function withSunOf(
+  outcome: WeatherOutcome | undefined,
+  { date, location }: DayLocation,
+  zone: string | null,
+) {
   if (outcome === undefined) {
     return { status: 'unavailable' as const }
   }
-  if (outcome.status !== 'ok' || hasZone) {
+  if (outcome.status !== 'ok') {
     return outcome
   }
-  return { status: 'ok' as const, reading: outcome.reading }
+  const { status, reading, sun: solarSun } = outcome
+  if (zone === null || date === null || location === null) {
+    return { status, reading }
+  }
+  return {
+    status,
+    reading,
+    sun: calendarSunTimes(location.lat, location.lng, date, zone),
+    solarSun,
+  }
 }
 
 /**
@@ -113,9 +127,9 @@ export async function loadTripWeather(
 
   return {
     distanceUnit: settings.distanceUnit,
-    days: locations.map(({ dayId }, index) => ({
-      dayId,
-      ...withSunOf(outcomes[index], zone !== null),
+    days: locations.map((day, index) => ({
+      dayId: day.dayId,
+      ...withSunOf(outcomes[index], day, zone),
     })),
   }
 }

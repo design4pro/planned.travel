@@ -804,7 +804,13 @@ describe('DayWeatherPanel', () => {
 describe('sunrise and sunset in the fuller forecast', () => {
   const openWith = async (sun: SunTimes) => {
     const user = userEvent.setup()
-    badge({ dayId: 'd1', status: 'ok', reading: READING, sun })
+    badge({
+      dayId: 'd1',
+      status: 'ok',
+      reading: READING,
+      sun: { sunrise: '02:57', sunset: null },
+      solarSun: sun,
+    })
     await user.click(screen.getByRole('button', { name: /^Forecast/ }))
     return within(await screen.findByRole('dialog'))
   }
@@ -886,7 +892,7 @@ describe('sunrise and sunset in the fuller forecast', () => {
       dayId: 'd1',
       status: 'ok',
       reading: RECORDED,
-      sun: { sunrise: '07:22', sunset: '18:50', sunsetNextDay: false },
+      sun: { sunrise: '07:22', sunset: '18:50' },
     })
     await user.click(screen.getByRole('button', { name: /^Recorded/ }))
     const panel = within(await screen.findByRole('dialog'))

@@ -11,7 +11,7 @@
  * coordinate with another must not be able to tell from it that the other one exists.
  */
 
-import type { SunTimes } from '#/lib/sun'
+import type { CalendarSunTimes, SunTimes } from '#/lib/sun'
 
 /** Which unit a reader sees temperatures in; the reader's existing distance unit decides. */
 export type WeatherUnit = 'metric' | 'imperial'
@@ -117,7 +117,9 @@ export type DayWeather =
        * from an answer that predates it and from a trip with no zone, stored or derived, whose UTC
        * clock would be the wrong one; the panel leaves the rows out then.
        */
-      readonly sun?: SunTimes
+      readonly sun?: CalendarSunTimes
+      /** Solar-day attribution for bundles that can display the next-day qualifier. */
+      readonly solarSun?: SunTimes
     }
 
 export interface TripWeather {

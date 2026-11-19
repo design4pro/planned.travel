@@ -186,6 +186,36 @@ describe('sunset attribution', () => {
     ])
   })
 
+  it('keeps a sunset rounded across midnight on its actual date', () => {
+    expect(
+      sunTimes(64.1466, -21.84, '2026-06-15', 'Atlantic/Reykjavik'),
+    ).toMatchObject({
+      sunset: '23:59',
+      sunsetNextDay: false,
+    })
+    expect(
+      sunTimes(64.1466, -21.9426, '2026-06-15', 'Atlantic/Reykjavik'),
+    ).toMatchObject({
+      sunset: '00:00',
+      sunsetNextDay: true,
+    })
+  })
+
+  it('does not reuse a sunset on a sunrise-less date when the preceding day owns it', () => {
+    const times = (date: string) => sunTimes(75.4, 15.65, date, 'Etc/GMT+2')
+
+    expect(times('2026-04-25')).toEqual({
+      sunrise: '21:44',
+      sunset: '20:43',
+      sunsetNextDay: true,
+    })
+    expect(times('2026-04-26')).toEqual({
+      sunrise: null,
+      sunset: null,
+      sunsetNextDay: false,
+    })
+  })
+
   it('keeps the evening sunset during a Fairbanks sweep around the solstice', () => {
     const sweep = Array.from({ length: 61 }, (_, index) => {
       const date = new Date(Date.UTC(2026, 4, 20 + index))
