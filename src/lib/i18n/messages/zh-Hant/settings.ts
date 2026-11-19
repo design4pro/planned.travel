@@ -542,11 +542,15 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '移除 {name}',
   'passkeys.delete.title': '移除這個密碼金鑰？',
-  'passkeys.delete.body': '移除後，你將無法再使用 {name} 登入。',
+  'passkeys.delete.body': '你將無法再使用 {name} 登入此帳號。',
   'passkeys.delete.password': '密碼',
   'passkeys.delete.passwordHint': '請輸入你的密碼以確認。',
+  'passkeys.delete.unnamed': '此未命名的通行密鑰',
+  'passkeys.delete.savedEntry': '已儲存的項目可能仍留在裝置或密碼管理器中。',
   'passkeys.delete.confirmOnly':
-    '你的帳戶沒有密碼。請確認你要移除這個密碼金鑰。',
+    '你仍可使用已設定的其他登入方式。移除通行密鑰需要你最近登入過。如果本次工作階段已持續一段時間，你需要重新登入。',
+  'passkeys.delete.impersonated': '以其他帳號身分操作時，無法移除通行密鑰。',
+  'passkeys.delete.refreshed': '該通行密鑰無法使用。清單已重新整理。',
   'passkeys.delete.confirm': '移除密碼金鑰',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '這個密碼不正確。',

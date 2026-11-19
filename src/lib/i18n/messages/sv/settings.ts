@@ -640,11 +640,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Ta bort {name}',
   'passkeys.delete.title': 'Ta bort den här lösenordsnyckeln?',
-  'passkeys.delete.body': 'Du kommer inte längre kunna logga in med {name}.',
+  'passkeys.delete.body':
+    'Du kan inte längre logga in på det här kontot med {name}.',
   'passkeys.delete.password': 'Lösenord',
   'passkeys.delete.passwordHint': 'Ange ditt lösenord för att bekräfta.',
+  'passkeys.delete.unnamed': 'den här namnlösa lösenordsnyckeln',
+  'passkeys.delete.savedEntry':
+    'En sparad post kan finnas kvar på din enhet eller i din lösenordshanterare.',
   'passkeys.delete.confirmOnly':
-    'Ditt konto har inget lösenord. Bekräfta att du vill ta bort den här lösenordsnyckeln.',
+    'Du kan fortfarande använda dina andra konfigurerade inloggningsmetoder. Du måste ha loggat in nyligen för att ta bort en lösenordsnyckel. Om sessionen är äldre behöver du logga in igen.',
+  'passkeys.delete.impersonated':
+    'Du kan inte ta bort en lösenordsnyckel när du agerar som ett annat konto.',
+  'passkeys.delete.refreshed':
+    'Lösenordsnyckeln var inte tillgänglig. Listan har uppdaterats.',
   'passkeys.delete.confirm': 'Ta bort lösenordsnyckel',
   'passkeys.delete.cancel': 'Avbryt',
   'passkeys.delete.wrongPassword': 'Lösenordet stämmer inte.',

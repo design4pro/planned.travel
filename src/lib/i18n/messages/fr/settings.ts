@@ -660,12 +660,20 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Supprimer {name}',
   'passkeys.delete.title': 'Supprimer cette clé d’accès ?',
-  'passkeys.delete.body': 'Vous ne pourrez plus vous connecter avec {name}.',
+  'passkeys.delete.body':
+    'Vous ne pourrez plus vous connecter à ce compte avec {name}.',
   'passkeys.delete.password': 'Mot de passe',
   'passkeys.delete.passwordHint':
     'Saisissez votre mot de passe pour confirmer.',
+  'passkeys.delete.unnamed': 'cette clé d’accès sans nom',
+  'passkeys.delete.savedEntry':
+    'Une entrée enregistrée peut rester sur votre appareil ou dans votre gestionnaire de mots de passe.',
   'passkeys.delete.confirmOnly':
-    'Votre compte n’a pas de mot de passe. Confirmez que vous voulez supprimer cette clé d’accès.',
+    'Vos autres méthodes de connexion configurées restent utilisables. Pour supprimer une clé d’accès, vous devez vous être connecté récemment. Si votre session est ancienne, vous devrez vous reconnecter.',
+  'passkeys.delete.impersonated':
+    'Vous ne pouvez pas supprimer une clé d’accès lorsque vous agissez au nom d’un autre compte.',
+  'passkeys.delete.refreshed':
+    'Cette clé d’accès n’était pas disponible. La liste a été actualisée.',
   'passkeys.delete.confirm': 'Supprimer la clé d’accès',
   'passkeys.delete.cancel': 'Annuler',
   'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',

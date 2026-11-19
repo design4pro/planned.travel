@@ -668,11 +668,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Удалить: {name}',
   'passkeys.delete.title': 'Удалить этот ключ доступа?',
-  'passkeys.delete.body': 'Вы больше не сможете входить с помощью: {name}.',
+  'passkeys.delete.body':
+    'Вы больше не сможете входить в этот аккаунт с помощью {name}.',
   'passkeys.delete.password': 'Пароль',
   'passkeys.delete.passwordHint': 'Введите пароль для подтверждения.',
+  'passkeys.delete.unnamed': 'этого ключа доступа без названия',
+  'passkeys.delete.savedEntry':
+    'Сохранённая запись может остаться на устройстве или в менеджере паролей.',
   'passkeys.delete.confirmOnly':
-    'У вашей учётной записи нет пароля. Подтвердите, что хотите удалить этот ключ доступа.',
+    'Вы по-прежнему можете пользоваться другими настроенными способами входа. Для удаления ключа доступа нужно недавно войти в аккаунт. Если сеанс начался давно, войдите снова.',
+  'passkeys.delete.impersonated':
+    'Нельзя удалить ключ доступа, пока вы действуете от имени другого аккаунта.',
+  'passkeys.delete.refreshed':
+    'Этот ключ доступа был недоступен. Список обновлён.',
   'passkeys.delete.confirm': 'Удалить ключ доступа',
   'passkeys.delete.cancel': 'Отмена',
   'passkeys.delete.wrongPassword': 'Этот пароль неверный.',

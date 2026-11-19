@@ -538,11 +538,15 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '删除 {name}',
   'passkeys.delete.title': '删除这个通行密钥？',
-  'passkeys.delete.body': '删除后，你将无法再使用 {name} 登录。',
+  'passkeys.delete.body': '你将无法再使用 {name} 登录此账号。',
   'passkeys.delete.password': '密码',
   'passkeys.delete.passwordHint': '请输入你的密码以确认。',
+  'passkeys.delete.unnamed': '此未命名的通行密钥',
+  'passkeys.delete.savedEntry': '已保存的条目可能仍留在设备或密码管理器中。',
   'passkeys.delete.confirmOnly':
-    '你的账户没有密码。请确认你要删除这个通行密钥。',
+    '你仍可使用已设置的其他登录方式。移除通行密钥需要你最近登录过。如果此次会话开始时间较早，你需要重新登录。',
+  'passkeys.delete.impersonated': '以其他账号身份操作时，无法移除通行密钥。',
+  'passkeys.delete.refreshed': '该通行密钥不可用。列表已刷新。',
   'passkeys.delete.confirm': '删除通行密钥',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '这个密码不正确。',

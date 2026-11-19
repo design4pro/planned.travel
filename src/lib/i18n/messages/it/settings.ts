@@ -654,11 +654,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Rimuovi {name}',
   'passkeys.delete.title': 'Rimuovere questa chiave d’accesso?',
-  'passkeys.delete.body': 'Non potrai più accedere con {name}.',
+  'passkeys.delete.body':
+    'Non potrai più accedere a questo account con {name}.',
   'passkeys.delete.password': 'La tua password',
   'passkeys.delete.passwordHint': 'Inserisci la tua password per confermare.',
+  'passkeys.delete.unnamed': 'questa passkey senza nome',
+  'passkeys.delete.savedEntry':
+    'Una voce salvata potrebbe rimanere sul dispositivo o nel gestore delle password.',
   'passkeys.delete.confirmOnly':
-    'Il tuo account non ha una password. Conferma di voler rimuovere questa chiave d’accesso.',
+    'Puoi continuare a usare gli altri metodi di accesso configurati. Per rimuovere una passkey devi aver effettuato l’accesso di recente. Se la sessione è meno recente, dovrai accedere di nuovo.',
+  'passkeys.delete.impersonated':
+    'Non puoi rimuovere una passkey mentre agisci per conto di un altro account.',
+  'passkeys.delete.refreshed':
+    'Questa passkey non era disponibile. L’elenco è stato aggiornato.',
   'passkeys.delete.confirm': 'Rimuovi la chiave d’accesso',
   'passkeys.delete.cancel': 'Annulla',
   'passkeys.delete.wrongPassword': 'Questa password non è corretta.',

@@ -10,6 +10,8 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { I18nProvider } from '#/lib/i18n'
+import auth from '#/lib/i18n/messages/en/auth'
+import ui from '#/lib/i18n/messages/en/ui'
 import settings from '#/lib/i18n/messages/en/settings'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import { PasskeyManager } from '../passkey-manager'
@@ -29,10 +31,12 @@ vi.mock('#/lib/auth/client', () => client)
 
 /** The shipped catalogue, namespaced the way the provider expects. */
 const EN: Catalogue = Object.fromEntries(
-  Object.entries(settings).map(([key, message]) => [
-    `settings.${key}`,
-    message,
-  ]),
+  Object.entries({ settings, auth, ui }).flatMap(([namespace, messages]) =>
+    Object.entries(messages).map(([key, message]) => [
+      `${namespace}.${key}`,
+      message,
+    ]),
+  ),
 )
 
 function passkey(overrides: Partial<PasskeySummary> = {}): PasskeySummary {
@@ -1333,6 +1337,16 @@ describe('removing a passkey', () => {
     ).toBeTruthy()
   })
 
+  it('uses a sentence-friendly fallback for an unnamed passkey', async () => {
+    await mountWithRows(false, passkey())
+    await userEvent.click(
+      screen.getByRole('button', { name: /^Remove Passkey · added / }),
+    )
+    const name = dialog().querySelector('bdi')
+    expect(name?.textContent).toBe('this unnamed passkey')
+    expect(name?.getAttribute('dir')).toBe('auto')
+  })
+
   describe('on an account with a password', () => {
     it('asks for the password in a field that is natively required, and names the passkey', async () => {
       await mountWithRows(true, WORK, LAPTOP)
@@ -1345,13 +1359,28 @@ describe('removing a passkey', () => {
       const description = dialog().getAttribute('aria-describedby') ?? ''
       const sentence = document.getElementById(description)
       expect(sentence?.textContent).toBe(
-        'You will no longer be able to sign in with Work phone.',
+        'You will no longer be able to sign in to this account with Work phone. A saved entry may remain on your device or in your password manager.',
       )
       expect(sentence?.querySelector('bdi')?.getAttribute('dir')).toBe('auto')
       const input = passwordInput()
       expect(input.getAttribute('type')).toBe('password')
       expect(input.hasAttribute('required')).toBe(true)
       expect(input.getAttribute('autocomplete')).toBe('current-password')
+      expect(input.getAttribute('enterkeyhint')).toBe('done')
+      expect(document.activeElement).toBe(input)
+      expect(
+        within(dialog())
+          .getByRole('link', { name: 'Forgot password?' })
+          .getAttribute('href'),
+      ).toBe('/forgot-password')
+      await userEvent.click(
+        within(dialog()).getByRole('button', { name: 'Show password' }),
+      )
+      expect(input.getAttribute('type')).toBe('text')
+      await userEvent.click(
+        within(dialog()).getByRole('button', { name: 'Hide password' }),
+      )
+      expect(input.getAttribute('type')).toBe('password')
       expect(
         within(dialog()).getByText('Enter your password to confirm.'),
       ).toBeTruthy()
@@ -1395,9 +1424,15 @@ describe('removing a passkey', () => {
       await userEvent.type(passwordInput(), 'nope{Enter}')
 
       expect(
-        await within(dialog()).findByText('That password is not right.'),
+        await within(dialog()).findByText('That password is not right.', {
+          selector: '[id]',
+        }),
       ).toBeTruthy()
       expect(passwordInput().getAttribute('aria-invalid')).toBe('true')
+      const error = within(dialog()).getByText('That password is not right.', {
+        selector: '[id]',
+      })
+      expectDescription(passwordInput(), error)
       await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
       expect(within(dialog()).queryByRole('alert')).toBeNull()
       expect(rowCount()).toBe(1)
@@ -1415,6 +1450,7 @@ describe('removing a passkey', () => {
       expect(
         await within(dialog()).findByText(
           'Enter your password to remove this passkey.',
+          { selector: '[id]' },
         ),
       ).toBeTruthy()
       await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
@@ -1431,6 +1467,7 @@ describe('removing a passkey', () => {
       expect(
         await within(dialog()).findByText(
           'Enter your password to remove this passkey.',
+          { selector: '[id]' },
         ),
       ).toBeTruthy()
       await waitFor(() => expect(document.activeElement).toBe(passwordInput()))
@@ -1442,17 +1479,40 @@ describe('removing a passkey', () => {
       expect(client.deletePasskey).toHaveBeenLastCalledWith('pk_1', 'hunter2')
     })
 
-    it('treats a passkey that is already gone as removed', async () => {
+    it('refreshes on not-found and uses the replacement account’s password requirement', async () => {
       client.deletePasskey.mockResolvedValue(failure(404, 'PASSKEY_NOT_FOUND'))
-      await mountWithRows(true, WORK, LAPTOP)
+      await mountWithRows(true, WORK)
+      client.listPasskeys.mockResolvedValue({
+        ok: true,
+        passkeys: [LAPTOP],
+        requiresPassword: false,
+      })
       await userEvent.click(removeButton('Work phone'))
       await userEvent.type(passwordInput(), 'hunter2{Enter}')
 
-      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await screen.findByRole('button', { name: 'Remove Laptop' })
       expect(screen.queryByText('Work phone')).toBeNull()
-      await waitFor(() =>
-        expect(screen.getByRole('status').textContent).toBe('Passkey removed'),
+      expect(screen.getByRole('status').textContent).toBe(
+        'That passkey was unavailable. The list was refreshed.',
       )
+      await userEvent.click(removeButton('Laptop'))
+      expect(within(dialog()).queryByLabelText('Password')).toBeNull()
+    })
+
+    it('updates the live region on each identical refusal submitted with Enter', async () => {
+      client.deletePasskey.mockResolvedValue(
+        failure(400, 'PASSKEY_INVALID_PASSWORD'),
+      )
+      await mountWithRows(true, WORK)
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'nope{Enter}')
+      const live = within(dialog()).getByRole('status')
+      const first = live.firstElementChild
+      expect(first?.textContent).toBe('That password is not right.')
+      await userEvent.keyboard('{Enter}')
+      expect(live.firstElementChild).not.toBe(first)
+      expect(live.textContent).toBe('That password is not right.')
+      expect(document.activeElement).toBe(passwordInput())
     })
 
     it('can try again after a refusal', async () => {
@@ -1462,7 +1522,9 @@ describe('removing a passkey', () => {
       await mountWithRows(true, WORK)
       await userEvent.click(removeButton('Work phone'))
       await userEvent.type(passwordInput(), 'nope{Enter}')
-      await within(dialog()).findByText('That password is not right.')
+      await within(dialog()).findByText('That password is not right.', {
+        selector: '[id]',
+      })
 
       await userEvent.clear(passwordInput())
       await userEvent.type(passwordInput(), 'right{Enter}')
@@ -1471,6 +1533,95 @@ describe('removing a passkey', () => {
       expect(client.deletePasskey).toHaveBeenLastCalledWith('pk_1', 'right')
     })
   })
+
+  it.each([
+    [500, 'Try again'],
+    [401, 'Sign in again'],
+  ])(
+    'hides old rows during a refresh and recovers from %s',
+    async (status, action) => {
+      let finish: (value: unknown) => void = () => {}
+      client.deletePasskey.mockResolvedValue(failure(404, 'PASSKEY_NOT_FOUND'))
+      await mountWithRows(true, WORK, LAPTOP)
+      client.listPasskeys.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.type(passwordInput(), 'nope{Enter}')
+
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+      expect(rowCount()).toBe(0)
+      expect(addButton()).toHaveProperty('disabled', true)
+      expect(screen.getByRole('status').textContent).toBe('')
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: 'Your passkeys' }),
+      )
+
+      finish(failure(status))
+      const recovery = await screen.findByRole('button', { name: action })
+      expect(rowCount()).toBe(0)
+      expect(screen.getByRole('status').textContent).toBe('')
+      if (status === 401) expect(document.activeElement).toBe(recovery)
+    },
+  )
+
+  it.each([
+    [
+      'successful removal',
+      { ok: true },
+      { ok: true, passkey: { ...WORK, name: 'Renamed' } },
+      'Passkey removed',
+    ],
+    ['successful removal', { ok: true }, failure(500), 'Passkey removed'],
+    [
+      'list replacement',
+      failure(404, 'PASSKEY_NOT_FOUND'),
+      { ok: true, passkey: { ...WORK, name: 'Renamed' } },
+      'That passkey was unavailable. The list was refreshed.',
+    ],
+    [
+      'list replacement',
+      failure(404, 'PASSKEY_NOT_FOUND'),
+      failure(500),
+      'That passkey was unavailable. The list was refreshed.',
+    ],
+  ])(
+    'ignores a late rename reply after %s',
+    async (_label, removalResult, renameResult, outcome) => {
+      let finish: (value: unknown) => void = () => {}
+      client.renamePasskey.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+      client.deletePasskey.mockResolvedValue(removalResult)
+      await mountWithRows(false, WORK, LAPTOP)
+      client.listPasskeys.mockResolvedValue({
+        ok: true,
+        passkeys: [WORK, LAPTOP],
+        requiresPassword: true,
+      })
+      await userEvent.click(renameButton('Work phone'))
+      await userEvent.clear(renameInput())
+      await userEvent.type(renameInput(), 'Renamed')
+      await userEvent.click(removeButton('Work phone'))
+      expect(client.renamePasskey).toHaveBeenCalledWith(WORK.id, 'Renamed')
+      await userEvent.click(confirmButton())
+      await waitFor(() =>
+        expect(screen.getByRole('status').textContent).toBe(outcome),
+      )
+      const focus = document.activeElement
+      const count = rowCount()
+
+      await act(async () => finish(renameResult))
+      expect(screen.getByRole('status').textContent).toBe(outcome)
+      expect(rowCount()).toBe(count)
+      expect(screen.queryByText('Renamed')).toBeNull()
+      expect(document.activeElement).toBe(focus)
+    },
+  )
 
   describe('on an account without a password', () => {
     it('asks for a plain confirmation and sends no password', async () => {
@@ -1481,7 +1632,7 @@ describe('removing a passkey', () => {
       expect(within(dialog()).queryByLabelText('Password')).toBeNull()
       expect(
         within(dialog()).getByText(
-          'Your account has no password. Confirm that you want to remove this passkey.',
+          'You can still use your other configured sign-in methods. Removing a passkey requires a recent sign-in. If your session is older, you’ll need to sign in again.',
         ),
       ).toBeTruthy()
 
@@ -1540,7 +1691,9 @@ describe('removing a passkey', () => {
       await mountWithRows(true, WORK)
       await userEvent.click(removeButton('Work phone'))
       await userEvent.type(passwordInput(), 'nope{Enter}')
-      await within(dialog()).findByText('That password is not right.')
+      await within(dialog()).findByText('That password is not right.', {
+        selector: '[id]',
+      })
       await userEvent.click(
         within(dialog()).getByRole('button', { name: 'Cancel' }),
       )
@@ -1550,7 +1703,9 @@ describe('removing a passkey', () => {
 
       expect((passwordInput() as HTMLInputElement).value).toBe('')
       expect(
-        within(dialog()).queryByText('That password is not right.'),
+        within(dialog()).queryByText('That password is not right.', {
+          selector: '[id]',
+        }),
       ).toBeNull()
     })
   })
@@ -1571,6 +1726,9 @@ describe('removing a passkey', () => {
         within(dialog()).getByRole('button', { name: 'Cancel' }),
       ).toHaveProperty('disabled', true)
       expect(confirmButton().textContent).toContain('Removing the passkey')
+      expect(within(dialog()).getByRole('status').textContent).toBe(
+        'Removing the passkey',
+      )
       expect(confirmButton()).toHaveProperty('disabled', false)
       expect(confirmButton().getAttribute('aria-disabled')).toBe('true')
       expect(confirmButton().getAttribute('aria-busy')).toBe('true')
@@ -1617,7 +1775,7 @@ describe('removing a passkey', () => {
       [
         'an impersonated session',
         failure(403, 'PASSKEY_IMPERSONATED'),
-        'The passkey was not removed. Try again.',
+        'You can’t remove a passkey while impersonating another account.',
       ],
       [
         'a dropped connection',
@@ -1647,6 +1805,19 @@ describe('removing a passkey', () => {
     it('does not offer Sign in again for a refusal that signing in cannot fix', async () => {
       const alert = await refuse(failure(403, 'PASSKEY_IMPERSONATED'))
       expect(within(alert).queryByRole('button')).toBeNull()
+      expect(
+        within(dialog())
+          .getAllByRole('button')
+          .map((button) => button.textContent),
+      ).toEqual(['Close'])
+      await userEvent.keyboard('{Enter}')
+      expect(client.deletePasskey).toHaveBeenCalledTimes(1)
+      await userEvent.click(
+        within(dialog()).getByRole('button', { name: 'Close' }),
+      )
+      await waitFor(() =>
+        expect(document.activeElement).toBe(removeButton('Work phone')),
+      )
     })
 
     it('never shows the server message', async () => {

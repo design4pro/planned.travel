@@ -633,11 +633,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Xóa {name}',
   'passkeys.delete.title': 'Xóa khóa truy cập này?',
-  'passkeys.delete.body': 'Bạn sẽ không thể đăng nhập bằng {name} nữa.',
+  'passkeys.delete.body':
+    'Bạn sẽ không thể đăng nhập vào tài khoản này bằng {name} nữa.',
   'passkeys.delete.password': 'Mật khẩu',
   'passkeys.delete.passwordHint': 'Nhập mật khẩu của bạn để xác nhận.',
+  'passkeys.delete.unnamed': 'khóa truy cập chưa đặt tên này',
+  'passkeys.delete.savedEntry':
+    'Mục đã lưu có thể vẫn còn trên thiết bị hoặc trong trình quản lý mật khẩu của bạn.',
   'passkeys.delete.confirmOnly':
-    'Tài khoản của bạn không có mật khẩu. Hãy xác nhận bạn muốn xóa khóa truy cập này.',
+    'Bạn vẫn có thể dùng các phương thức đăng nhập khác đã thiết lập. Để xóa khóa truy cập, bạn cần đăng nhập gần đây. Nếu phiên đã cũ, bạn cần đăng nhập lại.',
+  'passkeys.delete.impersonated':
+    'Bạn không thể xóa khóa truy cập khi đang thao tác thay mặt một tài khoản khác.',
+  'passkeys.delete.refreshed':
+    'Khóa truy cập đó không khả dụng. Danh sách đã được làm mới.',
   'passkeys.delete.confirm': 'Xóa khóa truy cập',
   'passkeys.delete.cancel': 'Hủy',
   'passkeys.delete.wrongPassword': 'Mật khẩu này không đúng.',

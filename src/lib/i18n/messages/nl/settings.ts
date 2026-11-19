@@ -650,11 +650,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} verwijderen',
   'passkeys.delete.title': 'Deze toegangssleutel verwijderen?',
-  'passkeys.delete.body': 'Je kunt dan niet meer inloggen met {name}.',
+  'passkeys.delete.body':
+    'Je kunt dan niet meer op dit account inloggen met {name}.',
   'passkeys.delete.password': 'Wachtwoord',
   'passkeys.delete.passwordHint': 'Voer ter bevestiging je wachtwoord in.',
+  'passkeys.delete.unnamed': 'deze naamloze passkey',
+  'passkeys.delete.savedEntry':
+    'Op je apparaat of in je wachtwoordbeheerder kan een opgeslagen vermelding achterblijven.',
   'passkeys.delete.confirmOnly':
-    'Je account heeft geen wachtwoord. Bevestig dat je deze toegangssleutel wilt verwijderen.',
+    'Je kunt je andere ingestelde inlogmethoden blijven gebruiken. Om een passkey te verwijderen moet je onlangs zijn ingelogd. Bij een oudere sessie moet je opnieuw inloggen.',
+  'passkeys.delete.impersonated':
+    'Je kunt geen passkey verwijderen terwijl je namens een ander account werkt.',
+  'passkeys.delete.refreshed':
+    'Die passkey was niet beschikbaar. De lijst is vernieuwd.',
   'passkeys.delete.confirm': 'Toegangssleutel verwijderen',
   'passkeys.delete.cancel': 'Annuleren',
   'passkeys.delete.wrongPassword': 'Dat wachtwoord klopt niet.',

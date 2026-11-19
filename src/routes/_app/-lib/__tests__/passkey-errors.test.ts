@@ -84,7 +84,6 @@ it.each([
     'settings.passkeys.delete.wrongPassword',
   ],
   ['PASSKEY_SESSION_NOT_FRESH', 'alert', 'settings.passkeys.delete.stale'],
-  ['PASSKEY_IMPERSONATED', 'alert', 'settings.passkeys.delete.failed'],
   ['PASSKEY_NOT_FOUND', 'alert', 'settings.passkeys.delete.failed'],
 ] as const)(
   'routes the wire code %s to the %s with %s',
@@ -96,7 +95,19 @@ it.each([
   },
 )
 
-it('keeps the already-absent removal code stable for the dialog', () => {
+it('offers dismissal for the impersonation refusal', () => {
+  expect(deleteFailure(failure('PASSKEY_IMPERSONATED', 403))).toEqual({
+    target: 'alert',
+    notice: {
+      key: 'settings.passkeys.delete.impersonated',
+      tone: 'danger',
+      signInAgain: false,
+    },
+    dismissOnly: true,
+  })
+})
+
+it('keeps the unavailable passkey code stable for the dialog', () => {
   expect(PASSKEY_NOT_FOUND).toBe('PASSKEY_NOT_FOUND')
 })
 

@@ -658,11 +658,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Eliminar {name}',
   'passkeys.delete.title': '¿Eliminar esta clave de acceso?',
-  'passkeys.delete.body': 'Ya no podrás iniciar sesión con {name}.',
+  'passkeys.delete.body':
+    'Ya no podrás iniciar sesión en esta cuenta con {name}.',
   'passkeys.delete.password': 'Contraseña',
   'passkeys.delete.passwordHint': 'Introduce tu contraseña para confirmar.',
+  'passkeys.delete.unnamed': 'esta llave de acceso sin nombre',
+  'passkeys.delete.savedEntry':
+    'Puede quedar una entrada guardada en tu dispositivo o en tu gestor de contraseñas.',
   'passkeys.delete.confirmOnly':
-    'Tu cuenta no tiene contraseña. Confirma que quieres eliminar esta clave de acceso.',
+    'Puedes seguir usando los otros métodos de inicio de sesión que hayas configurado. Para quitar una llave de acceso, debes haber iniciado sesión recientemente. Si tu sesión es antigua, tendrás que volver a iniciarla.',
+  'passkeys.delete.impersonated':
+    'No puedes quitar una llave de acceso mientras actúas en nombre de otra cuenta.',
+  'passkeys.delete.refreshed':
+    'Esa llave de acceso no estaba disponible. Se ha actualizado la lista.',
   'passkeys.delete.confirm': 'Eliminar clave de acceso',
   'passkeys.delete.cancel': 'Cancelar',
   'passkeys.delete.wrongPassword': 'Esa contraseña no es correcta.',

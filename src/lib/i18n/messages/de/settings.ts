@@ -654,11 +654,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} entfernen',
   'passkeys.delete.title': 'Diesen Zugangsschlüssel entfernen?',
-  'passkeys.delete.body': 'Du kannst dich dann nicht mehr mit {name} anmelden.',
+  'passkeys.delete.body':
+    'Du kannst dich dann nicht mehr mit {name} bei diesem Konto anmelden.',
   'passkeys.delete.password': 'Passwort',
   'passkeys.delete.passwordHint': 'Gib zur Bestätigung dein Passwort ein.',
+  'passkeys.delete.unnamed': 'diesem unbenannten Passkey',
+  'passkeys.delete.savedEntry':
+    'Der gespeicherte Eintrag kann auf deinem Gerät oder in deinem Passwortmanager verbleiben.',
   'passkeys.delete.confirmOnly':
-    'Dein Konto hat kein Passwort. Bestätige, dass du diesen Zugangsschlüssel entfernen möchtest.',
+    'Deine anderen eingerichteten Anmeldemethoden kannst du weiterhin nutzen. Zum Entfernen eines Passkeys musst du dich vor Kurzem angemeldet haben. Bei einer älteren Sitzung musst du dich erneut anmelden.',
+  'passkeys.delete.impersonated':
+    'Du kannst keinen Passkey entfernen, während du ein anderes Konto übernimmst.',
+  'passkeys.delete.refreshed':
+    'Dieser Passkey war nicht verfügbar. Die Liste wurde aktualisiert.',
   'passkeys.delete.confirm': 'Zugangsschlüssel entfernen',
   'passkeys.delete.cancel': 'Abbrechen',
   'passkeys.delete.wrongPassword': 'Dieses Passwort ist nicht richtig.',

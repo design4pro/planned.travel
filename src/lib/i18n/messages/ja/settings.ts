@@ -604,11 +604,19 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} を削除',
   'passkeys.delete.title': 'このパスキーを削除しますか？',
-  'passkeys.delete.body': '{name} ではサインインできなくなります。',
+  'passkeys.delete.body':
+    'このアカウントに {name} でログインできなくなります。',
   'passkeys.delete.password': 'パスワード',
   'passkeys.delete.passwordHint': '確認のため、パスワードを入力してください。',
+  'passkeys.delete.unnamed': 'この名前のないパスキー',
+  'passkeys.delete.savedEntry':
+    '端末やパスワードマネージャーに保存された項目が残ることがあります。',
   'passkeys.delete.confirmOnly':
-    'このアカウントにはパスワードがありません。このパスキーを削除することを確認してください。',
+    '設定済みの他のログイン方法は引き続き使用できます。パスキーを削除するには、最近ログインしている必要があります。ログインから時間が経っている場合は、再度ログインしてください。',
+  'passkeys.delete.impersonated':
+    '別のアカウントとして操作している間は、パスキーを削除できません。',
+  'passkeys.delete.refreshed':
+    'このパスキーは利用できませんでした。一覧を更新しました。',
   'passkeys.delete.confirm': 'パスキーを削除',
   'passkeys.delete.cancel': 'キャンセル',
   'passkeys.delete.wrongPassword': 'パスワードが正しくありません。',

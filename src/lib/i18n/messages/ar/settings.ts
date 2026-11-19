@@ -641,11 +641,18 @@ const messages = {
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'إزالة {name}',
   'passkeys.delete.title': 'هل تريد إزالة مفتاح المرور هذا؟',
-  'passkeys.delete.body': 'لن تتمكن بعد الآن من تسجيل الدخول باستخدام {name}.',
+  'passkeys.delete.body':
+    'لن تتمكن بعد الآن من تسجيل الدخول إلى هذا الحساب باستخدام {name}.',
   'passkeys.delete.password': 'كلمة المرور',
   'passkeys.delete.passwordHint': 'أدخل كلمة المرور للتأكيد.',
+  'passkeys.delete.unnamed': 'مفتاح المرور هذا الذي لا يحمل اسمًا',
+  'passkeys.delete.savedEntry':
+    'قد يبقى مفتاح المرور محفوظًا على جهازك أو في مدير كلمات المرور.',
   'passkeys.delete.confirmOnly':
-    'حسابك لا يحتوي على كلمة مرور. أكّد أنك تريد إزالة مفتاح المرور هذا.',
+    'يمكنك الاستمرار في استخدام طرق تسجيل الدخول الأخرى التي أعددتها. تتطلب إزالة مفتاح المرور تسجيل دخول حديثًا. إذا كانت جلستك قديمة، فستحتاج إلى تسجيل الدخول مجددًا.',
+  'passkeys.delete.impersonated':
+    'لا يمكنك إزالة مفتاح مرور أثناء استخدام حساب آخر بالنيابة عن صاحبه.',
+  'passkeys.delete.refreshed': 'مفتاح المرور هذا غير متاح. تم تحديث القائمة.',
   'passkeys.delete.confirm': 'إزالة مفتاح المرور',
   'passkeys.delete.cancel': 'إلغاء',
   'passkeys.delete.wrongPassword': 'كلمة المرور هذه غير صحيحة.',
