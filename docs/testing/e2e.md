@@ -146,9 +146,9 @@ does not permit deleting assertions or narrowing the browser/theme matrix.
 The full migration exposed two product invariants previously hidden by the old
 setup: the normal weather reading exceeded its reserved 80px box, and a Safari
 pointer activation could leave `body` as the captured dialog opener. The shared
-weather slot now reserves 104px across loading and settled states, including
-localized readings. Dialog
-and sheet wrappers let the primitive restore its registered trigger when the
+weather slot reserves the same space across loading and settled states and
+keeps the trigger within the slot when caption text grows. Dialog and sheet
+wrappers let the primitive restore its registered trigger when the
 page root was active. Existing exact geometry, zero-layout-shift, provider-call
 and focus assertions remain. Component regressions simulate activation without
 focus; diagnostic JSON records actual geometry rather than matching CSS class

@@ -22,9 +22,10 @@ import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { WeatherUnit } from '#/lib/weather'
 import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
 
-// Reserve the same slot through loading, empty and settled states. Leave room for
-// localized labels and signed temperatures without squeezing the day header on arrival.
-const BOX = 'flex h-7 w-26 shrink-0 items-center justify-end'
+// Reserve the same slot through loading, empty and settled states. Size it with
+// the caption font, but limit its share of the row so the day header keeps room.
+const BOX =
+  'flex min-h-[max(1.75rem,calc(2lh+0.375rem))] w-[max(6.5rem,14ch)] max-w-[45%] shrink-0 items-center justify-end text-caption leading-tight tabular-nums'
 
 /**
  * What a reading that is only temperatures is called, by what it is and by which of its two
@@ -92,7 +93,7 @@ export function DayWeatherBadge({
     return (
       <div data-part="day-weather" className={BOX}>
         <span role="img" aria-label={t('trips.plan.weather.badge.loading')}>
-          <Skeleton radius="sm" className="h-4 w-16" />
+          <Skeleton radius="sm" className="h-4 w-16 max-w-full" />
         </span>
       </div>
     )
@@ -164,7 +165,6 @@ function ForecastPopover({
   const contentRef = React.useRef<HTMLDivElement>(null)
   const { name, Icon, muted, lead, trail, temperatureLabel } = face
   const recorded = model.kind === 'recorded'
-  const stacked = recorded || temperatureLabel !== null
   const approximate = model.kind === 'estimate'
 
   React.useLayoutEffect(
@@ -189,18 +189,17 @@ function ForecastPopover({
           type="button"
           aria-label={name}
           className={cn(
-            'inline-flex h-7 items-center gap-1 rounded-md px-1 text-caption tabular-nums',
+            'inline-flex min-h-7 max-w-full items-center gap-1 rounded-md px-1 py-0.5 wrap-anywhere',
             transitionBase,
             focusRing,
             'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
             // An estimate is outlined, so it is not mistaken for a forecast at a glance.
             approximate && 'border border-dashed border-info',
-            stacked && 'justify-center leading-none',
-            recorded && 'flex-col gap-0',
+            recorded && 'flex-col justify-center gap-0',
           )}
         >
           {recorded ? (
-            <span className="whitespace-nowrap text-ink-3">
+            <span className="min-w-0 text-ink-3">
               {t('trips.plan.weather.badge.recordedLabel')}
             </span>
           ) : (
@@ -213,7 +212,7 @@ function ForecastPopover({
           )}
           <span
             className={cn(
-              'inline-flex whitespace-nowrap',
+              'inline-flex min-w-0',
               temperatureLabel !== null && !recorded
                 ? 'flex-col items-start'
                 : 'items-baseline gap-1',
