@@ -61,7 +61,12 @@ describe('document theme colour', () => {
     expectTheme('dark', 'dark')
     prefersDark = true
     act(() => systemChange())
+    prefersDark = false
+    act(() => systemChange())
+    expectTheme('dark', 'dark')
     act(() => result.current.setMode('light'))
+    prefersDark = true
+    act(() => systemChange())
     expectTheme('light', 'light')
     act(() => result.current.setMode('system'))
     expectTheme('system', 'dark')

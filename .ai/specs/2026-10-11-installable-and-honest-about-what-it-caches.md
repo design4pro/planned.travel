@@ -277,7 +277,8 @@ No other user-facing sentence is added. The 23-locale parity test is unaffected.
 2. The manifest's `name` equals the file's `SITE_NAME` and its `short_name` equals the `apple-mobile-web-app-title` content in
    `src/routes/__root.tsx`.
 3. The manifest's `theme_color` and `background_color` equal `--color-canvas` as declared on bare `:root` in
-   `src/styles/tokens.css`, and the light `theme-color` meta in `__root.tsx`.
+   `src/styles/tokens.css`, and the light no-JavaScript `theme-color` fallback. The running document advertises the canvas
+   colour of the resolved application theme (#1165).
 4. `scripts/render-app-icons.mjs` run with `--out <scratch>` writes four PNGs of 192x192, 512x512, 512x512 and 180x180; the `any`
    icons have a fully transparent corner pixel and the maskable and Apple icons an opaque one; the pixel at the small dot's centre
    is `#f8f7f4` and the background `#16150f`; in the maskable and Apple icons every pixel outside the centred circle of radius
