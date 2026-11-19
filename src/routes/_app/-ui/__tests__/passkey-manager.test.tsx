@@ -1380,6 +1380,114 @@ describe('removing a passkey', () => {
     expect(document.activeElement).toBe(editor)
   })
 
+  it.each(['Rename', 'Remove'])(
+    'hands focus from a retired %s action to the heading',
+    async (action) => {
+      let finish: (value: unknown) => void = () => {}
+      client.registerPasskey.mockResolvedValue(failure(500))
+      await mountWithRows(false, WORK)
+      client.listPasskeys.mockReturnValueOnce(
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+
+      await userEvent.click(addButton())
+      screen.getByRole('button', { name: `${action} Work phone` }).focus()
+      await act(async () =>
+        finish({ ok: true, passkeys: [], requiresPassword: false }),
+      )
+
+      expect(document.activeElement).toBe(
+        screen.getByRole('heading', { name: 'Your passkeys' }),
+      )
+    },
+  )
+
+  it('retires the saving announcement when a list replacement retires the save', async () => {
+    let finishList: (value: unknown) => void = () => {}
+    let finishName: (value: unknown) => void = () => {}
+    client.registerPasskey.mockResolvedValue(failure(500))
+    client.renamePasskey.mockReturnValue(
+      new Promise((resolve) => {
+        finishName = resolve
+      }),
+    )
+    await mountWithRows(false, WORK)
+    client.listPasskeys.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishList = resolve
+      }),
+    )
+
+    await userEvent.click(addButton())
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.clear(renameInput())
+    await userEvent.type(renameInput(), 'Draft{Enter}')
+    expect(screen.getByRole('status').textContent).toBe('Saving the name')
+
+    await act(async () =>
+      finishList({ ok: true, passkeys: [WORK], requiresPassword: false }),
+    )
+    expect(screen.getByRole('status').textContent).toBe('')
+    expect(renameInput()).toHaveProperty('value', 'Draft')
+    await act(async () =>
+      finishName({ ok: true, passkey: { ...WORK, name: 'Draft' } }),
+    )
+    expect(screen.getByRole('status').textContent).toBe('')
+  })
+
+  it.each(['before', 'during'])(
+    'reconciles lost enrollment after a rename that settles %s the list read',
+    async (when) => {
+      let finishAdd: (value: unknown) => void = () => {}
+      let finishStaleList: (value: unknown) => void = () => {}
+      const renamed = { ...WORK, name: 'Renamed phone' }
+      const added = passkey({ id: 'pk_new', name: 'New phone' })
+      client.registerPasskey.mockReturnValue(
+        new Promise((resolve) => {
+          finishAdd = resolve
+        }),
+      )
+      client.renamePasskey.mockResolvedValue({ ok: true, passkey: renamed })
+      await mountWithRows(false, WORK)
+      if (when === 'during') {
+        client.listPasskeys.mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishStaleList = resolve
+          }),
+        )
+      }
+      client.listPasskeys.mockResolvedValueOnce({
+        ok: true,
+        passkeys: [added, renamed],
+        requiresPassword: false,
+      })
+      await userEvent.click(addButton())
+      if (when === 'during') await act(async () => finishAdd(failure(0)))
+      await userEvent.click(renameButton('Work phone'))
+      await userEvent.clear(renameInput())
+      await userEvent.type(renameInput(), 'Renamed phone{Enter}')
+      expect(renameButton('Renamed phone')).toBeTruthy()
+
+      if (when === 'during') {
+        await act(async () =>
+          finishStaleList({
+            ok: true,
+            passkeys: [WORK],
+            requiresPassword: false,
+          }),
+        )
+      } else {
+        await act(async () => finishAdd(failure(0)))
+      }
+
+      expect(removeButton('New phone')).toBeTruthy()
+      expect(renameButton('Renamed phone')).toBeTruthy()
+      expect(screen.getByRole('status').textContent).toBe('Passkey added')
+    },
+  )
+
   it('ignores a background list snapshot that predates confirmed removal', async () => {
     let finish: (value: unknown) => void = () => {}
     client.registerPasskey.mockResolvedValue(failure(500))

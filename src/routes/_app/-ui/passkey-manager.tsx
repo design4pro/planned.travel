@@ -322,6 +322,7 @@ export function PasskeyManager() {
   const removalSerial = useRef(0)
   // A full list replacement retires saves started against its predecessor.
   const listGeneration = useRef(0)
+  // A write can make a list read that has already started stale.
   const listMutation = useRef(0)
   const pendingRenames = useRef(new Map<string, symbol>())
   // Read by a save that finishes after another row took over rename mode.
@@ -399,7 +400,7 @@ export function PasskeyManager() {
   async function addPasskey(): Promise<void> {
     // Counted before the ceremony, to tell a row it wrote from one already there.
     const generation = listGeneration.current
-    const mutation = ++listMutation.current
+    listMutation.current += 1
     const before = list.status === 'ready' ? list.passkeys.length : null
     setStatus(null)
     setEnrolling(true)
@@ -449,15 +450,23 @@ export function PasskeyManager() {
     // Whatever the server said, the list on screen may no longer match it (a reply lost after the
     // row was written, a second tab): read it again, and keep it when the read fails.
     if (lostReply) {
-      const next = await fetchList()
+      let mutation = listMutation.current
+      let next = await fetchList()
+      // Rename stays available during enrollment. If it commits during a read, read again so the
+      // replacement reflects both writes. Remove and another Add stay inert during this recovery.
+      while (
+        listGeneration.current === generation &&
+        listMutation.current !== mutation
+      ) {
+        mutation = listMutation.current
+        next = await fetchList()
+      }
       setEnrolling(false)
       if (listGeneration.current !== generation) return
-      if (next.status === 'ready' && listMutation.current === mutation)
-        replaceReadyList(next)
+      if (next.status === 'ready') replaceReadyList(next)
       // The row is there: the write succeeded, so the status must not tell the person to try again.
       if (
         next.status === 'ready' &&
-        listMutation.current === mutation &&
         before !== null &&
         next.passkeys.length > before
       ) {
@@ -466,6 +475,7 @@ export function PasskeyManager() {
         return
       }
     } else if (!result.aborted) {
+      const mutation = listMutation.current
       void fetchList().then((next) => {
         if (
           listGeneration.current !== generation ||
@@ -493,15 +503,22 @@ export function PasskeyManager() {
   ): void {
     listGeneration.current += 1
     pendingRenames.current.clear()
+    setStatus((previous) => (previous === SAVING ? null : previous))
+    const remaining = new Set(next.passkeys.map(({ id }) => id))
+    const activeRow = document.activeElement?.closest(
+      '[data-part="passkey-row"]',
+    )
+    if (activeRow) {
+      const focused = [...removeButtons.current].find(([, button]) =>
+        activeRow.contains(button),
+      )
+      if (focused && !remaining.has(focused[0])) setFocusTarget('heading')
+    }
     const editor = renameRef.current
     if (editor !== null) {
-      if (next.passkeys.some(({ id }) => id === editor.id)) {
+      if (remaining.has(editor.id)) {
         if (editor.saving) setRename({ ...editor, saving: false })
       } else {
-        if (
-          document.activeElement?.closest('[data-part="passkey-rename-field"]')
-        )
-          setFocusTarget('heading')
         setRename(null)
       }
     }
