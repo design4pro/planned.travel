@@ -469,6 +469,7 @@ const messages = {
     'Previsione: {figures} (massima {max}, minima {min})',
   'plan.weather.badge.unavailable': 'Meteo non disponibile per questo giorno',
   'plan.weather.badge.loading': 'Caricamento del meteo',
+  'plan.weather.badge.recordedLabel': 'Registrato',
   'plan.weather.badge.recorded': 'Registrato: massima {max}, minima {min}',
   'plan.weather.badge.recordedHigh': 'Registrato: massima {max}',
   'plan.weather.badge.recordedLow': 'Registrato: minima {min}',
@@ -493,7 +494,8 @@ const messages = {
   'plan.weather.panel.precipitationTypical':
     'Precipitazioni giornaliere tipiche',
   'plan.weather.panel.probability': '{percent} di probabilità',
-  'plan.weather.panel.wind': 'Vento',
+  'plan.weather.panel.maximumWind': 'Velocità massima del vento',
+  'plan.weather.panel.meanWind': 'Velocità media del vento',
   'plan.weather.panel.sunrise': 'Alba',
   'plan.weather.panel.sunset': 'Tramonto',
   'plan.weather.panel.noSunrise': 'Nessuna alba',

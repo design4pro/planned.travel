@@ -171,7 +171,8 @@ function ForecastPopover({
   const titleId = React.useId()
   const triggerRef = React.useRef<HTMLButtonElement>(null)
   const contentRef = React.useRef<HTMLDivElement>(null)
-  const { name, Icon, muted, lead, trail } = face
+  const { name, Icon, muted, lead, trail, temperatureLabel } = face
+  const recorded = model.kind === 'recorded'
   const approximate = model.kind === 'estimate'
 
   React.useLayoutEffect(
@@ -202,26 +203,38 @@ function ForecastPopover({
             'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
             // An estimate is outlined, so it is not mistaken for a forecast at a glance.
             approximate && 'border border-dashed border-info',
+            recorded && 'flex-col justify-center gap-0 leading-none',
           )}
         >
-          <Icon
-            size={15}
-            strokeWidth={2}
-            aria-hidden="true"
-            className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
-          />
-          {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
-          <span dir="ltr" className="whitespace-nowrap">
-            {approximate ? (
-              <span aria-hidden="true" className="text-info">
-                ≈
-              </span>
-            ) : null}
-            <span className="font-semibold text-ink-2">{lead}</span>
-            {trail === null ? null : (
-              <span className="text-ink-3">/{trail}</span>
+          {recorded ? (
+            <span className="whitespace-nowrap text-ink-3">
+              {t('trips.plan.weather.badge.recordedLabel')}
+            </span>
+          ) : (
+            <Icon
+              size={15}
+              strokeWidth={2}
+              aria-hidden="true"
+              className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
+            />
+          )}
+          <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+            {temperatureLabel === null ? null : (
+              <span className="text-ink-3">{t(temperatureLabel)}</span>
             )}
-            <span className="text-ink-4">{model.unit}</span>
+            {/* One run, fixed left to right: the figures read "24°/18°C" in every direction. */}
+            <span dir="ltr">
+              {approximate ? (
+                <span aria-hidden="true" className="text-info">
+                  ≈
+                </span>
+              ) : null}
+              <span className="font-semibold text-ink-2">{lead}</span>
+              {trail === null ? null : (
+                <span className="text-ink-3">/{trail}</span>
+              )}
+              <span className="text-ink-4">{model.unit}</span>
+            </span>
           </span>
         </button>
       </PopoverTrigger>
@@ -259,11 +272,9 @@ type ReadingModel = Extract<
 >
 
 /**
- * How a reading is drawn and named. A forecast is the condition icon and "high/low"; a recorded day
- * is the thermometer, and its name begins "Recorded" so nobody takes a measurement for a forecast
- * or the reverse. An estimate is the same picture under a name that begins "Estimate"; the sign
- * and the outline that set it apart are the badge's. A day of either that lacks one temperature
- * draws the one it has, and its name says which it is, and one with neither has no face.
+ * A forecast uses its condition icon and a high/low pair. Recorded readings carry a visible
+ * "Recorded" label. Estimates use a thermometer with an approximation sign and dashed outline.
+ * A lone temperature carries a high or low label. Each accessible name starts with the reading kind.
  */
 function readingFace(
   model: ReadingModel,
@@ -275,6 +286,7 @@ function readingFace(
   readonly muted: boolean
   readonly lead: string
   readonly trail: string | null
+  readonly temperatureLabel: MessageKey | null
 } | null {
   const figure = (value: number) => `${formatNumber(value, locale)}°`
   if (model.kind === 'forecast') {
@@ -302,6 +314,7 @@ function readingFace(
       muted: model.condition === null,
       lead: max,
       trail: min,
+      temperatureLabel: null,
     }
   }
   const { max, min } = model
@@ -317,6 +330,7 @@ function readingFace(
       muted: true,
       lead: figure(max),
       trail: figure(min),
+      temperatureLabel: null,
     }
   }
   if (max !== null) {
@@ -326,6 +340,7 @@ function readingFace(
       muted: true,
       lead: figure(max),
       trail: null,
+      temperatureLabel: 'trips.plan.weather.panel.high',
     }
   }
   // Such a reading always has one of the two, but the type cannot say so, and a missing
@@ -339,5 +354,6 @@ function readingFace(
     muted: true,
     lead: figure(min),
     trail: null,
+    temperatureLabel: 'trips.plan.weather.panel.low',
   }
 }

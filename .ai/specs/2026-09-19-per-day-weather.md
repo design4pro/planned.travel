@@ -381,14 +381,16 @@ export const loadTripWeather: ServerFn<
   and the inner `flex-1` span (`:156`) are untouched, and the badge sits at the row's end, vertically
   centred. This narrows the day header's click target by the badge's width, which is the price of one
   button per action. It shows a condition icon for a forecast, a
-  thermometer for recorded or estimated days, the max/min pair in `tabular-nums`, and the unit. Its
-  box is **reserved at final size** from first paint: a skeleton while loading, and nothing but empty
-  space for `none`. A late reading never shifts the itinerary (SPEC §2, zero layout shift).
+  thermometer for estimated days and condition-less forecasts, and a visible “Recorded” label for
+  recorded days. It shows the max/min pair in `tabular-nums`, or labels a lone temperature “High”
+  or “Low”, and includes the unit. The box reserves a minimum width from first paint, with a skeleton
+  while loading and empty space for `none`. Wider readings can grow to fit localized labels.
 - **The estimate marker** is not decoration. An estimated badge carries a `≈` prefix and a dashed
   outline in `--color-info`, and its accessible name starts with "Estimate". A recorded badge's name
   starts with "Recorded". A reader must never pack for an estimate believing it is a forecast.
 - **Fuller reading**: activating the badge opens a `Popover` (`src/components/ui/popover.tsx`) with:
-  - the min/max, precipitation (with probability when forecast), wind, and sunrise/sunset;
+  - the min/max, precipitation (with probability when forecast), maximum wind for forecasts or
+    mean wind for recorded readings, and sunrise/sunset;
   - for a forecast, the four 6-hour slots (night, morning, afternoon, evening);
   - for an estimate, one line explaining that it is a long-term monthly average and not a forecast;
   - an attribution line that names MET Norway (with CC BY 4.0) or NASA POWER.
@@ -462,6 +464,7 @@ locales in the same change (`i18n-messages` skill).
 | Key                                     | en text                                                    |
 | --------------------------------------- | ---------------------------------------------------------- |
 | `plan.weather.badge.forecast`           | `Forecast: {figures}, {condition} (high {max}, low {min})` |
+| `plan.weather.badge.recordedLabel`      | `Recorded`                                                 |
 | `plan.weather.badge.recorded`           | `Recorded: high {max}, low {min}`                          |
 | `plan.weather.badge.estimate`           | `Estimate: typical high {max}, low {min}`                  |
 | `plan.weather.badge.unavailable`        | `Weather unavailable for this day`                         |
@@ -474,7 +477,8 @@ locales in the same change (`i18n-messages` skill).
 | `plan.weather.panel.typicalLow`         | `Typical low`                                              |
 | `plan.weather.panel.precipitation`      | `Precipitation`                                            |
 | `plan.weather.panel.probability`        | `{percent} chance`                                         |
-| `plan.weather.panel.wind`               | `Wind`                                                     |
+| `plan.weather.panel.maximumWind`        | `Maximum wind`                                             |
+| `plan.weather.panel.meanWind`           | `Mean wind`                                                |
 | `plan.weather.panel.sunrise`            | `Sunrise`                                                  |
 | `plan.weather.panel.sunset`             | `Sunset`                                                   |
 | `plan.weather.panel.slot.night`         | `Night`                                                    |
@@ -569,7 +573,8 @@ them.
   settling, and the first day header's `boundingBox()` is identical before and after.
 - **AC10** A foreign workspace's trip id resolves no day locations (`tenant-isolation.test.ts`).
 - **AC11** An estimate badge's accessible name begins with "Estimate"; a recorded badge's with
-  "Recorded".
+  "Recorded", which is also visible on the badge. A lone temperature is visibly labelled “High”
+  or “Low”.
 - **AC12** No MET request URL carries more than 4 decimal places of latitude or longitude.
 - **AC13** After a vendor error, the next resolution for that location spends no rate unit and makes
   no outbound call while the `wx:v1:fail:` entry lives.

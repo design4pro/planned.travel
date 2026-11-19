@@ -468,6 +468,7 @@ const messages = {
   'plan.weather.badge.unavailable':
     'El tiempo no está disponible para este día',
   'plan.weather.badge.loading': 'Cargando el tiempo',
+  'plan.weather.badge.recordedLabel': 'Registrado',
   'plan.weather.badge.recorded': 'Registrado: máxima {max}, mínima {min}',
   'plan.weather.badge.recordedHigh': 'Registrado: máxima {max}',
   'plan.weather.badge.recordedLow': 'Registrado: mínima {min}',
@@ -491,7 +492,8 @@ const messages = {
   'plan.weather.panel.precipitation': 'Precipitación',
   'plan.weather.panel.precipitationTypical': 'Precipitación diaria habitual',
   'plan.weather.panel.probability': '{percent} de probabilidad',
-  'plan.weather.panel.wind': 'Viento',
+  'plan.weather.panel.maximumWind': 'Viento máximo',
+  'plan.weather.panel.meanWind': 'Viento medio',
   'plan.weather.panel.sunrise': 'Salida del sol',
   'plan.weather.panel.sunset': 'Puesta del sol',
   'plan.weather.panel.noSunrise': 'Sin salida del sol',

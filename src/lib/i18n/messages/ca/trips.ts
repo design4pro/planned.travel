@@ -466,6 +466,7 @@ const messages = {
   'plan.weather.badge.unavailable':
     'El temps no està disponible per a aquest dia',
   'plan.weather.badge.loading': "S'està carregant el temps",
+  'plan.weather.badge.recordedLabel': 'Registrat',
   'plan.weather.badge.recorded': 'Registrat: màxima {max}, mínima {min}',
   'plan.weather.badge.recordedHigh': 'Registrat: màxima {max}',
   'plan.weather.badge.recordedLow': 'Registrat: mínima {min}',
@@ -489,7 +490,8 @@ const messages = {
   'plan.weather.panel.precipitation': 'Precipitació',
   'plan.weather.panel.precipitationTypical': 'Precipitació diària habitual',
   'plan.weather.panel.probability': '{percent} de probabilitat',
-  'plan.weather.panel.wind': 'Vent',
+  'plan.weather.panel.maximumWind': 'Vent màxim',
+  'plan.weather.panel.meanWind': 'Vent mitjà',
   'plan.weather.panel.sunrise': 'Sortida del sol',
   'plan.weather.panel.sunset': 'Posta de sol',
   'plan.weather.panel.noSunrise': 'Sense sortida del sol',

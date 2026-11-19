@@ -462,6 +462,7 @@ const messages = {
   'plan.weather.badge.unavailable':
     'Ο καιρός δεν είναι διαθέσιμος για αυτή την ημέρα',
   'plan.weather.badge.loading': 'Φόρτωση καιρού',
+  'plan.weather.badge.recordedLabel': 'Καταγραφή',
   'plan.weather.badge.recorded': 'Καταγραφή: μέγιστη {max}, ελάχιστη {min}',
   'plan.weather.badge.recordedHigh': 'Καταγραφή: μέγιστη {max}',
   'plan.weather.badge.recordedLow': 'Καταγραφή: ελάχιστη {min}',
@@ -485,7 +486,8 @@ const messages = {
   'plan.weather.panel.precipitation': 'Βροχόπτωση',
   'plan.weather.panel.precipitationTypical': 'Τυπική ημερήσια βροχόπτωση',
   'plan.weather.panel.probability': 'Πιθανότητα {percent}',
-  'plan.weather.panel.wind': 'Άνεμος',
+  'plan.weather.panel.maximumWind': 'Μέγιστη ταχύτητα ανέμου',
+  'plan.weather.panel.meanWind': 'Μέση ταχύτητα ανέμου',
   'plan.weather.panel.sunrise': 'Ανατολή ηλίου',
   'plan.weather.panel.sunset': 'Δύση ηλίου',
   'plan.weather.panel.noSunrise': 'Χωρίς ανατολή ηλίου',
