@@ -471,6 +471,8 @@ export function PasskeyManager() {
         next.passkeys.length > before
       ) {
         setStatus(ADDED)
+        // The new editor owns focus even when the replacement retired the focused row.
+        setFocusTarget(null)
         startRename(next.passkeys[0].id)
         return
       }

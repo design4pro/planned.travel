@@ -691,6 +691,26 @@ describe('adding a passkey', () => {
       expect(spoken).toEqual(['Passkey added'])
     })
 
+    it('focuses the new editor when an Add recovery also removes the focused row action', async () => {
+      const old = passkey({ id: 'pk_old', name: 'Old phone' })
+      const { settle } = await mountWithHeldReload([old])
+      await waitFor(() => expect(client.listPasskeys).toHaveBeenCalledTimes(2))
+      renameButton('Old phone').focus()
+
+      await act(async () =>
+        settle({
+          ok: true,
+          passkeys: [
+            passkey({ id: 'pk_written' }),
+            passkey({ id: 'pk_other', name: 'Other phone' }),
+          ],
+        }),
+      )
+
+      expect(screen.getByRole('status').textContent).toBe('Passkey added')
+      expect(document.activeElement).toBe(renameInput())
+    })
+
     it('says it was not added once, with focus on Add, when the reload shows no new row', async () => {
       const { settle, spoken } = await mountWithHeldReload([
         passkey({ id: 'pk_old' }),
