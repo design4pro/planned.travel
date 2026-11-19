@@ -71,7 +71,7 @@
   },
   {
     "name": "Weekly lessons",
-    "description": "Candidate definition only. Enable separately after the ownership cutover and automation audit.",
+    "description": "Weekly evidence-based Open Mercato delivery retrospective. At most one reviewed local patch; publishing is a separate maintainer decision.",
     "kind": "schedule",
     "schedule": {
       "type": "weekly",

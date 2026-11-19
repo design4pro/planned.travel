@@ -2,7 +2,9 @@
 
 Always apply `.agents/policies/security.md` and the atomic ownership protocol in `.ai/trackers/github.md`.
 
-Extends the installed skill: read `.agents/skills/om-approve-merge-pr/SKILL.md` and follow it. The following additions override the installed skill where necessary:
+For native delivery, the Cezar graph invokes `.ai/scripts/pipeline-control.mjs merge`
+after CI. Its checked reports, atomic ownership and GitHub rules govern that path.
+This override covers direct skill invocations and workflows that still call the skill.
 
 - Step 2: run **list-review-threads**. Any thread that is unresolved and not outdated makes the PR not mergeable here, even with `APPROVED` and green checks: report the threads by path and author and offer `om-auto-fix-pr <number>`, which replies in and resolves the ones it handles. Never resolve a thread from this skill: it merges, it does not answer review feedback.
 

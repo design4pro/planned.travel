@@ -247,6 +247,7 @@ describe("classify", () => {
     const prLinks = new Map([[42, [{ number: 269, title: "t", viaKeyword: true }]]]);
     const seen = decide({ comments: [] }, { prLinks });
     expect(seen.state).toBe("IN_REVIEW");
+    expect(seen.next).toContain("start `pr-autopilot` for it in the Cezar cockpit");
     expect(seen.warning).toBeNull();
   });
 
@@ -313,7 +314,7 @@ describe("classify", () => {
     expect(decide({ comments: [agent(`triage\n\n${BRIEF}`), stop, stranger] }).state).toBe("NOT_READY");
   });
 
-  it("takes a newer Agent Brief as the answer, since afk-triage settles the gap into one", () => {
+  it("takes a newer Agent Brief as the answer, since triage settles the gap into one", () => {
     const comments = [agent("not ready", "2026-09-03T00:00:00Z"), agent(`triage\n\n${BRIEF}`, "2026-09-04T00:00:00Z")];
     expect(decide({ comments }).state).toBe("READY");
   });
@@ -347,7 +348,7 @@ describe("classify", () => {
       expect(seen.next).toContain("unblock");
     });
 
-    it("reads an afk-triage comment, which opens with the AI quote, as an agent's", () => {
+    it("reads an triage comment, which opens with the AI quote, as an agent's", () => {
       expect(blocked([{ body: AI_TRIAGE, createdAt: "2026-09-02T00:00:00Z", author: OWNER }]).canUnblock).toBe(true);
     });
 
@@ -402,7 +403,7 @@ describe("classify", () => {
       expect(seen.next).not.toContain("HUMAN-ONLY");
     });
 
-    it("leaves the cases afk-unblock step 1 refuses: a claimed issue, an open PR, a person who spoke last", () => {
+    it("leaves the cases unblock step 1 refuses: a claimed issue, an open PR, a person who spoke last", () => {
       const note = [agent("waiting on the decision")];
       expect(blocked(note, ["blocked", "in-progress"]).canUnblock).toBe(false);
       const prLinks = new Map([[42, [{ number: 7, viaKeyword: true }]]]);
@@ -486,6 +487,7 @@ describe("classify", () => {
     const seen = decide({ labels: [{ name: "bug" }] });
     expect(seen.state).toBe("NEEDS_TRIAGE");
     expect(seen.next).toContain("No priority label, risk label yet");
+    expect(seen.next).toContain("start `triage` for #42 in the Cezar cockpit");
   });
 
   it("calls a briefed, labelled, unclaimed, unblocked issue ready", () => {
@@ -950,7 +952,7 @@ describe("addsSpec", () => {
 });
 
 describe("marksDeliveredStages", () => {
-  it("is true for the branch afk-plan-to-spec opens to mark delivered stages", () => {
+  it("is true for the branch plan-to-spec opens to mark delivered stages", () => {
     expect(marksDeliveredStages({ headRefName: "docs/plan-delivered-budget-and-currencies" })).toBe(true);
   });
 

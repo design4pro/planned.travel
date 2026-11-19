@@ -16,8 +16,9 @@ account, installs a global CLI or starts an allocator.
 
 Use Node 24.x, matching `.github/actions/setup/action.yml`, and the package manager version
 in `package.json`. Install the browsers required by both e2e-inc engines using the repository's installed
-`pnpm exec e2e-web install chromium webkit` command. Both engine configurations
-resolve the same pinned Playwright core version. The host needs package registry, GitHub and
+`pnpm exec e2e-web install chromium webkit` and `pnpm exec playwright install chromium webkit`
+commands. The portable and custom engines have independent lockfile-resolved Playwright
+owners whose browser builds may differ. The host needs package registry, GitHub and
 browser download access; grant provider access only when the task requires it.
 
 For ordinary development, run `pnpm worktree:bootstrap` from the checkout. For an ephemeral

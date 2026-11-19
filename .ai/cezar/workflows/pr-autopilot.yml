@@ -6,7 +6,7 @@ nodes:
     type: start
   - id: preflight
     type: check
-    command: node .ai/scripts/pipeline-control.mjs pr-preflight
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" pr-preflight
   - id: ready
     type: if
     condition: { kind: output, ref: preflight.output, op: contains, value: 'PIPELINE_CONTINUE=1' }
@@ -19,25 +19,29 @@ nodes:
     prompt: |
       Run om-pr-autopilot {{task}} through review, QA and concrete fixes. Checkout the PR head.
       The graph owns CI waiting and final merge. Reuse current-head/policy evidence. Stop before
-      CI waiting and emit CEZ:VERDICT ready when review and QA pass, otherwise blocked.
+      CI waiting and emit CEZ:VERDICT ready after the current required evidence is recorded.
+      Retain this run's atomic PR lock and in-progress label for the native merge check.
+      Use the report markers and record-evidence commands in the repository autopilot policy.
       Keep the existing three-round cap across runs; never remove a hold to finish.
+      After review, QA and the final push, mark an eligible draft ready per SDLC.md.
+      Before emitting ready, keep the worktree at the exact published head and emit the
+      PR reference for this task. The graph verifies these facts before waiting for CI.
+  - id: ci-preflight
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci-preflight
   - id: ci
     type: github.wait-ci
     timeoutMs: 2400000
     pollMs: 60000
   - id: verify-ci
     type: check
-    command: node .ai/scripts/pipeline-control.mjs ci
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" ci
   - id: merge
-    type: agent
-    verdicts: [merged, blocked]
-    prompt: |
-      Run om-approve-merge-pr {{task}} into develop only. Verify the current head and all
-      existing QA/security/hold gates. Emit merged only on fresh GitHub confirmation;
-      otherwise emit blocked. Do not repeat a valid review just because this is another tick.
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" merge
   - id: confirm
     type: check
-    command: node .ai/scripts/pipeline-control.mjs confirm-merge
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" confirm-merge
   - id: reconcile-issues
     type: agent
     verdicts: [reconciled, blocked]
@@ -51,6 +55,9 @@ nodes:
       Verify each resulting issue state. Emit CEZ:VERDICT reconciled when all eligible issues
       are closed or there are no eligible closing links; otherwise emit CEZ:VERDICT blocked
       with an explicit handoff naming the unresolved issue and owner. A merge alone is not closure.
+  - id: cleanup
+    type: check
+    command: common="$(git rev-parse --path-format=absolute --git-common-dir)" && node "$common/../.ai/scripts/pipeline-control.mjs" cleanup
   - id: done
     type: end
     status: success
@@ -65,20 +72,23 @@ edges:
   - { from: ready.true, to: bootstrap }
   - { from: bootstrap.pass, to: prepare }
   - { from: bootstrap.fail, to: failed }
-  - { from: prepare.ready, to: ci }
+  - { from: prepare.ready, to: ci-preflight }
+  - { from: ci-preflight.pass, to: ci }
+  - { from: ci-preflight.fail, to: cleanup }
   - { from: prepare.blocked, to: failed }
   - { from: prepare.failed, to: failed }
   - { from: ci.green, to: verify-ci }
-  - { from: ci.red, to: failed }
-  - { from: ci.timeout, to: failed }
-  - { from: ci.failed, to: failed }
+  - { from: ci.red, to: cleanup }
+  - { from: ci.timeout, to: cleanup }
+  - { from: ci.failed, to: cleanup }
   - { from: verify-ci.pass, to: merge }
-  - { from: verify-ci.fail, to: failed }
-  - { from: merge.merged, to: confirm }
-  - { from: merge.blocked, to: failed }
-  - { from: merge.failed, to: failed }
+  - { from: verify-ci.fail, to: cleanup }
+  - { from: merge.pass, to: confirm }
+  - { from: merge.fail, to: cleanup }
   - { from: confirm.pass, to: reconcile-issues }
   - { from: confirm.fail, to: failed }
   - { from: reconcile-issues.reconciled, to: done }
   - { from: reconcile-issues.blocked, to: failed }
   - { from: reconcile-issues.failed, to: failed }
+  - { from: cleanup.pass, to: failed }
+  - { from: cleanup.fail, to: failed }

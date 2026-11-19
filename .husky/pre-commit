@@ -7,6 +7,10 @@ if [ -n "${CEZ_TASK_ID-}" ]; then
 fi
 
 npx lint-staged
+# Check after lint-staged because the formatter can change the index.
+if [ -f scripts/ci/validation.mjs ] && node scripts/ci/validation.mjs --check-commit; then
+  exit 0
+fi
 pnpm typecheck
 # The tests this commit can reach, not the whole suite (ADR 0031): every test that imports a staged
 # file, plus every test-side file that reads the disk or starts a process, because what those

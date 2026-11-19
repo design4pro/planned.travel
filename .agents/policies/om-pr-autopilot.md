@@ -27,6 +27,20 @@ The shared safety policy applies to this run and every chained skill. Additional
 
 - **Find the dev server from the descriptor.** Read `baseUrl` from `.ai/qa/test-env.json` (`sh .ai/scripts/test-env-up.sh` writes it); never grep `.dev.vars*`, which the deny rules refuse. Quote every path that holds a variable, and never `cd` into a route path such as `src/routes/_app/trips/$tripId` unquoted: the shell expands `$tripId` to nothing.
 
+## Native delivery
+
+The prepare node retains the exact atomic PR lock and `in-progress` for this run. Publish
+passing independent reports with the markers from the review and QA policies. For a required
+security or configuration verdict, publish the approving independent report with
+`Cezar gate: security <full-head-sha> approved` and record it with the same
+`record-evidence security <pr> <report-url> <head> <base>` command. For the plan-to-spec
+exception, add `Cezar gate: plan-to-spec panel approved` only after verifying that panel.
+
+Before the ready verdict, check `--check-delivery` with the primary checkout's validator from
+the candidate worktree. Run the configured gate with `--for-commit` once if the exact result
+is missing. Hand the exact ready PR back to the graph. The native check verifies the lock, current reports,
+holds, review threads, exact head/base and executed CI and submits the protected merge.
+
 ## Shared PR and CI evidence
 
 Use `node .ai/scripts/pr-state.mjs <pr>` for the read-only state snapshot and add `--wait` for

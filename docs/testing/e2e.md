@@ -25,6 +25,7 @@ own deliberately selected server with `PLAYWRIGHT_ALLOW_ANY_PORT=1` instead.
 
 ```sh
 pnpm exec e2e-web install chromium webkit
+pnpm exec playwright install chromium webkit
 pnpm e2e:native --target chromium
 pnpm e2e:native --target webkit
 pnpm e2e:browser --target chromium
@@ -156,7 +157,8 @@ names. Focus/geometry tests wait for real fonts and scrolling to settle.
 
 1. Existing PR, push and merge-group scope rules choose whether the E2E gate runs.
    Documentation-only exceptions and promotion/draft restrictions are unchanged.
-2. Each of the two isolated shards installs the pinned browser builds once,
+2. Each of the two isolated shards installs the browser builds resolved by both
+   e2e-web and root Playwright,
    migrates local D1, seeds its own workspace and serves an `E2E_BUILD=1` build.
    Tests do not need R2 or production credentials.
 3. Each shard runs the browser journey and portable Chromium configurations.

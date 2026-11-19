@@ -25,6 +25,7 @@ and current findings/revocations. Reuse only completed passing coverage for its 
 and policy. Missing evidence or new concrete findings require fresh work. After publishing a
 passing report for the head actually inspected, verify the head and base have not moved and run
 `node .ai/scripts/pipeline-control.mjs record-evidence qa <pr> <report-url> <reviewed-head-sha> <reviewed-base-sha>`.
+For native delivery, put `Cezar gate: qa <full-head-sha> approved` on its own line in the passing report before recording it.
 Never record a failed, partial or waived stage as passed.
 
 Outside Cezar, use the published report and exact current head/base/policy checks directly; the local run-store commands require a Cezar run identity.
