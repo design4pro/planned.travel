@@ -329,7 +329,7 @@ export function PlanWorkspace({
         handleOnly
       >
         <SheetContent side="bottom" className="max-h-[86dvh]">
-          <SheetHeader className="pe-14">
+          <SheetHeader>
             <SheetTitle
               ref={sheetTitleRef}
               tabIndex={-1}
@@ -338,7 +338,7 @@ export function PlanWorkspace({
               {t('shell.trip.tab.plan')}
             </SheetTitle>
           </SheetHeader>
-          <SheetBody className="px-3 py-3">
+          <SheetBody className="[--sheet-body-gutter:0.75rem] py-3">
             <Tabs
               value={sheet ?? 'itinerary'}
               onValueChange={(value) =>

@@ -192,7 +192,7 @@ const WELL = cn(
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
   // chrome floating over it. Symmetric, so it needs no logical form.
-  'end-px start-px [--well-margin:max(1px,calc((100vw_-_var(--content-max))/2))]',
+  'end-px start-px [--well-margin:max(0px,calc((100vw_-_var(--content-max))/2))]',
   '[--well-start:max(var(--atlas-gutter),calc(var(--safe-start)_-_var(--well-margin)))]',
   '[--well-end:max(var(--atlas-gutter),calc(var(--safe-end)_-_var(--well-margin)))]',
 )

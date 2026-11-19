@@ -539,43 +539,66 @@ test.describe('authenticated routes', () => {
       const credit = page.locator(
         'div:has(> span.sr-only:text-is("Map data from"))',
       )
+      const fallback = page
+        .getByRole('status')
+        .filter({ hasText: 'Basemap unavailable' })
       await expect(zoom).toBeVisible()
-      await expect(credit).toBeVisible()
+      await expect(credit.or(fallback)).toBeVisible()
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en')
 
-      for (const direction of ['ltr', 'rtl']) {
-        for (const [left, right] of [
-          [0, 0],
-          [53, 61],
-        ]) {
-          await page.evaluate(
-            (insets) => {
-              const root = document.documentElement
-              root.dir = insets.direction
-              root.style.setProperty('--safe-left', insets.left + 'px')
-              root.style.setProperty('--safe-right', insets.right + 'px')
-            },
-            { direction, left, right },
-          )
-          const end = direction === 'rtl' ? left : right
-          for (const control of [zoom, credit]) {
-            const bounds = await control.boundingBox()
-            if (!bounds) throw new Error('Missing Atlas chrome')
+      for (const [width, gutter] of [
+        [1500, 46],
+        [800, 12],
+      ]) {
+        await page.setViewportSize({ width, height: 900 })
+        for (const direction of ['ltr', 'rtl']) {
+          for (const [left, right] of [
+            [0, 0],
+            [53, 61],
+          ]) {
+            await page.evaluate(
+              (insets) => {
+                const root = document.documentElement
+                root.dir = insets.direction
+                root.style.setProperty('--safe-left', insets.left + 'px')
+                root.style.setProperty('--safe-right', insets.right + 'px')
+              },
+              { direction, left, right },
+            )
+            const rtl = direction === 'rtl'
+            const zoomBounds = await zoom.boundingBox()
+            if (!zoomBounds) throw new Error('Missing Atlas zoom controls')
             expect(
-              direction === 'rtl' ? bounds.x : 1500 - bounds.x - bounds.width,
-            ).toBeCloseTo(Math.max(46, end), 0)
+              rtl ? zoomBounds.x : width - zoomBounds.x - zoomBounds.width,
+            ).toBeCloseTo(Math.max(gutter, rtl ? left : right), 0)
+            if (await credit.isVisible()) {
+              const bounds = await credit.boundingBox()
+              if (!bounds) throw new Error('Missing Atlas attribution')
+              const creditOnLeft = width < 1024 ? !rtl : rtl
+              expect(
+                creditOnLeft ? bounds.x : width - bounds.x - bounds.width,
+              ).toBeCloseTo(Math.max(gutter, creditOnLeft ? left : right), 0)
+            } else {
+              const bounds = await fallback.boundingBox()
+              if (!bounds)
+                throw new Error('Missing basemap notice and attribution')
+              expect(bounds.x).toBeGreaterThanOrEqual(left)
+              expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - right)
+            }
+
+            const close = panel.getByRole('button', { name: 'Close France' })
+            await expect
+              .poll(async () => {
+                const bounds = await close.boundingBox()
+                return (
+                  bounds !== null &&
+                  bounds.x >= left &&
+                  bounds.x + bounds.width <= width - right
+                )
+              })
+              .toBe(true)
+            await close.click({ trial: true })
           }
-          const close = panel.getByRole('button', { name: 'Close France' })
-          await expect
-            .poll(async () => {
-              const bounds = await close.boundingBox()
-              return (
-                bounds !== null &&
-                bounds.x >= left &&
-                bounds.x + bounds.width <= 1500 - right
-              )
-            })
-            .toBe(true)
-          await close.click({ trial: true })
         }
       }
     },

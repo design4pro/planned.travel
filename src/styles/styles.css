@@ -823,11 +823,12 @@
   padding-right: max(var(--gutter-x), var(--safe-right));
 }
 /* Physical screen insets stay attached to the glass. Map them to the reading
-   edges at the point of use, including when dir changes on an open page. */
+   edges using the document dir attribute. The optimized stylesheet must
+   follow dir independently of lang when the setting changes. */
 @utility safe-inline-edges {
   --safe-start: var(--safe-left);
   --safe-end: var(--safe-right);
-  &:dir(rtl) {
+  html[dir='rtl'] & {
     --safe-start: var(--safe-right);
     --safe-end: var(--safe-left);
   }
@@ -845,7 +846,7 @@
   );
   --panel-start: var(--panel-left);
   --panel-end: var(--panel-right);
-  &:dir(rtl) {
+  html[dir='rtl'] & {
     --panel-start: var(--panel-right);
     --panel-end: var(--panel-left);
   }

@@ -141,6 +141,43 @@ describe('shell safe-area gutters', () => {
     },
   )
 
+  test(
+    'the planner sheet spends its compact padding before adding safe clearance',
+    { session: 'owner' },
+    async ({ app, browser, screen }) => {
+      await browser.setViewport({ width: 450, height: 520 })
+      await app.open('/trips/demo-trip-01-tokyo-and-kyoto/plan')
+      await waitForHydration(browser)
+      await screen.getByRole('button', 'Days', { exact: true }).tap()
+      const header = '[role="dialog"] .panel-divider'
+      const body = '[role="dialog"] .overflow-y-auto'
+      await browser.locator(header).waitFor()
+
+      for (const direction of ['ltr', 'rtl']) {
+        await browser.evaluate((dir) => {
+          document.documentElement.dir = dir
+          return null
+        }, direction)
+        for (const [left, right] of [
+          [0, 0],
+          [LEFT_INSET, RIGHT_INSET],
+        ]) {
+          await setInsets(browser, left, right)
+          const [title, tabs] = await readRows(browser, [header, body])
+          expect(tabs.contentLeft).toBe(Math.max(12, left))
+          expect(tabs.contentRight).toBe(Math.max(12, right))
+          const rtl = direction === 'rtl'
+          expect(rtl ? title.contentLeft : title.contentRight).toBe(
+            Math.max(56, 42 + (rtl ? left : right)),
+          )
+          expect(rtl ? title.contentRight : title.contentLeft).toBe(
+            Math.max(20, rtl ? right : left),
+          )
+        }
+      }
+    },
+  )
+
   test('feedback actor spends its existing SDK margin before adding clearance', async ({
     app,
     browser,

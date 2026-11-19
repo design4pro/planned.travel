@@ -266,7 +266,7 @@ export const SheetBody = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'min-h-0 flex-1 overscroll-contain overflow-y-auto ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(0px,calc(1.25rem-var(--panel-end,0px)))] py-5',
+      'min-h-0 flex-1 overscroll-contain overflow-y-auto ps-[max(0px,calc(var(--sheet-body-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--sheet-body-gutter,1.25rem)-var(--panel-end,0px)))] py-5',
       className,
     )}
     {...props}
