@@ -20,7 +20,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { calendarSunTimes } from '#/lib/sun'
 import { resolveLimitsFromRow } from '#/server/billing/limits'
 import {
   getEffectiveSettings,
@@ -30,7 +29,7 @@ import {
 } from '#/server/repos'
 import { weatherRuntime } from '#/server/weather/bindings'
 import { deriveTripZone } from '#/server/weather/trip-zone'
-import { resolveTripWeather } from '#/server/weather/weather'
+import { calendarSunTimes, resolveTripWeather } from '#/server/weather/weather'
 import { appScope } from '../../../-server/context'
 
 import type { TripWeather } from '#/lib/weather'
