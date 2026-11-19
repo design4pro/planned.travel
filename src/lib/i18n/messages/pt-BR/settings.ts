@@ -646,7 +646,12 @@ const messages = {
   'passkeys.rename.placeholder': 'Dê um nome, como Celular do trabalho',
   'passkeys.rename.saving': 'Salvando o nome',
   'passkeys.rename.saved': 'Nome salvo',
-  'passkeys.rename.failed': 'O nome não foi salvo',
+  'passkeys.rename.cancel': 'Cancelar',
+  'passkeys.rename.save': 'Salvar',
+  'passkeys.rename.failed': 'O nome não foi salvo. Tente novamente.',
+  'passkeys.rename.missing':
+    'O nome não foi salvo. Recarregue a página e confira a lista de chaves de acesso.',
+  'passkeys.rename.failedFor': 'Não foi possível renomear {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Remover {name}',
   'passkeys.delete.title': 'Remover esta chave de acesso?',

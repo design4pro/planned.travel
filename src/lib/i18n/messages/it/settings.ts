@@ -650,7 +650,12 @@ const messages = {
   'passkeys.rename.placeholder': 'Dalle un nome, ad esempio Telefono di lavoro',
   'passkeys.rename.saving': 'Salvataggio del nome',
   'passkeys.rename.saved': 'Nome salvato',
-  'passkeys.rename.failed': 'Il nome non è stato salvato',
+  'passkeys.rename.cancel': 'Annulla',
+  'passkeys.rename.save': 'Salva',
+  'passkeys.rename.failed': 'Il nome non è stato salvato. Riprova.',
+  'passkeys.rename.missing':
+    'Il nome non è stato salvato. Ricarica la pagina e controlla l’elenco delle passkey.',
+  'passkeys.rename.failedFor': 'Impossibile rinominare {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Rimuovi {name}',
   'passkeys.delete.title': 'Rimuovere questa chiave d’accesso?',

@@ -60,6 +60,17 @@ const RENAME_PATH = '/passkey/rename'
 const DELETE_RATE_LIMIT = { window: 300, max: 5 } as const
 const DELETE_PATH = '/passkey/delete'
 
+// Require qualifying content without changing joiners, marks or other code points in a valid name.
+const passkeyName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .regex(
+    /(?![\p{White_Space}\p{Default_Ignorable_Code_Point}])[\p{L}\p{N}\p{P}\p{S}]/u,
+    'A passkey name must contain a letter, number, punctuation mark or symbol.',
+  )
+
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
 export { PASSKEY_ERROR_CODES }
 
@@ -363,7 +374,7 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           use: [sessionMiddleware],
           body: z.object({
             credential: registrationCredentialSchema,
-            name: z.string().trim().min(1).max(64).optional(),
+            name: passkeyName.optional(),
           }),
         },
         async (ctx) => {
@@ -622,7 +633,7 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           use: [sessionMiddleware],
           body: z.strictObject({
             id: z.string().min(1),
-            name: z.string().trim().min(1).max(64),
+            name: passkeyName,
           }),
         },
         async (ctx) => {

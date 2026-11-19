@@ -650,7 +650,13 @@ const messages = {
   'passkeys.rename.placeholder': 'Gib ihm einen Namen, z. B. Diensthandy',
   'passkeys.rename.saving': 'Name wird gespeichert',
   'passkeys.rename.saved': 'Name gespeichert',
-  'passkeys.rename.failed': 'Der Name wurde nicht gespeichert',
+  'passkeys.rename.cancel': 'Abbrechen',
+  'passkeys.rename.save': 'Speichern',
+  'passkeys.rename.failed':
+    'Der Name wurde nicht gespeichert. Versuche es erneut.',
+  'passkeys.rename.missing':
+    'Der Name wurde nicht gespeichert. Lade die Seite neu und prüfe die Liste der Passkeys.',
+  'passkeys.rename.failedFor': '{name} konnte nicht umbenannt werden. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} entfernen',
   'passkeys.delete.title': 'Diesen Zugangsschlüssel entfernen?',

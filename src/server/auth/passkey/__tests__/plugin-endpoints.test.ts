@@ -491,6 +491,10 @@ describe('POST /passkey/rename', () => {
   it.each([
     ['an empty name', ''],
     ['a blank name', '   '],
+    ['zero-width and bidi controls', '\u200B\u202E'],
+    ['combining marks only', '\u0301\u0651'],
+    ['an invisible letter', '\u3164'],
+    ['controls only', '\u0000\u0007'],
     ['a 65-character name', 'a'.repeat(65)],
   ])('refuses %s and keeps the stored name', async (_label, name) => {
     auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
@@ -502,14 +506,16 @@ describe('POST /passkey/rename', () => {
     expect(auth.passkeyName('alice-1')).toBe('Kept')
   })
 
-  it('accepts a 64-character name (positive control for the bound)', async () => {
-    auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
-    const cookie = await auth.signIn('alice@planned.travel')
+  it.each(['a'.repeat(64), 'کلید‌خانه', '👩‍💻', '鍵'])(
+    'accepts the name %s',
+    async (name) => {
+      auth.seedPasskeys(aliceId, [{ id: 'alice-1' }])
+      const cookie = await auth.signIn('alice@planned.travel')
 
-    const name = 'a'.repeat(64)
-    expect((await rename(cookie, { id: 'alice-1', name })).status).toBe(200)
-    expect(auth.passkeyName('alice-1')).toBe(name)
-  })
+      expect((await rename(cookie, { id: 'alice-1', name })).status).toBe(200)
+      expect(auth.passkeyName('alice-1')).toBe(name)
+    },
+  )
 
   it('refuses a field the body does not declare, and writes nothing', async () => {
     auth.seedPasskeys(aliceId, [{ id: 'alice-1', name: 'Kept' }])
@@ -952,6 +958,42 @@ describe('passkey owner notices', () => {
     expect(shared.email).toHaveBeenCalledTimes(1)
     expect(auth.passkeyCount(bobId)).toBe(1)
   })
+})
+
+describe('registration name validation', () => {
+  async function registerWithName(name: string) {
+    const cookie = await auth.signIn('alice@planned.travel')
+    const device = await createAuthenticator()
+    const options = await auth.post('/passkey/register/options', {}, { cookie })
+    expect(options.status).toBe(200)
+    const { challenge } = (await options.json()) as { challenge: string }
+    return auth.post(
+      '/passkey/register/verify',
+      { ...device.registration(challenge), name },
+      { cookie },
+    )
+  }
+
+  it.each(['\u200B\u202E', '\u0301', '\u3164', 'a'.repeat(65)])(
+    'refuses a supplied invalid name %j',
+    async (name) => {
+      const response = await registerWithName(name)
+      expect(response.status).toBe(400)
+      expect(auth.passkeyCount(aliceId)).toBe(0)
+    },
+  )
+
+  it.each(['鍵', '👩‍💻', 'کلید\u200cخانه'])(
+    'accepts and trims %s',
+    async (name) => {
+      const response = await registerWithName(`  ${name}  `)
+      expect(response.status).toBe(200)
+      const { passkey: registered } = (await response.json()) as {
+        passkey: { id: string }
+      }
+      expect(auth.passkeyName(registered.id)).toBe(name)
+    },
+  )
 })
 
 describe('passkey security notice delivery', () => {

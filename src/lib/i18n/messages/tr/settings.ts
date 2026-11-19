@@ -630,7 +630,12 @@ const messages = {
   'passkeys.rename.placeholder': 'Bir ad verin, örneğin İş telefonu',
   'passkeys.rename.saving': 'Ad kaydediliyor',
   'passkeys.rename.saved': 'Ad kaydedildi',
-  'passkeys.rename.failed': 'Ad kaydedilmedi',
+  'passkeys.rename.cancel': 'İptal',
+  'passkeys.rename.save': 'Kaydet',
+  'passkeys.rename.failed': 'Ad kaydedilemedi. Tekrar dene.',
+  'passkeys.rename.missing':
+    'Ad kaydedilemedi. Sayfayı yeniden yükle ve geçiş anahtarı listeni kontrol et.',
+  'passkeys.rename.failedFor': '{name} yeniden adlandırılamadı. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Kaldır: {name}',
   'passkeys.delete.title': 'Bu geçiş anahtarı kaldırılsın mı?',

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { Field, Input } from '#/components/ui'
+import { Button, Field, Input } from '#/components/ui'
 import { useI18n } from '#/lib/i18n'
 
 import type { KeyboardEvent } from 'react'
@@ -12,15 +12,11 @@ const MAX_NAME_LENGTH = 64
  * The name input of the one row in rename mode. It owns the draft text and the keys; the request,
  * the list and the focus handed back to the row's Rename control belong to the manager.
  *
- * - Enter commits, Escape reverts. A blur commits only a non-empty value that differs from the
- *   stored name. An empty or unchanged value never reaches `onSubmit`: a rename cannot clear a name,
- *   and a passkey that was unnamed stays unnamed.
- * - `viaKey` tells the manager whether to hand focus back to the Rename control: after Enter or
- *   Escape yes, after a blur no, because the person has already moved on.
- * - A blur never decides while the field shows an error: the person is most likely on their way to
- *   an action beside the row (Sign in again), and closing or saving would unmount it before the
- *   click lands. Enter and Escape still decide. A failed save keeps the typed text, so a retry does
- *   not mean typing it again (WCAG 3.3.7).
+ * - Enter and Save commit. Escape and Cancel discard the draft. Explicit actions return focus
+ *   to the row's Rename control if focus is still in the editor when they complete.
+ * - Moving focus outside the editor in the active document saves a changed, non-empty name
+ *   and leaves focus where the person moved it. With an error showing, only explicit actions
+ *   decide so the person can still reach Sign in again and retry without retyping.
  * - `attention` is bumped by the manager each time the field must take focus again (the Rename
  *   control pressed, or a failed save started by a key).
  */
@@ -39,14 +35,13 @@ export function PasskeyRenameField({
   saving: boolean
   error: string | null
   attention: number
-  onSubmit: (value: string, viaKey: boolean) => void
-  onCancel: (viaKey: boolean) => void
+  onSubmit: (value: string, explicit: boolean) => void
+  onCancel: (explicit: boolean) => void
 }) {
   const { t } = useI18n()
   const [draft, setDraft] = useState(initial)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Set once Enter or Escape has decided, so the blur that follows the input unmounting (some
-  // browsers fire one) cannot decide a second time.
+  // An explicit action and a subsequent blur must never submit the same draft twice.
   const settled = useRef(false)
 
   useEffect(() => {
@@ -60,16 +55,22 @@ export function PasskeyRenameField({
     if (!saving) settled.current = false
   }, [saving])
 
-  function decide(viaKey: boolean): void {
+  function decide(explicit: boolean): void {
     if (settled.current || saving) return
     const value = draft.trim()
-    if (!viaKey && error !== null) return
+    if (!explicit && error !== null) return
     settled.current = true
     if (value === '' || value === initial) {
-      onCancel(viaKey)
+      onCancel(explicit)
       return
     }
-    onSubmit(value, viaKey)
+    onSubmit(value, explicit)
+  }
+
+  function cancel(): void {
+    if (settled.current || saving) return
+    settled.current = true
+    onCancel(true)
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>): void {
@@ -81,9 +82,7 @@ export function PasskeyRenameField({
       decide(true)
     } else if (event.key === 'Escape') {
       event.preventDefault()
-      if (settled.current || saving) return
-      settled.current = true
-      onCancel(true)
+      cancel()
     }
   }
 
@@ -94,6 +93,15 @@ export function PasskeyRenameField({
       label={t('settings.passkeys.rename.fieldLabel')}
       error={error}
       className="mt-2"
+      onBlur={(event) => {
+        if (
+          event.relatedTarget === null &&
+          !event.currentTarget.ownerDocument.hasFocus()
+        )
+          return
+        if (event.currentTarget.contains(event.relatedTarget)) return
+        decide(false)
+      }}
     >
       <Input
         ref={inputRef}
@@ -111,10 +119,35 @@ export function PasskeyRenameField({
           setDraft(event.currentTarget.value)
         }}
         onKeyDown={onKeyDown}
-        onBlur={() => {
-          decide(false)
-        }}
       />
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={saving}
+          onPointerDown={(event) => {
+            // Some browsers blur the input without focusing the clicked button.
+            event.preventDefault()
+          }}
+          onClick={cancel}
+        >
+          {t('settings.passkeys.rename.cancel')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          disabled={saving}
+          onPointerDown={(event) => {
+            event.preventDefault()
+          }}
+          onClick={() => {
+            decide(true)
+          }}
+        >
+          {t('settings.passkeys.rename.save')}
+        </Button>
+      </div>
     </Field>
   )
 }

@@ -574,7 +574,12 @@ const messages = {
   'passkeys.rename.placeholder': '이름을 입력해 주세요. 예: 회사 휴대폰',
   'passkeys.rename.saving': '이름을 저장하는 중',
   'passkeys.rename.saved': '이름을 저장했어요',
-  'passkeys.rename.failed': '이름을 저장하지 못했어요',
+  'passkeys.rename.cancel': '취소',
+  'passkeys.rename.save': '저장',
+  'passkeys.rename.failed': '이름을 저장하지 못했습니다. 다시 시도하세요.',
+  'passkeys.rename.missing':
+    '이름을 저장하지 못했습니다. 페이지를 새로고침하고 패스키 목록을 확인하세요.',
+  'passkeys.rename.failedFor': '{name}의 이름을 변경하지 못했습니다. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '{name} 삭제',
   'passkeys.delete.title': '이 패스키를 삭제할까요?',

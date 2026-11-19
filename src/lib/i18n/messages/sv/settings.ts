@@ -636,7 +636,13 @@ const messages = {
   'passkeys.rename.placeholder': 'Ge den ett namn, till exempel Jobbtelefon',
   'passkeys.rename.saving': 'Sparar namnet',
   'passkeys.rename.saved': 'Namnet sparades',
-  'passkeys.rename.failed': 'Namnet sparades inte',
+  'passkeys.rename.cancel': 'Avbryt',
+  'passkeys.rename.save': 'Spara',
+  'passkeys.rename.failed': 'Namnet sparades inte. Försök igen.',
+  'passkeys.rename.missing':
+    'Namnet sparades inte. Ladda om sidan och kontrollera listan över passkeys.',
+  'passkeys.rename.failedFor':
+    'Det gick inte att byta namn på {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Ta bort {name}',
   'passkeys.delete.title': 'Ta bort den här lösenordsnyckeln?',

@@ -628,7 +628,12 @@ const messages = {
   'passkeys.rename.placeholder': 'Beri nama, misalnya Ponsel kerja',
   'passkeys.rename.saving': 'Menyimpan nama',
   'passkeys.rename.saved': 'Nama disimpan',
-  'passkeys.rename.failed': 'Nama tidak disimpan',
+  'passkeys.rename.cancel': 'Batal',
+  'passkeys.rename.save': 'Simpan',
+  'passkeys.rename.failed': 'Nama tidak tersimpan. Coba lagi.',
+  'passkeys.rename.missing':
+    'Nama tidak tersimpan. Muat ulang halaman dan periksa daftar kunci sandi.',
+  'passkeys.rename.failedFor': 'Tidak dapat mengganti nama {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Hapus {name}',
   'passkeys.delete.title': 'Hapus kunci sandi ini?',

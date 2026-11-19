@@ -653,7 +653,13 @@ const messages = {
   'passkeys.rename.placeholder': 'Дайте назву, наприклад Робочий телефон',
   'passkeys.rename.saving': 'Зберігаємо назву',
   'passkeys.rename.saved': 'Назву збережено',
-  'passkeys.rename.failed': 'Назву не збережено',
+  'passkeys.rename.cancel': 'Скасувати',
+  'passkeys.rename.save': 'Зберегти',
+  'passkeys.rename.failed': 'Не вдалося зберегти назву. Спробуйте ще раз.',
+  'passkeys.rename.missing':
+    'Не вдалося зберегти назву. Перезавантажте сторінку та перевірте список ключів доступу.',
+  'passkeys.rename.failedFor':
+    'Не вдалося перейменувати ключ «{name}». {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Видалити: {name}',
   'passkeys.delete.title': 'Видалити цей ключ доступу?',

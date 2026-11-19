@@ -637,7 +637,12 @@ const messages = {
   'passkeys.rename.placeholder': 'سمّه، مثل هاتف العمل',
   'passkeys.rename.saving': 'جارٍ حفظ الاسم',
   'passkeys.rename.saved': 'تم حفظ الاسم',
-  'passkeys.rename.failed': 'لم يتم حفظ الاسم',
+  'passkeys.rename.cancel': 'إلغاء',
+  'passkeys.rename.save': 'حفظ',
+  'passkeys.rename.failed': 'لم يُحفظ الاسم. حاول مرة أخرى.',
+  'passkeys.rename.missing':
+    'لم يُحفظ الاسم. أعد تحميل الصفحة وتحقق من قائمة مفاتيح المرور.',
+  'passkeys.rename.failedFor': 'تعذّرت إعادة تسمية {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'إزالة {name}',
   'passkeys.delete.title': 'هل تريد إزالة مفتاح المرور هذا؟',

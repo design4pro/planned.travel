@@ -534,7 +534,11 @@ const messages = {
   'passkeys.rename.placeholder': '起个名字，例如“工作手机”',
   'passkeys.rename.saving': '正在保存名称',
   'passkeys.rename.saved': '名称已保存',
-  'passkeys.rename.failed': '名称未能保存',
+  'passkeys.rename.cancel': '取消',
+  'passkeys.rename.save': '保存',
+  'passkeys.rename.failed': '未能保存名称。请重试。',
+  'passkeys.rename.missing': '未能保存名称。请重新加载页面并查看通行密钥列表。',
+  'passkeys.rename.failedFor': '无法重命名“{name}”。{detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': '删除 {name}',
   'passkeys.delete.title': '删除这个通行密钥？',

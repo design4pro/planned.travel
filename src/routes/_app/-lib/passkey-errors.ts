@@ -68,15 +68,14 @@ export function loadFailureNotice(failure: AuthFailure): PasskeyNotice {
   )
 }
 
-/**
- * Why a name was not saved. A `401` and a `429` say so by name, as everywhere on this screen;
- * anything else (a refused or impersonated session, a passkey that is gone, a dropped connection)
- * is the one sentence "The name was not saved".
- */
+/** Recovery guidance chosen from the rename endpoint's public failure contract. */
 export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
-  return (
-    sharedNotice(failure) ?? notice('settings.passkeys.rename.failed', 'danger')
-  )
+  const shared = sharedNotice(failure)
+  if (shared !== null) return shared
+  if (failure.code === PASSKEY_NOT_FOUND) {
+    return notice('settings.passkeys.rename.missing', 'danger')
+  }
+  return notice('settings.passkeys.rename.failed', 'danger')
 }
 
 /**

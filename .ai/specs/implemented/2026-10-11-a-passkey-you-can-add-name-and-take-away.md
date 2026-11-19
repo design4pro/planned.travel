@@ -292,11 +292,13 @@ The ceremony runs first and sends **no name**; the new row opens in rename mode 
 in a `Field` with a **visible** label ("Name this passkey"; its accessible name contains that visible text, WCAG 2.5.3), a visible placeholder
 ("Name it, like Work phone"), `enterKeyHint="done"`, `maxLength={64}` and `dir="auto"`; only one row is in rename mode at a time, so the shared
 label is never duplicated on the page. Every row carries a **Rename
-{name}** control (`IconButton`, at least 24px, named per row) that moves focus into the input; Enter, Escape and a successful save return focus
-to that control; a failed save keeps focus in the input and shows the error through `Field`'s `error`. Enter commits; blur commits only a non-empty changed value; Escape reverts; an empty value
-or Escape sends no request and leaves `name` null. A spinner shows while the rename saves; a failed rename keeps the typed text and says so
-inline. The input is a full-width tap target of at least 44px high and the design does not depend on focus opening the keyboard after the sheet
-closes (iOS will not).
+{name}** control (`IconButton`, at least 24px, named per row) that moves focus into the input. Enter and Save submit a changed,
+non-empty name. Escape and Cancel discard the draft. Explicit actions
+return focus to the Rename control when the person is still in the editor. Moving focus out of the editor in the active document can also save;
+leaving the window or tab keeps the draft open. An empty or unchanged name closes the editor without a request when a save is attempted.
+The input is read-only and both buttons are disabled during a save. An active editor keeps its draft on failure and shows recovery guidance
+inline. The input is a full-width tap target of at least 44px high. The design does not depend on the keyboard opening automatically after the
+system sheet closes.
 
 **The fallback name (shipped by 09-S1a, because every passkey a registers is unnamed).** A passkey with no name shows the **display-only
 fallback** "Passkey · added {date}", built at render time from a catalogue key and `formatDate`, in the reader's locale. It is never saved, never
@@ -376,7 +378,11 @@ component does not read fails `coverage.test.ts`, so a ticket lands exactly the 
 | `passkeys.rename.placeholder`      | Name it, like Work phone                                                                                   | b      |
 | `passkeys.rename.saving`           | Saving the name                                                                                            | b      |
 | `passkeys.rename.saved`            | Name saved                                                                                                 | b      |
-| `passkeys.rename.failed`           | The name was not saved                                                                                     | b      |
+| `passkeys.rename.cancel`           | Cancel                                                                                                     | b      |
+| `passkeys.rename.save`             | Save                                                                                                       | b      |
+| `passkeys.rename.failed`           | The name was not saved. Try again.                                                                         | b      |
+| `passkeys.rename.missing`          | The name was not saved. Reload the page and check your passkey list.                                       | b      |
+| `passkeys.rename.failedFor`        | Could not rename {name}. {detail}                                                                          | b      |
 | `passkeys.delete.action`           | Remove {name}                                                                                              | c      |
 | `passkeys.delete.title`            | Remove this passkey?                                                                                       | c      |
 | `passkeys.delete.body`             | You will no longer be able to sign in with {name}.                                                         | c      |
@@ -414,9 +420,9 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 | Account at 20 passkeys                                                | `register/options` refuses with `PASSKEY_LIMIT_REACHED`; the screen shows the limit sentence; no sheet opens.                                           |
 | Two ceremonies in parallel at 19                                      | May end at 21; accepted and documented (no atomic count-and-insert in the adapter).                                                                     |
 | List request fails or returns 429                                     | Error alert with Try again; 429 says so by name.                                                                                                        |
-| Rename to an empty string, Escape, or blur unchanged                  | No request; name stays as it was (null stays null).                                                                                                     |
+| Rename to an empty string, Escape or Cancel, or blur unchanged        | No request; name stays as it was (null stays null).                                                                                                     |
 | Rename of another person's credential id                              | `NOT_FOUND`; the other row is unchanged.                                                                                                                |
-| Rename request fails                                                  | Text stays, inline "The name was not saved".                                                                                                            |
+| Rename request fails                                                  | Active draft stays with inline recovery guidance; a late failure names the affected passkey in the status region.                                       |
 | Delete with a wrong password / no password on a password account      | `BAD_REQUEST` with the matching code; the row survives; the dialog says so inline and stays open.                                                       |
 | Delete on a passwordless account with a session older than `freshAge` | `PASSKEY_SESSION_NOT_FRESH`; the row survives; the dialog asks the person to sign in again.                                                             |
 | Delete of another person's credential id                              | `NOT_FOUND` whatever else was sent; the other row is unchanged.                                                                                         |
@@ -658,3 +664,16 @@ Phase 3 (09-S1c, #1146) differs from the design in these places:
 17. **The delete dialog is its own module** (`passkey-delete-dialog.tsx`) and owns the request, the password and the refusals; the manager owns the list and where focus goes once it has closed. `SignInAgain` moved to `passkey-sign-in-again.tsx` so both read it. The passkey's name sits in a `bdi dir="auto"` inside the translated sentence (a sentinel character is split out of the message, because the catalogue has no markup). The copy gate walks both new files.
 18. **Removing lifts the ceiling line.** A removed passkey clears the standing "limit reached" line, so "Remove one to add another" holds without a reload.
 19. **Removal answers that are not refusals.** `PASSKEY_NOT_FOUND` on delete (another tab removed it, or a reply was lost and the retry reached the server) counts as removed: the row leaves, the dialog closes and "Passkey removed" is announced, because retrying could never succeed. A password refusal with no field drawn (the list's hint was stale) switches the dialog to password mode and draws the field. "Passkey removed" is written from `onCloseAutoFocus`, after the dialog has gone, because until then the page behind it is `aria-hidden` and the change would not be announced.
+
+### Passkey naming follow-up (#1203)
+
+- Save and Cancel are visible at every viewport size. Focusing either action stays within the editor, so Cancel can discard a changed draft
+  before blur commits it. An ordinary blur out of the editor in the active document still saves unless an error is showing. Leaving the window
+  or tab preserves the draft and sends no request. See the existing IME and focus rules in amendment 13.
+- A missing passkey asks the person to reload and check their passkey list. Other generic failures offer a retry. The session-ended
+  and rate-limit messages still take precedence. A late failure announces the display name or fallback captured from the caller's list
+  at submission, with its own text direction, and leaves the current editor and focus in place.
+- The optional registration name and the required rename name share one Zod rule: after trimming, keep the 64-character limit and require
+  at least one Unicode letter, number, punctuation mark or symbol outside the whitespace and default-ignorable sets. Accepted names keep
+  their joiners, marks and other code points. Existing names remain stored as they are. Missing and foreign passkeys still return the same
+  not-found error for a valid rename request.

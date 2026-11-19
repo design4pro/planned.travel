@@ -653,7 +653,13 @@ const messages = {
   'passkeys.rename.placeholder': 'Posa-li nom, per exemple Mòbil de la feina',
   'passkeys.rename.saving': 'Desant el nom',
   'passkeys.rename.saved': 'Nom desat',
-  'passkeys.rename.failed': 'No s’ha desat el nom',
+  'passkeys.rename.cancel': 'Cancel·la',
+  'passkeys.rename.save': 'Desa',
+  'passkeys.rename.failed': 'No s’ha desat el nom. Torna-ho a provar.',
+  'passkeys.rename.missing':
+    'No s’ha desat el nom. Torna a carregar la pàgina i comprova la llista de claus d’accés.',
+  'passkeys.rename.failedFor':
+    'No s’ha pogut canviar el nom de {name}. {detail}',
   // 09-S1c: taking a passkey away.
   'passkeys.delete.action': 'Elimina {name}',
   'passkeys.delete.title': 'Vols eliminar aquesta clau d’accés?',
