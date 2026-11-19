@@ -19,7 +19,7 @@ import {
   loadCatalogue,
   RECOVERY_CATALOGUES,
 } from '#/lib/i18n'
-import { themeBootstrapScript } from '#/lib/theme'
+import { themeBootstrapScript, themeColorFallback } from '#/lib/theme'
 import { wideLayoutBootstrapScript } from '#/lib/wide-layout'
 import { takeWorkspaceDocumentFetch } from '#/lib/workspace-claim-store'
 import { negotiateRequestLocale } from '#/server/fns/locale'
@@ -127,16 +127,6 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { name: 'mobile-web-app-capable', content: 'yes' },
       { name: 'format-detection', content: 'telephone=no' },
       { name: 'color-scheme', content: 'light dark' },
-      {
-        name: 'theme-color',
-        content: '#faf9f7',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        name: 'theme-color',
-        content: '#121211',
-        media: '(prefers-color-scheme: dark)',
-      },
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: SITE_NAME },
       { property: 'og:title', content: TITLE },
@@ -191,7 +181,8 @@ export function RootDocument({ children }: { children: ReactNode }) {
     // the negotiated locale and must match byte for byte after hydration.
     <html lang={locale} dir={dir} suppressHydrationWarning>
       <head>
-        {/* First thing in <head>: commits the right palette with frame one. */}
+        {/* The bootstrap owns the live meta so React never hydrates a changed value. */}
+        <noscript dangerouslySetInnerHTML={{ __html: themeColorFallback }} />
         <script
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: themeBootstrapScript }}

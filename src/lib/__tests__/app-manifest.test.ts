@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { THEME_COLORS, themeColorFallback } from '../theme'
 
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 const root = read('src/routes/__root.tsx')
@@ -54,11 +55,8 @@ describe('the installed app identity', () => {
     )?.[1]
     expect(manifest.theme_color).toBe(canvas)
     expect(manifest.background_color).toBe(canvas)
-    expect(root).toMatch(
-      new RegExp(
-        `name: 'theme-color',\\s*content: '${canvas}',\\s*media: '\\(prefers-color-scheme: light\\)'`,
-      ),
-    )
+    expect(THEME_COLORS.light).toBe(canvas)
+    expect(THEME_COLORS.dark).toBe('#121211')
   })
 
   it('announces a credentialed manifest and touch icon without deprecated Apple meta', () => {
@@ -79,8 +77,14 @@ describe('the installed app identity', () => {
     expect(root).toContain(
       'width=device-width, initial-scale=1, viewport-fit=cover',
     )
-    expect(root).toMatch(
-      /content: '#121211',\s*media: '\(prefers-color-scheme: dark\)'/,
+    expect(root).toContain(
+      '<noscript dangerouslySetInnerHTML={{ __html: themeColorFallback }} />',
+    )
+    expect(themeColorFallback).toContain(
+      'content="#faf9f7" media="(prefers-color-scheme: light)"',
+    )
+    expect(themeColorFallback).toContain(
+      'content="#121211" media="(prefers-color-scheme: dark)"',
     )
   })
 })
