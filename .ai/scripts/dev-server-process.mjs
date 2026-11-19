@@ -15,10 +15,14 @@ import { setTimeout as sleep } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 
 const output = (command, args) => {
+  const darwinLsof = process.platform === 'darwin' && command === 'lsof'
   try {
-    return execFileSync(command, args, {
+    // Avoid lsof's costly syscall isolation on macOS. Bound the whole child
+    // instead and discard its output if it fails or times out.
+    return execFileSync(command, darwinLsof ? ['-O', ...args] : args, {
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'ignore'],
+      ...(darwinLsof && { timeout: 2000, killSignal: 'SIGKILL' }),
     }).trim()
   } catch {
     return ''
