@@ -75,7 +75,7 @@ export function PasskeyDeleteDialog({
   requiresPassword,
   onOpenChange,
   onRemoved,
-  onUnavailable,
+  onReconcile,
   onCloseAutoFocus,
 }: {
   passkey: PasskeySummary
@@ -85,7 +85,7 @@ export function PasskeyDeleteDialog({
   requiresPassword: boolean
   onOpenChange: (open: boolean) => void
   onRemoved: () => void
-  onUnavailable: () => void
+  onReconcile: (outcome: 'unavailable' | 'unknown') => void
   onCloseAutoFocus: (event: Event) => void
 }) {
   const { t } = useI18n()
@@ -131,9 +131,12 @@ export function PasskeyDeleteDialog({
       onRemoved()
       return
     }
-    if (result.failure.code === PASSKEY_NOT_FOUND) {
+    if (
+      result.failure.status === 0 ||
+      result.failure.code === PASSKEY_NOT_FOUND
+    ) {
       setPassword('')
-      onUnavailable()
+      onReconcile(result.failure.status === 0 ? 'unknown' : 'unavailable')
       return
     }
     const refused = deleteFailure(result.failure)
@@ -152,6 +155,8 @@ export function PasskeyDeleteDialog({
   const passwordRefusal = refusal?.focus === 'password' ? refusal : null
   const alertRefusal =
     refusal !== null && passwordRefusal === null ? refusal : null
+  const showPassword = !refusal?.dismissOnly && askPassword
+  const hasVisibleBody = showPassword || alertRefusal !== null
 
   return (
     <Dialog
@@ -168,7 +173,11 @@ export function PasskeyDeleteDialog({
         data-part="passkey-delete-dialog"
         onCloseAutoFocus={onCloseAutoFocus}
       >
-        <DialogHeader className="pe-5 sm:pe-6">
+        <DialogHeader
+          className={
+            hasVisibleBody ? 'pe-5 sm:pe-6' : 'border-b-0 pe-5 sm:pe-6'
+          }
+        >
           <DialogTitle>{t('settings.passkeys.delete.title')}</DialogTitle>
           <DialogDescription>
             <NamedSentence
@@ -176,9 +185,14 @@ export function PasskeyDeleteDialog({
               name={displayName}
             />{' '}
             {t('settings.passkeys.delete.savedEntry')}
+            {!refusal?.dismissOnly && !askPassword ? (
+              <span className="mt-2 block text-body text-ink-2">
+                {t('settings.passkeys.delete.confirmOnly')}
+              </span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
-        <DialogBody>
+        <DialogBody className={hasVisibleBody ? undefined : 'py-0'}>
           <form
             id={formId}
             className="flex flex-col gap-4"
@@ -194,7 +208,7 @@ export function PasskeyDeleteDialog({
                 <span key={announcement}>{t(passwordRefusal.notice.key)}</span>
               )}
             </p>
-            {!refusal?.dismissOnly && askPassword ? (
+            {showPassword ? (
               <>
                 <Field
                   label={t('settings.passkeys.delete.password')}
@@ -231,11 +245,6 @@ export function PasskeyDeleteDialog({
                   {t('auth.login.forgot')}
                 </a>
               </>
-            ) : null}
-            {!refusal?.dismissOnly && !askPassword ? (
-              <p className="text-body text-ink-2">
-                {t('settings.passkeys.delete.confirmOnly')}
-              </p>
             ) : null}
             {alertRefusal === null ? null : (
               <Alert

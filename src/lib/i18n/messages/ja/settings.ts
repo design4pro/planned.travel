@@ -617,6 +617,8 @@ const messages = {
     '別のアカウントとして操作している間は、パスキーを削除できません。',
   'passkeys.delete.refreshed':
     'このパスキーは利用できませんでした。一覧を更新しました。',
+  'passkeys.delete.unknown':
+    '削除を確認できませんでした。パスキーの一覧を更新しました。',
   'passkeys.delete.confirm': 'パスキーを削除',
   'passkeys.delete.cancel': 'キャンセル',
   'passkeys.delete.wrongPassword': 'パスワードが正しくありません。',

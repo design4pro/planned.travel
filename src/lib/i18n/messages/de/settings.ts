@@ -667,6 +667,8 @@ const messages = {
     'Du kannst keinen Passkey entfernen, während du ein anderes Konto übernimmst.',
   'passkeys.delete.refreshed':
     'Dieser Passkey war nicht verfügbar. Die Liste wurde aktualisiert.',
+  'passkeys.delete.unknown':
+    'Das Entfernen konnte nicht bestätigt werden. Die Passkey-Liste wurde aktualisiert.',
   'passkeys.delete.confirm': 'Zugangsschlüssel entfernen',
   'passkeys.delete.cancel': 'Abbrechen',
   'passkeys.delete.wrongPassword': 'Dieses Passwort ist nicht richtig.',

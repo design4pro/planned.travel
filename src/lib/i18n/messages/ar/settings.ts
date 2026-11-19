@@ -653,6 +653,7 @@ const messages = {
   'passkeys.delete.impersonated':
     'لا يمكنك إزالة مفتاح مرور أثناء استخدام حساب آخر بالنيابة عن صاحبه.',
   'passkeys.delete.refreshed': 'مفتاح المرور هذا غير متاح. تم تحديث القائمة.',
+  'passkeys.delete.unknown': 'تعذّر تأكيد الإزالة. حُدّثت قائمة مفاتيح المرور.',
   'passkeys.delete.confirm': 'إزالة مفتاح المرور',
   'passkeys.delete.cancel': 'إلغاء',
   'passkeys.delete.wrongPassword': 'كلمة المرور هذه غير صحيحة.',

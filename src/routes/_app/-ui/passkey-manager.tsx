@@ -62,7 +62,7 @@ interface RenameState {
 interface Removal {
   readonly passkey: PasskeySummary
   readonly open: boolean
-  readonly outcome: 'cancelled' | 'removed' | 'unavailable'
+  readonly outcome: 'cancelled' | 'removed' | 'unavailable' | 'unknown'
   readonly requiresPassword: boolean
   readonly serial: number
 }
@@ -91,6 +91,12 @@ const REMOVED: PasskeyNotice = {
 
 const REFRESHED: PasskeyNotice = {
   key: 'settings.passkeys.delete.refreshed',
+  tone: 'neutral',
+  signInAgain: false,
+}
+
+const REMOVAL_UNKNOWN: PasskeyNotice = {
+  key: 'settings.passkeys.delete.unknown',
   tone: 'neutral',
   signInAgain: false,
 }
@@ -177,6 +183,7 @@ function focusIsInRenameField(): boolean {
 function PasskeyRow({
   passkey,
   rename,
+  removeDisabled,
   registerRenameButton,
   registerRemoveButton,
   onStartRename,
@@ -189,6 +196,7 @@ function PasskeyRow({
   passkey: PasskeySummary
   /** Set only on the row that is in rename mode. */
   rename: RenameState | null
+  removeDisabled: boolean
   registerRenameButton: (element: HTMLButtonElement | null) => void
   registerRemoveButton: (element: HTMLButtonElement | null) => void
   onStartRename: () => void
@@ -275,6 +283,7 @@ function PasskeyRow({
         ref={registerRemoveButton}
         data-part="passkey-delete"
         variant="danger"
+        aria-disabled={removeDisabled || undefined}
         icon={<Trash2 />}
         label={t('settings.passkeys.delete.action', { name: displayName })}
         onClick={onStartRemove}
@@ -313,6 +322,7 @@ export function PasskeyManager() {
   const removalSerial = useRef(0)
   // A full list replacement retires saves started against its predecessor.
   const listGeneration = useRef(0)
+  const listMutation = useRef(0)
   const pendingRenames = useRef(new Map<string, symbol>())
   // Read by a save that finishes after another row took over rename mode.
   const renameRef = useRef<RenameState | null>(null)
@@ -389,6 +399,7 @@ export function PasskeyManager() {
   async function addPasskey(): Promise<void> {
     // Counted before the ceremony, to tell a row it wrote from one already there.
     const generation = listGeneration.current
+    const mutation = ++listMutation.current
     const before = list.status === 'ready' ? list.passkeys.length : null
     setStatus(null)
     setEnrolling(true)
@@ -441,15 +452,12 @@ export function PasskeyManager() {
       const next = await fetchList()
       setEnrolling(false)
       if (listGeneration.current !== generation) return
-      if (next.status === 'ready') {
-        listGeneration.current += 1
-        setRename(null)
-        setRenameFocusId(null)
-        setList(next)
-      }
+      if (next.status === 'ready' && listMutation.current === mutation)
+        replaceReadyList(next)
       // The row is there: the write succeeded, so the status must not tell the person to try again.
       if (
         next.status === 'ready' &&
+        listMutation.current === mutation &&
         before !== null &&
         next.passkeys.length > before
       ) {
@@ -459,12 +467,13 @@ export function PasskeyManager() {
       }
     } else if (!result.aborted) {
       void fetchList().then((next) => {
-        if (listGeneration.current !== generation || next.status !== 'ready')
+        if (
+          listGeneration.current !== generation ||
+          listMutation.current !== mutation ||
+          next.status !== 'ready'
+        )
           return
-        listGeneration.current += 1
-        setRename(null)
-        setRenameFocusId(null)
-        setList(next)
+        replaceReadyList(next)
       })
     }
 
@@ -477,6 +486,26 @@ export function PasskeyManager() {
     }
     setStatus(outcome.notice)
     setFocusTarget(outcome.notice.signInAgain ? 'signIn' : 'add')
+  }
+
+  function replaceReadyList(
+    next: Extract<ListState, { status: 'ready' }>,
+  ): void {
+    listGeneration.current += 1
+    pendingRenames.current.clear()
+    const editor = renameRef.current
+    if (editor !== null) {
+      if (next.passkeys.some(({ id }) => id === editor.id)) {
+        if (editor.saving) setRename({ ...editor, saving: false })
+      } else {
+        if (
+          document.activeElement?.closest('[data-part="passkey-rename-field"]')
+        )
+          setFocusTarget('heading')
+        setRename(null)
+      }
+    }
+    setList(next)
   }
 
   function startRename(id: string): void {
@@ -523,6 +552,7 @@ export function PasskeyManager() {
     const returnFocus = viaKey && focusIsInRenameField()
 
     if (result.ok) {
+      listMutation.current += 1
       setList((previous) =>
         previous.status === 'ready'
           ? {
@@ -565,7 +595,7 @@ export function PasskeyManager() {
   }
 
   function startRemove(passkey: PasskeySummary): void {
-    if (list.status !== 'ready') return
+    if (list.status !== 'ready' || enrolling) return
     removalSerial.current += 1
     setRemoval({
       passkey,
@@ -583,6 +613,7 @@ export function PasskeyManager() {
   }
 
   function passkeyRemoved(id: string): void {
+    listMutation.current += 1
     pendingRenames.current.delete(id)
     setList((previous) =>
       previous.status === 'ready'
@@ -603,7 +634,7 @@ export function PasskeyManager() {
     )
   }
 
-  function passkeyUnavailable(): void {
+  function reconcileRemoval(outcome: 'unavailable' | 'unknown'): void {
     listGeneration.current += 1
     pendingRenames.current.clear()
     setRename(null)
@@ -612,19 +643,19 @@ export function PasskeyManager() {
     setLimitHit(false)
     setList(LOADING)
     setRemoval((previous) =>
-      previous === null
-        ? previous
-        : { ...previous, open: false, outcome: 'unavailable' },
+      previous === null ? previous : { ...previous, open: false, outcome },
     )
   }
 
-  async function refreshAfterUnavailable(): Promise<void> {
+  async function refreshAfterRemoval(
+    outcome: 'unavailable' | 'unknown',
+  ): Promise<void> {
     const generation = listGeneration.current
     const next = await fetchList()
     if (listGeneration.current !== generation) return
     setList(next)
     if (next.status === 'ready') {
-      setStatus(REFRESHED)
+      setStatus(outcome === 'unknown' ? REMOVAL_UNKNOWN : REFRESHED)
       setStatusTick((tick) => tick + 1)
     } else if (
       next.notice.signInAgain &&
@@ -642,8 +673,11 @@ export function PasskeyManager() {
       if (!addDisabled) target = addRef.current ?? target
       setStatus(REMOVED)
       setStatusTick((tick) => tick + 1)
-    } else if (removal?.outcome === 'unavailable') {
-      void refreshAfterUnavailable()
+    } else if (
+      removal?.outcome === 'unavailable' ||
+      removal?.outcome === 'unknown'
+    ) {
+      void refreshAfterRemoval(removal.outcome)
     } else {
       target = removeButtons.current.get(removal?.passkey.id ?? '') ?? target
     }
@@ -751,6 +785,7 @@ export function PasskeyManager() {
                   variant="secondary"
                   size="sm"
                   shape="pill"
+                  disabled={enrolling}
                   onClick={retry}
                 >
                   {t('settings.passkeys.error.retry')}
@@ -786,6 +821,7 @@ export function PasskeyManager() {
                 key={passkey.id}
                 passkey={passkey}
                 rename={rename?.id === passkey.id ? rename : null}
+                removeDisabled={enrolling}
                 registerRenameButton={(element) => {
                   if (element === null) renameButtons.current.delete(passkey.id)
                   else renameButtons.current.set(passkey.id, element)
@@ -842,7 +878,7 @@ export function PasskeyManager() {
           onRemoved={() => {
             passkeyRemoved(removal.passkey.id)
           }}
-          onUnavailable={passkeyUnavailable}
+          onReconcile={reconcileRemoval}
           onCloseAutoFocus={returnFocusAfterRemove}
         />
       )}

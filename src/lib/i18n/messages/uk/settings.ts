@@ -670,6 +670,8 @@ const messages = {
     'Ви не можете видалити ключ доступу, діючи від імені іншого облікового запису.',
   'passkeys.delete.refreshed':
     'Цей ключ доступу був недоступний. Список оновлено.',
+  'passkeys.delete.unknown':
+    'Не вдалося підтвердити видалення. Список ключів доступу оновлено.',
   'passkeys.delete.confirm': 'Видалити ключ доступу',
   'passkeys.delete.cancel': 'Скасувати',
   'passkeys.delete.wrongPassword': 'Цей пароль неправильний.',

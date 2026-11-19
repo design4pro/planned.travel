@@ -590,6 +590,8 @@ const messages = {
     '다른 계정으로 대신 작업하는 동안에는 패스키를 삭제할 수 없습니다.',
   'passkeys.delete.refreshed':
     '이 패스키를 사용할 수 없었습니다. 목록을 새로고침했습니다.',
+  'passkeys.delete.unknown':
+    '삭제 여부를 확인할 수 없습니다. 패스키 목록을 새로 고쳤습니다.',
   'passkeys.delete.confirm': '패스키 삭제',
   'passkeys.delete.cancel': '취소',
   'passkeys.delete.wrongPassword': '비밀번호가 맞지 않아요.',

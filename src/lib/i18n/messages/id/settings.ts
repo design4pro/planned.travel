@@ -646,6 +646,8 @@ const messages = {
     'Anda tidak dapat menghapus kunci sandi saat bertindak sebagai akun lain.',
   'passkeys.delete.refreshed':
     'Kunci sandi itu tidak tersedia. Daftar telah diperbarui.',
+  'passkeys.delete.unknown':
+    'Penghapusan tidak dapat dikonfirmasi. Daftar kunci sandi telah dimuat ulang.',
   'passkeys.delete.confirm': 'Hapus kunci sandi',
   'passkeys.delete.cancel': 'Batal',
   'passkeys.delete.wrongPassword': 'Kata sandi itu tidak tepat.',

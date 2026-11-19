@@ -670,6 +670,8 @@ const messages = {
     'No pots eliminar una clau d’accés mentre actues en nom d’un altre compte.',
   'passkeys.delete.refreshed':
     'Aquesta clau d’accés no estava disponible. S’ha actualitzat la llista.',
+  'passkeys.delete.unknown':
+    'No s’ha pogut confirmar l’eliminació. S’ha actualitzat la llista de claus d’accés.',
   'passkeys.delete.confirm': 'Elimina la clau d’accés',
   'passkeys.delete.cancel': 'Cancel·la',
   'passkeys.delete.wrongPassword': 'Aquesta contrasenya no és correcta.',

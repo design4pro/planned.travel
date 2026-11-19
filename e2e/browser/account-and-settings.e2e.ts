@@ -182,8 +182,13 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
       dialog.getByRole('button', { name: 'Sign in again' }),
     ).toBeInViewport()
     await expect(dialog.getByRole('alert')).toBeFocused()
+    await page.setViewportSize({ width: 2560, height: 1000 })
+    await expect(
+      dialog.getByRole('button', { name: 'Sign in again' }),
+    ).toBeInViewport()
     await page.keyboard.press('Escape')
     await expect(remove).toBeFocused()
+    await page.setViewportSize({ width: 360, height: 780 })
 
     // Change only the browser context's locale; the demo account is shared across tests.
     await page.route('**/_serverFn/**', (route) => {
@@ -210,6 +215,11 @@ test.describe('ACC-03 - the passkeys page answers for a signed-in member', () =>
       arabicSettings['passkeys.delete.title'],
     )
     await expectDialogFits()
+    await confirm.click()
+    await expect(dialog.getByRole('alert')).toContainText(
+      arabicSettings['passkeys.delete.stale'],
+    )
+    await expect(dialog.getByRole('alert')).toBeFocused()
   })
 
   test('does not move when the list resolves into rows', async ({

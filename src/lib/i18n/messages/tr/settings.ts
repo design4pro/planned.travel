@@ -646,6 +646,8 @@ const messages = {
     'Başka bir hesap adına işlem yaparken geçiş anahtarı kaldıramazsınız.',
   'passkeys.delete.refreshed':
     'Bu geçiş anahtarı kullanılamıyordu. Liste yenilendi.',
+  'passkeys.delete.unknown':
+    'Kaldırma işlemi doğrulanamadı. Geçiş anahtarı listesi yenilendi.',
   'passkeys.delete.confirm': 'Geçiş anahtarını kaldır',
   'passkeys.delete.cancel': 'İptal',
   'passkeys.delete.wrongPassword': 'Bu şifre doğru değil.',

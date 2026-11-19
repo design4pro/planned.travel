@@ -1328,6 +1328,104 @@ describe('removing a passkey', () => {
   const WORK = passkey({ id: 'pk_1', name: 'Work phone' })
   const LAPTOP = passkey({ id: 'pk_2', name: 'Laptop' })
 
+  it('keeps removal inert until a concurrent registration settles', async () => {
+    let finish: (value: unknown) => void = () => {}
+    client.registerPasskey.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await mountWithRows(false, WORK)
+
+    await userEvent.click(addButton())
+    expect(removeButton('Work phone').getAttribute('aria-disabled')).toBe(
+      'true',
+    )
+    await userEvent.click(removeButton('Work phone'))
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await act(async () =>
+      finish({
+        ok: true,
+        passkey: passkey({ id: 'pk_new', name: 'New phone' }),
+      }),
+    )
+    expect(removeButton('New phone')).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toBe('Passkey added')
+    await userEvent.click(removeButton('Work phone'))
+    expect(dialog()).toBeTruthy()
+  })
+
+  it('keeps a surviving rename draft and focus when a background list refresh resolves', async () => {
+    let finish: (value: unknown) => void = () => {}
+    client.registerPasskey.mockResolvedValue(failure(500))
+    await mountWithRows(false, WORK)
+    client.listPasskeys.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(addButton())
+    await userEvent.click(renameButton('Work phone'))
+    const editor = renameInput()
+    await userEvent.clear(editor)
+    await userEvent.type(editor, 'Draft')
+
+    await act(async () =>
+      finish({ ok: true, passkeys: [WORK], requiresPassword: false }),
+    )
+
+    expect(renameInput()).toBe(editor)
+    expect(editor).toHaveProperty('value', 'Draft')
+    expect(document.activeElement).toBe(editor)
+  })
+
+  it('ignores a background list snapshot that predates confirmed removal', async () => {
+    let finish: (value: unknown) => void = () => {}
+    client.registerPasskey.mockResolvedValue(failure(500))
+    client.deletePasskey.mockResolvedValue({ ok: true })
+    await mountWithRows(false, WORK)
+    client.listPasskeys.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(addButton())
+    await userEvent.click(removeButton('Work phone'))
+    await userEvent.click(confirmButton())
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+
+    await act(async () =>
+      finish({ ok: true, passkeys: [WORK], requiresPassword: false }),
+    )
+
+    expect(rowCount()).toBe(0)
+    expect(screen.getByRole('status').textContent).toBe('Passkey removed')
+  })
+
+  it.each([true, false])(
+    'refreshes after a lost delete reply, row remains: %s',
+    async (remains) => {
+      client.deletePasskey.mockResolvedValue(failure(0))
+      await mountWithRows(false, WORK)
+      client.listPasskeys.mockResolvedValueOnce({
+        ok: true,
+        passkeys: remains ? [WORK] : [],
+        requiresPassword: true,
+      })
+      await userEvent.click(removeButton('Work phone'))
+      await userEvent.click(confirmButton())
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() =>
+        expect(screen.getByRole('status').textContent).toBe(
+          'Removal could not be confirmed. The passkey list was refreshed.',
+        ),
+      )
+      expect(rowCount()).toBe(Number(remains))
+    },
+  )
+
   it('names every row’s Remove control with the passkey, the fallback included', async () => {
     await mountWithRows(true, WORK, passkey({ id: 'pk_2' }))
 
@@ -1630,11 +1728,12 @@ describe('removing a passkey', () => {
       await userEvent.click(removeButton('Work phone'))
 
       expect(within(dialog()).queryByLabelText('Password')).toBeNull()
-      expect(
-        within(dialog()).getByText(
-          'You can still use your other configured sign-in methods. Removing a passkey requires a recent sign-in. If your session is older, you’ll need to sign in again.',
-        ),
-      ).toBeTruthy()
+      const description = document.getElementById(
+        dialog().getAttribute('aria-describedby') ?? '',
+      )
+      expect(description?.textContent).toContain(
+        'You can still use your other configured sign-in methods. Removing a passkey requires a recent sign-in. If your session is older, you’ll need to sign in again.',
+      )
 
       await userEvent.click(confirmButton())
 
@@ -1776,11 +1875,6 @@ describe('removing a passkey', () => {
         'an impersonated session',
         failure(403, 'PASSKEY_IMPERSONATED'),
         'You can’t remove a passkey while impersonating another account.',
-      ],
-      [
-        'a dropped connection',
-        failure(0),
-        'The passkey was not removed. Try again.',
       ],
     ])(
       'shows %s in one alert that takes focus, and keeps the dialog and the row',

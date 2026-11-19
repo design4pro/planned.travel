@@ -663,6 +663,8 @@ const messages = {
     'Při vystupování za jiný účet nelze odebrat přístupový klíč.',
   'passkeys.delete.refreshed':
     'Přístupový klíč nebyl dostupný. Seznam se obnovil.',
+  'passkeys.delete.unknown':
+    'Odebrání se nepodařilo potvrdit. Seznam přístupových klíčů byl obnoven.',
   'passkeys.delete.confirm': 'Odebrat přístupový klíč',
   'passkeys.delete.cancel': 'Zrušit',
   'passkeys.delete.wrongPassword': 'Toto heslo není správné.',

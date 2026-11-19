@@ -683,6 +683,8 @@ const messages = {
     'Nie możesz usunąć klucza dostępu podczas działania w imieniu innego konta.',
   'passkeys.delete.refreshed':
     'Ten klucz dostępu był niedostępny. Lista została odświeżona.',
+  'passkeys.delete.unknown':
+    'Nie udało się potwierdzić usunięcia. Lista kluczy dostępu została odświeżona.',
   'passkeys.delete.confirm': 'Usuń klucz dostępu',
   'passkeys.delete.cancel': 'Anuluj',
   'passkeys.delete.wrongPassword': 'To hasło jest nieprawidłowe.',

@@ -656,6 +656,8 @@ const messages = {
     'Másik fiók nevében nem távolíthatsz el hozzáférési kulcsot.',
   'passkeys.delete.refreshed':
     'Ez a hozzáférési kulcs nem volt elérhető. A lista frissült.',
+  'passkeys.delete.unknown':
+    'Az eltávolítást nem sikerült megerősíteni. A hozzáférési kulcsok listája frissült.',
   'passkeys.delete.confirm': 'Belépési kulcs eltávolítása',
   'passkeys.delete.cancel': 'Mégse',
   'passkeys.delete.wrongPassword': 'Ez a jelszó nem helyes.',

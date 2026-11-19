@@ -653,6 +653,8 @@ const messages = {
     'Du kan inte ta bort en lösenordsnyckel när du agerar som ett annat konto.',
   'passkeys.delete.refreshed':
     'Lösenordsnyckeln var inte tillgänglig. Listan har uppdaterats.',
+  'passkeys.delete.unknown':
+    'Det gick inte att bekräfta borttagningen. Lösenordsnyckellistan har uppdaterats.',
   'passkeys.delete.confirm': 'Ta bort lösenordsnyckel',
   'passkeys.delete.cancel': 'Avbryt',
   'passkeys.delete.wrongPassword': 'Lösenordet stämmer inte.',

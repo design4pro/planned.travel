@@ -663,6 +663,8 @@ const messages = {
     'Je kunt geen passkey verwijderen terwijl je namens een ander account werkt.',
   'passkeys.delete.refreshed':
     'Die passkey was niet beschikbaar. De lijst is vernieuwd.',
+  'passkeys.delete.unknown':
+    'De verwijdering kon niet worden bevestigd. De lijst met toegangssleutels is vernieuwd.',
   'passkeys.delete.confirm': 'Toegangssleutel verwijderen',
   'passkeys.delete.cancel': 'Annuleren',
   'passkeys.delete.wrongPassword': 'Dat wachtwoord klopt niet.',

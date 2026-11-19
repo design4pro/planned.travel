@@ -661,6 +661,8 @@ const messages = {
     'Δεν μπορείς να αφαιρέσεις κλειδί πρόσβασης όσο ενεργείς ως άλλος λογαριασμός.',
   'passkeys.delete.refreshed':
     'Αυτό το κλειδί πρόσβασης δεν ήταν διαθέσιμο. Η λίστα ανανεώθηκε.',
+  'passkeys.delete.unknown':
+    'Δεν ήταν δυνατή η επιβεβαίωση της αφαίρεσης. Η λίστα κλειδιών πρόσβασης ανανεώθηκε.',
   'passkeys.delete.confirm': 'Αφαίρεση κλειδιού πρόσβασης',
   'passkeys.delete.cancel': 'Ακύρωση',
   'passkeys.delete.wrongPassword':

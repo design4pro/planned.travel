@@ -733,6 +733,8 @@ const messages = {
     'You can’t remove a passkey while impersonating another account.',
   'passkeys.delete.refreshed':
     'That passkey was unavailable. The list was refreshed.',
+  'passkeys.delete.unknown':
+    'Removal could not be confirmed. The passkey list was refreshed.',
   'passkeys.delete.confirm': 'Remove passkey',
   'passkeys.delete.cancel': 'Cancel',
   'passkeys.delete.wrongPassword': 'That password is not right.',

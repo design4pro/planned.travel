@@ -681,6 +681,8 @@ const messages = {
     'Нельзя удалить ключ доступа, пока вы действуете от имени другого аккаунта.',
   'passkeys.delete.refreshed':
     'Этот ключ доступа был недоступен. Список обновлён.',
+  'passkeys.delete.unknown':
+    'Не удалось подтвердить удаление. Список ключей доступа обновлён.',
   'passkeys.delete.confirm': 'Удалить ключ доступа',
   'passkeys.delete.cancel': 'Отмена',
   'passkeys.delete.wrongPassword': 'Этот пароль неверный.',

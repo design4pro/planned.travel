@@ -662,6 +662,8 @@ const messages = {
     'Você não pode remover uma chave de acesso enquanto atua em nome de outra conta.',
   'passkeys.delete.refreshed':
     'Essa chave de acesso não estava disponível. A lista foi atualizada.',
+  'passkeys.delete.unknown':
+    'Não foi possível confirmar a remoção. A lista de chaves de acesso foi atualizada.',
   'passkeys.delete.confirm': 'Remover chave de acesso',
   'passkeys.delete.cancel': 'Cancelar',
   'passkeys.delete.wrongPassword': 'Essa senha não está correta.',

@@ -667,6 +667,8 @@ const messages = {
     'Non puoi rimuovere una passkey mentre agisci per conto di un altro account.',
   'passkeys.delete.refreshed':
     'Questa passkey non era disponibile. L’elenco è stato aggiornato.',
+  'passkeys.delete.unknown':
+    'Non è stato possibile confermare la rimozione. L’elenco delle passkey è stato aggiornato.',
   'passkeys.delete.confirm': 'Rimuovi la chiave d’accesso',
   'passkeys.delete.cancel': 'Annulla',
   'passkeys.delete.wrongPassword': 'Questa password non è corretta.',

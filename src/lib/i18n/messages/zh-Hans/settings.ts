@@ -547,6 +547,7 @@ const messages = {
     '你仍可使用已设置的其他登录方式。移除通行密钥需要你最近登录过。如果此次会话开始时间较早，你需要重新登录。',
   'passkeys.delete.impersonated': '以其他账号身份操作时，无法移除通行密钥。',
   'passkeys.delete.refreshed': '该通行密钥不可用。列表已刷新。',
+  'passkeys.delete.unknown': '无法确认是否已移除。通行密钥列表已刷新。',
   'passkeys.delete.confirm': '删除通行密钥',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '这个密码不正确。',

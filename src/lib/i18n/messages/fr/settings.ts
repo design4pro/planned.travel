@@ -674,6 +674,8 @@ const messages = {
     'Vous ne pouvez pas supprimer une clé d’accès lorsque vous agissez au nom d’un autre compte.',
   'passkeys.delete.refreshed':
     'Cette clé d’accès n’était pas disponible. La liste a été actualisée.',
+  'passkeys.delete.unknown':
+    'La suppression n’a pas pu être confirmée. La liste des clés d’accès a été actualisée.',
   'passkeys.delete.confirm': 'Supprimer la clé d’accès',
   'passkeys.delete.cancel': 'Annuler',
   'passkeys.delete.wrongPassword': 'Ce mot de passe n’est pas le bon.',

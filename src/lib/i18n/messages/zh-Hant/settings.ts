@@ -551,6 +551,7 @@ const messages = {
     '你仍可使用已設定的其他登入方式。移除通行密鑰需要你最近登入過。如果本次工作階段已持續一段時間，你需要重新登入。',
   'passkeys.delete.impersonated': '以其他帳號身分操作時，無法移除通行密鑰。',
   'passkeys.delete.refreshed': '該通行密鑰無法使用。清單已重新整理。',
+  'passkeys.delete.unknown': '無法確認是否已移除。通行密鑰清單已重新整理。',
   'passkeys.delete.confirm': '移除密碼金鑰',
   'passkeys.delete.cancel': '取消',
   'passkeys.delete.wrongPassword': '這個密碼不正確。',

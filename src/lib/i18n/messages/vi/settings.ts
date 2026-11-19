@@ -646,6 +646,8 @@ const messages = {
     'Bạn không thể xóa khóa truy cập khi đang thao tác thay mặt một tài khoản khác.',
   'passkeys.delete.refreshed':
     'Khóa truy cập đó không khả dụng. Danh sách đã được làm mới.',
+  'passkeys.delete.unknown':
+    'Không thể xác nhận việc xóa. Danh sách khóa truy cập đã được làm mới.',
   'passkeys.delete.confirm': 'Xóa khóa truy cập',
   'passkeys.delete.cancel': 'Hủy',
   'passkeys.delete.wrongPassword': 'Mật khẩu này không đúng.',
