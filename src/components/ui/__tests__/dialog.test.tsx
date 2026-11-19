@@ -74,6 +74,16 @@ describe('Dialog', () => {
     )
   })
 
+  it('shares the edge clearance between the panel and its dismiss button', () => {
+    render(<Fixture open />)
+    expect(
+      screen.getByRole('dialog').classList.contains('panel-safe-content'),
+    ).toBe(true)
+    expect(screen.getByRole('button', { name: 'Close' }).className).toContain(
+      'var(--panel-end)',
+    )
+  })
+
   it('closes on Escape', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
@@ -117,7 +127,8 @@ describe('Dialog', () => {
     render(<Fixture />)
     await user.click(screen.getByRole('button', { name: 'Invite travellers' }))
     const dialog = screen.getByRole('dialog')
-    expect(dialog.className).toContain('max-w-sm')
+    expect(dialog.className).toContain('max-w-(--dialog-width)')
+    expect(dialog.className).toContain('[--dialog-width:var(--container-sm)]')
     expect(dialog.className).toContain('data-[state=open]:animate-dialog-in')
   })
 })

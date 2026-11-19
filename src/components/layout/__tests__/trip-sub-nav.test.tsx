@@ -77,6 +77,16 @@ beforeEach(() => {
 })
 
 describe('TripSubNav', () => {
+  it('uses the safe gutter on both rows', () => {
+    const { container } = renderAt('/trips/trip-1/plan')
+    const rows = Array.from(container.firstElementChild?.children ?? [])
+    expect(rows).toHaveLength(2)
+    for (const row of rows) {
+      expect(row.classList.contains('gutter-x')).toBe(true)
+      expect(row.className).not.toMatch(/(?:^|[ :])px-/)
+    }
+  })
+
   it('lights the tab the reader is on and remembers it', () => {
     renderAt('/trips/trip-1/costs')
 

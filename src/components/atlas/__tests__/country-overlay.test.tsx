@@ -797,6 +797,27 @@ describe('anchorSpan', () => {
 describe('surfaceAreas', () => {
   const box: SurfaceBox = { x: 0, y: 0, width: 1440, height: 835 }
 
+  it('keeps all placement areas inside unequal physical edges in RTL', () => {
+    const phone = { x: 0, y: 0, width: 400, height: 650 }
+    const areas = surfaceAreas(phone, {
+      top: 72,
+      bottom: 154,
+      left: 105,
+      right: 21,
+      sideGutters: { left: 53, right: 21 },
+      gutter: 12,
+      direction: 'rtl',
+    })
+    expect(areas.find((area) => area.kind === 'gutter')).toMatchObject({
+      x: 53,
+      width: 326,
+    })
+    for (const area of areas) {
+      expect(area.x).toBeGreaterThanOrEqual(53)
+      expect(area.x + area.width).toBeLessThanOrEqual(379)
+    }
+  })
+
   it('states the strict area as the chrome describes it', () => {
     const [strict] = surfaceAreas(box, {
       top: 76,

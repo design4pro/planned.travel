@@ -22,6 +22,7 @@ import { CountryActions } from './country-actions'
 import { CountryCard, CountryCardSkeleton } from './country-card'
 
 import type { CountryActionsGoal, CountryActionsVisit } from './country-actions'
+import type { AtlasPadding } from '#/lib/atlas/layout'
 import type { CountryFactColumns } from '#/lib/atlas/country-facts'
 import type { MapVisitedCountry } from '#/components/map'
 import type {
@@ -917,25 +918,30 @@ const CONTROLS_MOVE_AT = 1024
  *    tab strip, and a panel lying across it takes the reader's other route to the
  *    very country it is about.
  *
- * `padding.left` is the plain gutter in both widenings, so the areas and the
- * chrome cannot drift apart.
+ * The widened areas still reserve both physical side gutters.
  */
 export function surfaceAreas(
   box: SurfaceBox,
-  padding: EdgePadding,
+  padding: AtlasPadding,
   column: number = Number.POSITIVE_INFINITY,
 ): ReadonlyArray<SurfaceArea> {
   const well = Math.min(box.width, Math.max(column, 0))
-  const wellRight = box.x + (box.width - well) / 2 + well
+  const wellLeft = box.x + (box.width - well) / 2
+  const wellRight = wellLeft + well
+  const rtl = padding.direction === 'rtl'
+  const leftEdge = rtl ? wellLeft : box.x
+  const rightEdge = rtl ? box.x + box.width : wellRight
 
-  const left = box.x + padding.left
+  const sideLeft = padding.sideGutters?.left ?? padding.left
+  const sideRight = padding.sideGutters?.right ?? padding.left
+  const left = leftEdge + padding.left
   const top = box.y + padding.top
   const clear = Math.max(box.height - padding.top - padding.bottom, 0)
   const strict: SurfaceArea = {
     kind: 'strict',
     x: left,
     y: top,
-    width: Math.max(wellRight - padding.right - left, 0),
+    width: Math.max(rightEdge - padding.right - left, 0),
     height: clear,
   }
   // Below the width at which the cluster moves it is the map's *top* right
@@ -944,13 +950,14 @@ export function surfaceAreas(
   // cost a phone 52 of its 348 clear pixels — exactly the width a gutter-to-
   // gutter sheet was short of fitting above the shelf, which is why every phone
   // panel used to end up on top of it.
-  const right =
-    box.width < CONTROLS_MOVE_AT ? padding.left : Math.max(padding.right, 0)
+  const controlsAbove = box.width < CONTROLS_MOVE_AT
+  const gutterLeft = leftEdge + (controlsAbove ? sideLeft : padding.left)
+  const right = controlsAbove ? sideRight : Math.max(padding.right, 0)
   const gutter: SurfaceArea = {
     kind: 'gutter',
-    x: left,
+    x: gutterLeft,
     y: top,
-    width: Math.max(wellRight - right - left, 0),
+    width: Math.max(rightEdge - right - gutterLeft, 0),
     height: clear,
   }
   const relaxed: SurfaceArea = {
@@ -958,13 +965,16 @@ export function surfaceAreas(
     x: gutter.x,
     y: gutter.y,
     width: gutter.width,
-    height: Math.max(box.height - padding.top - padding.left, 0),
+    height: Math.max(
+      box.height - padding.top - (padding.gutter ?? padding.left),
+      0,
+    ),
   }
   const outside: SurfaceArea = {
     kind: 'outside',
-    x: wellRight,
+    x: rtl ? box.x + sideLeft : wellRight,
     y: top,
-    width: Math.max(box.x + box.width - padding.left - wellRight, 0),
+    width: Math.max((box.width - well) / 2 - (rtl ? sideLeft : sideRight), 0),
     height: clear,
   }
 

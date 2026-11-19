@@ -2659,6 +2659,29 @@ test.describe('a confirmation file read into the booking desk', () => {
         await page.keyboard.press('Escape')
         await expect(dialog).toBeHidden()
         const widget = page.locator('[data-part="book-import-widget"]')
+        await expect(widget).toBeVisible()
+        const horizontalClearance = async () =>
+          widget.evaluate((element) => {
+            const { left, right } = element.getBoundingClientRect()
+            return { left, right: innerWidth - right }
+          })
+        expect((await horizontalClearance()).right).toBe(16)
+        await page.evaluate(() => {
+          document.documentElement.style.setProperty('--safe-left', '53px')
+          document.documentElement.style.setProperty('--safe-right', '21px')
+        })
+        expect((await horizontalClearance()).right).toBe(21)
+        await page.evaluate(() => {
+          document.documentElement.dir = 'rtl'
+        })
+        const rtl = await horizontalClearance()
+        expect(rtl.left).toBe(53)
+        expect(rtl.right).toBeGreaterThanOrEqual(21)
+        await page.evaluate(() => {
+          document.documentElement.dir = 'ltr'
+          document.documentElement.style.removeProperty('--safe-left')
+          document.documentElement.style.removeProperty('--safe-right')
+        })
         await widget.getByRole('button', { name: 'Dismiss' }).click()
         await expect(widget).toBeHidden()
 

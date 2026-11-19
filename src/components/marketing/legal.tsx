@@ -71,7 +71,7 @@ export function LegalDocument({
 }: LegalDocumentProps) {
   const t = useTranslate()
   return (
-    <div className="mx-auto w-full max-w-content px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+    <div className="mx-auto w-full max-w-content gutter-x py-12 sm:py-16">
       <header className="max-w-3xl">
         <SectionLabel icon={<Scale />}>{eyebrow}</SectionLabel>
         <h1 className="mt-3 font-display text-title font-extrabold tracking-tighter text-balance text-ink sm:text-display">
