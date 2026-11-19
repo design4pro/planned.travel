@@ -374,17 +374,14 @@ export const loadTripWeather: ServerFn<
 
 ## 📝 UI/UX
 
-- **Badge** (`day-weather-badge.tsx`), placed **beside** the day header button in `day-section.tsx`,
-  never inside it. The date label (`:161-166`) sits inside the header `<button>` (`:134-171`), so the
-  badge cannot go there. The header button and the badge become siblings in a new
-  `flex items-center` wrapper: the button's `w-full` (`:139`) becomes `flex-1 min-w-0`, its contents
-  and the inner `flex-1` span (`:156`) are untouched, and the badge sits at the row's end, vertically
-  centred. This narrows the day header's click target by the badge's width, which is the price of one
-  button per action. It shows a condition icon for a forecast, a
-  thermometer for estimated days and condition-less forecasts, and a visible “Recorded” label for
-  recorded days. It shows the max/min pair in `tabular-nums`, or labels a lone temperature “High”
-  or “Low”, and includes the unit. The box reserves a minimum width from first paint, with a skeleton
-  while loading and empty space for `none`. Wider readings can grow to fit localized labels.
+- **Badge** (`day-weather-badge.tsx`), placed beside the day header button in `day-section.tsx` so
+  each button has one action. The header and badge are siblings in the same flex row. The header
+  can shrink, with the date moving below the title when both need more room. The badge sits at the
+  row's end and shows a condition icon for a forecast, a thermometer for estimated days and
+  condition-less forecasts, and visible “Recorded” text for recorded days. It shows the max/min
+  pair in `tabular-nums`, or labels a lone temperature “High” or “Low”, and includes the unit.
+  An empty or loading day reserves the same space from first paint. The slot scales with caption
+  text and takes at most 45% of the row, with long label text wrapping within the trigger.
 - **The estimate marker** is not decoration. An estimated badge carries a `≈` prefix and a dashed
   outline in `--color-info`, and its accessible name starts with "Estimate". A recorded badge's name
   starts with "Recorded". A reader must never pack for an estimate believing it is a forecast.

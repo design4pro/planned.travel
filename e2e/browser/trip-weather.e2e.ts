@@ -386,12 +386,12 @@ async function expectEnlargedWeatherLayout(
     expect((await title.boundingBox())?.width).toBeGreaterThan(30)
     const geometry = await badge.evaluate((button) => {
       const trigger = button.getBoundingClientRect()
-      const slot = button.parentElement?.getBoundingClientRect()
+      const slotRect = button.parentElement?.getBoundingClientRect()
       return {
         triggerWithinSlot:
-          slot !== undefined &&
-          trigger.left >= slot.left - 0.5 &&
-          trigger.right <= slot.right + 0.5,
+          slotRect !== undefined &&
+          trigger.left >= slotRect.left - 0.5 &&
+          trigger.right <= slotRect.right + 0.5,
         horizontalOverflow: button.scrollWidth - button.clientWidth,
         verticalOverflow: button.scrollHeight - button.clientHeight,
       }
