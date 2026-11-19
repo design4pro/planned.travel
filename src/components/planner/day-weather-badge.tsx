@@ -22,18 +22,9 @@ import type { Locale, MessageKey, Translate } from '#/lib/i18n'
 import type { WeatherUnit } from '#/lib/weather'
 import type { DayWeatherView, WeatherBadgeModel } from './weather-model'
 
-/**
- * The box every state is drawn in.
- *
- * One class string for loading, a forecast, an unavailable day and a day with nothing to show, so
- * the row the badge sits in is the same width before the answer arrives and after it. A late
- * reading fills this box; it never makes the itinerary move. The width is a floor, not a fixed
- * size: the usual reading fits inside it, and the rare wide one (two signed digits each, or a
- * three-digit Fahrenheit high) widens the box instead of painting over the day's header button.
- */
-// A normal two-temperature reading is 80.484px with the shipped font; reserve
-// the next spacing step while allowing unusually wide readings to grow.
-const BOX = 'flex h-7 min-w-21 shrink-0 items-center justify-end'
+// Reserve the same slot through loading, empty and settled states. Leave room for
+// localized labels and signed temperatures without squeezing the day header on arrival.
+const BOX = 'flex h-7 w-26 shrink-0 items-center justify-end'
 
 /**
  * What a reading that is only temperatures is called, by what it is and by which of its two
@@ -173,6 +164,7 @@ function ForecastPopover({
   const contentRef = React.useRef<HTMLDivElement>(null)
   const { name, Icon, muted, lead, trail, temperatureLabel } = face
   const recorded = model.kind === 'recorded'
+  const stacked = recorded || temperatureLabel !== null
   const approximate = model.kind === 'estimate'
 
   React.useLayoutEffect(
@@ -203,7 +195,8 @@ function ForecastPopover({
             'hover:bg-hover active:bg-active data-[state=open]:bg-hover',
             // An estimate is outlined, so it is not mistaken for a forecast at a glance.
             approximate && 'border border-dashed border-info',
-            recorded && 'flex-col justify-center gap-0 leading-none',
+            stacked && 'justify-center leading-none',
+            recorded && 'flex-col gap-0',
           )}
         >
           {recorded ? (
@@ -218,7 +211,14 @@ function ForecastPopover({
               className={cn('shrink-0', muted ? 'text-ink-4' : 'text-info')}
             />
           )}
-          <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
+          <span
+            className={cn(
+              'inline-flex whitespace-nowrap',
+              temperatureLabel !== null && !recorded
+                ? 'flex-col items-start'
+                : 'items-baseline gap-1',
+            )}
+          >
             {temperatureLabel === null ? null : (
               <span className="text-ink-3">{t(temperatureLabel)}</span>
             )}

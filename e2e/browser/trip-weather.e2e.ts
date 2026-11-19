@@ -125,18 +125,20 @@ test.describe('DOC-08 — the weather of a day', () => {
 
       // The header is where it was: a late answer fills a box that was already there.
       const after = await first.boundingBox()
+      const weatherAfter = await recorded
+        .locator('[data-part="day-weather"]')
+        .boundingBox()
       await test.info().attach('weather-header-geometry', {
         body: JSON.stringify({
           before,
           after,
           weatherBefore,
-          weatherAfter: await recorded
-            .locator('[data-part="day-weather"]')
-            .boundingBox(),
+          weatherAfter,
         }),
         contentType: 'application/json',
       })
       expect(after).toEqual(before)
+      expect(weatherAfter).toEqual(weatherBefore)
       // WebKit publishes no layout shifts: there an empty list proves nothing, so it is not asserted.
       if (await layoutShiftsReported(page)) {
         expect(
