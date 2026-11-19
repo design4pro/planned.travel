@@ -1,6 +1,13 @@
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -13,7 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
  * oxlint reads `.gitignore` itself, the nested `.ai/cezar/.gitignore` included (ADR 0028), so that
  * list is gone and this file pins the premise instead: a file dropped into a gitignored directory
  * is never linted. The other half is `ignorePatterns` in `.oxlintrc.json`, which still names the
- * tracked paths that are not ours to lint, `.claude` among them.
+ * tracked paths that are not ours to lint, including vendored skills.
  *
  * Its failure mode is silence in both directions: nothing notices a directory that is linted when
  * it should not be until the tool that writes it runs, and nothing notices an ignore that grew too
@@ -47,34 +54,43 @@ const IGNORED = [
 /** Not tracked either, but not gitignored: the shared config the QA browser descriptor writes. */
 const WRITTEN_AND_LINTED = ['.ai/qa/playwright.config.ts'] as const
 
-/** What this file created, deepest last, so `afterAll` removes exactly that and nothing else. */
-const created: string[] = []
+const SOURCE_FILES = [
+  'src/routes/index.tsx',
+  'src/server/repos/trips.ts',
+] as const
 
-const write = (path: string) => {
-  const file = resolve(root, path)
-  if (existsSync(file)) return
-  let top = dirname(file)
-  while (!existsSync(dirname(top))) top = dirname(top)
-  created.push(existsSync(top) ? file : top)
-  mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, 'export const probe = 1\n')
-}
-
+let fixture: string | undefined
 let linted: Set<string>
 
 beforeAll(() => {
-  for (const path of [...IGNORED, ...WRITTEN_AND_LINTED]) write(path)
-  const run = spawnSync(
+  // Other tooling tests inspect the checkout while this suite runs.
+  fixture = mkdtempSync(join(tmpdir(), 'planned-travel-lint-ignores-'))
+  // The validation runner puts TMPDIR under a gitignored directory in the checkout.
+  execFileSync('git', ['init', '--quiet', '--template='], {
+    cwd: fixture,
+    timeout: 10_000,
+  })
+  for (const path of ['.oxlintrc.json', '.gitignore', '.ai/cezar/.gitignore']) {
+    const target = resolve(fixture, path)
+    mkdirSync(dirname(target), { recursive: true })
+    copyFileSync(resolve(root, path), target)
+  }
+  for (const path of [...IGNORED, ...WRITTEN_AND_LINTED, ...SOURCE_FILES]) {
+    const target = resolve(fixture, path)
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, 'export const probe = 1\n')
+  }
+  const output = execFileSync(
     resolve(root, 'node_modules/.bin/oxlint'),
     ['--debug=files'],
     {
-      cwd: root,
+      cwd: fixture,
       encoding: 'utf8',
+      timeout: 30_000,
     },
   )
-  expect(run.status).toBe(0)
   linted = new Set(
-    run.stdout
+    output
       .split('\n')
       .filter(Boolean)
       .map((line) => line.replace(/^\.\//, '')),
@@ -82,8 +98,7 @@ beforeAll(() => {
 }, 60_000)
 
 afterAll(() => {
-  for (const path of created.reverse())
-    rmSync(path, { recursive: true, force: true })
+  if (fixture) rmSync(fixture, { recursive: true, force: true })
 })
 
 describe('pnpm lint ignores', () => {
@@ -92,8 +107,7 @@ describe('pnpm lint ignores', () => {
   })
 
   it.each([
-    'src/routes/index.tsx',
-    'src/server/repos/trips.ts',
+    ...SOURCE_FILES,
     // One level up from the per-run QA scratch: only the `artifacts_*` directories are out.
     ...WRITTEN_AND_LINTED,
   ])('still lints %s', (path) => {
