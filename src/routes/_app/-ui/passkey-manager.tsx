@@ -51,6 +51,7 @@ type ListState =
  */
 interface RenameState {
   readonly id: string
+  readonly instance: number
   readonly saving: boolean
   readonly error: PasskeyNotice | null
   readonly attention: number
@@ -304,6 +305,7 @@ export function PasskeyManager() {
   const [statusTick, setStatusTick] = useState(0)
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
   const [rename, setRename] = useState<RenameState | null>(null)
+  const renameInstance = useRef(0)
   // The row whose Rename control takes focus back once its rename mode has closed.
   const [renameFocusId, setRenameFocusId] = useState<string | null>(null)
   const renameButtons = useRef(new Map<string, HTMLButtonElement>())
@@ -458,12 +460,14 @@ export function PasskeyManager() {
   }
 
   function startRename(id: string): void {
+    const instance = ++renameInstance.current
     setRename((previous) => {
       // A save is running: the Rename control pressed meanwhile (a blur just started it) must not
       // make the field editable again.
       if (previous?.id === id && previous.saving) return previous
       return {
         id,
+        instance,
         saving: false,
         error: null,
         attention: previous?.id === id ? previous.attention + 1 : 0,
@@ -471,12 +475,13 @@ export function PasskeyManager() {
     })
   }
 
-  function closeRename(id: string, returnFocus: boolean): void {
-    setRename((previous) => (previous?.id === id ? null : previous))
-    // Another row took rename mode while this one saved: focus is theirs now.
-    const otherRowOpen =
-      renameRef.current !== null && renameRef.current.id !== id
-    if (returnFocus && !otherRowOpen) setRenameFocusId(id)
+  function closeRename(editor: RenameState, returnFocus: boolean): void {
+    setRename((previous) =>
+      previous?.instance === editor.instance ? null : previous,
+    )
+    if (returnFocus && renameRef.current?.instance === editor.instance) {
+      setRenameFocusId(editor.id)
+    }
   }
 
   async function submitName(
@@ -484,17 +489,20 @@ export function PasskeyManager() {
     value: string,
     explicit: boolean,
   ): Promise<void> {
+    const editor = renameRef.current
     const { id } = passkey
+    if (editor?.id !== id) return
     const passkeyName = displayNameOf(passkey, i18n)
     setRename((previous) =>
-      previous?.id === id
+      previous?.instance === editor.instance
         ? { ...previous, saving: true, error: null }
         : previous,
     )
     setStatus(SAVING)
     const result = await renamePasskey(id, value)
     // Focus follows the person if they moved away during an explicit save.
-    const returnFocus = explicit && focusIsInRenameField()
+    const sameEditor = renameRef.current?.instance === editor.instance
+    const returnFocus = sameEditor && explicit && focusIsInRenameField()
 
     if (result.ok) {
       setList((previous) =>
@@ -507,18 +515,18 @@ export function PasskeyManager() {
             }
           : previous,
       )
-      closeRename(id, returnFocus)
+      closeRename(editor, returnFocus)
       setStatus(SAVED)
       return
     }
 
     const notice = renameFailureNotice(result.failure)
-    if (renameRef.current?.id === id) {
+    if (sameEditor) {
       // The field is still on screen: the error sits beside it. An explicit save takes focus
       // back into the input; one started by a blur leaves it where the person moved it. The status
       // region says it too, once and without the sign-in action the row already carries.
       setRename((previous) =>
-        previous?.id === id
+        previous?.instance === editor.instance
           ? {
               ...previous,
               saving: false,
@@ -754,7 +762,8 @@ export function PasskeyManager() {
                   void submitName(passkey, value, explicit)
                 }}
                 onCancelRename={(explicit) => {
-                  closeRename(passkey.id, explicit)
+                  const editor = renameRef.current
+                  if (editor?.id === passkey.id) closeRename(editor, explicit)
                 }}
                 signInRef={signInRef}
                 onSignOutFailed={() => {

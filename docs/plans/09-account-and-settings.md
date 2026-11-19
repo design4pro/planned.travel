@@ -338,7 +338,7 @@ should stop and re-read `src/lib/auth/client.ts`: that method does not exist in 
 
 **What `src/server/auth/passkey/plugin.ts` gains:**
 
-- `POST /passkey/rename`, `use: [sessionMiddleware]`, body `z.object({ id: z.string().min(1), name: z.string().trim().min(1).max(64) })`.
+- `POST /passkey/rename`, `use: [sessionMiddleware]`, with a strict body containing the passkey id and a trimmed name of up to 64 characters that passes the shared visible-character rule.
   It re-reads the record and compares `record.userId` to `ctx.context.session.user.id` before writing,
   the same guard `/passkey/delete` already applies at `:420-424`; a mismatch is `NOT_FOUND`, never
   `FORBIDDEN`, so the endpoint does not confirm that somebody else's credential id exists.
@@ -381,8 +381,9 @@ a list of credentials. Each row: the credential's name (or a derived fallback na
 family from `aaguid` when the reader never typed one), a `Badge` reading **Synced** when `backedUp`
 is true and **This device** when `deviceType` is `singleDevice`, the added date, and the last-used
 date rendered with `formatDate` from `src/routes/_app/-lib/format.ts` and `tabular-nums` because it
-changes. Rename is inline: the name becomes an `Input` in place, commits on Enter or blur, reverts on
-Escape, and shows an inline `Spinner` while the write is in flight. Delete opens a `Dialog` that
+changes. Rename is inline: the name becomes an `Input` in place with Save and Cancel. Enter, Save,
+and ordinary blur save a valid changed draft. Cancel and Escape discard it, while leaving the window
+keeps it open. The field shows a spinner during the write. Delete opens a `Dialog` that
 names the credential and asks for the password.
 
 **States, named rather than promised.**

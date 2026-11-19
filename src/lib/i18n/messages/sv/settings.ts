@@ -641,9 +641,9 @@ const messages = {
   'passkeys.rename.failed': 'Namnet sparades inte. Försök igen.',
   'passkeys.rename.missing':
     'Namnet sparades inte. Ladda om sidan och kontrollera listan över passkeys.',
-  'passkeys.rename.failedFor':
-    'Det gick inte att byta namn på {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Det gick inte att bekräfta att namnet sparades. Ladda om sidan och kontrollera listan över nycklar.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Ta bort {name}',
   'passkeys.delete.title': 'Ta bort den här lösenordsnyckeln?',
   'passkeys.delete.body': 'Du kommer inte längre kunna logga in med {name}.',

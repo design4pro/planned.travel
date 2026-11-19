@@ -974,7 +974,7 @@ describe('registration name validation', () => {
     )
   }
 
-  it.each(['\u200B\u202E', '\u0301', '\u3164', 'a'.repeat(65)])(
+  it.each(['\u200B\u202E', '\u0301', '\u3164', '\u2800', 'a'.repeat(65)])(
     'refuses a supplied invalid name %j',
     async (name) => {
       const response = await registerWithName(name)

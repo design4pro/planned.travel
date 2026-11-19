@@ -669,9 +669,9 @@ const messages = {
   'passkeys.rename.failed': 'Не удалось сохранить имя. Попробуйте ещё раз.',
   'passkeys.rename.missing':
     'Не удалось сохранить имя. Перезагрузите страницу и проверьте список ключей доступа.',
-  'passkeys.rename.failedFor':
-    'Не удалось переименовать ключ «{name}». {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Не удалось подтвердить сохранение. Обновите страницу и проверьте список ключей доступа.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Удалить: {name}',
   'passkeys.delete.title': 'Удалить этот ключ доступа?',
   'passkeys.delete.body': 'Вы больше не сможете входить с помощью: {name}.',

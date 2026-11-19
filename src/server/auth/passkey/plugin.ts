@@ -13,6 +13,7 @@ import * as z from 'zod'
 import { queueAuthEmail } from '../email'
 import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import type { BetterAuthPlugin } from 'better-auth'
 import {
   base64UrlDecode,
@@ -66,9 +67,9 @@ const passkeyName = z
   .trim()
   .min(1)
   .max(64)
-  .regex(
-    /(?![\p{White_Space}\p{Default_Ignorable_Code_Point}])[\p{L}\p{N}\p{P}\p{S}]/u,
-    'A passkey name must contain a letter, number, punctuation mark or symbol.',
+  .refine(
+    hasVisibleCharacter,
+    'A passkey name must contain a visible character.',
   )
 
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */

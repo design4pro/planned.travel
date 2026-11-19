@@ -658,9 +658,9 @@ const messages = {
   'passkeys.rename.failed': 'No s’ha desat el nom. Torna-ho a provar.',
   'passkeys.rename.missing':
     'No s’ha desat el nom. Torna a carregar la pàgina i comprova la llista de claus d’accés.',
-  'passkeys.rename.failedFor':
-    'No s’ha pogut canviar el nom de {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'No s’ha pogut confirmar que s’hagi desat. Torna a carregar la pàgina i comprova la llista de claus d’accés.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Elimina {name}',
   'passkeys.delete.title': 'Vols eliminar aquesta clau d’accés?',
   'passkeys.delete.body': 'Ja no podràs iniciar la sessió amb {name}.',

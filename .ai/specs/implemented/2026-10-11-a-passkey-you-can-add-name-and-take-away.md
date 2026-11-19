@@ -135,8 +135,7 @@ fixture to test. 20 sits below the `limit: 50` window of the list and of the exc
 atomic: two parallel ceremonies can overshoot by one or two. That is accepted (the ceiling bounds storage, it is not a quota anyone sells) and
 stated in the test as a known property, not asserted away.
 
-**Rename (09-S1b).** `POST /passkey/rename`, `use: [sessionMiddleware]`, body `z.strictObject({ id: z.string().min(1), name:
-z.string().trim().min(1).max(64) })`. It reads the record by id, compares `record.userId` to `ctx.context.session.user.id` before writing, and
+**Rename (09-S1b).** `POST /passkey/rename`, `use: [sessionMiddleware]`, a strict body with `id: z.string().min(1)` and a trimmed name of up to 64 characters that passes the shared visible-character rule. It reads the record by id, compares `record.userId` to `ctx.context.session.user.id` before writing, and
 answers `NOT_FOUND` on mismatch. It returns `{ passkey: toPublicPasskey(updated) }`. A rename never clears a name: clearing is not an operation
 (Resolved assumption 3).
 
@@ -343,60 +342,61 @@ in all 23 locales in the same change (`i18n-messages` skill). No file other than
 09 stage's block is left as found. Numbers arrive as `{value}`, already formatted (`settings.ts` header); no key is plural on `count`. A key a
 component does not read fails `coverage.test.ts`, so a ticket lands exactly the keys its components read. The English source:
 
-| Key                                | Text                                                                                                       | Ticket |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
-| `passkeys.page.eyebrow`            | Account                                                                                                    | a      |
-| `passkeys.page.title`              | Passkeys                                                                                                   | a      |
-| `passkeys.page.description`        | A passkey lets you sign in with your fingerprint, your face or a security key instead of typing anything.  | a      |
-| `passkeys.page.back`               | Back to security                                                                                           | a      |
-| `passkeys.list.label`              | Your passkeys                                                                                              | a      |
-| `passkeys.add.action`              | Add a passkey                                                                                              | a      |
-| `passkeys.add.loading`             | Waiting for your device                                                                                    | a      |
-| `passkeys.add.added`               | Passkey added                                                                                              | a      |
-| `passkeys.add.dismissed`           | No passkey was added                                                                                       | a      |
-| `passkeys.add.exists`              | This device already has a passkey for your account                                                         | a      |
-| `passkeys.add.failed`              | The passkey was not added. Try again.                                                                      | a      |
-| `passkeys.add.stale`               | For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.                                                                | a      |
-| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to continue managing your passkeys.                                                         | a      |
-| `passkeys.signInAgain`             | Sign in again                                                                                              | a      |
-| `passkeys.add.limit`               | You have reached the limit of {value} passkeys. Remove one to add another.                                 | a      |
-| `passkeys.add.unsupported`         | This browser cannot create passkeys. Try another browser or device.                                        | a      |
-| `passkeys.empty.title`             | No passkeys yet                                                                                            | a      |
-| `passkeys.empty.body`              | Add one and you can sign in with your fingerprint, your face or a security key instead of typing anything. | a      |
-| `passkeys.row.fallbackName`        | Passkey · added {date}                                                                                     | a      |
-| `passkeys.row.added`               | Added {date}                                                                                               | a      |
-| `passkeys.row.lastUsed`            | Last used {date}                                                                                           | a      |
-| `passkeys.row.neverUsed`           | Not used to sign in yet                                                                                    | a      |
-| `passkeys.badge.synced`            | Synced                                                                                                     | a      |
-| `passkeys.badge.singleDevice`      | On one device only                                                                                         | a      |
-| `passkeys.error.title`             | Your passkeys did not load                                                                                 | a      |
-| `passkeys.error.retry`             | Try again                                                                                                  | a      |
-| `passkeys.error.rateLimited`       | Too many attempts. Try again in a few minutes.                                                             | a      |
-| `passkeys.error.generic`           | Check your connection and try again.                                                                       | a      |
-| `passkeys.rename.action`           | Rename {name}                                                                                              | b      |
-| `passkeys.rename.fieldLabel`       | Name this passkey                                                                                          | b      |
-| `passkeys.rename.placeholder`      | Name it, like Work phone                                                                                   | b      |
-| `passkeys.rename.saving`           | Saving the name                                                                                            | b      |
-| `passkeys.rename.saved`            | Name saved                                                                                                 | b      |
-| `passkeys.rename.cancel`           | Cancel                                                                                                     | b      |
-| `passkeys.rename.save`             | Save                                                                                                       | b      |
-| `passkeys.rename.failed`           | The name was not saved. Try again.                                                                         | b      |
-| `passkeys.rename.missing`          | The name was not saved. Reload the page and check your passkey list.                                       | b      |
-| `passkeys.rename.failedFor`        | Could not rename {name}. {detail}                                                                          | b      |
-| `passkeys.delete.action`           | Remove {name}                                                                                              | c      |
-| `passkeys.delete.title`            | Remove this passkey?                                                                                       | c      |
-| `passkeys.delete.body`             | You will no longer be able to sign in with {name}.                                                         | c      |
-| `passkeys.delete.password`         | Password                                                                                                   | c      |
-| `passkeys.delete.passwordHint`     | Enter your password to confirm.                                                                            | c      |
-| `passkeys.delete.confirmOnly`      | Your account has no password. Confirm that you want to remove this passkey.                                | c      |
-| `passkeys.delete.confirm`          | Remove passkey                                                                                             | c      |
-| `passkeys.delete.cancel`           | Cancel                                                                                                     | c      |
-| `passkeys.delete.wrongPassword`    | That password is not right.                                                                                | c      |
-| `passkeys.delete.stale`            | For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.                                                  | c      |
-| `passkeys.delete.removed`          | Passkey removed                                                                                            | c      |
-| `passkeys.delete.failed`           | The passkey was not removed. Try again.                                                                    | c      |
-| `passkeys.delete.removing`         | Removing the passkey                                                                                       | c      |
-| `passkeys.delete.passwordRequired` | Enter your password to remove this passkey.                                                                | c      |
+| Key                                | Text                                                                                                                                                | Ticket |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| `passkeys.page.eyebrow`            | Account                                                                                                                                             | a      |
+| `passkeys.page.title`              | Passkeys                                                                                                                                            | a      |
+| `passkeys.page.description`        | A passkey lets you sign in with your fingerprint, your face or a security key instead of typing anything.                                           | a      |
+| `passkeys.page.back`               | Back to security                                                                                                                                    | a      |
+| `passkeys.list.label`              | Your passkeys                                                                                                                                       | a      |
+| `passkeys.add.action`              | Add a passkey                                                                                                                                       | a      |
+| `passkeys.add.loading`             | Waiting for your device                                                                                                                             | a      |
+| `passkeys.add.added`               | Passkey added                                                                                                                                       | a      |
+| `passkeys.add.dismissed`           | No passkey was added                                                                                                                                | a      |
+| `passkeys.add.exists`              | This device already has a passkey for your account                                                                                                  | a      |
+| `passkeys.add.failed`              | The passkey was not added. Try again.                                                                                                               | a      |
+| `passkeys.add.stale`               | For your safety, managing passkeys requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page.  | a      |
+| `passkeys.error.sessionEnded`      | Your session has ended. Sign in again to continue managing your passkeys.                                                                           | a      |
+| `passkeys.signInAgain`             | Sign in again                                                                                                                                       | a      |
+| `passkeys.add.limit`               | You have reached the limit of {value} passkeys. Remove one to add another.                                                                          | a      |
+| `passkeys.add.unsupported`         | This browser cannot create passkeys. Try another browser or device.                                                                                 | a      |
+| `passkeys.empty.title`             | No passkeys yet                                                                                                                                     | a      |
+| `passkeys.empty.body`              | Add one and you can sign in with your fingerprint, your face or a security key instead of typing anything.                                          | a      |
+| `passkeys.row.fallbackName`        | Passkey · added {date}                                                                                                                              | a      |
+| `passkeys.row.added`               | Added {date}                                                                                                                                        | a      |
+| `passkeys.row.lastUsed`            | Last used {date}                                                                                                                                    | a      |
+| `passkeys.row.neverUsed`           | Not used to sign in yet                                                                                                                             | a      |
+| `passkeys.badge.synced`            | Synced                                                                                                                                              | a      |
+| `passkeys.badge.singleDevice`      | On one device only                                                                                                                                  | a      |
+| `passkeys.error.title`             | Your passkeys did not load                                                                                                                          | a      |
+| `passkeys.error.retry`             | Try again                                                                                                                                           | a      |
+| `passkeys.error.rateLimited`       | Too many attempts. Try again in a few minutes.                                                                                                      | a      |
+| `passkeys.error.generic`           | Check your connection and try again.                                                                                                                | a      |
+| `passkeys.rename.action`           | Rename {name}                                                                                                                                       | b      |
+| `passkeys.rename.fieldLabel`       | Name this passkey                                                                                                                                   | b      |
+| `passkeys.rename.placeholder`      | Name it, like Work phone                                                                                                                            | b      |
+| `passkeys.rename.saving`           | Saving the name                                                                                                                                     | b      |
+| `passkeys.rename.saved`            | Name saved                                                                                                                                          | b      |
+| `passkeys.rename.cancel`           | Cancel                                                                                                                                              | b      |
+| `passkeys.rename.save`             | Save                                                                                                                                                | b      |
+| `passkeys.rename.failed`           | The name was not saved. Try again.                                                                                                                  | b      |
+| `passkeys.rename.missing`          | The name was not saved. Reload the page and check your passkey list.                                                                                | b      |
+| `passkeys.rename.unknown`          | The save could not be confirmed. Reload the page and check your passkey list.                                                                       | b      |
+| `passkeys.rename.failedFor`        | {name}: {detail}                                                                                                                                    | b      |
+| `passkeys.delete.action`           | Remove {name}                                                                                                                                       | c      |
+| `passkeys.delete.title`            | Remove this passkey?                                                                                                                                | c      |
+| `passkeys.delete.body`             | You will no longer be able to sign in with {name}.                                                                                                  | c      |
+| `passkeys.delete.password`         | Password                                                                                                                                            | c      |
+| `passkeys.delete.passwordHint`     | Enter your password to confirm.                                                                                                                     | c      |
+| `passkeys.delete.confirmOnly`      | Your account has no password. Confirm that you want to remove this passkey.                                                                         | c      |
+| `passkeys.delete.confirm`          | Remove passkey                                                                                                                                      | c      |
+| `passkeys.delete.cancel`           | Cancel                                                                                                                                              | c      |
+| `passkeys.delete.wrongPassword`    | That password is not right.                                                                                                                         | c      |
+| `passkeys.delete.stale`            | For your safety, removing a passkey requires a recent sign-in. Choosing ‘Sign in again’ will sign you out first, then take you to the sign-in page. | c      |
+| `passkeys.delete.removed`          | Passkey removed                                                                                                                                     | c      |
+| `passkeys.delete.failed`           | The passkey was not removed. Try again.                                                                                                             | c      |
+| `passkeys.delete.removing`         | Removing the passkey                                                                                                                                | c      |
+| `passkeys.delete.passwordRequired` | Enter your password to remove this passkey.                                                                                                         | c      |
 
 `{name}` is the passkey's own name or the fallback; user-typed names are rendered as text, never as markup, and wherever `{name}` sits inside a
 sentence (`delete.body`, the row actions) it is wrapped in a `dir="auto"` element (`bdi`). The server's English `message`
@@ -458,7 +458,7 @@ moves to the rename input). The copy gate `src/routes/_app/settings/-lib/__tests
 
 09-S1b:
 
-10. `POST /passkey/rename` trims, requires 1 to 64 characters, refuses any other field, refuses an impersonated session (`impersonatedBy` of `''`
+10. `POST /passkey/rename` trims, requires a visible character within the 64-character limit, refuses any other field, refuses an impersonated session (`impersonatedBy` of `''`
     included), and answers `NOT_FOUND` for another user's id with that user's `name` unchanged; its `rateLimit` rule (5 per 300 s) is in the array.
 11. A newly added row opens in rename mode with focus in a `Field` with a visible label; empty, Escape and an unchanged blur send no request;
     each row has a Rename control named with the passkey; focus returns to it after Enter, Escape or a saved name.
@@ -652,7 +652,7 @@ Phase 2 (09-S1b, #1145) differs from the design in these places:
 8. **The rename field is its own module.** `src/routes/_app/-ui/passkey-rename-field.tsx` owns the draft text and the keys (Enter, Escape, blur); `passkey-manager.tsx` owns the one row in rename mode, the request and the focus handed back to the Rename control. The copy gate walks the new file.
 9. **A blur does not take focus back.** Enter and Escape return focus to the row's Rename control; a name saved by a blur leaves focus where the person moved it. An empty or unchanged value, on any of the three, closes rename mode without a request.
 10. **The impersonation veto is one helper.** `assertNotImpersonated` in `plugin.ts` is called by both registration endpoints and by rename; the delete endpoint of 09-S1c calls it too.
-11. **Failed saves by status.** `renameFailureNotice` maps a `401` to `passkeys.error.sessionEnded` with Sign in again beside the row, a `429` to `passkeys.error.rateLimited`, anything else to `passkeys.rename.failed`. A save that fails after another row took rename mode says so in the status region instead. `passkeys.rename.saving` is announced there while a save runs.
+11. **Original phase 2 failure mapping (superseded by the #1203 follow-up below).** `renameFailureNotice` maps a `401` to `passkeys.error.sessionEnded` with Sign in again beside the row, a `429` to `passkeys.error.rateLimited`, anything else to `passkeys.rename.failed`. A save that fails after another row took rename mode says so in the status region instead. `passkeys.rename.saving` is announced there while a save runs.
 12. **A lost reply opens rename mode too.** When the registration reply is lost and the reloaded list holds the new row, that row (the newest) opens in rename mode like any added one. The status and the focus move wait for that reload (the Add button stays busy meanwhile), so one outcome is announced, never "not added" followed by "added" (#1190).
 13. **A failed save leaves the field open, reachable and filled.** The design (lines "a failed rename reverts the text" and the Rename-request-fails row) and the ticket's acceptance criterion said the text reverts. Build review (WCAG 2.2 3.3.7, Redundant Entry, level A: a retry after a `429` or a dropped connection must not mean typing the name again) overturned that: the typed text stays in the field, and the stored name is still drawn in the row above it. A blur never decides while the field shows an error (it neither saves nor closes), so Sign in again beside the row can be reached; Enter and Escape still decide. A failure after a blur does not move focus back into the input, and focus is handed back after a key-started save only while it is still in the field. Every failure is also announced in the status region (visually hidden, no second Sign in again), the Rename control pressed while its own row saves does not reopen the field, an Enter that ends an IME composition (`isComposing`, or key code 229 in WebKit) does not commit, a failed sign-out from the row puts focus back on that button, and the update is scoped to the caller's `userId` as well as the passkey id.
 
@@ -670,10 +670,10 @@ Phase 3 (09-S1c, #1146) differs from the design in these places:
 - Save and Cancel are visible at every viewport size. Focusing either action stays within the editor, so Cancel can discard a changed draft
   before blur commits it. An ordinary blur out of the editor in the active document still saves unless an error is showing. Leaving the window
   or tab preserves the draft and sends no request. See the existing IME and focus rules in amendment 13.
-- A missing passkey asks the person to reload and check their passkey list. Other generic failures offer a retry. The session-ended
-  and rate-limit messages still take precedence. A late failure announces the display name or fallback captured from the caller's list
-  at submission, with its own text direction, and leaves the current editor and focus in place.
+- A missing passkey asks the person to reload and check their passkey list. An unconfirmed write asks them to reload and verify the outcome. Confirmed generic refusals offer a retry. The session-ended
+  and rate-limit messages still take precedence. A failure from an earlier editor instance announces the display name or fallback captured from the caller's list
+  at submission, with its own text direction, and leaves the current editor and focus in place, including when the same row was reopened.
 - The optional registration name and the required rename name share one Zod rule: after trimming, keep the 64-character limit and require
-  at least one Unicode letter, number, punctuation mark or symbol outside the whitespace and default-ignorable sets. Accepted names keep
+  at least one Unicode letter, number, punctuation mark or symbol accepted by the shared visible-character rule in SPEC §6, which also excludes blank Braille. The editor checks the same rule before writing. Accepted names keep
   their joiners, marks and other code points. Existing names remain stored as they are. Missing and foreign passkeys still return the same
   not-found error for a valid rename request.

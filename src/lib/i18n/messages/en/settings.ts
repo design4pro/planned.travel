@@ -721,8 +721,9 @@ const messages = {
   'passkeys.rename.failed': 'The name was not saved. Try again.',
   'passkeys.rename.missing':
     'The name was not saved. Reload the page and check your passkey list.',
-  'passkeys.rename.failedFor': 'Could not rename {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'The save could not be confirmed. Reload the page and check your passkey list.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Remove {name}',
   'passkeys.delete.title': 'Remove this passkey?',
   'passkeys.delete.body': 'You will no longer be able to sign in with {name}.',

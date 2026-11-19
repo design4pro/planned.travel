@@ -648,9 +648,9 @@ const messages = {
   'passkeys.rename.failed': 'Το όνομα δεν αποθηκεύτηκε. Δοκίμασε ξανά.',
   'passkeys.rename.missing':
     'Το όνομα δεν αποθηκεύτηκε. Φόρτωσε ξανά τη σελίδα και έλεγξε τη λίστα κλειδιών πρόσβασης.',
-  'passkeys.rename.failedFor':
-    'Δεν ήταν δυνατή η μετονομασία του κλειδιού {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Δεν ήταν δυνατή η επιβεβαίωση της αποθήκευσης. Φόρτωσε ξανά τη σελίδα και έλεγξε τη λίστα με τα κλειδιά πρόσβασης.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Αφαίρεση του {name}',
   'passkeys.delete.title': 'Να αφαιρεθεί αυτό το κλειδί πρόσβασης;',
   'passkeys.delete.body': 'Δεν θα μπορείτε πια να συνδέεστε με το {name}.',

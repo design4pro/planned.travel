@@ -108,8 +108,7 @@ const messages = {
   'profile.regional.saved': 'حُفظت تفضيلاتك',
   'profile.regional.saveFailed': 'لم تُحفظ تفضيلاتك',
   'profile.language.label': 'اللغة',
-  'profile.language.hint':
-    'تُختار في شاشة خاصة بها، حيث كل لغة مكتوبة بحروفها.',
+  'profile.language.hint': 'تُختار في شاشة خاصة بها، حيث كل لغة مكتوبة بحروفها.',
   'profile.language.action': 'تغيير',
   'profile.timezone.label': 'المنطقة الزمنية',
   'profile.timezone.hint': 'مواعيد المغادرة والوصول تُعرض وفق هذه المنطقة.',
@@ -328,8 +327,7 @@ const messages = {
   'workspace.invitations.title': 'الدعوات',
   'workspace.invitations.description': 'من دُعي ولم ينضم بعد.',
   'workspace.invitations.emptyTitle': 'لا دعوات معلّقة',
-  'workspace.invitations.emptyBody':
-    'كل من دُعي إلى مساحة العمل هذه انضم فعلًا.',
+  'workspace.invitations.emptyBody': 'كل من دُعي إلى مساحة العمل هذه انضم فعلًا.',
   'workspace.invitations.expires': 'تنتهي في {date}',
   'workspace.invitations.expiresSoon': 'قريبًا',
   'workspace.defaults.title': 'الإعدادات المشتركة',
@@ -461,8 +459,7 @@ const messages = {
   'billing.interval.yearly': 'سنويًا',
   'billing.plan.free.name': 'مجانية',
   'billing.plan.free.tagline': 'خطّط لرحلتيك القادمتين',
-  'billing.plan.free.feature.trips':
-    'رحلتان في وقت واحد وما يصل إلى 150 مكانًا',
+  'billing.plan.free.feature.trips': 'رحلتان في وقت واحد وما يصل إلى 150 مكانًا',
   'billing.plan.free.feature.itinerary': 'برنامج يوم بيوم وخريطة',
   'billing.plan.free.feature.lists': 'قوائم حزم وميزانيات بسيطة',
   'billing.plan.free.feature.atlas': 'خريطة العالم التي تتابع أين كنت',
@@ -642,8 +639,9 @@ const messages = {
   'passkeys.rename.failed': 'لم يُحفظ الاسم. حاول مرة أخرى.',
   'passkeys.rename.missing':
     'لم يُحفظ الاسم. أعد تحميل الصفحة وتحقق من قائمة مفاتيح المرور.',
-  'passkeys.rename.failedFor': 'تعذّرت إعادة تسمية {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'تعذّر تأكيد الحفظ. أعد تحميل الصفحة وتحقق من قائمة مفاتيح المرور.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'إزالة {name}',
   'passkeys.delete.title': 'هل تريد إزالة مفتاح المرور هذا؟',
   'passkeys.delete.body': 'لن تتمكن بعد الآن من تسجيل الدخول باستخدام {name}.',

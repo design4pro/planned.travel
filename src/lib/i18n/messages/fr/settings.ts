@@ -661,8 +661,9 @@ const messages = {
   'passkeys.rename.failed': 'Le nom n’a pas été enregistré. Réessaie.',
   'passkeys.rename.missing':
     'Le nom n’a pas été enregistré. Recharge la page et vérifie la liste de tes clés d’accès.',
-  'passkeys.rename.failedFor': 'Impossible de renommer {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Impossible de confirmer l’enregistrement. Rechargez la page et vérifiez votre liste de clés d’accès.',
+  'passkeys.rename.failedFor': '{name} : {detail}',
   'passkeys.delete.action': 'Supprimer {name}',
   'passkeys.delete.title': 'Supprimer cette clé d’accès ?',
   'passkeys.delete.body': 'Vous ne pourrez plus vous connecter avec {name}.',

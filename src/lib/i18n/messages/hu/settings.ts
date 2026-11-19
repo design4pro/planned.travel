@@ -644,9 +644,9 @@ const messages = {
   'passkeys.rename.failed': 'A név mentése nem sikerült. Próbáld újra.',
   'passkeys.rename.missing':
     'A név mentése nem sikerült. Töltsd be újra az oldalt, és ellenőrizd a hozzáférési kulcsok listáját.',
-  'passkeys.rename.failedFor':
-    'Nem sikerült átnevezni ezt a kulcsot: {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'A mentést nem sikerült megerősíteni. Töltsd újra az oldalt, és ellenőrizd a hozzáférési kulcsok listáját.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': '{name} eltávolítása',
   'passkeys.delete.title': 'Eltávolítja ezt a belépési kulcsot?',
   'passkeys.delete.body': 'Ezzel többé nem tud bejelentkezni: {name}.',

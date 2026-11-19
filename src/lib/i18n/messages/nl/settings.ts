@@ -651,8 +651,9 @@ const messages = {
   'passkeys.rename.failed': 'De naam is niet opgeslagen. Probeer het opnieuw.',
   'passkeys.rename.missing':
     'De naam is niet opgeslagen. Laad de pagina opnieuw en controleer je lijst met passkeys.',
-  'passkeys.rename.failedFor': 'Kan de naam van {name} niet wijzigen. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Het opslaan kon niet worden bevestigd. Laad de pagina opnieuw en controleer je lijst met toegangssleutels.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': '{name} verwijderen',
   'passkeys.delete.title': 'Deze toegangssleutel verwijderen?',
   'passkeys.delete.body': 'Je kunt dan niet meer inloggen met {name}.',

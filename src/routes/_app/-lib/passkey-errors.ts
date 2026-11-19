@@ -75,6 +75,9 @@ export function renameFailureNotice(failure: AuthFailure): PasskeyNotice {
   if (failure.code === PASSKEY_NOT_FOUND) {
     return notice('settings.passkeys.rename.missing', 'danger')
   }
+  if (failure.status === 0) {
+    return notice('settings.passkeys.rename.unknown', 'danger')
+  }
   return notice('settings.passkeys.rename.failed', 'danger')
 }
 

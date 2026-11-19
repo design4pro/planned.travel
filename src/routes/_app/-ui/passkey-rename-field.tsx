@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { Button, Field, Input } from '#/components/ui'
 import { useI18n } from '#/lib/i18n'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 
 import type { KeyboardEvent } from 'react'
 
@@ -40,6 +41,7 @@ export function PasskeyRenameField({
 }) {
   const { t } = useI18n()
   const [draft, setDraft] = useState(initial)
+  const [invalid, setInvalid] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   // An explicit action and a subsequent blur must never submit the same draft twice.
   const settled = useRef(false)
@@ -58,7 +60,12 @@ export function PasskeyRenameField({
   function decide(explicit: boolean): void {
     if (settled.current || saving) return
     const value = draft.trim()
-    if (!explicit && error !== null) return
+    if (!explicit && (error !== null || invalid)) return
+    if (value !== '' && value !== initial && !hasVisibleCharacter(value)) {
+      setInvalid(true)
+      if (explicit) inputRef.current?.focus()
+      return
+    }
     settled.current = true
     if (value === '' || value === initial) {
       onCancel(explicit)
@@ -80,9 +87,6 @@ export function PasskeyRenameField({
       if (event.nativeEvent.isComposing || event.keyCode === 229) return
       event.preventDefault()
       decide(true)
-    } else if (event.key === 'Escape') {
-      event.preventDefault()
-      cancel()
     }
   }
 
@@ -91,8 +95,13 @@ export function PasskeyRenameField({
       data-part="passkey-rename-field"
       htmlFor={inputId}
       label={t('settings.passkeys.rename.fieldLabel')}
-      error={error}
+      error={invalid ? t('shell.validation.visibleName') : error}
       className="mt-2"
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape') return
+        event.preventDefault()
+        cancel()
+      }}
       onBlur={(event) => {
         if (
           event.relatedTarget === null &&
@@ -117,6 +126,7 @@ export function PasskeyRenameField({
         placeholder={t('settings.passkeys.rename.placeholder')}
         onChange={(event) => {
           setDraft(event.currentTarget.value)
+          setInvalid(false)
         }}
         onKeyDown={onKeyDown}
       />

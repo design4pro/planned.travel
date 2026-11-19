@@ -606,9 +606,9 @@ const messages = {
     '名前を保存できませんでした。もう一度お試しください。',
   'passkeys.rename.missing':
     '名前を保存できませんでした。ページを再読み込みしてパスキーの一覧を確認してください。',
-  'passkeys.rename.failedFor':
-    '「{name}」の名前を変更できませんでした。{detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    '保存できたか確認できませんでした。ページを再読み込みしてパスキーの一覧を確認してください。',
+  'passkeys.rename.failedFor': '{name}：{detail}',
   'passkeys.delete.action': '{name} を削除',
   'passkeys.delete.title': 'このパスキーを削除しますか？',
   'passkeys.delete.body': '{name} ではサインインできなくなります。',

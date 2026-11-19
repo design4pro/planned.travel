@@ -651,8 +651,9 @@ const messages = {
   'passkeys.rename.failed': 'O nome não foi salvo. Tente novamente.',
   'passkeys.rename.missing':
     'O nome não foi salvo. Recarregue a página e confira a lista de chaves de acesso.',
-  'passkeys.rename.failedFor': 'Não foi possível renomear {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Não foi possível confirmar se o nome foi salvo. Recarregue a página e confira a lista de chaves de acesso.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Remover {name}',
   'passkeys.delete.title': 'Remover esta chave de acesso?',
   'passkeys.delete.body': 'Você não poderá mais entrar com {name}.',

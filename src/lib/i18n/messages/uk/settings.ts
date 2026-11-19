@@ -658,9 +658,9 @@ const messages = {
   'passkeys.rename.failed': 'Не вдалося зберегти назву. Спробуйте ще раз.',
   'passkeys.rename.missing':
     'Не вдалося зберегти назву. Перезавантажте сторінку та перевірте список ключів доступу.',
-  'passkeys.rename.failedFor':
-    'Не вдалося перейменувати ключ «{name}». {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Не вдалося підтвердити збереження. Перезавантажте сторінку й перевірте список ключів доступу.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Видалити: {name}',
   'passkeys.delete.title': 'Видалити цей ключ доступу?',
   'passkeys.delete.body': 'Ви більше не зможете входити за допомогою: {name}.',

@@ -107,7 +107,7 @@ it('keeps the already-absent removal code stable for the dialog', () => {
 it.each([
   ['PASSKEY_IMPERSONATED', 403, 'settings.passkeys.rename.failed'],
   ['PASSKEY_NOT_FOUND', 404, 'settings.passkeys.rename.missing'],
-  [null, 0, 'settings.passkeys.rename.failed'],
+  [null, 0, 'settings.passkeys.rename.unknown'],
   [null, 401, 'settings.passkeys.error.sessionEnded'],
   [null, 429, 'settings.passkeys.error.rateLimited'],
 ] as const)(

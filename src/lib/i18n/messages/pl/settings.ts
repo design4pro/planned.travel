@@ -671,9 +671,9 @@ const messages = {
   'passkeys.rename.failed': 'Nie zapisano nazwy. Spróbuj ponownie.',
   'passkeys.rename.missing':
     'Nie zapisano nazwy. Odśwież stronę i sprawdź listę kluczy dostępu.',
-  'passkeys.rename.failedFor':
-    'Nie udało się zmienić nazwy klucza {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Nie udało się potwierdzić zapisu. Odśwież stronę i sprawdź listę kluczy dostępu.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Usuń: {name}',
   'passkeys.delete.title': 'Usunąć ten klucz dostępu?',
   'passkeys.delete.body': 'Nie zalogujesz się już przy użyciu: {name}.',

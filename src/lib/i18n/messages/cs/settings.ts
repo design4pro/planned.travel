@@ -652,9 +652,9 @@ const messages = {
   'passkeys.rename.failed': 'Název se neuložil. Zkuste to znovu.',
   'passkeys.rename.missing':
     'Název se neuložil. Načtěte stránku znovu a zkontrolujte seznam přístupových klíčů.',
-  'passkeys.rename.failedFor':
-    'Klíč {name} se nepodařilo přejmenovat. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Uložení se nepodařilo potvrdit. Načtěte stránku znovu a zkontrolujte seznam přístupových klíčů.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Odebrat {name}',
   'passkeys.delete.title': 'Odebrat tento přístupový klíč?',
   'passkeys.delete.body': 'Pomocí {name} se už nebudete moci přihlásit.',

@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { I18nProvider } from '#/lib/i18n'
 import settings from '#/lib/i18n/messages/en/settings'
+import shell from '#/lib/i18n/messages/en/shell'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import { PasskeyManager } from '../passkey-manager'
 
@@ -29,10 +30,13 @@ vi.mock('#/lib/auth/client', () => client)
 
 /** The shipped catalogue, namespaced the way the provider expects. */
 const EN: Catalogue = Object.fromEntries(
-  Object.entries(settings).map(([key, message]) => [
-    `settings.${key}`,
-    message,
-  ]),
+  [['settings', settings] as const, ['shell', shell] as const].flatMap(
+    ([namespace, messages]) =>
+      Object.entries(messages).map(([key, message]) => [
+        `${namespace}.${key}`,
+        message,
+      ]),
+  ),
 )
 
 function passkey(overrides: Partial<PasskeySummary> = {}): PasskeySummary {
@@ -1119,19 +1123,23 @@ describe('naming a passkey', () => {
     })
 
     it.each([
-      [403, 'PASSKEY_IMPERSONATED', 'Try again.'],
+      [403, 'PASSKEY_IMPERSONATED', 'The name was not saved. Try again.'],
       [
         404,
         'PASSKEY_NOT_FOUND',
-        'Reload the page and check your passkey list.',
+        'The name was not saved. Reload the page and check your passkey list.',
       ],
-      [0, null, 'Try again.'],
+      [
+        0,
+        null,
+        'The save could not be confirmed. Reload the page and check your passkey list.',
+      ],
     ] as const)(
       'shows recovery guidance for a %i (%s)',
       async (status, code, guidance) => {
         await failWith(status, code)
 
-        await screen.findByText(`The name was not saved. ${guidance}`, {
+        await screen.findByText(guidance, {
           selector: 'p',
         })
       },
@@ -1354,10 +1362,56 @@ describe('naming a passkey', () => {
     await waitFor(() =>
       expect(
         document.querySelector('[data-part="passkey-status"]')?.textContent,
-      ).toContain('Could not rename Work phone.'),
+      ).toContain('Work phone: The name was not saved. Try again.'),
     )
     expect((renameInput() as HTMLInputElement).value).toBe('Laptop3')
     expect(document.activeElement).toBe(renameInput())
+  })
+
+  it('does not attach an old failure to a reopened editor for the same passkey', async () => {
+    await mountWithRows(
+      passkey({ id: 'pk_1', name: 'Work phone' }),
+      passkey({ id: 'pk_2', name: 'Laptop' }),
+    )
+    let finish: (value: unknown) => void = () => {}
+    client.renamePasskey.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '2{Enter}')
+    await userEvent.click(renameButton('Laptop'))
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '3')
+
+    finish(failure(0))
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-part="passkey-status"]')?.textContent,
+      ).toContain('Work phone: The save could not be confirmed.'),
+    )
+    expect(renameInput().getAttribute('aria-invalid')).not.toBe('true')
+    expect((renameInput() as HTMLInputElement).value).toBe('Work phone3')
+    expect(document.activeElement).toBe(renameInput())
+  })
+
+  it('keeps a blank Braille draft without sending it and supports Escape from Cancel', async () => {
+    await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.clear(renameInput())
+    await userEvent.type(renameInput(), '\u2800{Enter}')
+    expect(client.renamePasskey).not.toHaveBeenCalled()
+    expect(
+      screen.getByText('Enter at least one visible character.'),
+    ).toBeDefined()
+    await userEvent.tab()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Cancel' }),
+    )
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(document.activeElement).toBe(renameButton('Work phone'))
   })
 
   it('does not hand focus to a row that finished saving after another row took rename mode', async () => {

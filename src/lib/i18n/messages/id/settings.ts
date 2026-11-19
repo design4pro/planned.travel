@@ -633,8 +633,9 @@ const messages = {
   'passkeys.rename.failed': 'Nama tidak tersimpan. Coba lagi.',
   'passkeys.rename.missing':
     'Nama tidak tersimpan. Muat ulang halaman dan periksa daftar kunci sandi.',
-  'passkeys.rename.failedFor': 'Tidak dapat mengganti nama {name}. {detail}',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.unknown':
+    'Penyimpanan tidak dapat dikonfirmasi. Muat ulang halaman dan periksa daftar kunci sandi Anda.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Hapus {name}',
   'passkeys.delete.title': 'Hapus kunci sandi ini?',
   'passkeys.delete.body': 'Anda tidak akan bisa lagi masuk dengan {name}.',
