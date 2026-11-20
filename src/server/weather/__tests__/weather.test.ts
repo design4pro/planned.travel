@@ -384,7 +384,7 @@ describe('sunrise and sunset', () => {
     // 07:44 and 18:23 are what the calculator's own code gives for Oslo on 10 October at UTC+2.
     expect(outcome).toMatchObject({
       status: 'ok',
-      sun: { sunrise: '07:44', sunset: '18:23' },
+      sun: { sunrise: '07:44', sunset: '18:23', sunsetNextDay: false },
     })
   })
 
@@ -396,7 +396,7 @@ describe('sunrise and sunset', () => {
     )
 
     expect(outcome).toMatchObject({
-      sun: { sunrise: '05:44', sunset: '16:23' },
+      sun: { sunrise: '05:44', sunset: '16:23', sunsetNextDay: false },
     })
   })
 

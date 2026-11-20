@@ -877,6 +877,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': '파일을 불러오지 못했습니다',
+  'files.page.empty': '아직 첨부 파일이 없습니다',
+  'files.page.summary': '{files} · 이 여행에 {size}',
+  'files.page.thisTrip': '이 여행',
+  'files.page.workspaceStorage': '작업 공간 저장 용량',
+  'files.page.photosCaption': '이 여행의 이미지',
+  'files.page.documents': '티켓 및 영수증',
+  'files.page.documentsCaption': '국경 심사와 회계 처리에 바로 사용하세요',
+  'files.count.filtered': '{total}개 중 {shown}개',
+  'files.storage.meter': '{limit} 중 {used}',
+  'files.storage.meterUnlimited': '무제한 용량 중 {used}',
+  'files.storage.ofLimit': '/ {limit}',
+  'files.storage.percentUsed': '{percent}% 사용',
+  'files.storage.unlimited': '무제한',
+  'files.error.missingTripFile': '이 파일은 이 여행에 속하지 않습니다.',
+  'files.error.missingCopy': '이 파일의 저장된 사본을 찾을 수 없습니다.',
+  'files.reject.empty': '“{name}” 파일이 비어 있어 저장할 내용이 없습니다.',
+  'files.reject.tooLarge':
+    '“{name}” 파일의 크기는 {size}입니다. 파일당 한도는 {limit}입니다.',
+  'files.reject.unsupportedType':
+    '이 작업 공간은 “{name}”의 파일 형식을 지원하지 않습니다. PDF, 이미지, 문서 또는 캘린더 파일을 사용해 보세요.',
+  'files.reject.quota':
+    '“{name}”을 저장하려면 {size}가 필요하지만 요금제 한도 {limit} 중 {remaining}만 남았습니다. 파일을 삭제하거나 요금제를 업그레이드하세요.',
+  'files.count.attached': { other: '파일 {count}개' },
   'files.kind.document': '문서',
   'files.kind.photo': '사진',
   'files.kind.ticket': '티켓',

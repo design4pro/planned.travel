@@ -586,6 +586,10 @@ const messages = {
   'editTrip.currencyLocked':
     'Perjalanan ini sudah memiliki harga, sehingga mata uang anggarannya tidak dapat diubah di sini. Gunakan Ubah mata uang anggaran di tab Biaya, atau kembalikan ke {current} untuk menyimpan perubahan lainnya.',
   'editTrip.currencyReadonly': 'Mata uang anggaran diubah dari tab Biaya.',
+  'editTrip.currencyUnsaved':
+    'Simpan atau batalkan perubahan sebelum membuka tab Biaya.',
+  'editTrip.currencyArchived':
+    'Mata uang anggaran tidak dapat diubah selama perjalanan diarsipkan.',
   'editTrip.currencyLink': 'Buka tab Biaya',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Hapus “{title}” selamanya?',

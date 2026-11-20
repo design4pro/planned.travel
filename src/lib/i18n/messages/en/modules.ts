@@ -1099,6 +1099,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'The files did not load',
+  'files.page.empty': 'Nothing attached yet',
+  'files.page.summary': '{files} · {size} on this trip',
+  'files.page.thisTrip': 'This trip',
+  'files.page.workspaceStorage': 'Workspace storage',
+  'files.page.photosCaption': 'Images across this trip',
+  'files.page.documents': 'Tickets & receipts',
+  'files.page.documentsCaption': 'Ready for the border and the accountant',
+  'files.count.filtered': '{shown} of {total}',
+  'files.storage.meter': '{used} of {limit}',
+  'files.storage.meterUnlimited': '{used} of unlimited',
+  'files.storage.ofLimit': 'of {limit}',
+  'files.storage.percentUsed': '{percent}% used',
+  'files.storage.unlimited': 'unlimited',
+  'files.error.missingTripFile': 'That file is not on this trip.',
+  'files.error.missingCopy': 'The stored copy of this file is missing.',
+  'files.reject.empty': '“{name}” is empty, so there is nothing to store.',
+  'files.reject.tooLarge':
+    '“{name}” is {size}. Single files are limited to {limit}.',
+  'files.reject.unsupportedType':
+    '“{name}” is not a file type this workspace accepts. Try a PDF, an image, a document or a calendar file.',
+  'files.reject.quota':
+    "Storing “{name}” needs {size} but only {remaining} of your plan's {limit} is left. Remove a file or upgrade the plan.",
+  'files.count.attached': { one: '{count} file', other: '{count} files' },
   'files.kind.document': 'Document',
   'files.kind.photo': 'Photo',
   'files.kind.ticket': 'Ticket',

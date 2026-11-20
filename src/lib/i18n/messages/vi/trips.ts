@@ -468,6 +468,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Mặt trời lặn',
   'plan.weather.panel.noSunrise': 'Không có mặt trời mọc',
   'plan.weather.panel.noSunset': 'Không có mặt trời lặn',
+  'plan.weather.panel.sunsetNextDay': '(ngày hôm sau)',
   'plan.weather.panel.slots': 'Trong ngày',
   'plan.weather.panel.slot.night': 'Đêm',
   'plan.weather.panel.slot.morning': 'Sáng',

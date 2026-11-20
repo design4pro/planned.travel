@@ -18,7 +18,6 @@ import { PlacesPanel } from '#/components/modules/files/places-panel'
 import { Button, Card, Progress, StatCard } from '#/components/ui'
 import { formatStorage } from '#/lib/plans'
 import { loadTripFiles } from '../../-server/trip'
-import { pluralise } from '../../-lib/format'
 import { HeaderSkeleton, RowsSkeleton, StatsSkeleton } from '../../-ui/scaffold'
 import { TripModuleHeader } from '../../-ui/trip-header'
 
@@ -33,13 +32,18 @@ export const Route = createFileRoute('/_app/trips/$tripId/files')({
   loader: async ({ params }) =>
     requireFound(await loadTripFiles({ data: { tripId: params.tripId } })),
   pendingComponent: FilesPending,
-  errorComponent: ({ error }) => (
-    <AppFrame>
-      <ErrorPanel error={error} title="The files did not load" />
-    </AppFrame>
-  ),
+  errorComponent: FilesError,
   component: FilesPage,
 })
+
+function FilesError({ error }: { error: Error }) {
+  const t = useTranslate()
+  return (
+    <AppFrame>
+      <ErrorPanel error={error} title={t('modules.files.page.error')} />
+    </AppFrame>
+  )
+}
 
 function FilesPage() {
   const t = useTranslate()
@@ -54,7 +58,11 @@ function FilesPage() {
    */
   const [pickRequestedAt, setPickRequestedAt] = useState(0)
 
+  const hasLimit = Number.isFinite(data.limitBytes) && data.limitBytes >= 0
   const limit = Math.max(data.limitBytes, 1)
+  const count = data.files.length
+  const tripSize = formatStorage(data.tripBytes)
+  const fileCount = t('modules.files.count.attached', { count })
   const ratio = data.workspaceBytes / limit
   const images = data.files.filter((file) => file.kind === 'image').length
   const documents = data.files.filter(
@@ -65,11 +73,14 @@ function FilesPage() {
     <AppFrame>
       <AppSections>
         <TripModuleHeader
-          title="Files"
+          title={t('shell.trip.tab.files')}
           description={
-            data.files.length === 0
-              ? 'Nothing attached yet'
-              : `${pluralise(data.files.length, 'file')} · ${formatStorage(data.tripBytes)} on this trip`
+            count === 0
+              ? t('modules.files.page.empty')
+              : t('modules.files.page.summary', {
+                  files: fileCount,
+                  size: tripSize,
+                })
           }
           actions={
             <>
@@ -103,37 +114,51 @@ function FilesPage() {
           <StatCard
             tone="inverse"
             icon={<HardDrive />}
-            label="This trip"
-            value={formatStorage(data.tripBytes)}
-            caption={pluralise(data.files.length, 'file')}
+            label={t('modules.files.page.thisTrip')}
+            value={tripSize}
+            caption={fileCount}
           />
           <StatCard
-            label="Workspace storage"
+            label={t('modules.files.page.workspaceStorage')}
             value={formatStorage(data.workspaceBytes)}
-            unit={`of ${formatStorage(limit)}`}
-            caption={`${Math.round(ratio * 100)}% used`}
+            unit={
+              hasLimit
+                ? t('modules.files.storage.ofLimit', {
+                    limit: formatStorage(data.limitBytes),
+                  })
+                : undefined
+            }
+            caption={
+              hasLimit
+                ? t('modules.files.storage.percentUsed', {
+                    percent: Math.round(ratio * 100),
+                  })
+                : t('modules.files.storage.unlimited')
+            }
             footer={
-              <Progress
-                value={data.workspaceBytes}
-                max={limit}
-                size="xs"
-                tone={
-                  ratio > 0.9 ? 'danger' : ratio > 0.7 ? 'warning' : 'brand'
-                }
-              />
+              hasLimit ? (
+                <Progress
+                  value={data.workspaceBytes}
+                  max={limit}
+                  size="xs"
+                  tone={
+                    ratio > 0.9 ? 'danger' : ratio > 0.7 ? 'warning' : 'brand'
+                  }
+                />
+              ) : undefined
             }
           />
           <StatCard
             icon={<FileImage />}
-            label="Photos"
+            label={t('journal.figure.photos')}
             value={images}
-            caption="Images across this trip"
+            caption={t('modules.files.page.photosCaption')}
           />
           <StatCard
             icon={<Ticket />}
-            label="Tickets & receipts"
+            label={t('modules.files.page.documents')}
             value={documents}
-            caption="Ready for the border and the accountant"
+            caption={t('modules.files.page.documentsCaption')}
           />
         </div>
 

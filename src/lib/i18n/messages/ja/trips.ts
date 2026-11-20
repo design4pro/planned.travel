@@ -466,6 +466,7 @@ const messages = {
   'plan.weather.panel.sunset': '日の入り',
   'plan.weather.panel.noSunrise': '日の出なし',
   'plan.weather.panel.noSunset': '日の入りなし',
+  'plan.weather.panel.sunsetNextDay': '（翌日）',
   'plan.weather.panel.slots': '時間帯別',
   'plan.weather.panel.slot.night': '深夜',
   'plan.weather.panel.slot.morning': '午前',

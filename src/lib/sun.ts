@@ -10,18 +10,23 @@
  * trip that crosses zones the far leg's times are wrong by the offset: that is a limitation of the
  * single-zone trip model, recorded in the per-day weather spec, not something to correct here.
  *
- * Where the sun does not cross the horizon that day (polar night, midnight sun) there is nothing
- * to report and that side comes back `null`: both sides on a full polar day, one side alone on the
- * first or last day of a polar period.
+ * Sunrise belongs to its local date. Sunset follows the sunrise of its daylight period, at
+ * most one local date later. A day without sunrise can keep an unassigned local sunset.
+ * Polar periods can leave either or both sides missing.
  */
 
 import { dayKeyIn, resolveTimeZone } from '#/lib/time'
 import { clockIn } from '#/lib/timezones'
 
-/** Sunrise and sunset as local `HH:mm`, or `null` for a side the day does not have. */
-export interface SunTimes {
+/** Local `HH:mm` times, or `null` for a missing side. */
+export interface CalendarSunTimes {
   readonly sunrise: string | null
   readonly sunset: string | null
+}
+
+export interface SunTimes extends CalendarSunTimes {
+  /** True when the sunset clock time falls on the following local date. */
+  readonly sunsetNextDay: boolean
 }
 
 const DATE_KEY = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -142,58 +147,61 @@ function crossingInstant(
   return second === null ? null : midnightUtcMs + second * MINUTE_MS
 }
 
-/**
- * One side of the day as a local clock time, or `null`.
- *
- * The algorithm anchors on the UTC day, which is the zone's own day in most of the world. Where the
- * zone sits far from the longitude's solar time the crossing can land on the neighbouring local
- * date, so the anchor is moved a day until the crossing falls on the date asked about.
- */
-function localClock(
+interface SolarCrossing {
+  readonly instant: number
+  readonly iso: string
+  readonly date: string
+}
+
+function nearbyCrossings(
   rise: boolean,
-  date: string,
   midnightUtcMs: number,
   lat: number,
   lng: number,
   zone: string,
-): string | null {
-  for (const shift of [0, -1, 1]) {
+): SolarCrossing[] {
+  const crossings: SolarCrossing[] = []
+  // Include the previous and following local dates. An anchor can differ from the crossing's
+  // local date by two days when the zone and the longitude are on opposite sides of the date line.
+  for (let shift = -3; shift <= 3; shift++) {
     const instant = crossingInstant(
       rise,
       midnightUtcMs + shift * DAY_MS,
       lat,
       lng,
     )
-    // No crossing on this anchor day says nothing about the neighbours: on the day a polar
-    // transition begins, the crossing that falls on the local date can belong to the day before.
-    if (instant === null) {
-      continue
-    }
-    // Whole minutes first, so a crossing at 05:40:50 reads 05:41 and not 05:40.
-    const rounded = new Date(
-      Math.round(instant / MINUTE_MS) * MINUTE_MS,
-    ).toISOString()
-    if (dayKeyIn(rounded, zone) === date) {
-      return clockIn(rounded, zone)
+    if (instant !== null) {
+      const raw = new Date(instant).toISOString()
+      const date = dayKeyIn(raw, zone)
+      const rounded = roundedCrossing(instant)
+      // Keep the display on the event’s date if rounding would carry it across midnight.
+      const iso = dayKeyIn(rounded, zone) === date ? rounded : raw
+      crossings.push({ instant, iso, date })
     }
   }
-  return null
+  return crossings.sort((a, b) => a.instant - b.instant)
 }
 
-/**
- * Sunrise and sunset on a calendar date at a point, as local `HH:mm` in `timeZone`.
- *
- * `date` is `YYYY-MM-DD`; a value that is not a date, or a latitude or longitude outside the earth,
- * gets `null` on both sides rather than a wrong time. An unknown zone is read as UTC.
- */
-export function sunTimes(
-  lat: number,
-  lng: number,
-  date: string,
-  timeZone: string,
-): SunTimes {
+function followingSunset(
+  sunrise: SolarCrossing,
+  nextSunrise: SolarCrossing | undefined,
+  nextDate: string,
+  sunsets: SolarCrossing[],
+): SolarCrossing | undefined {
+  return sunsets.find(
+    (sunset) =>
+      sunset.instant > sunrise.instant &&
+      (nextSunrise === undefined || sunset.instant < nextSunrise.instant) &&
+      (sunset.date === sunrise.date || sunset.date === nextDate),
+  )
+}
+
+function roundedCrossing(instant: number): string {
+  return new Date(Math.round(instant / MINUTE_MS) * MINUTE_MS).toISOString()
+}
+
+function validAnchor(date: string, lat: number, lng: number): number | null {
   const match = DATE_KEY.exec(date)
-  const none: SunTimes = { sunrise: null, sunset: null }
   if (
     match === null ||
     !Number.isFinite(lat) ||
@@ -201,20 +209,101 @@ export function sunTimes(
     Math.abs(lat) > 90 ||
     Math.abs(lng) > 180
   ) {
-    return none
+    return null
   }
-  const midnightUtcMs = Date.UTC(
+  const midnight = Date.UTC(
     Number(match[1]),
     Number(match[2]) - 1,
     Number(match[3]),
   )
-  // `Date.UTC` rolls 31 February over into March; a date that does not survive the round trip is not one.
-  if (new Date(midnightUtcMs).toISOString().slice(0, 10) !== date) {
-    return none
+  // Date.UTC normalizes invalid calendar dates, so verify the round trip.
+  return new Date(midnight).toISOString().slice(0, 10) === date
+    ? midnight
+    : null
+}
+
+function calendarClock(
+  rise: boolean,
+  date: string,
+  midnight: number,
+  lat: number,
+  lng: number,
+  zone: string,
+): string | null {
+  for (const shift of [0, -1, 1]) {
+    const instant = crossingInstant(rise, midnight + shift * DAY_MS, lat, lng)
+    if (instant !== null) {
+      const rounded = roundedCrossing(instant)
+      if (dayKeyIn(rounded, zone) === date) {
+        return clockIn(rounded, zone)
+      }
+    }
+  }
+  return null
+}
+
+/** The calendar-date projection used by planner bundles loaded before solar-day sunsets. */
+export function calendarSunTimes(
+  lat: number,
+  lng: number,
+  date: string,
+  timeZone: string,
+): CalendarSunTimes {
+  const midnight = validAnchor(date, lat, lng)
+  if (midnight === null) {
+    return { sunrise: null, sunset: null }
   }
   const zone = resolveTimeZone(timeZone)
   return {
-    sunrise: localClock(true, date, midnightUtcMs, lat, lng, zone),
-    sunset: localClock(false, date, midnightUtcMs, lat, lng, zone),
+    sunrise: calendarClock(true, date, midnight, lat, lng, zone),
+    sunset: calendarClock(false, date, midnight, lat, lng, zone),
+  }
+}
+
+/** Local sunrise and its daylight period’s sunset, at most one local date later. */
+export function sunTimes(
+  lat: number,
+  lng: number,
+  date: string,
+  timeZone: string,
+): SunTimes {
+  const midnightUtcMs = validAnchor(date, lat, lng)
+  if (midnightUtcMs === null) {
+    return { sunrise: null, sunset: null, sunsetNextDay: false }
+  }
+  const zone = resolveTimeZone(timeZone)
+  const sunrises = nearbyCrossings(true, midnightUtcMs, lat, lng, zone)
+  const sunsets = nearbyCrossings(false, midnightUtcMs, lat, lng, zone)
+  const sunrise = sunrises.find((crossing) => crossing.date === date)
+  let sunset: SolarCrossing | undefined
+  if (sunrise !== undefined) {
+    const nextDate = new Date(midnightUtcMs + DAY_MS).toISOString().slice(0, 10)
+    const nextSunrise = sunrises.find(
+      (crossing) => crossing.instant > sunrise.instant,
+    )
+    sunset = followingSunset(sunrise, nextSunrise, nextDate, sunsets)
+  } else {
+    const previousDate = new Date(midnightUtcMs - DAY_MS)
+      .toISOString()
+      .slice(0, 10)
+    const previousSunrise = sunrises.find(
+      (crossing) => crossing.date === previousDate,
+    )
+    const assigned =
+      previousSunrise &&
+      followingSunset(
+        previousSunrise,
+        sunrises.find((crossing) => crossing.instant > previousSunrise.instant),
+        date,
+        sunsets,
+      )
+    sunset = sunsets.find(
+      (crossing) => crossing.date === date && crossing !== assigned,
+    )
+  }
+  return {
+    sunrise: sunrise === undefined ? null : clockIn(sunrise.iso, zone),
+    sunset: sunset === undefined ? null : clockIn(sunset.iso, zone),
+    sunsetNextDay: sunset !== undefined && sunset.date !== date,
   }
 }

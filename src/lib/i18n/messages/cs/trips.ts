@@ -497,6 +497,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Západ slunce',
   'plan.weather.panel.noSunrise': 'Žádný východ slunce',
   'plan.weather.panel.noSunset': 'Žádný západ slunce',
+  'plan.weather.panel.sunsetNextDay': '(následující den)',
   'plan.weather.panel.slots': 'Během dne',
   'plan.weather.panel.slot.night': 'Noc',
   'plan.weather.panel.slot.morning': 'Dopoledne',

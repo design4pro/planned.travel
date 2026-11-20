@@ -637,6 +637,10 @@ const messages = {
     'Ennek az utazásnak már vannak árai, ezért a költségvetés pénznemét itt nem lehet módosítani. A Költségek fülön használd a Költségvetés pénznemének módosítása gombot, vagy állítsd vissza {current} értékre, hogy a többi módosításod mentődjön.',
   'editTrip.currencyReadonly':
     'A költségvetés pénznemét a Költségek fülön lehet módosítani.',
+  'editTrip.currencyUnsaved':
+    'A Költségek fül megnyitása előtt mentsd vagy vesd el a módosításokat.',
+  'editTrip.currencyArchived':
+    'A költségvetés pénzneme nem módosítható, amíg az utazás archiválva van.',
   'editTrip.currencyLink': 'A Költségek fül megnyitása',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Véglegesen törlöd ezt: „{title}”?',

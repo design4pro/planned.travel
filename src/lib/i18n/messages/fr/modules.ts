@@ -960,6 +960,37 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Impossible de charger les fichiers',
+  'files.page.empty': 'Aucune pièce jointe pour le moment',
+  'files.page.summary': '{files} · {size} pour ce voyage',
+  'files.page.thisTrip': 'Ce voyage',
+  'files.page.workspaceStorage': 'Stockage de l’espace de travail',
+  'files.page.photosCaption': 'Images de ce voyage',
+  'files.page.documents': 'Billets et reçus',
+  'files.page.documentsCaption':
+    'Prêts pour le contrôle aux frontières et la comptabilité',
+  'files.count.filtered': '{shown} sur {total}',
+  'files.storage.meter': '{used} sur {limit}',
+  'files.storage.meterUnlimited': '{used} sur un espace illimité',
+  'files.storage.ofLimit': 'sur {limit}',
+  'files.storage.percentUsed': '{percent} % utilisés',
+  'files.storage.unlimited': 'illimité',
+  'files.error.missingTripFile': 'Ce fichier ne fait pas partie de ce voyage.',
+  'files.error.missingCopy':
+    'La copie enregistrée de ce fichier est introuvable.',
+  'files.reject.empty':
+    '« {name} » est vide, il n’y a donc rien à enregistrer.',
+  'files.reject.tooLarge':
+    '« {name} » fait {size}. Chaque fichier est limité à {limit}.',
+  'files.reject.unsupportedType':
+    'Le type de fichier de « {name} » n’est pas accepté dans cet espace de travail. Essayez un PDF, une image, un document ou un fichier de calendrier.',
+  'files.reject.quota':
+    'Il faut {size} pour stocker « {name} », mais il ne reste que {remaining} sur les {limit} de votre forfait. Supprimez un fichier ou passez à un forfait supérieur.',
+  'files.count.attached': {
+    one: '{count} fichier',
+    many: '{count} fichiers',
+    other: '{count} fichiers',
+  },
   'files.kind.document': 'Document',
   'files.kind.photo': 'Photo',
   'files.kind.ticket': 'Billet',

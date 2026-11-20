@@ -7,6 +7,7 @@
  * behind the session — so the response is turned into a blob and handed to a
  * synthetic link, which is what makes the browser save it under its real name.
  */
+import type { Translate } from '#/lib/i18n'
 import { downloadTripFileFn } from '#/server/fns/files'
 
 /**
@@ -27,7 +28,7 @@ const GENERIC_BINARY = 'application/octet-stream'
 /** How long the object URL is kept alive after the click that consumed it. */
 const REVOKE_DELAY_MS = 60_000
 
-async function reasonFor(response: Response): Promise<string> {
+async function reasonFor(response: Response, t: Translate): Promise<string> {
   try {
     const body: unknown = await response.json()
     if (
@@ -36,12 +37,23 @@ async function reasonFor(response: Response): Promise<string> {
       'error' in body &&
       typeof body.error === 'string'
     ) {
-      return body.error
+      if (
+        response.status === 404 &&
+        body.error === 'That file is not on this trip.'
+      ) {
+        return t('modules.files.error.missingTripFile')
+      }
+      if (
+        response.status === 410 &&
+        body.error === 'The stored copy of this file is missing.'
+      ) {
+        return t('modules.files.error.missingCopy')
+      }
     }
   } catch {
     // A non-JSON body is not worth surfacing verbatim.
   }
-  return `The download failed (${response.status}).`
+  return t('modules.files.error.downloadFailed', { status: response.status })
 }
 
 /**
@@ -74,18 +86,21 @@ export function saveBlob(stored: Blob, filename: string): void {
 }
 
 /** Fetches authenticated bytes without saving or changing their MIME type. */
-export async function fetchTripFileBytes(input: {
-  readonly tripId: string
-  readonly fileId: string
-}): Promise<Blob> {
+export async function fetchTripFileBytes(
+  input: {
+    readonly tripId: string
+    readonly fileId: string
+  },
+  t?: Translate,
+): Promise<Blob> {
   const response = await downloadTripFileFn({
     data: { tripId: input.tripId, fileId: input.fileId },
   })
   if (!(response instanceof Response)) {
-    throw new Error('The download did not come back in a form we could save.')
+    throw new Error(t?.('modules.files.error.downloadShape'))
   }
   if (!response.ok) {
-    throw Object.assign(new Error(await reasonFor(response)), {
+    throw Object.assign(new Error(t && (await reasonFor(response, t))), {
       status: response.status,
     })
   }
@@ -93,11 +108,14 @@ export async function fetchTripFileBytes(input: {
 }
 
 /** Saves one attachment under its real name; failures go through the caller's useAction. */
-export async function downloadTripFile(input: {
-  readonly tripId: string
-  readonly fileId: string
-  readonly filename: string
-}): Promise<{ readonly filename: string }> {
-  saveBlob(await fetchTripFileBytes(input), input.filename)
+export async function downloadTripFile(
+  input: {
+    readonly tripId: string
+    readonly fileId: string
+    readonly filename: string
+  },
+  t: Translate,
+): Promise<{ readonly filename: string }> {
+  saveBlob(await fetchTripFileBytes(input, t), input.filename)
   return { filename: input.filename }
 }

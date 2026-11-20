@@ -332,6 +332,29 @@ describe('checkUpload', () => {
 })
 
 describe('screenFiles', () => {
+  it('carries the name and formatted sizes for empty and oversized files', () => {
+    const empty = file('empty.pdf', 'application/pdf', 0)
+    const large = file('large.pdf', 'application/pdf', MAX_FILE_BYTES * 2)
+    const { accepted, rejected } = screenFiles([empty, large], UNLIMITED)
+    expect(accepted).toEqual([])
+    expect(rejected).toEqual([
+      {
+        file: empty,
+        message: {
+          key: 'modules.files.reject.empty',
+          params: { name: 'empty.pdf' },
+        },
+      },
+      {
+        file: large,
+        message: {
+          key: 'modules.files.reject.tooLarge',
+          params: { name: 'large.pdf', size: '50 MB', limit: '25 MB' },
+        },
+      },
+    ])
+  })
+
   it('splits a drop into what will be sent and what will not', () => {
     const good = file('pass.pdf', 'application/pdf', 1024)
     const bad = file('run.exe', 'application/x-msdownload', 1024)
@@ -341,7 +364,10 @@ describe('screenFiles', () => {
     expect(accepted).toEqual([good])
     expect(rejected).toHaveLength(1)
     expect(rejected[0]?.file).toBe(bad)
-    expect(rejected[0]?.message).toContain('run.exe')
+    expect(rejected[0]?.message).toEqual({
+      key: 'modules.files.reject.unsupportedType',
+      params: { name: 'run.exe' },
+    })
   })
 
   it('carries each accepted size into the budget for the next file', () => {
@@ -355,7 +381,15 @@ describe('screenFiles', () => {
 
     expect(accepted).toEqual([first])
     expect(rejected[0]?.file).toBe(second)
-    expect(rejected[0]?.message).toContain('plan')
+    expect(rejected[0]?.message).toEqual({
+      key: 'modules.files.reject.quota',
+      params: {
+        name: 'two.pdf',
+        size: '600 B',
+        remaining: '400 B',
+        limit: '1000 B',
+      },
+    })
   })
 
   it('keeps two files that happen to share a name apart', () => {
@@ -424,7 +458,26 @@ describe('describeRejection', () => {
     expect(describeRejection('blocked-type', {}, FALLBACK)).toBe(FALLBACK)
   })
 
-  it.each(['empty', 'too-large', 'unsupported-type', 'quota', 'rejected', 'x'])(
+  it.each([
+    ['empty', 'empty', { name: 'a.pdf' }],
+    ['too-large', 'tooLarge', { name: 'a.pdf', size: '20 MB', limit: '10 MB' }],
+    ['unsupported-type', 'unsupportedType', { name: 'a.pdf' }],
+    [
+      'quota',
+      'quota',
+      { name: 'a.pdf', size: '600 B', remaining: '400 B', limit: '1000 B' },
+    ],
+  ] as const)(
+    'uses the catalogue for a server refusal with code %s',
+    (code, key, params) => {
+      expect(describeRejection(code, params, FALLBACK)).toEqual({
+        key: 'modules.files.reject.' + key,
+        params,
+      })
+    },
+  )
+
+  it.each(['too-large', 'quota', 'rejected', 'x'])(
     'leaves %s as the English message it carries',
     (code) => {
       expect(describeRejection(code, { name: 'a.pdf' }, FALLBACK)).toBe(

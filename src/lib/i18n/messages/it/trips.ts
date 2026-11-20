@@ -498,6 +498,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Tramonto',
   'plan.weather.panel.noSunrise': 'Nessuna alba',
   'plan.weather.panel.noSunset': 'Nessun tramonto',
+  'plan.weather.panel.sunsetNextDay': '(il giorno seguente)',
   'plan.weather.panel.slots': 'Nel corso della giornata',
   'plan.weather.panel.slot.night': 'Notte',
   'plan.weather.panel.slot.morning': 'Mattina',

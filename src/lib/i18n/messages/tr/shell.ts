@@ -614,6 +614,10 @@ const messages = {
     'Bu gezide zaten fiyatlar var, bu yüzden bütçe para birimi burada değiştirilemez. Masraflar sekmesindeki “Bütçe para birimini değiştir” düğmesini kullanın ya da diğer değişiklikleri kaydetmek için {current} değerine geri döndürün.',
   'editTrip.currencyReadonly':
     'Bütçe para birimi Masraflar sekmesinden değiştirilir.',
+  'editTrip.currencyUnsaved':
+    'Masraflar sekmesini açmadan önce değişikliklerini kaydet veya iptal et.',
+  'editTrip.currencyArchived':
+    'Seyahat arşivdeyken bütçe para birimi değiştirilemez.',
   'editTrip.currencyLink': 'Masraflar sekmesini aç',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” kalıcı olarak silinsin mi?',

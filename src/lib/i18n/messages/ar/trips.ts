@@ -514,6 +514,7 @@ const messages = {
   'plan.weather.panel.sunset': 'الغروب',
   'plan.weather.panel.noSunrise': 'لا يوجد شروق',
   'plan.weather.panel.noSunset': 'لا يوجد غروب',
+  'plan.weather.panel.sunsetNextDay': '(اليوم التالي)',
   'plan.weather.panel.slots': 'على مدار اليوم',
   'plan.weather.panel.slot.night': 'ليلًا',
   'plan.weather.panel.slot.morning': 'صباحًا',

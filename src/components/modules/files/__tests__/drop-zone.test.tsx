@@ -14,13 +14,13 @@ import {
 } from '@testing-library/react'
 
 import { toast } from '#/components/ui'
-import { I18nProvider } from '#/lib/i18n'
+import { I18nProvider, loadCatalogue } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import type { FileData } from '../types'
-import { FileLibrary } from '../file-library'
+import { FileLibrary, StorageMeter } from '../file-library'
 
 import type { Catalogue } from '#/lib/i18n'
 
@@ -68,9 +68,11 @@ function renderLibrary(
   canWrite = true,
   files: ReadonlyArray<FileData> = [],
   archived = false,
+  locale: 'en' | 'pl' = 'en',
+  messages = EN,
 ): void {
   render(
-    <I18nProvider locale="en" messages={EN}>
+    <I18nProvider locale={locale} messages={messages}>
       <FileLibrary
         canWrite={canWrite}
         archived={archived}
@@ -315,11 +317,14 @@ it.each(['list', 'table'] as const)(
     openFileMenu(surface)
     fireEvent.click(await screen.findByRole('menuitem', { name: /Download/ }))
     await waitFor(() =>
-      expect(stubs.download).toHaveBeenCalledWith({
-        tripId: 'trip-1',
-        fileId: 'booking',
-        filename: BOOKING.filename,
-      }),
+      expect(stubs.download).toHaveBeenCalledWith(
+        {
+          tripId: 'trip-1',
+          fileId: 'booking',
+          filename: BOOKING.filename,
+        },
+        expect.any(Function),
+      ),
     )
   },
 )
@@ -437,11 +442,14 @@ it.each(['list', 'table'] as const)(
       }),
     )
     await waitFor(() =>
-      expect(stubs.download).toHaveBeenCalledWith({
-        tripId: 'trip-1',
-        fileId: BOOKING.id,
-        filename: BOOKING.filename,
-      }),
+      expect(stubs.download).toHaveBeenCalledWith(
+        {
+          tripId: 'trip-1',
+          fileId: BOOKING.id,
+          filename: BOOKING.filename,
+        },
+        expect.any(Function),
+      ),
     )
   },
 )
@@ -471,4 +479,33 @@ it('keeps the initial file timestamp stable when hydration crosses a minute boun
   } finally {
     now.mockRestore()
   }
+})
+
+it('renders finite and unlimited storage in Polish', async () => {
+  render(
+    <I18nProvider locale="pl" messages={await loadCatalogue('pl')}>
+      <StorageMeter usedBytes={256} limitBytes={512} />
+      <StorageMeter usedBytes={256} limitBytes={-1} />
+      <StorageMeter usedBytes={128} limitBytes={Infinity} />
+    </I18nProvider>,
+  )
+  expect(screen.getByText('256 B z 512 B')).toBeTruthy()
+  expect(screen.getByText('256 B z nieograniczonego limitu')).toBeTruthy()
+  expect(screen.getByText('128 B z nieograniczonego limitu')).toBeTruthy()
+})
+
+it('localizes the attachment count as the kind filter changes', async () => {
+  renderLibrary(
+    false,
+    [
+      BOOKING,
+      { ...BOOKING, id: 'photo', filename: 'arrival.jpg', kind: 'image' },
+    ],
+    false,
+    'pl',
+    await loadCatalogue('pl'),
+  )
+  expect(screen.getByText('2 z 2')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: /Dokument/ }))
+  expect(screen.getByText('1 z 2')).toBeTruthy()
 })

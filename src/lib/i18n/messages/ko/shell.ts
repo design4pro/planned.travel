@@ -523,6 +523,10 @@ const messages = {
   'editTrip.currencyLocked':
     '이 여행에는 이미 금액이 있어서 여기서는 예산 통화를 바꿀 수 없습니다. 비용 탭의 “예산 통화 변경”을 사용하거나, 다른 변경 사항을 저장하려면 통화를 {current}(으)로 되돌려 주세요.',
   'editTrip.currencyReadonly': '예산 통화는 비용 탭에서 바꿉니다.',
+  'editTrip.currencyUnsaved':
+    '비용 탭을 열기 전에 변경사항을 저장하거나 취소하세요.',
+  'editTrip.currencyArchived':
+    '여행이 보관된 상태에서는 예산 통화를 변경할 수 없습니다.',
   'editTrip.currencyLink': '비용 탭 열기',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}”을(를) 영구 삭제할까요?',

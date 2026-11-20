@@ -1106,7 +1106,7 @@ export async function updateTrip(
   // change. An equal one is left out of the patch altogether rather than written back, so a change
   // that lands between this read and the write is not restored. A tab that was already stale when
   // the request arrived still reads as a change: the server cannot tell that from a deliberate pick,
-  // which is why the current sheet sends the currency only when the reader changed it.
+  // which is why the current edit sheet omits currency from its updates.
   const currencyChanged =
     currency !== undefined && currency !== existing.currency
 

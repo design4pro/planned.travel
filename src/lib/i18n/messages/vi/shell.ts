@@ -584,6 +584,10 @@ const messages = {
   'editTrip.currencyLocked':
     'Chuyến đi này đã có giá, nên không thể đổi tiền tệ của ngân sách tại đây. Hãy dùng nút “Đổi tiền tệ của ngân sách” ở tab Chi phí, hoặc đặt lại {current} để lưu các thay đổi khác.',
   'editTrip.currencyReadonly': 'Tiền tệ của ngân sách được đổi ở tab Chi phí.',
+  'editTrip.currencyUnsaved':
+    'Hãy lưu hoặc hủy các thay đổi trước khi mở tab Chi phí.',
+  'editTrip.currencyArchived':
+    'Không thể đổi đơn vị tiền tệ của ngân sách khi chuyến đi đã được lưu trữ.',
   'editTrip.currencyLink': 'Mở tab Chi phí',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Xóa vĩnh viễn “{title}”?',

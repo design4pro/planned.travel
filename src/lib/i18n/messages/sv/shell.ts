@@ -618,6 +618,10 @@ const messages = {
   'editTrip.currencyLocked':
     'Resan har redan priser, så budgetvalutan kan inte ändras här. Använd Ändra budgetvaluta på fliken Kostnader eller ställ tillbaka den på {current} för att spara dina övriga ändringar.',
   'editTrip.currencyReadonly': 'Budgetvalutan ändras på fliken Kostnader.',
+  'editTrip.currencyUnsaved':
+    'Spara eller ångra dina ändringar innan du öppnar fliken Kostnader.',
+  'editTrip.currencyArchived':
+    'Budgetvalutan kan inte ändras medan resan är arkiverad.',
   'editTrip.currencyLink': 'Öppna fliken Kostnader',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Ta bort ”{title}” för gott?',

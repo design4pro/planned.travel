@@ -651,6 +651,10 @@ const messages = {
   'editTrip.currencyLocked':
     'Esta viagem já tem preços, então a moeda do orçamento não pode ser alterada aqui. Use Alterar moeda do orçamento na aba Gastos ou volte para {current} para salvar as outras alterações.',
   'editTrip.currencyReadonly': 'A moeda do orçamento é alterada na aba Gastos.',
+  'editTrip.currencyUnsaved':
+    'Salve ou cancele as alterações antes de abrir a aba Gastos.',
+  'editTrip.currencyArchived':
+    'A moeda do orçamento não pode ser alterada enquanto a viagem estiver arquivada.',
   'editTrip.currencyLink': 'Abrir a aba Gastos',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Excluir “{title}” para sempre?',
