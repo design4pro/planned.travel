@@ -68,7 +68,7 @@ const messages = {
   'nav.admin': 'Arbetsytans konsol',
   'nav.admin.hint': 'Medlemmar, inbjudningar och senaste aktivitet',
   'nav.billing': 'Fakturering',
-  'nav.billing.hint': 'Abonnemang, platser och fakturor',
+  'nav.billing.hint': 'Abonnemang, medlemmar och fakturor',
 
   /* ----------------------------------------------------------------- shared */
   'action.save': 'Spara ändringarna',

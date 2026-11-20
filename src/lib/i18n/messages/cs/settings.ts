@@ -73,7 +73,7 @@ const messages = {
   'nav.admin': 'Konzole pracovního prostoru',
   'nav.admin.hint': 'Členové, pozvánky a nedávná aktivita',
   'nav.billing': 'Platby',
-  'nav.billing.hint': 'Tarif, místa a faktury',
+  'nav.billing.hint': 'Tarif, členové a faktury',
 
   /* ----------------------------------------------------------------- shared */
   'action.save': 'Uložit změny',

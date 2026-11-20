@@ -64,7 +64,7 @@ const messages = {
   'nav.admin': 'Munkaterület konzol',
   'nav.admin.hint': 'Tagok, meghívók és legutóbbi tevékenység',
   'nav.billing': 'Számlázás',
-  'nav.billing.hint': 'Csomag, helyek és számlák',
+  'nav.billing.hint': 'Csomag, tagok és számlák',
 
   /* ----------------------------------------------------------------- shared */
   'action.save': 'Változtatások mentése',
