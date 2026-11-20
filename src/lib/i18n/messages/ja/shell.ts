@@ -535,6 +535,10 @@ const messages = {
   'editTrip.currencyLocked':
     'この旅行にはすでに金額が入っているため、予算の通貨はここでは変更できません。「費用」タブの「予算の通貨を変更」を使うか、ほかの変更を保存するには通貨を {current} に戻してください。',
   'editTrip.currencyReadonly': '予算の通貨は「費用」タブで変更します。',
+  'editTrip.currencyUnsaved':
+    '費用タブを開く前に、変更を保存するか取り消してください。',
+  'editTrip.currencyArchived':
+    '旅行がアーカイブされている間は、予算通貨を変更できません。',
   'editTrip.currencyLink': '「費用」タブを開く',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '「{title}」を完全に削除しますか？',

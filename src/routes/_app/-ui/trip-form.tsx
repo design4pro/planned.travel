@@ -14,14 +14,14 @@
  * face, never both: the server refuses a day count beside a date.
  *
  * **The budget currency is chosen once.** A create offers the select; an edit (given a `tripId`) shows
- * it as text and points to the Costs tab, because changing it after a trip carries money is a re-basing
- * that tab owns. The value stays in the payload, so the edit caller decides not to send it.
+ * it as text and points to the Costs tab when the live trip has no pending edits or save. Costs
+ * owns currency changes. The edit caller omits currency from its update.
  *
  * **The cover is not in the payload.** It is a file, chosen here and uploaded by the caller once the
  * trip exists, so the form holds it beside the values and the payload never carries it.
  */
 import { hasVisibleCharacter } from '#/lib/workspace-name'
-import { useId, useMemo, useState } from 'react'
+import { useCallback, useId, useMemo, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 
 import {
@@ -255,6 +255,8 @@ export interface TripFormFieldsProps {
    * without it the select stays, since a new trip has nothing to convert.
    */
   tripId?: string
+  archived?: boolean
+  hasUnsavedChanges?: boolean
   /** The cover the trip already has, shown in the cover region on edit. */
   currentCoverUrl?: string | null
   /** `0`-`1` while the chosen cover uploads, otherwise `null`. */
@@ -267,6 +269,8 @@ export function TripFormFields({
   undatedDays = true,
   owner = true,
   tripId,
+  archived = false,
+  hasUnsavedChanges = false,
   currentCoverUrl = null,
   coverProgress = null,
 }: TripFormFieldsProps) {
@@ -388,7 +392,13 @@ export function TripFormFields({
           onChange={(next) => set('currency', next)}
         />
       ) : (
-        <CurrencyReadout value={values.currency} tripId={tripId} />
+        <CurrencyReadout
+          value={values.currency}
+          tripId={tripId}
+          archived={archived}
+          saving={form.saving}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
       )}
 
       {owner ? <ReminderField form={form} /> : null}
@@ -451,16 +461,52 @@ function CurrencyField({
  * Not a disabled select: a control that cannot be used says nothing about why. The field is not the
  * access control either - `updateTrip` still refuses a changed currency on a priced trip.
  */
-function CurrencyReadout({ value, tripId }: { value: string; tripId: string }) {
+function CurrencyReadout({
+  value,
+  tripId,
+  archived,
+  saving,
+  hasUnsavedChanges,
+}: {
+  value: string
+  tripId: string
+  archived: boolean
+  saving: boolean
+  hasUnsavedChanges: boolean
+}) {
   const t = useTranslate()
   const locale = useLocale()
   const labelId = useId()
+  const guidanceId = useId()
+  const groupRef = useRef<HTMLDivElement>(null)
+  const linkRef = useCallback((link: HTMLAnchorElement | null) => {
+    if (link === null) return
+    return () => {
+      // A cover drop can invalidate the link while it still has keyboard focus.
+      if (link.ownerDocument.activeElement === link) groupRef.current?.focus()
+    }
+  }, [])
+  let guidance:
+    | 'shell.editTrip.currencyReadonly'
+    | 'shell.editTrip.currencyArchived'
+    | 'shell.editTrip.saving'
+    | 'shell.editTrip.currencyUnsaved' = 'shell.editTrip.currencyReadonly'
+  if (archived) {
+    guidance = 'shell.editTrip.currencyArchived'
+  } else if (saving) {
+    guidance = 'shell.editTrip.saving'
+  } else if (hasUnsavedChanges) {
+    guidance = 'shell.editTrip.currencyUnsaved'
+  }
 
   return (
     <div
+      ref={groupRef}
       role="group"
       aria-labelledby={labelId}
-      className="flex flex-col gap-1.5"
+      aria-describedby={guidanceId}
+      tabIndex={-1}
+      className="flex flex-col gap-1.5 rounded-sm focus-ring"
     >
       <span id={labelId} className="text-label font-medium text-ink-2">
         {t('shell.newTrip.currency')}
@@ -469,14 +515,22 @@ function CurrencyReadout({ value, tripId }: { value: string; tripId: string }) {
         {openedCurrencyLabel(t, locale, value)}
       </p>
       <p className="text-caption text-ink-3">
-        {t('shell.editTrip.currencyReadonly')}{' '}
-        <Link
-          to="/trips/$tripId/costs"
-          params={{ tripId }}
-          className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
-        >
-          {t('shell.editTrip.currencyLink')}
-        </Link>
+        <span id={guidanceId} role="status">
+          {t(guidance)}
+        </span>
+        {guidance === 'shell.editTrip.currencyReadonly' ? (
+          <>
+            {' '}
+            <Link
+              ref={linkRef}
+              to="/trips/$tripId/costs"
+              params={{ tripId }}
+              className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
+            >
+              {t('shell.editTrip.currencyLink')}
+            </Link>
+          </>
+        ) : null}
       </p>
     </div>
   )
