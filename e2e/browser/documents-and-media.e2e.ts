@@ -652,67 +652,136 @@ test.describe('06-S1 — Every way a file gets in', () => {
     expect(report().fatal, 'the console stays silent').toEqual([])
   })
 
-  test('the zone filling and a refusal are framed at three widths in both themes', async ({
-    context,
-    page,
-  }, testInfo) => {
-    const report = await openEmptyLibrary(context, page)
-    const bodies = await interceptUploads(page)
-    const zone = page.locator(DROP)
-    const overlay = zone.locator('[data-part="file-drop-overlay"]')
-    const widths = [
-      { width: 360, height: 800 },
-      { width: 1280, height: 900 },
-      { width: 2560, height: 1440 },
-    ]
+  test(
+    'the zone filling and a refusal are framed at three widths in both themes',
+    { timeout: 60_000 },
+    async ({ context, page }, testInfo) => {
+      // The local feedback run uses a placeholder DSN. Keep its transport offline.
+      await page.route('https://example.invalid/api/1/envelope/**', (route) =>
+        route.fulfill({ json: {} }),
+      )
+      const report = await openEmptyLibrary(context, page)
+      const bodies = await interceptUploads(page)
+      const zone = page.locator(DROP)
+      const overlay = zone.locator('[data-part="file-drop-overlay"]')
+      const widths = [
+        { width: 320, height: 800 },
+        { width: 360, height: 800 },
+        { width: 1280, height: 900 },
+        { width: 2560, height: 1440 },
+      ]
 
-    // Frames for a person to read, not for a pixel comparison (ADR 0016): attached to the run, and
-    // also written to `E2E_FRAMES_DIR` when it is set - a directory outside the repository, which
-    // never receives an image.
-    const frame = async (name: string): Promise<void> => {
-      const body = await page.screenshot({ fullPage: false })
-      await testInfo.attach(`${name}.png`, { body, contentType: 'image/png' })
-      const outside = process.env.E2E_FRAMES_DIR
-      if (outside !== undefined) {
-        await mkdir(outside, { recursive: true })
-        await writeFile(join(outside, `${name}.png`), body)
+      // Frames for a person to read, not for a pixel comparison (ADR 0016): attached to the run, and
+      // also written to `E2E_FRAMES_DIR` when it is set - a directory outside the repository, which
+      // never receives an image.
+      const frame = async (name: string): Promise<void> => {
+        const body = await page.screenshot({ fullPage: false })
+        await testInfo.attach(`${name}.png`, { body, contentType: 'image/png' })
+        const outside = process.env.E2E_FRAMES_DIR
+        if (outside !== undefined) {
+          await mkdir(outside, { recursive: true })
+          await writeFile(join(outside, `${name}.png`), body)
+        }
       }
-    }
 
-    for (const theme of THEMES satisfies ReadonlyArray<Theme>) {
-      await applyTheme(page, theme)
-      for (const { width, height } of widths) {
-        await page.setViewportSize({ width, height })
-        const label = `${testInfo.project.name}-${width}-${theme}`
-        await zone.scrollIntoViewIfNeeded()
+      for (const theme of THEMES satisfies ReadonlyArray<Theme>) {
+        await applyTheme(page, theme)
+        for (const { width, height } of widths) {
+          await page.setViewportSize({ width, height })
+          const label = `${testInfo.project.name}-${width}-${theme}`
+          await zone.scrollIntoViewIfNeeded()
 
-        await drag(page, DROP, 'dragenter', 'files')
-        await expect(zone).toHaveAttribute('data-state', 'active')
-        await expect(overlay).toHaveCSS('opacity', '1')
-        await expect(zone).toContainText('Drop to upload')
-        await frame(`drop-active-${label}`)
-        await drag(page, DROP, 'dragleave', 'files')
-        await expect(zone).toHaveAttribute('data-state', 'idle')
+          await drag(page, DROP, 'dragenter', 'files')
+          await expect(zone).toHaveAttribute('data-state', 'active')
+          await expect(overlay).toHaveCSS('opacity', '1')
+          await expect(zone).toContainText('Drop to upload')
+          if (width >= 360) await frame(`drop-active-${label}`)
+          await drag(page, DROP, 'dragleave', 'files')
+          await expect(zone).toHaveAttribute('data-state', 'idle')
 
-        await page.locator('input[type="file"]').setInputFiles({
-          name: 'notes.xml',
-          mimeType: 'application/xml',
-          buffer: Buffer.from('<notes/>'),
-        })
-        const row = page.getByRole('listitem').filter({
-          has: page.getByRole('button', { name: 'Dismiss notes.xml' }),
-        })
-        await expect(row).toContainText(BLOCKED_XML)
-        await frame(`upload-refused-${label}`)
-        await page.getByRole('button', { name: 'Clear finished' }).click()
-        await expect(row).toHaveCount(0)
+          await page.locator('input[type="file"]').setInputFiles({
+            name: 'notes.xml',
+            mimeType: 'application/xml',
+            buffer: Buffer.from('<notes/>'),
+          })
+          const row = page.getByRole('listitem').filter({
+            has: page.getByRole('button', { name: 'Dismiss notes.xml' }),
+          })
+          await expect(row).toContainText(BLOCKED_XML)
+          if (width <= 360) {
+            // Capture the persistent explanation after the temporary notification leaves.
+            await page.mouse.move(0, 0)
+            await expect(
+              page.getByText(FAILED_ONE, { exact: true }),
+            ).toHaveCount(0, {
+              timeout: 6500,
+            })
+            const heading = page.getByRole('heading', { name: 'Add files' })
+            const summary = page.getByText('1 file did not upload.', {
+              exact: false,
+            })
+            const clear = page.getByRole('button', { name: 'Clear finished' })
+            await expect(heading).toBeVisible()
+            await expect(summary).toBeVisible()
+            await expect(clear).toBeVisible()
+            const count = page.getByText('up to 25 MB each', { exact: true })
+            await expect(count).toBeVisible()
+            await summary.evaluate((element) =>
+              element.scrollIntoView({ block: 'nearest' }),
+            )
+            expect(
+              await heading.evaluate((element) => {
+                const text = document.createRange()
+                text.selectNodeContents(element)
+                const bounds = element.getBoundingClientRect()
+                return Array.from(text.getClientRects()).every(
+                  (line) =>
+                    line.left >= bounds.left - 1 &&
+                    line.right <= bounds.right + 1,
+                )
+              }),
+            ).toBe(true)
+            expect(
+              await page.evaluate(() => document.documentElement.scrollWidth),
+            ).toBe(width)
+
+            const feedback = page
+              .locator('#sentry-feedback')
+              .getByRole('button', {
+                name: 'Report a problem',
+              })
+            if (
+              process.env.E2E_EXPECT_FEEDBACK === '1' ||
+              (await feedback.count()) > 0
+            ) {
+              await expect(feedback).toBeVisible()
+              const position = await feedback.evaluate((actor) => {
+                const originalScroll = window.scrollY
+                const before = actor.getBoundingClientRect().top
+                window.scrollTo({
+                  top: document.documentElement.scrollHeight,
+                  behavior: 'instant',
+                })
+                const scroll = window.scrollY - originalScroll
+                const movement = before - actor.getBoundingClientRect().top
+                window.scrollTo({ top: originalScroll, behavior: 'instant' })
+                return { scroll, movement }
+              })
+              expect(position.scroll).toBeGreaterThan(0)
+              expect(position.movement).toBeCloseTo(position.scroll, 0)
+            }
+          }
+          if (width >= 360) await frame(`upload-refused-${label}`)
+          await page.getByRole('button', { name: 'Clear finished' }).click()
+          await expect(row).toHaveCount(0)
+        }
       }
-    }
 
-    await settleMutations(page)
-    expect(bodies, 'the refusals sent nothing to the workspace').toEqual([])
-    expect(report().fatal, 'the console stays silent').toEqual([])
-  })
+      await settleMutations(page)
+      expect(bodies, 'the refusals sent nothing to the workspace').toEqual([])
+      expect(report().fatal, 'the console stays silent').toEqual([])
+    },
+  )
 })
 
 /**

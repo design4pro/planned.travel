@@ -117,6 +117,9 @@ export function FeedbackWidget() {
         errorForbiddenText: t('shell.feedback.errorForbiddenText'),
         errorGenericText: t('shell.feedback.errorGenericText'),
       })
+      // The SDK fixes the actor to the viewport inside its shadow root.
+      // Allow the host stylesheet to put it in flow without moving the dialog.
+      widget.el.style.position = 'var(--pt-feedback-actor-position, fixed)'
     })
 
     return () => {
