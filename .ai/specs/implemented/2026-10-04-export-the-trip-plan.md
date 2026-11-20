@@ -999,3 +999,10 @@ whole trip; neither pruning nor storage, allowance or queue shapes change.
 The producer `src/server/fns/exports.ts` already derives `notify` from the session;
 its request tests enforce this. The payload field comment records that clients cannot supply it.
 All copy changes ship in all 23 locales. Implementation PR: #1652.
+
+## Amendment - weekly object retention (#1287)
+
+The weekly slot now removes well-formed export objects older than seven days using their R2
+upload time. It covers incomplete exports and runs independently of the per-trip newest-five
+prune. For the upload pass, the continuation limits and the remaining backup retention gap,
+see [Deployment §11](../../../docs/DEPLOY.md#11-smoke-verification).

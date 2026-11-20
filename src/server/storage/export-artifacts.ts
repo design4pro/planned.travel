@@ -98,6 +98,10 @@ export function isExpired(createdAt: number, now: number): boolean {
 /** `<taskId>.html` or `<taskId>.pdf`, with nothing nested beneath the prefix. */
 const OBJECT_NAME = /^([^/]+)\.(html|pdf)$/
 
+export function isExportObjectName(name: string): boolean {
+  return OBJECT_NAME.exec(name)?.[0] === name
+}
+
 interface ParsedObject {
   readonly taskId: string
   readonly format: ExportFormat

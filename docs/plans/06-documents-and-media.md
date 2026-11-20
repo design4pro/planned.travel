@@ -552,13 +552,9 @@ still in R2. Three rules, and the third is the one that stops the trash from bec
    `purgeFile` and `emptyTrash` first purges that trip's rows whose `deleted_at` is older than the
    window, capped at 25 objects per call so one request cannot turn into an unbounded R2 loop. A
    loader that deletes rows while rendering a page is a worse bug than a late sweep.
-3. **The correct long-term home is the weekly retention cron, and it does not exist.**
-   `wrangler.jsonc:113` declares `"17 4 * * 1"` with the comment "Weekly retention prune of expired
-   backups and export artifacts", and `src/server/worker.ts:60-66` answers it with
-   `logger.warn('cron has no handler yet')`. Wiring it is a foundations requirement — the Worker
-   entry is a shared path — and it is stated here rather than taken: a workspace-wide sweep would
-   also close the orphaned-object leak from the area brief. Until it lands, rule 2 is what makes rule
-   1 true, and rule 1 is not claimed to hold for a trip nobody opens.
+3. **The weekly retention cron handles orphan uploads.** Its sweep removes sufficiently old
+   objects only when both the file record and trip are absent in the key's existing organization.
+   The per-trip write-path sweep still owns the trash window for recorded files.
 
 **Trashed bytes keep counting against the plan, and that is a rule rather than an oversight.**
 `getStorageUsage` sums every row in the tenant, trashed or not, and this stage does not change it.
@@ -890,12 +886,11 @@ configured (`pdf-export.ts:20-27, 133-155`). Three rules:
    at most the five newest and deletes the rest. Bounded by construction — one `list` and a handful
    of `delete` calls, inside a queue consumer that may run for minutes — and self-healing: a trip
    exported twice a day converges on five artifacts rather than growing.
-3. **A workspace-wide sweep is a foundations requirement, stated and not taken.** `wrangler.jsonc:113`
-   already declares `"17 4 * * 1"` as the "weekly retention prune of expired backups and export
-   artifacts" and `src/server/worker.ts:60-66` answers it with `logger.warn('cron has no handler yet')`.
-   Wiring it needs the Worker entry, which is a shared path. Rule 2 makes the policy true for every
-   trip that is exported again; the cron is what would make it true for a trip exported once and
-   never revisited, and for the orphaned upload objects named in the area brief.
+3. **The existing weekly retention slot provides the age sweep.** It deletes export objects
+   strictly older than seven days by their R2 upload time, independently of the per-trip newest-five
+   policy. The same slot checks for orphan uploads in a separate bounded pass. An upload is eligible
+   at seven days only if the organization exists and both its trip and its file record are absent.
+   This protects copied covers and all uploads under existing trips.
 
 The published storage number stays honest under all three, because export artifacts are **not**
 counted by `getStorageUsage` — that sums `trip_files` rows, and an export writes none. Stated so
