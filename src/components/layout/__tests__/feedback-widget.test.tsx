@@ -105,7 +105,10 @@ beforeEach(() => {
   // have to be re-established here - `restoreMocks` does neither for a bare `vi.fn()`.
   vi.clearAllMocks()
   route.href = '/trips'
-  createWidget.mockReturnValue({ removeFromDom })
+  createWidget.mockImplementation(() => ({
+    el: document.createElement('button'),
+    removeFromDom,
+  }))
   startFeedback.mockReturnValue({ createWidget, setTheme })
 })
 

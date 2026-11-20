@@ -19,6 +19,8 @@ export interface ModulePanelProps {
   count?: string
   /** Trailing control on the header row. */
   action?: ReactNode
+  /** Keep long headings and supporting text readable when space is limited. */
+  wrapHeader?: boolean
   /** Sub-header row: filters, a search box, a progress bar. */
   toolbar?: ReactNode
   children: ReactNode
@@ -49,6 +51,7 @@ export function ModulePanel({
   label,
   count,
   action,
+  wrapHeader = false,
   toolbar,
   children,
   footer,
@@ -61,13 +64,28 @@ export function ModulePanel({
   return (
     <Card padding="none" className={cn('flex min-w-0 flex-col', className)}>
       <div className="flex flex-col gap-3 px-5 pt-4 pb-3">
-        <div className="flex min-h-6 items-center justify-between gap-3">
+        <div
+          className={cn(
+            'flex min-h-6 items-center justify-between gap-3',
+            wrapHeader && 'flex-wrap',
+          )}
+        >
           <div className="flex min-w-0 items-baseline gap-2">
-            <SectionLabel as="h2" className="truncate" {...headingProps}>
+            <SectionLabel
+              as="h2"
+              truncate={!wrapHeader}
+              className={wrapHeader ? 'wrap-anywhere' : 'truncate'}
+              {...headingProps}
+            >
               {label}
             </SectionLabel>
             {count === undefined ? null : (
-              <span className="shrink-0 text-caption tabular-nums text-ink-4">
+              <span
+                className={cn(
+                  'text-caption tabular-nums text-ink-4',
+                  wrapHeader ? 'wrap-anywhere' : 'shrink-0',
+                )}
+              >
                 {count}
               </span>
             )}

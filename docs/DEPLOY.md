@@ -2388,7 +2388,10 @@ the SDK is tree-shaken out of the client bundle entirely.
 | Tracing             | both                            | 10% on production, 100% on staging. Routing spans come from the TanStack Router integration in `src/router.tsx` |
 | Application metrics | Worker                          | `server_fn.failure` counted by kind, and `operation.duration` from anything timed with `Logger.track()`         |
 | Session replay      | browser                         | 10% of sessions, 100% of sessions that hit an error                                                             |
-| User feedback       | browser                         | A floating "Report a problem" button on every page, with an optional screenshot                                 |
+| User feedback       | browser                         | A "Report a problem" button with an optional screenshot                                                         |
+
+On narrow Files screens the feedback button follows the page content, above the space reserved for
+the mobile navigation. Elsewhere it floats in the viewport corner.
 
 **Session replay masks everything by default and that is deliberate.** A replay records the DOM,
 and this DOM holds trip contents, member lists and billing state. `maskAllText`, `maskAllInputs` and

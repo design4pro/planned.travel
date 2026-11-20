@@ -531,7 +531,7 @@ export function FileLibrary({
   )
 
   return (
-    <div className="flex min-w-0 flex-col gap-5">
+    <div data-part="file-library" className="flex min-w-0 flex-col gap-5">
       {canWrite ? (
         <input
           ref={inputRef}
@@ -560,6 +560,7 @@ export function FileLibrary({
 
       {canWrite ? (
         <ModulePanel
+          wrapHeader
           label={t('modules.files.action.add')}
           count={t('modules.files.storage.perFile', {
             size: formatStorage(MAX_FILE_BYTES),

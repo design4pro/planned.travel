@@ -1223,6 +1223,16 @@ html[dir='rtl'] #sentry-feedback {
   --actor-inset: auto auto var(--pt-feedback-bottom) 0;
 }
 
+/* On narrow Files screens the actor follows the content, clear of the fixed tab bar. */
+@media (width < 40rem) {
+  html:has([data-part='file-library']) #sentry-feedback {
+    --pt-feedback-actor-position: static;
+    display: flex;
+    justify-content: flex-end;
+    padding-block-end: var(--pt-feedback-bottom);
+  }
+}
+
 /* From `lg` the tab bar is gone and so is its clearance. */
 @media (width >= 64rem) {
   #sentry-feedback {
