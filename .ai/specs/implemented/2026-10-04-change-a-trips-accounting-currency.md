@@ -825,6 +825,10 @@ Touches `screen.tsx`, held by other stages; rebase on develop first.
 2. Copy: `shell.editTrip.currencyReadonly` and `shell.editTrip.currencyLink` in all 23 locales.
    Rebase on develop first: #779 owns these files until it merges.
 
+Follow-up #1268 removes the Phase 1 currency-specific handler from the edit sheet. The sheet
+omits currency from its saves and uses the standard failure handling. The server still applies
+the Phase 1 refusal to callers that submit a changed currency for a trip with priced rows.
+
 ## Verification
 
 The gate is `validation.commands` in `.ai/agentic.config.json`, run on the last commit of every
