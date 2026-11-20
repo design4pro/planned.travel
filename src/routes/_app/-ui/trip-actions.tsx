@@ -149,21 +149,28 @@ export function TripEditSheet({
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
   )
-  const form = useTripForm(
-    {
-      title: trip.title,
-      summary: trip.summary ?? '',
-      destination: trip.destination ?? '',
-      startDate: trip.startDate ?? '',
-      endDate: trip.endDate ?? '',
-      duration:
-        inclusiveDays(trip.startDate ?? '', trip.endDate ?? '')?.toString() ??
-        '',
-      currency: trip.currency,
-      reminderDays: trip.reminderDays,
-    },
-    saving,
-  )
+  const [initialValues] = useState(() => ({
+    title: trip.title,
+    summary: trip.summary ?? '',
+    destination: trip.destination ?? '',
+    startDate: trip.startDate ?? '',
+    endDate: trip.endDate ?? '',
+    duration:
+      inclusiveDays(trip.startDate ?? '', trip.endDate ?? '')?.toString() ?? '',
+    currency: trip.currency,
+    reminderDays: trip.reminderDays,
+  }))
+  const form = useTripForm(initialValues, saving)
+  const { values } = form
+  const hasUnsavedChanges =
+    values.title !== initialValues.title ||
+    values.summary !== initialValues.summary ||
+    values.destination !== initialValues.destination ||
+    values.startDate !== initialValues.startDate ||
+    values.endDate !== initialValues.endDate ||
+    values.reminderDays !== initialValues.reminderDays ||
+    form.cover !== null ||
+    form.coverRemoved
 
   /**
    * The cover change this save carries: a file id once the chosen image is stored, `null` to drop the
@@ -367,6 +374,8 @@ export function TripEditSheet({
               undatedDays={false}
               owner={isOwner}
               tripId={trip.id}
+              archived={trip.isArchived}
+              hasUnsavedChanges={hasUnsavedChanges}
               currentCoverUrl={trip.coverImageUrl}
               coverProgress={coverProgress}
             />

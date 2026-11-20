@@ -255,6 +255,8 @@ export interface TripFormFieldsProps {
    * without it the select stays, since a new trip has nothing to convert.
    */
   tripId?: string
+  archived?: boolean
+  hasUnsavedChanges?: boolean
   /** The cover the trip already has, shown in the cover region on edit. */
   currentCoverUrl?: string | null
   /** `0`-`1` while the chosen cover uploads, otherwise `null`. */
@@ -267,6 +269,8 @@ export function TripFormFields({
   undatedDays = true,
   owner = true,
   tripId,
+  archived = false,
+  hasUnsavedChanges = false,
   currentCoverUrl = null,
   coverProgress = null,
 }: TripFormFieldsProps) {
@@ -388,7 +392,13 @@ export function TripFormFields({
           onChange={(next) => set('currency', next)}
         />
       ) : (
-        <CurrencyReadout value={values.currency} tripId={tripId} />
+        <CurrencyReadout
+          value={values.currency}
+          tripId={tripId}
+          archived={archived}
+          saving={form.saving}
+          hasUnsavedChanges={hasUnsavedChanges}
+        />
       )}
 
       {owner ? <ReminderField form={form} /> : null}
@@ -451,10 +461,34 @@ function CurrencyField({
  * Not a disabled select: a control that cannot be used says nothing about why. The field is not the
  * access control either - `updateTrip` still refuses a changed currency on a priced trip.
  */
-function CurrencyReadout({ value, tripId }: { value: string; tripId: string }) {
+function CurrencyReadout({
+  value,
+  tripId,
+  archived,
+  saving,
+  hasUnsavedChanges,
+}: {
+  value: string
+  tripId: string
+  archived: boolean
+  saving: boolean
+  hasUnsavedChanges: boolean
+}) {
   const t = useTranslate()
   const locale = useLocale()
   const labelId = useId()
+  let guidance:
+    | 'shell.editTrip.currencyReadonly'
+    | 'shell.editTrip.currencyArchived'
+    | 'shell.editTrip.saving'
+    | 'shell.editTrip.currencyUnsaved' = 'shell.editTrip.currencyReadonly'
+  if (archived) {
+    guidance = 'shell.editTrip.currencyArchived'
+  } else if (saving) {
+    guidance = 'shell.editTrip.saving'
+  } else if (hasUnsavedChanges) {
+    guidance = 'shell.editTrip.currencyUnsaved'
+  }
 
   return (
     <div
@@ -469,14 +503,19 @@ function CurrencyReadout({ value, tripId }: { value: string; tripId: string }) {
         {openedCurrencyLabel(t, locale, value)}
       </p>
       <p className="text-caption text-ink-3">
-        {t('shell.editTrip.currencyReadonly')}{' '}
-        <Link
-          to="/trips/$tripId/costs"
-          params={{ tripId }}
-          className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
-        >
-          {t('shell.editTrip.currencyLink')}
-        </Link>
+        {t(guidance)}
+        {guidance === 'shell.editTrip.currencyReadonly' ? (
+          <>
+            {' '}
+            <Link
+              to="/trips/$tripId/costs"
+              params={{ tripId }}
+              className="rounded-sm font-medium text-brand underline decoration-brand/30 underline-offset-4 focus-ring hover:decoration-brand"
+            >
+              {t('shell.editTrip.currencyLink')}
+            </Link>
+          </>
+        ) : null}
       </p>
     </div>
   )

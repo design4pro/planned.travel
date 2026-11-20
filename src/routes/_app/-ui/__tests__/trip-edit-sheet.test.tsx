@@ -168,6 +168,70 @@ describe('the budget currency in the trip edit sheet', () => {
     ).toBe('/trips/trip-1/costs')
   })
 
+  it('removes the Costs destination while a field is dirty and restores it after a revert', async () => {
+    const user = userEvent.setup()
+    await save('en', EN, false)
+    const destination = screen.getByLabelText('Destination')
+    const costs = () =>
+      screen.queryByRole('link', { name: 'Open the Costs tab' })
+
+    await user.type(destination, ' and Porto')
+    expect(costs()).toBeNull()
+    const guidance = screen.getByText(
+      'Save or cancel your changes before opening the Costs tab.',
+    )
+    await user.click(guidance)
+    await user.keyboard('{Enter}')
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(destination).toHaveProperty('value', 'Lisbon and Porto')
+    expect(server.update).not.toHaveBeenCalled()
+
+    await user.clear(destination)
+    await user.type(destination, 'Lisbon')
+    expect(costs()?.getAttribute('href')).toBe('/trips/trip-1/costs')
+  })
+
+  it('keeps Costs unavailable during a clean save and restores it after a failure', async () => {
+    let rejectSave: (error: Error) => void = () => {}
+    server.update.mockReturnValue(
+      new Promise<void>((_, reject) => {
+        rejectSave = reject
+      }),
+    )
+    await save('en', EN)
+
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+    rejectSave(new Error('Save failed'))
+    await screen.findByRole('alert')
+    expect(
+      screen.getByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeTruthy()
+  })
+
+  it('shows archived currency guidance without a Costs link', () => {
+    render(
+      <I18nProvider locale="en" messages={EN}>
+        <TripEditSheet
+          trip={tripCard({ currency: 'EUR', isArchived: true })}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </I18nProvider>,
+    )
+
+    expect(screen.getByText('EUR — Euro')).toBeTruthy()
+    expect(
+      screen.getByText(
+        'The budget currency can’t be changed while the trip is archived.',
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+  })
+
   it('never sends a currency, whatever else the save changes', async () => {
     server.update.mockResolvedValue(undefined)
     const user = userEvent.setup()
@@ -206,6 +270,52 @@ describe('the trip edit sheet and the cover image', () => {
     await user.upload(input, cover)
     return user
   }
+
+  it('restores the Costs link when the chosen cover is removed', async () => {
+    const user = await chooseCover()
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+    await user.click(
+      screen.getByRole('button', { name: 'Remove the cover image' }),
+    )
+    expect(
+      screen.getByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeTruthy()
+  })
+
+  it('keeps the draft and Costs unavailable during and after a failed cover upload', async () => {
+    const failure = { ok: false, code: 'quota', message: 'Upload failed' }
+    let finishUpload: (result: typeof failure) => void = () => {}
+    upload.upload.mockReturnValue(
+      new Promise<typeof failure>((resolve) => {
+        finishUpload = resolve
+      }),
+    )
+    const user = await chooseCover()
+    const destination = screen.getByLabelText('Destination')
+    await user.type(destination, ' and Porto')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    expect(upload.upload).toHaveBeenCalledTimes(1)
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+    await user.tab()
+    expect(document.activeElement?.getAttribute('href')).not.toBe(
+      '/trips/trip-1/costs',
+    )
+
+    finishUpload(failure)
+    await screen.findByText('Upload failed')
+    expect(
+      screen.getByRole('button', { name: 'Save without the new cover' }),
+    ).toBeTruthy()
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+    expect(destination).toHaveProperty('value', 'Lisbon and Porto')
+    expect(server.update).not.toHaveBeenCalled()
+  })
 
   it('uploads the image first and sends its id in the one update', async () => {
     upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
@@ -273,6 +383,7 @@ describe('the trip edit sheet and the cover image', () => {
     await user.click(
       screen.getByRole('button', { name: 'Remove the cover image' }),
     )
+    expect(screen.queryByRole('link', { name: 'Open the Costs tab' })).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => {

@@ -497,6 +497,8 @@ const messages = {
   'editTrip.currencyLocked':
     '这趟行程已经有价格，所以不能在这里更改预算货币。请使用“花费”标签页中的“更改预算货币”按钮，或改回 {current}，再保存其他修改。',
   'editTrip.currencyReadonly': '预算货币在“花费”标签页中更改。',
+  'editTrip.currencyUnsaved': '请先保存或取消更改，再打开“花费”标签页。',
+  'editTrip.currencyArchived': '行程归档后无法更改预算货币。',
   'editTrip.currencyLink': '打开“花费”标签页',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '永久删除“{title}”？',
