@@ -103,38 +103,12 @@ async function save(locale: 'en' | 'pl', messages: Catalogue, submit = true) {
   )
 }
 
-describe('the trip edit sheet when the budget currency cannot change', () => {
-  it('shows the refusal in the reader’s language, naming the currency the trip still has', async () => {
+describe('the trip edit sheet after an unexpected save failure', () => {
+  it('keeps the sheet open without refreshing the trip', async () => {
     server.update.mockRejectedValue(
-      refusedWith('shell.editTrip.currencyLocked'),
-    )
-
-    await save('en', EN)
-
-    const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toContain(
-      'This trip already has prices in it, so its budget currency can’t be changed here. Use Change budget currency on the Costs tab, or set it back to EUR to save your other changes.',
-    )
-    expect(alert.textContent).not.toContain('shell.editTrip')
-    expect(alert.textContent).not.toContain('{current}')
-  })
-
-  it('reads the same refusal in Polish on a Polish screen', async () => {
-    server.update.mockRejectedValue(
-      refusedWith('shell.editTrip.currencyLocked'),
-    )
-
-    await save('pl', PL)
-
-    const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toContain('Ten wyjazd ma już ceny')
-    expect(alert.textContent).toContain('Zmień walutę budżetu')
-    expect(alert.textContent).toContain('ustaw z powrotem EUR')
-  })
-
-  it('keeps the sheet open and the trip unchanged on screen', async () => {
-    server.update.mockRejectedValue(
-      refusedWith('shell.editTrip.currencyLocked'),
+      new Error(
+        encodePublicFailure({ kind: 'unexpected', reference: 'ref-1' }),
+      ),
     )
 
     await save('en', EN)
@@ -490,18 +464,6 @@ describe('the trip edit sheet when the server refuses the save', () => {
 
     await userEvent.click(saveButton())
     expect(server.update).toHaveBeenCalledTimes(1)
-  })
-
-  it('does not re-read for the currency refusal it explains itself', async () => {
-    server.update.mockRejectedValue(
-      refusedWith('shell.editTrip.currencyLocked'),
-    )
-    render(sheetFor('owner'))
-
-    await userEvent.click(saveButton())
-
-    await screen.findByRole('alert')
-    expect(router.invalidate).not.toHaveBeenCalled()
   })
 
   it.each(['validation', 'unexpected'] as const)(

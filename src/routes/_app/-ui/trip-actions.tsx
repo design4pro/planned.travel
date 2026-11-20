@@ -69,7 +69,6 @@ import {
   useOptimistic,
 } from '#/components/modules/shared'
 import { uploadFile } from '#/components/modules/files/upload'
-import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
@@ -236,27 +235,16 @@ export function TripEditSheet({
       onOpenChange(false)
       toast.success(t('shell.editTrip.saved'))
     } catch (cause) {
-      // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
-      // language of the screen it lands on. `current` is the currency the trip still has.
-      const refusal = currencyRefusalOf(cause)
-      const archived = readPublicFailure(cause).message === TRIP_ARCHIVED_KEY
+      const failure = readPublicFailure(cause)
+      const archived = failure.message === TRIP_ARCHIVED_KEY
       setArchivedRefusal(archived)
-      if (archived) {
-        setError(t(TRIP_ARCHIVED_KEY))
-      } else {
-        setError(
-          refusal === 'shell.editTrip.currencyLocked'
-            ? t(refusal, { current: trip.currency })
-            : messageOf(cause, t('shell.editTrip.error')),
-        )
-      }
-      // Refresh permission refusals, but keep an archived trip's unsaved sheet: a reload removes
-      // its list row and the editor it owns. Currency refusals also keep their current trip.
-      if (
-        !archived &&
-        refusal === null &&
-        readPublicFailure(cause).kind === 'refusal'
-      ) {
+      setError(
+        archived
+          ? t(TRIP_ARCHIVED_KEY)
+          : messageOf(cause, t('shell.editTrip.error')),
+      )
+      // Keep an archived trip's unsaved sheet: a reload removes its list row and editor.
+      if (!archived && failure.kind === 'refusal') {
         try {
           await router.invalidate()
         } catch {
