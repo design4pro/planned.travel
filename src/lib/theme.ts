@@ -19,7 +19,23 @@ export const THEME_STORAGE_KEY = 'planned.theme'
 
 export const THEME_MODES: ReadonlyArray<ThemeMode> = ['light', 'dark', 'system']
 
-const DARK_QUERY = '(prefers-color-scheme: dark)'
+export const THEME_COLOR_MEDIA = {
+  light: '(prefers-color-scheme: light)',
+  dark: '(prefers-color-scheme: dark)',
+} as const
+
+export const THEME_COLORS = { light: '#faf9f7', dark: '#121211' } as const
+
+const THEME_COLOR_SELECTOR = 'head > meta[name="theme-color"]'
+
+export const themeColorFallback = THEME_MODES.filter(
+  (mode) => mode !== 'system',
+)
+  .map(
+    (mode) =>
+      `<meta name="theme-color" content="${THEME_COLORS[mode]}" media="${THEME_COLOR_MEDIA[mode]}">`,
+  )
+  .join('')
 
 /**
  * Runs in `<head>` before first paint so the correct palette is committed with
@@ -27,7 +43,20 @@ const DARK_QUERY = '(prefers-color-scheme: dark)'
  * deliberately tiny and dependency free; it must never throw (Safari private
  * browsing can make `localStorage` access itself throw).
  */
-export const themeBootstrapScript = `(function(){try{var m=localStorage.getItem("${THEME_STORAGE_KEY}");if(m==="dark"||m==="light"){var r=document.documentElement;r.setAttribute("data-theme",m);r.style.colorScheme=m}}catch(e){}})();`
+export const themeBootstrapScript = `(function () {
+  var mode;
+  try { mode = localStorage.getItem("${THEME_STORAGE_KEY}"); } catch {}
+  var explicit = mode === "light" || mode === "dark";
+  if (explicit) {
+    document.documentElement.setAttribute("data-theme", mode);
+    document.documentElement.style.colorScheme = mode;
+  }
+  var dark = explicit ? mode === "dark" : window.matchMedia?.("${THEME_COLOR_MEDIA.dark}").matches;
+  var meta = document.createElement("meta");
+  meta.name = "theme-color";
+  meta.content = dark ? "${THEME_COLORS.dark}" : "${THEME_COLORS.light}";
+  document.head.appendChild(meta);
+})();`
 
 function isThemeMode(value: unknown): value is ThemeMode {
   return value === 'light' || value === 'dark' || value === 'system'
@@ -42,10 +71,13 @@ let started = false
 const listeners = new Set<() => void>()
 
 function readSystemTheme(): ResolvedTheme {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+  if (
+    typeof window === 'undefined' ||
+    typeof window.matchMedia !== 'function'
+  ) {
     return 'light'
   }
-  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light'
+  return window.matchMedia(THEME_COLOR_MEDIA.dark).matches ? 'dark' : 'light'
 }
 
 function readStoredMode(): ThemeMode {
@@ -64,6 +96,13 @@ function resolve(mode: ThemeMode): ThemeState {
 
 function applyToDocument(next: ThemeState): void {
   if (typeof document === 'undefined') return
+  let meta = document.head.querySelector<HTMLMetaElement>(THEME_COLOR_SELECTOR)
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.name = 'theme-color'
+    document.head.appendChild(meta)
+  }
+  meta.content = THEME_COLORS[next.resolved]
   const root = document.documentElement
   if (next.mode === 'system') {
     root.removeAttribute('data-theme')
@@ -86,7 +125,9 @@ function commit(next: ThemeState): void {
 
 function handleSystemChange(): void {
   if (state.mode !== 'system') return
-  commit(resolve('system'))
+  const next = resolve('system')
+  applyToDocument(next)
+  commit(next)
 }
 
 function handleStorage(event: StorageEvent): void {
@@ -105,7 +146,9 @@ function start(): void {
   started = true
   state = resolve(readStoredMode())
   applyToDocument(state)
-  window.matchMedia(DARK_QUERY).addEventListener('change', handleSystemChange)
+  window
+    .matchMedia?.(THEME_COLOR_MEDIA.dark)
+    .addEventListener('change', handleSystemChange)
   window.addEventListener('storage', handleStorage)
 }
 
@@ -152,7 +195,11 @@ export interface UseThemeResult extends ThemeState {
 }
 
 export function useTheme(): UseThemeResult {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  )
 
   const setMode = useCallback((mode: ThemeMode) => {
     setThemeMode(mode)

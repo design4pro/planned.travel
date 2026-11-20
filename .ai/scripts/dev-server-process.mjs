@@ -77,7 +77,17 @@ export function processInfo(pid) {
         : '',
     }
   }
-  const cwd = output('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'])
+  // Darwin supplies the vnode path without lsof statting mounted filesystems.
+  const cwd = output('lsof', [
+    '-b',
+    '-nP',
+    '-a',
+    '-p',
+    String(pid),
+    '-d',
+    'cwd',
+    '-Fn',
+  ])
     .split('\n')
     .find((line) => line.startsWith('n'))
     ?.slice(1)
@@ -220,7 +230,7 @@ export function portHolders(port) {
       })
       .map(processInfo)
   }
-  return output('lsof', ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'])
+  return output('lsof', ['-b', '-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'])
     .split(/\s+/)
     .filter(Boolean)
     .map(Number)
