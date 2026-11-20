@@ -1926,6 +1926,7 @@ test.describe('01-S8b — A cover image by drop, paste and picker', () => {
     page,
   }) => {
     const report = watchConsole(page, TRIPS)
+    await page.setViewportSize({ width: 360, height: 800 })
     await visit(page, TRIPS, 'light')
 
     await page.locator(CARD).first().locator(TRIGGER).click()
@@ -1936,6 +1937,48 @@ test.describe('01-S8b — A cover image by drop, paste and picker', () => {
     await expect(
       sheet.getByRole('button', { name: /^(Add a|Change the) cover image$/ }),
     ).toBeVisible()
+
+    await page.route(
+      (url) => callsServerFn(url, 'uploadTripFileFn'),
+      (route) =>
+        route.fulfill({
+          json: { ok: false, code: 'quota', message: 'Raw upload refusal' },
+        }),
+    )
+    const filename = `${'longfilename'.repeat(12)}.png`
+    await sheet.locator('input[type="file"]').setInputFiles({
+      name: filename,
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+        'base64',
+      ),
+    })
+    await sheet.getByLabel(/Trip name/).press('Enter')
+
+    const failure = sheet.getByRole('group', {
+      name: 'The cover image was not added',
+    })
+    await expect(failure).toBeFocused()
+    await expect(failure).toContainText(filename)
+    await expect(failure).toContainText('This workspace is out of storage')
+    await expect(failure).not.toContainText('Raw upload refusal')
+    const bodyId = await failure.getAttribute('aria-describedby')
+    expect(bodyId).toBeTruthy()
+    const failureBody = sheet.locator(`[id="${bodyId}"]`)
+    const chooserHint = sheet.getByText(`Cover image: ${filename}`, {
+      exact: true,
+    })
+    for (const content of [failureBody, chooserHint]) {
+      const dimensions = await content.evaluate((element) => ({
+        width: element.clientWidth,
+        overflow: element.scrollWidth - element.clientWidth,
+        viewport: window.innerWidth,
+      }))
+      expect(dimensions.viewport).toBe(360)
+      expect(dimensions.width).toBeGreaterThan(0)
+      expect(dimensions.overflow).toBeLessThanOrEqual(1)
+    }
 
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()

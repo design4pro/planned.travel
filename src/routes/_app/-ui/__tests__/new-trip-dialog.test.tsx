@@ -1,7 +1,7 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -146,6 +146,42 @@ describe('NewTripDialog', () => {
       await user.upload(input, cover)
       return user
     }
+
+    it('abandons a stalled upload and ignores a late success', async () => {
+      let finishUpload!: (value: unknown) => void
+      upload.upload.mockReturnValue(
+        new Promise((resolve) => {
+          finishUpload = resolve
+        }),
+      )
+      const user = await createWithCover()
+      vi.useFakeTimers()
+      try {
+        await act(async () => {
+          screen.getByRole('button', { name: 'Create trip' }).click()
+        })
+        const signal = upload.upload.mock.calls[0][0].signal
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(299_999)
+        })
+        expect(signal?.aborted).toBe(false)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(1)
+        })
+        expect(signal.aborted).toBe(true)
+        expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+        await act(async () => {
+          finishUpload({ ok: true, file: { id: 'late-file' } })
+        })
+        expect(server.update).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+      await user.click(
+        screen.getByRole('button', { name: 'Open the trip without a cover' }),
+      )
+      expect(server.create).toHaveBeenCalledOnce()
+    })
 
     it('creates the trip, uploads the image against it, then records it as the cover', async () => {
       upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })

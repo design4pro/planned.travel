@@ -265,6 +265,30 @@ function DashboardPage() {
 
 /* ----------------------------------------------------------------- up next */
 
+function DashboardCover({ url }: { url: string | null }) {
+  const [failed, setFailed] = useState(false)
+  if (url === null || failed) {
+    return (
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-32 -end-24 size-80 rounded-full bg-brand/30 blur-3xl"
+      />
+    )
+  }
+  return (
+    <>
+      <img
+        src={url}
+        alt=""
+        fetchPriority="high"
+        className="absolute inset-0 -z-10 size-full object-cover opacity-40"
+        onError={() => setFailed(true)}
+      />
+      <span aria-hidden className="absolute inset-0 -z-10 bg-inverse/60" />
+    </>
+  )
+}
+
 function UpNext({
   data,
   userId,
@@ -348,25 +372,7 @@ function UpNext({
       padding="none"
       className="relative isolate overflow-hidden"
     >
-      {trip.coverImageUrl === null ? (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -top-32 -end-24 size-80 rounded-full bg-brand/30 blur-3xl"
-        />
-      ) : (
-        <>
-          <img
-            src={trip.coverImageUrl}
-            alt=""
-            // The hero, so deliberately not lazy — and told so, because the
-            // trip cards below carry covers of their own and would otherwise
-            // be fetched at the same weight as the thing being waited for.
-            fetchPriority="high"
-            className="absolute inset-0 -z-10 size-full object-cover opacity-40"
-          />
-          <span aria-hidden className="absolute inset-0 -z-10 bg-inverse/60" />
-        </>
-      )}
+      <DashboardCover key={trip.coverImageUrl} url={trip.coverImageUrl} />
 
       <div className="relative flex flex-col gap-7 p-6 sm:gap-9 sm:p-8 lg:p-10">
         <div className="flex flex-wrap items-start justify-between gap-4">

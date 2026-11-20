@@ -3,12 +3,14 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
+import EnModules from '#/lib/i18n/messages/en/modules'
+import PlModules from '#/lib/i18n/messages/pl/modules'
 import Pl from '#/lib/i18n/messages/pl/shell'
 import Settings from '#/lib/i18n/messages/en/settings'
 import Shell from '#/lib/i18n/messages/en/shell'
@@ -19,11 +21,13 @@ import { tripCard } from './fixtures'
 import type { Catalogue } from '#/lib/i18n'
 
 const EN: Catalogue = {
+  ...namespaceCatalogue('modules', EnModules),
   ...namespaceCatalogue('settings', Settings),
   ...namespaceCatalogue('shell', Shell),
   ...namespaceCatalogue('ui', Ui),
 }
 const PL: Catalogue = {
+  ...namespaceCatalogue('modules', PlModules),
   ...namespaceCatalogue('shell', Pl),
   ...namespaceCatalogue('ui', Ui),
 }
@@ -186,12 +190,12 @@ describe('the budget currency in the trip edit sheet', () => {
 describe('the trip edit sheet and the cover image', () => {
   const cover = new File(['x'], 'beach.png', { type: 'image/png' })
 
-  async function chooseCover() {
+  async function chooseCover(locale: 'en' | 'pl' = 'en') {
     URL.createObjectURL = vi.fn(() => 'blob:preview')
     URL.revokeObjectURL = vi.fn()
     const user = userEvent.setup()
     render(
-      <I18nProvider locale="en" messages={EN}>
+      <I18nProvider locale={locale} messages={locale === 'pl' ? PL : EN}>
         <TripEditSheet
           trip={tripCard({ currency: 'EUR' })}
           open
@@ -226,16 +230,68 @@ describe('the trip edit sheet and the cover image', () => {
     )
   })
 
-  it('says why the server refused the image', async () => {
+  it('localizes the quota refusal without displaying its raw message', async () => {
     upload.upload.mockResolvedValue({
       ok: false,
       code: 'quota',
       message: 'The workspace is out of storage.',
     })
+    const user = await chooseCover('pl')
+
+    await user.click(
+      screen.getByRole('button', { name: Pl['editTrip.submit'] }),
+    )
+    await screen.findByText(PlModules['files.storage.full'])
+    expect(screen.queryByText('The workspace is out of storage.')).toBeNull()
+  })
+
+  it('focuses recovery after the upload expires and disables it for an invalid title', async () => {
+    upload.upload.mockReturnValue(new Promise(() => {}))
+    const user = await chooseCover()
+    vi.useFakeTimers()
+    try {
+      await act(async () => {
+        screen.getByRole('button', { name: 'Save changes' }).click()
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300_000)
+      })
+      expect(upload.upload.mock.calls[0][0].signal.aborted).toBe(true)
+      expect(server.update).not.toHaveBeenCalled()
+      const summary = screen.getByRole('group', {
+        name: Shell['newTrip.coverFailedTitle'],
+      })
+      expect(document.activeElement).toBe(summary)
+      expect(summary.getAttribute('aria-live')).toBe('off')
+    } finally {
+      vi.useRealTimers()
+    }
+    const title = screen.getByLabelText(/Trip name/)
+    const retry = screen.getByRole('button', { name: 'Try again' })
+    const skip = screen.getByRole('button', {
+      name: 'Save without the new cover',
+    })
+    await user.clear(title)
+    expect(retry.hasAttribute('disabled')).toBe(true)
+    expect(skip.hasAttribute('disabled')).toBe(true)
+    await user.type(title, 'Revised title')
+    expect(retry.hasAttribute('disabled')).toBe(false)
+    expect(skip.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('reuses the uploaded file when the cover write fails', async () => {
+    upload.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })
+    server.update.mockRejectedValueOnce(new Error('Unexpected failure'))
     const user = await chooseCover()
 
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
-    await screen.findByText('The workspace is out of storage.')
+    const retry = await screen.findByRole('button', { name: 'Try again' })
+    expect(screen.queryByText('Unexpected failure')).toBeNull()
+    await user.click(retry)
+
+    expect(upload.upload).toHaveBeenCalledOnce()
+    expect(server.update).toHaveBeenCalledTimes(2)
+    expect(server.update.mock.calls[1][0].data.coverFileId).toBe('file-1')
   })
 
   it('writes nothing when the image fails, and saves the rest on request', async () => {
