@@ -321,7 +321,10 @@ numerals, tiny uppercase tracked labels, one near-black accent, generous whitesp
 
 **Type.** Display = `MuseoModerno` (geometric, rounded, friendly — headings, wordmark, hero
 numerals). UI/body = `Geist Sans` (crisp at small sizes, excellent tabular numerals). Load
-both from Google Fonts with `display=swap` and a real fallback stack. Always
+both from Google Fonts with metric-compensated fallback stacks. The app shell uses
+`display=optional` for its primary faces so a late font cannot move already painted text.
+The Noto script companions use `display=swap` so glyphs missing from system fonts can still
+render during the visit. Documents outside the app shell use `display=swap` for all faces. Always
 `font-variant-numeric: tabular-nums` on any number that can change.
 
 **Tokens.** All colour, spacing, radius, shadow, easing and z-index values come from
@@ -1186,7 +1189,7 @@ would start, in a file holding both scales with nothing to say which `admin` is 
 
 ### Who wires the document shell
 
-`src/lib/fonts.ts` exports the stylesheet href and the preconnect origins **as data**; it does not
+`src/lib/fonts.ts` exports the stylesheet hrefs and the preconnect origins **as data**; it does not
 render them. `src/routes/__root.tsx` is owned by `locale-negotiation-shell`, and that item is what
 imports `fonts.ts`, deletes the second hard-coded copy of the font URL, and sets `<html lang>` and
 `<html dir>`. An item is never held to an acceptance criterion it does not own the file to satisfy.

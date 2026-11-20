@@ -143,11 +143,11 @@ test.describe('DOC-08 — the weather of a day', () => {
           await layoutShiftSum(page, shellShifts),
           'the plan route shifted its layout while the weather arrived',
         ).toBe(0)
+        expect(
+          await layoutShiftSum(page),
+          'the plan route shifted its layout during the cold visit',
+        ).toBe(0)
       }
-      test.info().annotations.push({
-        type: 'layout shift of the whole visit',
-        description: `${await layoutShiftSum(page)} (the shell's nav, before any weather; ${await layoutShiftSum(page, shellShifts)} after the answer)`,
-      })
 
       await expectLisbonStates(page)
 
