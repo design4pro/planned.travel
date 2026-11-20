@@ -3,7 +3,13 @@
 import '#/components/ui/__tests__/test-env'
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { encodePublicFailure } from '#/lib/errors'
@@ -43,8 +49,23 @@ vi.mock('../../-server/trip-lifecycle', () => ({
 }))
 vi.mock('@tanstack/react-router', () => ({
   useRouter: () => router,
-  Link: ({ children }: { children?: React.ReactNode }) => (
-    <a href="/trips/trip-1/costs">{children}</a>
+  Link: ({
+    children,
+    to,
+    params,
+    ref,
+  }: {
+    children?: React.ReactNode
+    to: string
+    params: { tripId: string }
+    ref?: React.Ref<HTMLAnchorElement>
+  }) => (
+    <a
+      ref={ref}
+      href={to.replace('$tripId', encodeURIComponent(params.tripId))}
+    >
+      {children}
+    </a>
   ),
 }))
 vi.mock('#/components/modules/files/upload', () => ({
@@ -210,6 +231,22 @@ describe('the budget currency in the trip edit sheet', () => {
     ).toBeTruthy()
   })
 
+  it('preserves dirty fields and Retry when the update fails', async () => {
+    const user = userEvent.setup()
+    server.update.mockRejectedValue(new Error('Save failed'))
+    await save('en', EN, false)
+    const destination = screen.getByLabelText('Destination')
+    await user.type(destination, ' and Porto')
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await screen.findByRole('alert')
+    expect(destination).toHaveProperty('value', 'Lisbon and Porto')
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+  })
+
   it('shows archived currency guidance without a Costs link', () => {
     render(
       <I18nProvider locale="en" messages={EN}>
@@ -249,6 +286,27 @@ describe('the budget currency in the trip edit sheet', () => {
 
 describe('the trip edit sheet and the cover image', () => {
   const cover = new File(['x'], 'beach.png', { type: 'image/png' })
+
+  it('moves focus to the currency guidance when a drop removes the focused Costs link', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:preview')
+    URL.revokeObjectURL = vi.fn()
+    await save('en', EN, false)
+    screen.getByRole('link', { name: 'Open the Costs tab' }).focus()
+
+    fireEvent.drop(screen.getByRole('button', { name: 'Add a cover image' }), {
+      dataTransfer: { files: [cover], types: ['Files'] },
+    })
+
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
+    expect(document.activeElement).toBe(
+      screen.getByRole('group', { name: 'Budget currency' }),
+    )
+    expect(screen.getByRole('status').textContent).toBe(
+      'Save or cancel your changes before opening the Costs tab.',
+    )
+  })
 
   async function chooseCover() {
     URL.createObjectURL = vi.fn(() => 'blob:preview')
@@ -383,7 +441,9 @@ describe('the trip edit sheet and the cover image', () => {
     await user.click(
       screen.getByRole('button', { name: 'Remove the cover image' }),
     )
-    expect(screen.queryByRole('link', { name: 'Open the Costs tab' })).toBeNull()
+    expect(
+      screen.queryByRole('link', { name: 'Open the Costs tab' }),
+    ).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => {
