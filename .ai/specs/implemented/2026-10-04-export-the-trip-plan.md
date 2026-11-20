@@ -791,6 +791,7 @@ placeholder keeps its name in every locale; no key interpolates a translated nou
   expressed in it. **Phase 4's ticket files one issue for it**, stating those two prerequisites and that the work needs a
   planning stage that widens `queue/types.ts` in the wave that owns that file, so triage treats it as a spec task and not a
   ticket; the issue is the work's handle and is not assigned to a stage.
+  The subsequent [Journey book specification](../2026-11-20-export-the-journey-book.md) assigns this work to 06-S8.
 - **The weekly retention cron half** (`worker.ts`, `wrangler.jsonc`): a foundations requirement; Phase 4 files the follow-up.
 - **A planner-toolbar shortcut**, an export for a journal, an export per day, a re-run of an old export, and an email to someone
   other than the requester.
