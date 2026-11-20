@@ -37,6 +37,8 @@ import { sweepReminders } from './queue/reminders'
 import { createWorkspaceDeletionRuntime } from './workspace-deletion/runtime'
 import { callProvider } from './metering/outbound'
 import { pruneCompletedWorkspaceDeletions } from './workspace-deletion/ledger'
+import { createRetentionOwnership } from './storage/retention-ownership'
+import { pruneWeeklyObjects } from './storage/weekly-retention'
 import { sentryOptions, workerLogger } from './observability/sentry'
 
 // Type-only, so nothing resolves `cloudflare:workers` at runtime - the node test project cannot.
@@ -96,8 +98,7 @@ function taskEnv(env: Cloudflare.Env): TaskBindings {
  * The three expressions `wrangler.jsonc` registers, and there are exactly three on production
  * (docs/DEPLOY.md §11). The weekly retention slot now carries the 400-day `platform_audit_log`
  * and tenant `audit_log` prunes, the usage rollup, completed workspace deletion records and
- * dead-letter retention alongside the backup and export retention it was registered for; a fourth
- * expression for them would falsify that count, so they join the existing one rather than adding one.
+ * dead-letter, trip export and orphan upload retention. Backup retention still emits a warning.
  */
 const REMINDER_CRON = '*/15 * * * *'
 const BACKUP_CRON = '0 3 * * *'
@@ -184,41 +185,22 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
         return
       }
       case RETENTION_CRON:
-        // This slot shares retention jobs; backup and export retention are still not written.
-        //
-        // Not written: the backup and export artifact half this expression was registered for.
-        // `wrangler.jsonc` documents `17 4 * * 1` as the weekly retention prune of expired backups
-        // and export artifacts, and `BACKUP_RETENTION_DAYS` is a declared var nothing acts on.
-        // Adding the jobs beside it must not make that gap invisible in Workers Observability, so
-        // the warn the branch carried before this handler existed stays — one line per week, naming
-        // the half that is missing.
-        //
-        // It is emitted *first* for a reason that is not stylistic: the prune is the one function in
-        // that module documented as able to reject, so a warn sequenced after it would go missing in
-        // exactly the week this slot is unhealthy — the week the signal is worth having.
+        // Keep the remaining backup retention gap visible even when a job fails.
         logger.warn('cron half has no handler yet', {
           cron: controller.cron,
-          pending: 'backup and export artifact retention',
+          pending: 'backup retention',
           retentionDays: env.BACKUP_RETENTION_DAYS,
         })
-        // Written: the 400-day prunes of `platform_audit_log` and tenant `audit_log`
-        // (docs/ACCESS.md §4.3/§4.5), the weekly fold
-        // of hourly `provider_usage` rows into their month rows, the 30-day terminal workspace
-        // deletion ledger prune, and retention of `dead-letter/` objects (`DEAD_LETTER_RETENTION_DAYS`,
-        // 14 by default). The existing audit, rollup and dead-letter jobs log their own counts.
-        //
-        // They run together rather than in sequence, and that is not a micro-optimisation. The
-        // audit prune is documented as able to reject, so an `await` chain would silently skip
-        // whatever followed it in exactly the week this slot is unhealthy — the same argument the
-        // warn above is emitted first for. `allSettled` runs all of them and then rethrows the first
-        // rejection, so no job can hide another and a failure is still the slot's failure.
-        //
-        // A fourth cron expression for the rollup was available and refused: this file and
-        // `wrangler.jsonc` both state there are exactly three on production, and a new one would
-        // have falsified that count to save sharing a slot that already shares.
         {
           const db = createDb(env.DB)
           const now = new Date(controller.scheduledTime)
+          const retention = {
+            bucket: env.FILES,
+            checkpoints: env.KV,
+            ownership: createRetentionOwnership(db),
+            logger,
+            now: now.getTime(),
+          }
           const outcomes = await Promise.allSettled([
             pruneCompletedWorkspaceDeletions(db, now),
             prunePlatformAuditLog(db, PLATFORM_SYSTEM_ACTOR, logger, { now }),
@@ -230,6 +212,8 @@ export default Sentry.withSentry((env: Cloudflare.Env) => sentryOptions(env), {
                 bindings.DEAD_LETTER_RETENTION_DAYS,
               ),
             }),
+            pruneWeeklyObjects('exports', retention),
+            pruneWeeklyObjects('trips', retention),
           ])
           // Only the first rejection is rethrown, so each one is logged first: a second job that
           // failed in the same slot would otherwise leave no trace.

@@ -1,18 +1,4 @@
-/**
- * The cron switch, and one property of it that is easy to get right once and lose in a refactor.
- *
- * `17 4 * * 1` carries several jobs. The ones that are written are the 400-day `platform_audit_log`
- * prune (docs/ACCESS.md §4.3), the provider usage rollup and the `dead-letter/` retention; the one
- * that is not is the R2 retention sweep of expired backups and export
- * artifacts that `wrangler.jsonc` registered the slot for. Only three cron expressions exist on
- * production (docs/DEPLOY.md §11), so the prune joined that slot rather than adding a fourth — and
- * the warning naming the missing half has to survive the prune failing, because the week this slot
- * is unhealthy is the week that signal is worth having. Sequencing decides that, and sequencing is
- * exactly what nothing was pinning.
- *
- * Everything the entry module pulls in for its other exports — the Start handler, the Durable Object
- * class, the D1 client, the queue consumer — is replaced here. This is a test about a `switch`.
- */
+/** Weekly cron coverage with isolated jobs and observable failures. */
 
 import { describe, expect, it, vi } from 'vitest'
 import type * as CatalogAudit from '../catalog/audit'
@@ -41,6 +27,7 @@ const harness = vi.hoisted(() => {
     deadLetters: vi
       .fn()
       .mockResolvedValue({ listed: 0, deleted: 0, drained: true }),
+    objectPrune: vi.fn().mockResolvedValue(undefined),
     sweep: vi.fn(),
     securitySweep: vi.fn(),
     deletionPrune: vi.fn().mockResolvedValue(0),
@@ -62,6 +49,10 @@ vi.mock('@tanstack/react-start/server', () => ({
 }))
 
 vi.mock('../db/client', () => ({ createDb: () => ({ name: 'platform-db' }) }))
+
+vi.mock('../storage/weekly-retention', () => ({
+  pruneWeeklyObjects: harness.objectPrune,
+}))
 
 vi.mock('../queue/consumer', () => ({ consumeTaskBatch: vi.fn() }))
 
@@ -171,6 +162,34 @@ function pendingWarnings(): Array<LogRecord> {
 }
 
 describe('the weekly retention slot', () => {
+  it.each(['exports', 'trips'])(
+    'runs sibling jobs when %s retention fails',
+    async (family) => {
+      harness.prune.mockReset().mockResolvedValue(undefined)
+      harness.rollUp.mockReset().mockResolvedValue(undefined)
+      harness.deadLetters.mockReset().mockResolvedValue(undefined)
+      harness.objectPrune.mockReset().mockImplementation(async (candidate) => {
+        if (candidate === family)
+          throw new Error('object retention unavailable')
+      })
+
+      try {
+        await expect(
+          worker.scheduled(controller(RETENTION_CRON), env, executionContext()),
+        ).rejects.toThrow('object retention unavailable')
+        expect(harness.objectPrune.mock.calls.map(([name]) => name)).toEqual([
+          'exports',
+          'trips',
+        ])
+        expect(harness.prune).toHaveBeenCalled()
+        expect(harness.rollUp).toHaveBeenCalled()
+        expect(harness.deadLetters).toHaveBeenCalled()
+      } finally {
+        harness.objectPrune.mockReset().mockResolvedValue(undefined)
+      }
+    },
+  )
+
   it('reports a workspace deletion prune failure after sibling retention jobs run', async () => {
     harness.deletionPrune.mockRejectedValueOnce(
       new Error('deletion prune unavailable'),
@@ -241,7 +260,7 @@ describe('the weekly retention slot', () => {
     const warnings = pendingWarnings()
     expect(warnings).toHaveLength(1)
     expect(warnings[0]?.level).toBe('warn')
-    expect(warnings[0]?.pending).toBe('backup and export artifact retention')
+    expect(warnings[0]?.pending).toBe('backup retention')
     expect(warnings[0]?.cron).toBe(RETENTION_CRON)
     expect(warnings[0]?.retentionDays).toBe(30)
   })

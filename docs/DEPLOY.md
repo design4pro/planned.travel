@@ -1748,14 +1748,16 @@ constant `TENANT_AUDIT_RETENTION_DAYS = 400` (owner confirms), with 200 ids per 
 250-batch cap across workspaces. Watch `deleted`, `batches`, `organizations`, `drained`;
 `drained: false` is an error requiring investigation. Workspace deletion retention removes at most
 100 `done`/`refused` rows older than 30 days per tick; unfinished rows remain recoverable. Staging
-has neither this weekly slot nor the quarter-hour recovery slot. Backup/export artifact retention remains
-unimplemented and still emits its warning. For a finished trip export that means the "kept for 7
-days" wording holds for the reader, not for the bytes: after seven days the export is neither
-listed nor downloadable and its KV pointer is gone, but the object stays under
-`exports/<org>/<trip>/` until the same trip is exported again, the trip is deleted (the purge
-takes the export keys it can list; an export still running when the trip is deleted writes after
-that listing, and a listing that fails is only logged, so either can leave the object), or the
-weekly export sweep of #1287 is written. Production still has exactly three cron expressions.
+has neither this weekly slot nor the quarter-hour recovery slot. The weekly job also processes
+`exports/` and `trips/` in independent passes. Each pass lists at most ten pages of ten objects
+and stores its own last processed key in KV, resuming after that key and clearing it at exhaustion.
+Each pass reports inspected, skipped and deleted counts and whether work remains. An export is
+eligible when its R2 upload time is strictly older than seven days, including an incomplete export.
+An upload is eligible at seven days if its exact organization still exists and it has neither a
+tenant-scoped file record nor an existing trip. The upload checks are repeated before deletion;
+uploads under a live trip, including copied covers, remain protected. The sweep changes only
+object bytes. Backup retention remains unimplemented and emits a weekly warning. Production still
+has exactly three cron expressions.
 
 **Use this read-back, not `wrangler deployments list`.** That command lists Worker _versions_ —
 id, author, source, deployment time — and never prints a cron expression, so it cannot tell you
