@@ -526,6 +526,84 @@ test.describe('authenticated routes', () => {
     })
   }
 
+  test(
+    'Atlas chrome and selected actions spend the physical insets once',
+    { timeout: ATLAS_JOURNEY_TIMEOUT_MS },
+    async ({ page }) => {
+      if (ATLAS === undefined) throw new Error('Atlas route missing')
+      await page.setViewportSize({ width: 1500, height: 900 })
+      await visit(page, ATLAS, 'light')
+      await chooseCountry(page, 'France')
+      const panel = page.locator('[data-part="country-panel"]')
+      const zoom = page.getByRole('toolbar', { name: 'Map controls' })
+      const credit = page.locator(
+        'div:has(> span.sr-only:text-is("Map data from"))',
+      )
+      const fallback = page
+        .getByRole('status')
+        .filter({ hasText: 'Basemap unavailable' })
+      await expect(zoom).toBeVisible()
+      await expect(credit.or(fallback)).toBeVisible()
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+
+      for (const [width, gutter] of [
+        [1500, 46],
+        [800, 12],
+      ]) {
+        await page.setViewportSize({ width, height: 900 })
+        for (const direction of ['ltr', 'rtl']) {
+          for (const [left, right] of [
+            [0, 0],
+            [53, 61],
+          ]) {
+            await page.evaluate(
+              (insets) => {
+                const root = document.documentElement
+                root.dir = insets.direction
+                root.style.setProperty('--safe-left', insets.left + 'px')
+                root.style.setProperty('--safe-right', insets.right + 'px')
+              },
+              { direction, left, right },
+            )
+            const rtl = direction === 'rtl'
+            const zoomBounds = await zoom.boundingBox()
+            if (!zoomBounds) throw new Error('Missing Atlas zoom controls')
+            expect(
+              rtl ? zoomBounds.x : width - zoomBounds.x - zoomBounds.width,
+            ).toBeCloseTo(Math.max(gutter, rtl ? left : right), 0)
+            if (await credit.isVisible()) {
+              const bounds = await credit.boundingBox()
+              if (!bounds) throw new Error('Missing Atlas attribution')
+              const creditOnLeft = width < 1024 ? !rtl : rtl
+              expect(
+                creditOnLeft ? bounds.x : width - bounds.x - bounds.width,
+              ).toBeCloseTo(Math.max(gutter, creditOnLeft ? left : right), 0)
+            } else {
+              const bounds = await fallback.boundingBox()
+              if (!bounds)
+                throw new Error('Missing basemap notice and attribution')
+              expect(bounds.x).toBeGreaterThanOrEqual(left)
+              expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - right)
+            }
+
+            const close = panel.getByRole('button', { name: 'Close France' })
+            await expect
+              .poll(async () => {
+                const bounds = await close.boundingBox()
+                return (
+                  bounds !== null &&
+                  bounds.x >= left &&
+                  bounds.x + bounds.width <= width - right
+                )
+              })
+              .toBe(true)
+            await close.click({ trial: true })
+          }
+        }
+      }
+    },
+  )
+
   /**
    * Journey 4: a country opens on the map, and the reader can act on it.
    *
@@ -2040,6 +2118,41 @@ test.describe('the impersonation warning bar', () => {
       await expect(
         bar.getByRole('button', { name: 'End impersonation' }),
       ).toBeEnabled()
+      for (const [width, gutter] of [
+        [600, 16],
+        [800, 24],
+        [1100, 32],
+      ]) {
+        await page.setViewportSize({ width, height: 520 })
+        for (const direction of ['ltr', 'rtl']) {
+          for (const [left, right] of [
+            [0, 0],
+            [53, 21],
+          ]) {
+            const bounds = await bar.evaluate(
+              (region, insets) => {
+                const root = document.documentElement
+                root.dir = insets.direction
+                root.style.setProperty('--safe-left', insets.left + 'px')
+                root.style.setProperty('--safe-right', insets.right + 'px')
+                const row = region.firstElementChild
+                if (!row) throw new Error('Missing impersonation row')
+                const box = row.getBoundingClientRect()
+                const style = getComputedStyle(row)
+                return [
+                  box.left + parseFloat(style.paddingLeft),
+                  innerWidth - box.right + parseFloat(style.paddingRight),
+                ]
+              },
+              { direction, left, right },
+            )
+            expect(bounds).toEqual([
+              Math.max(gutter, left),
+              Math.max(gutter, right),
+            ])
+          }
+        }
+      }
     } finally {
       await endImpersonationFixture(page)
     }
@@ -2659,6 +2772,29 @@ test.describe('a confirmation file read into the booking desk', () => {
         await page.keyboard.press('Escape')
         await expect(dialog).toBeHidden()
         const widget = page.locator('[data-part="book-import-widget"]')
+        await expect(widget).toBeVisible()
+        const horizontalClearance = async () =>
+          widget.evaluate((element) => {
+            const { left, right } = element.getBoundingClientRect()
+            return { left, right: innerWidth - right }
+          })
+        expect((await horizontalClearance()).right).toBe(16)
+        await page.evaluate(() => {
+          document.documentElement.style.setProperty('--safe-left', '53px')
+          document.documentElement.style.setProperty('--safe-right', '21px')
+        })
+        expect((await horizontalClearance()).right).toBe(21)
+        await page.evaluate(() => {
+          document.documentElement.dir = 'rtl'
+        })
+        const rtl = await horizontalClearance()
+        expect(rtl.left).toBe(53)
+        expect(rtl.right).toBeGreaterThanOrEqual(21)
+        await page.evaluate(() => {
+          document.documentElement.dir = 'ltr'
+          document.documentElement.style.removeProperty('--safe-left')
+          document.documentElement.style.removeProperty('--safe-right')
+        })
         await widget.getByRole('button', { name: 'Dismiss' }).click()
         await expect(widget).toBeHidden()
 

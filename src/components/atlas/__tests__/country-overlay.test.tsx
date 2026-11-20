@@ -797,6 +797,27 @@ describe('anchorSpan', () => {
 describe('surfaceAreas', () => {
   const box: SurfaceBox = { x: 0, y: 0, width: 1440, height: 835 }
 
+  it('keeps all placement areas inside unequal physical edges in RTL', () => {
+    const phone = { x: 0, y: 0, width: 400, height: 650 }
+    const areas = surfaceAreas(phone, {
+      top: 72,
+      bottom: 154,
+      left: 105,
+      right: 21,
+      sideGutters: { left: 53, right: 21 },
+      gutter: 12,
+      direction: 'rtl',
+    })
+    expect(areas.find((area) => area.kind === 'gutter')).toMatchObject({
+      x: 53,
+      width: 326,
+    })
+    for (const area of areas) {
+      expect(area.x).toBeGreaterThanOrEqual(53)
+      expect(area.x + area.width).toBeLessThanOrEqual(379)
+    }
+  })
+
   it('states the strict area as the chrome describes it', () => {
     const [strict] = surfaceAreas(box, {
       top: 76,
@@ -898,6 +919,29 @@ describe('surfaceAreas', () => {
       expect(strict.x).toBe(16)
       expect(strict.x + strict.width).toBe(2000 - 60)
     })
+
+    it.each(['ltr', 'rtl'] as const)(
+      'spends the well margin before adding the %s end inset',
+      (direction) => {
+        const map = { ...wide, width: 1500 }
+        const rtl = direction === 'rtl'
+        const [strict] = surfaceAreas(
+          map,
+          {
+            ...padding,
+            direction,
+            left: rtl ? 97 : 16,
+            right: rtl ? 16 : 97,
+            gutter: 16,
+            sideGutters: { left: rtl ? 53 : 16, right: rtl ? 16 : 53 },
+          },
+          1440,
+        )
+        expect(rtl ? strict.x : map.width - strict.x - strict.width).toBe(
+          53 + 44,
+        )
+      },
+    )
 
     it('offers the map beyond the column, where no chrome ever goes', () => {
       const areas = surfaceAreas(wide, padding, 1440)

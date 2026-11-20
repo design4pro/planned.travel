@@ -80,6 +80,13 @@ afterEach(() => {
 const user = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
 describe('the impersonation bar', () => {
+  it('applies the safe gutter to the content row inside the full-width bar', () => {
+    render(<ImpersonationBar session={sessionWith(true)} />)
+    const region = screen.getByRole('region')
+    expect(region.classList.contains('gutter-x')).toBe(false)
+    expect(region.firstElementChild?.classList.contains('gutter-x')).toBe(true)
+  })
+
   it('renders nothing at all on an ordinary session', () => {
     const { container } = render(
       <ImpersonationBar session={sessionWith(false)} />,

@@ -51,7 +51,7 @@ export function MarketingHero() {
     >
       <HeroBackdrop />
 
-      <div className="mx-auto max-w-content px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20 lg:px-8 lg:pt-24 lg:pb-28">
+      <div className="mx-auto max-w-content gutter-x pt-14 pb-16 sm:pt-20 sm:pb-20 lg:pt-24 lg:pb-28">
         {/* Transform-and-opacity only, and collapsed to nothing by the
             reduced-motion rules in `styles.css`. */}
         <div className="mx-auto flex max-w-3xl animate-rise flex-col items-center text-center">

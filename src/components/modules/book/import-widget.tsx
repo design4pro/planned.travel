@@ -90,7 +90,7 @@ export function BookImportWidget({ userId }: { readonly userId: string }) {
     <div
       aria-live="polite"
       data-part="book-import-widget"
-      className="fixed end-4 bottom-[calc(var(--safe-bottom)+8.5rem)] z-dropdown w-[min(20rem,calc(100vw-2rem))] lg:bottom-[4.5rem]"
+      className="safe-inline-edges fixed end-[max(1rem,var(--safe-end))] bottom-[calc(var(--safe-bottom)+8.5rem)] z-dropdown w-[min(20rem,calc(100vw-max(1rem,var(--safe-left))-max(1rem,var(--safe-right))))] lg:bottom-[4.5rem]"
     >
       <Card
         padding="sm"

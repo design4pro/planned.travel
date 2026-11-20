@@ -8,11 +8,11 @@ import { useUiCopy } from './copy'
 import { overlaySurface } from './shared'
 
 const contentSizes = {
-  sm: 'max-w-sm',
-  md: 'max-w-lg',
-  lg: 'max-w-2xl',
-  xl: 'max-w-4xl',
-  full: 'max-w-[calc(100vw-2rem)]',
+  sm: '[--dialog-width:var(--container-sm)]',
+  md: '[--dialog-width:var(--container-lg)]',
+  lg: '[--dialog-width:var(--container-2xl)]',
+  xl: '[--dialog-width:var(--container-4xl)]',
+  full: '[--dialog-width:calc(100vw-2rem)]',
 } as const
 
 export const Dialog = DialogPrimitive.Root
@@ -88,12 +88,12 @@ export const DialogContent = React.forwardRef<
         {/* A non-interactive centring frame. Keeping the panel free of layout
           transforms is what lets the entrance animation own `transform`
           outright, with no fight between centring and choreography. */}
-        <div className="pointer-events-none fixed inset-0 z-modal flex items-end justify-center sm:items-center sm:p-4">
+        <div className="pointer-events-none fixed inset-0 z-modal flex items-end justify-center [--dialog-frame-gutter:0px] sm:items-center sm:p-4 sm:[--dialog-frame-gutter:1rem]">
           <DialogPrimitive.Content
             ref={ref}
             data-motion-transform=""
             className={cn(
-              'pointer-events-auto relative flex w-full flex-col overflow-hidden bg-surface text-ink shadow-modal',
+              'panel-safe-content dialog-safe-content sm:[--panel-gutter:1.5rem] pointer-events-auto relative flex w-full max-w-(--dialog-width) flex-col overflow-hidden bg-surface text-ink shadow-modal',
               'max-h-[92dvh] rounded-t-2xl border-t border-edge-faint pb-safe',
               'sm:max-h-[85dvh] sm:rounded-xl sm:border sm:pb-0',
               'data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out',
@@ -134,7 +134,7 @@ export const DialogContent = React.forwardRef<
                   label={closeLabel ?? t('ui.action.close')}
                   size="sm"
                   variant="ghost"
-                  className="absolute top-3.5 end-3.5"
+                  className="absolute top-3.5 end-[max(0.875rem,var(--panel-end))]"
                 />
               </DialogPrimitive.Close>
             )}
@@ -154,11 +154,8 @@ export const DialogHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      // The end padding is the close button's seat, and it has to be restated at
-      // `sm`: `sm:px-6` sets both inline sides and is emitted after the unprefixed
-      // `pe-14`, so without `sm:pe-14` a title long enough to reach the corner runs
-      // under the button on every viewport from 640px up.
-      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14 sm:px-6 sm:py-5 sm:pe-14',
+      // Keep room for the close button even when it moves in from the edge.
+      'shrink-0 panel-divider [--divider-bottom:-1px] border-b border-transparent ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4 sm:py-5',
       className,
     )}
     {...props}
@@ -198,7 +195,7 @@ export const DialogBody = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'min-h-0 flex-1 overscroll-contain overflow-y-auto px-5 py-5 sm:px-6',
+      'min-h-0 flex-1 overscroll-contain overflow-y-auto ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-end,0px)))] py-5',
       className,
     )}
     {...props}
@@ -217,7 +214,7 @@ export const DialogFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-t border-edge-faint bg-surface px-5 py-4 sm:px-6',
+      'shrink-0 panel-divider [--divider-top:-1px] border-t border-transparent bg-surface ps-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--panel-gutter,1.25rem)-var(--panel-end,0px)))] py-4',
       'flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3',
       '[&>*]:w-full sm:[&>*]:w-auto',
       className,

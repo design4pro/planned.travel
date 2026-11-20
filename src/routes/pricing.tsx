@@ -176,7 +176,7 @@ function PlansBand({
         <div className="absolute -top-40 left-1/2 size-[38rem] -translate-x-1/2 rounded-full bg-brand/12 blur-3xl" />
       </div>
 
-      <div className="mx-auto w-full max-w-content px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+      <div className="mx-auto w-full max-w-content gutter-x py-14 sm:py-20">
         <div className="mx-auto flex max-w-3xl flex-col items-center text-center">
           <Eyebrow icon={<Sparkles />}>
             {t('marketing.pricing.hero.eyebrow')}

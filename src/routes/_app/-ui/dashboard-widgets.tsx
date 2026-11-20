@@ -286,7 +286,7 @@ export function DashboardWidgetsSheet({ children }: { children: ReactNode }) {
           target?.focus()
         }}
       >
-        <SheetHeader className="pe-14">
+        <SheetHeader>
           <SheetTitle>{t('shell.dashboard.widgets.label')}</SheetTitle>
           <SheetDescription>
             {t('shell.dashboard.widgets.description')}

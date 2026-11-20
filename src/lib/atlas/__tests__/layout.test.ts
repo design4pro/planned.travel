@@ -315,6 +315,25 @@ describe('the camera padding', () => {
     )
   })
 
+  it.each(['ltr', 'rtl'] as const)(
+    'uses physical insets with %s controls',
+    (direction) => {
+      const geometry = {
+        wide: false,
+        shelf: 134,
+        controls: 44,
+        safeLeft: 52,
+        safeRight: 22,
+        direction,
+      }
+      const padding = cameraPadding(geometry)
+      expect(padding.left).toBe(direction === 'ltr' ? 52 : 104)
+      expect(padding.right).toBe(direction === 'ltr' ? 74 : 22)
+      expect(padding.top).toBe(72)
+      expect(padding.bottom).toBe(154)
+    },
+  )
+
   it('leaves room to draw at every width the product supports', () => {
     for (const width of [360, 393, 768, 1024, 1440, 2560]) {
       const wide = width >= 1024

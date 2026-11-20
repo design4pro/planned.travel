@@ -58,7 +58,7 @@ export const BasemapNotice = React.forwardRef<
         // box anchored at `left-1/2` can never exceed half the map, which on a
         // phone turned four lines of copy into seven in a column half as wide as
         // it was designed for.
-        'absolute bottom-4 left-1/2 z-map-overlay w-max max-w-[min(18rem,calc(100%-2rem))]',
+        'absolute bottom-4 left-1/2 z-map-overlay w-max max-w-[min(18rem,calc(100%-2*var(--map-notice-gutter,1rem)))]',
         '-translate-x-1/2 animate-overlay-in',
         className,
       )}
@@ -178,7 +178,7 @@ export const MapEngineNotice = React.forwardRef<
       role="status"
       aria-live="polite"
       className={cn(
-        'absolute top-1/2 left-1/2 z-map-overlay w-max max-w-[min(20rem,calc(100%-2rem))]',
+        'absolute top-1/2 left-1/2 z-map-overlay w-max max-w-[min(20rem,calc(100%-2*var(--map-notice-gutter,1rem)))]',
         '-translate-x-1/2 -translate-y-1/2 animate-overlay-in',
         className,
       )}

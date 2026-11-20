@@ -45,7 +45,7 @@ export function Section({
     >
       <div
         className={cn(
-          'mx-auto w-full px-4 sm:px-6 lg:px-8',
+          'mx-auto w-full gutter-x',
           widths[width],
           density === 'tight'
             ? 'py-12 sm:py-14 lg:py-16'

@@ -32,8 +32,9 @@ const sideClasses = {
   bottom:
     'inset-x-0 bottom-0 mt-24 max-h-[92dvh] rounded-t-2xl border-t pb-safe',
   top: 'inset-x-0 top-0 mb-24 max-h-[92dvh] rounded-b-2xl border-b pt-safe',
-  left: 'inset-y-0 left-0 w-full max-w-md rounded-r-2xl border-r',
-  right: 'inset-y-0 right-0 w-full max-w-md rounded-l-2xl border-l',
+  left: 'inset-y-0 left-0 w-full max-w-md rounded-r-2xl border-r [--panel-margin-right:max(0px,calc(100vw_-_var(--container-md)))]',
+  right:
+    'inset-y-0 right-0 w-full max-w-md rounded-l-2xl border-l [--panel-margin-left:max(0px,calc(100vw_-_var(--container-md)))]',
 } as const
 
 /** A physical edge `vaul` and `sideClasses` both understand. */
@@ -151,7 +152,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
         <Drawer.Content
           ref={ref}
           className={cn(
-            'fixed z-modal flex flex-col border-edge bg-surface text-ink shadow-modal outline-none',
+            'panel-safe-content fixed z-modal flex flex-col border-edge bg-surface text-ink shadow-modal outline-none',
             sideClasses[physicalSide],
             className,
           )}
@@ -208,7 +209,7 @@ export const SheetContent = React.forwardRef<HTMLDivElement, SheetContentProps>(
                 label={closeLabel ?? t('ui.action.close')}
                 size="sm"
                 variant="ghost"
-                className="absolute top-3.5 end-3.5"
+                className="absolute top-3.5 end-[max(0.875rem,var(--panel-end))]"
               />
             </Drawer.Close>
           )}
@@ -226,7 +227,7 @@ export const SheetHeader = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-b border-edge-faint px-5 py-4 pe-14',
+      'shrink-0 panel-divider [--divider-bottom:-1px] border-b border-transparent ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(2.625rem,calc(3.5rem-var(--panel-end,0px)))] py-4',
       className,
     )}
     {...props}
@@ -265,7 +266,7 @@ export const SheetBody = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'min-h-0 flex-1 overscroll-contain overflow-y-auto px-5 py-5',
+      'min-h-0 flex-1 overscroll-contain overflow-y-auto ps-[max(0px,calc(var(--sheet-body-gutter,1.25rem)-var(--panel-start,0px)))] pe-[max(0px,calc(var(--sheet-body-gutter,1.25rem)-var(--panel-end,0px)))] py-5',
       className,
     )}
     {...props}
@@ -280,7 +281,7 @@ export const SheetFooter = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'shrink-0 border-t border-edge-faint bg-surface px-5 py-4',
+      'shrink-0 panel-divider [--divider-top:-1px] border-t border-transparent bg-surface ps-[max(0px,calc(1.25rem-var(--panel-start,0px)))] pe-[max(0px,calc(1.25rem-var(--panel-end,0px)))] py-4',
       'flex flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3',
       '[&>*]:w-full sm:[&>*]:w-auto',
       className,

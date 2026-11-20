@@ -166,7 +166,8 @@ import type { AtlasPayload } from '../-server/library'
  * read and a failed one occupy the very same box the map will.
  */
 const SLICE = cn(
-  'relative isolate w-full overflow-hidden bg-canvas',
+  'safe-inline-edges relative isolate w-full overflow-hidden bg-canvas',
+  '[--atlas-gutter:0.75rem] lg:[--atlas-gutter:1rem]',
   SLICE_HEIGHT_CLASS.base,
   SLICE_HEIGHT_CLASS.lg,
   SHELF_CLASS.fallback,
@@ -191,7 +192,9 @@ const WELL = cn(
   // A pixel in from each edge of the overhanging box below, which puts it back
   // on the slice's own edges: the overhang belongs to the drawing, not to the
   // chrome floating over it. Symmetric, so it needs no logical form.
-  'end-px start-px',
+  'end-px start-px [--well-margin:max(0px,calc((100vw_-_var(--content-max))/2))]',
+  '[--well-start:max(var(--atlas-gutter),calc(var(--safe-start)_-_var(--well-margin)))]',
+  '[--well-end:max(var(--atlas-gutter),calc(var(--safe-end)_-_var(--well-margin)))]',
 )
 
 /**
@@ -234,8 +237,8 @@ const SURFACE_LAYER = cn(
 
 /** The floating panel's box: gutters, and the product's own content ceiling. */
 const PANEL_BOX = cn(
-  'absolute inset-x-3 bottom-3 mx-auto max-w-content',
-  'lg:inset-x-4 lg:bottom-4',
+  'absolute start-[max(var(--atlas-gutter),var(--safe-start))] end-[max(var(--atlas-gutter),var(--safe-end))] bottom-3 mx-auto max-w-content',
+  'lg:bottom-4',
 )
 
 /**
@@ -252,8 +255,8 @@ const SEARCH_BOX = cn(
   // inline end, exactly as they do in `en`. The canvas under them is not
   // mirrored — a map is not a paragraph — so each of these states its own side
   // rather than inheriting one.
-  'pointer-events-auto absolute top-3 end-18 start-3 w-auto z-map-overlay',
-  'lg:top-4 lg:end-auto lg:start-4 lg:w-88',
+  'pointer-events-auto absolute top-3 end-[calc(var(--well-end)+3.75rem)] start-[var(--well-start)] w-auto z-map-overlay',
+  'lg:top-4 lg:end-auto lg:w-88',
 )
 
 /**
@@ -275,12 +278,12 @@ const SEARCH_BOX = cn(
  */
 const CHROME = {
   controls: cn(
-    'pointer-events-auto top-3 end-3 bottom-auto',
-    'lg:top-auto lg:end-4 lg:bottom-(--atlas-clear)',
+    'pointer-events-auto top-3 end-[var(--well-end)] bottom-auto',
+    'lg:top-auto lg:bottom-(--atlas-clear)',
   ),
   credit: cn(
-    'top-auto end-auto bottom-(--atlas-clear) start-3',
-    'lg:top-4 lg:end-4 lg:bottom-auto lg:start-auto',
+    'top-auto end-auto bottom-(--atlas-clear) start-[var(--well-start)]',
+    'lg:top-4 lg:end-[var(--well-end)] lg:bottom-auto lg:start-auto',
   ),
 } as const
 
@@ -393,7 +396,7 @@ function AtlasChrome({
           // The 72px the pill gives up on a phone belongs to the zoom cluster.
           // With no cluster there is nothing to give it up for, and the gap
           // reads as a control that failed to draw.
-          failed && 'end-3',
+          failed && 'end-[var(--well-end)]',
         )}
       />
 
@@ -541,6 +544,42 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
   const [containerRef, box] = useMeasuredBox()
   const [shelfRef, shelfBox] = useMeasuredBox()
   const wide = useIsWide()
+  const leftInsetRef = React.useRef<HTMLSpanElement>(null)
+  const rightInsetRef = React.useRef<HTMLSpanElement>(null)
+  const [sides, setSides] = React.useState<{
+    safeLeft: number
+    safeRight: number
+    direction: 'ltr' | 'rtl'
+  }>()
+  useIsomorphicLayoutEffect(() => {
+    const left = leftInsetRef.current
+    const right = rightInsetRef.current
+    if (!left || !right) return
+
+    const read = () => {
+      const safeLeft = left.getBoundingClientRect().width
+      const safeRight = right.getBoundingClientRect().width
+      const direction = left.matches(':dir(rtl)') ? 'rtl' : 'ltr'
+      setSides((previous) =>
+        previous?.safeLeft === safeLeft &&
+        previous.safeRight === safeRight &&
+        previous.direction === direction
+          ? previous
+          : { safeLeft, safeRight, direction },
+      )
+    }
+    read()
+    // Separate probes detect a side changing even when their sum stays constant.
+    const sizes = new ResizeObserver(read)
+    sizes.observe(left)
+    sizes.observe(right)
+    const direction = new MutationObserver(read)
+    direction.observe(document.documentElement, { attributeFilter: ['dir'] })
+    return () => {
+      sizes.disconnect()
+      direction.disconnect()
+    }
+  }, [])
 
   const [selected, setSelected] = React.useState<string | null>(null)
   const [tab, setTab] = React.useState<AtlasPanelTab>('stats')
@@ -603,8 +642,9 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
         wide,
         shelf: shelf ?? 0,
         controls: MAP_CONTROLS_WIDTH,
+        ...sides,
       }),
-    [wide, shelf],
+    [wide, shelf, sides],
   )
 
   /**
@@ -753,6 +793,16 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
 
   return (
     <div ref={containerRef} className={SLICE} style={shelfStyle}>
+      <span
+        ref={leftInsetRef}
+        aria-hidden="true"
+        className="invisible absolute w-(--safe-left)"
+      />
+      <span
+        ref={rightInsetRef}
+        aria-hidden="true"
+        className="invisible absolute w-(--safe-right)"
+      />
       {/* The map is the content, so the screen has no title bar to name it and
           the outline used to open at the panel's `h2` — a page with no `h1`. A
           canvas cannot carry a heading without a title bar being added, so the
@@ -817,7 +867,7 @@ export function AtlasScreen({ atlas }: AtlasScreenProps) {
           }}
           // Transparent, so the static world behind it shows through until the
           // renderer paints — and forever, if it never does.
-          className="absolute inset-0 bg-transparent"
+          className="absolute inset-0 bg-transparent [--map-notice-gutter:max(1rem,calc(1px_+_max(var(--safe-left),var(--safe-right))))]"
           chrome={
             <AtlasChrome
               countries={countries}
@@ -1002,7 +1052,7 @@ export function AtlasScreenError({ error }: AtlasScreenErrorProps) {
           className="absolute inset-0 -z-10 opacity-60"
         />
       </div>
-      <div className="absolute inset-0 grid place-items-center p-4">
+      <div className="absolute inset-0 grid place-items-center py-4 ps-[max(1rem,var(--safe-start))] pe-[max(1rem,var(--safe-end))]">
         <div
           ref={recovery}
           role="region"

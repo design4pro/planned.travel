@@ -821,6 +821,61 @@
   padding-left: max(var(--gutter-x), var(--safe-left));
   padding-right: max(var(--gutter-x), var(--safe-right));
 }
+/* Physical screen insets stay attached to the glass. Map them to the reading
+   edges using the document dir attribute. The optimized stylesheet must
+   follow dir independently of lang when the setting changes. */
+@utility safe-inline-edges {
+  --safe-start: var(--safe-left);
+  --safe-end: var(--safe-right);
+  html[dir='rtl'] & {
+    --safe-start: var(--safe-right);
+    --safe-end: var(--safe-left);
+  }
+}
+/* The panel background reaches the edge. Its children can spend the
+   existing gutter before they need any additional room for the inset. */
+@utility panel-safe-content {
+  --panel-left: max(
+    0px,
+    calc(var(--safe-left) - var(--panel-margin-left, 0px))
+  );
+  --panel-right: max(
+    0px,
+    calc(var(--safe-right) - var(--panel-margin-right, 0px))
+  );
+  --panel-start: var(--panel-left);
+  --panel-end: var(--panel-right);
+  html[dir='rtl'] & {
+    --panel-start: var(--panel-right);
+    --panel-end: var(--panel-left);
+  }
+  padding-left: var(--panel-left);
+  padding-right: var(--panel-right);
+}
+/* Extend the divider across the panel's safe padding without moving its content. */
+@utility panel-divider {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset-inline-start: calc(-1 * var(--panel-start, 0px));
+    inset-inline-end: calc(-1 * var(--panel-end, 0px));
+    top: var(--divider-top, auto);
+    bottom: var(--divider-bottom, auto);
+    height: 1px;
+    background-color: var(--color-edge-faint);
+    pointer-events: none;
+  }
+}
+/* The centred dialog already clears any inset that fits in its outer margin. */
+@utility dialog-safe-content {
+  --dialog-margin: max(
+    var(--dialog-frame-gutter),
+    calc((100vw - var(--dialog-width)) / 2)
+  );
+  --panel-margin-left: var(--dialog-margin);
+  --panel-margin-right: var(--dialog-margin);
+}
 @utility mb-safe {
   margin-bottom: var(--safe-bottom);
 }
@@ -1215,12 +1270,15 @@
      `--inset` would take the dialog with it, and that one is a centred modal
      with nothing to clear. */
   --pt-feedback-bottom: calc(1px + 4rem + var(--safe-bottom));
-  --actor-inset: auto 0 var(--pt-feedback-bottom) auto;
+  /* The SDK adds page-margin to the inset on the anchored physical side. */
+  --actor-inset: auto max(0px, calc(var(--safe-right) - var(--page-margin)))
+    var(--pt-feedback-bottom) auto;
 }
 
 /* Arabic reads right to left, so the button belongs in the other corner. */
 html[dir='rtl'] #sentry-feedback {
-  --actor-inset: auto auto var(--pt-feedback-bottom) 0;
+  --actor-inset: auto auto var(--pt-feedback-bottom)
+    max(0px, calc(var(--safe-left) - var(--page-margin)));
 }
 
 /* From `lg` the tab bar is gone and so is its clearance. */

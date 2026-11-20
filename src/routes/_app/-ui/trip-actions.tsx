@@ -272,7 +272,7 @@ export function TripEditSheet({
         className="w-full sm:max-w-md"
         data-part="trip-edit-sheet"
       >
-        <SheetHeader className="pe-14">
+        <SheetHeader>
           <SheetTitle>{t('shell.editTrip.title')}</SheetTitle>
         </SheetHeader>
 

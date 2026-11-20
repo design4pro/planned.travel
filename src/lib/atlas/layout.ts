@@ -415,18 +415,35 @@ export function shelfClear(geometry: ShelfGeometry): number {
  * `CountrySearch`, which clamps its fly-to against it. Two numbers that
  * disagreed put a searched country underneath the panel describing it.
  */
-export function cameraPadding(geometry: ShelfGeometry): EdgePadding {
+export interface AtlasPadding extends EdgePadding {
+  readonly sideGutters?: { readonly left: number; readonly right: number }
+  readonly direction?: 'ltr' | 'rtl'
+  readonly gutter?: number
+}
+
+export function cameraPadding(
+  geometry: ShelfGeometry & {
+    readonly safeLeft?: number
+    readonly safeRight?: number
+    readonly direction?: 'ltr' | 'rtl'
+  },
+): AtlasPadding {
   const gutter = geometry.wide ? CHROME_GUTTER.lg : CHROME_GUTTER.base
   const top = gutter + SEARCH_HEIGHT + CHROME_GAP
-  const controls = gutter + geometry.controls + CHROME_GAP
+  const controls = geometry.controls + CHROME_GAP
+  const left = Math.max(gutter, geometry.safeLeft ?? 0)
+  const right = Math.max(gutter, geometry.safeRight ?? 0)
+  const rtl = geometry.direction === 'rtl'
 
   return {
-    // The zoom cluster is the top-right corner below `lg` and the bottom-right
-    // corner from `lg`, so it costs the right edge either way.
-    top: geometry.wide ? top : Math.max(top, controls),
-    right: controls,
+    // The zoom cluster occupies the inline end at both breakpoints.
+    top: geometry.wide ? top : Math.max(top, gutter + controls),
+    right: right + (rtl ? 0 : controls),
     bottom: shelfClear(geometry),
-    left: gutter,
+    left: left + (rtl ? controls : 0),
+    sideGutters: { left, right },
+    gutter,
+    direction: geometry.direction,
   }
 }
 
