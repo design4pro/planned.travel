@@ -945,6 +945,36 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Soubory se nepodařilo načíst',
+  'files.page.empty': 'Zatím žádné přílohy',
+  'files.page.summary': '{files} · {size} na této cestě',
+  'files.page.thisTrip': 'Tato cesta',
+  'files.page.workspaceStorage': 'Úložiště pracovního prostoru',
+  'files.page.photosCaption': 'Obrázky z této cesty',
+  'files.page.documents': 'Jízdenky a účtenky',
+  'files.page.documentsCaption':
+    'Připraveno pro hraniční kontrolu a účetnictví',
+  'files.count.filtered': '{shown} z {total}',
+  'files.storage.meter': '{used} z {limit}',
+  'files.storage.meterUnlimited': '{used} v neomezeném úložišti',
+  'files.storage.ofLimit': 'z {limit}',
+  'files.storage.percentUsed': 'Využito {percent} %',
+  'files.storage.unlimited': 'bez omezení',
+  'files.error.missingTripFile': 'Tento soubor nepatří k této cestě.',
+  'files.error.missingCopy': 'Uložená kopie tohoto souboru chybí.',
+  'files.reject.empty': 'Soubor „{name}“ je prázdný, takže není co uložit.',
+  'files.reject.tooLarge':
+    'Soubor „{name}“ má velikost {size}. Limit na jeden soubor je {limit}.',
+  'files.reject.unsupportedType':
+    'Pracovní prostor nepodporuje typ souboru „{name}“. Zkuste PDF, obrázek, dokument nebo soubor kalendáře.',
+  'files.reject.quota':
+    'K uložení souboru „{name}“ je potřeba {size}, ale z {limit} vašeho tarifu zbývá jen {remaining}. Odstraňte soubor nebo přejděte na vyšší tarif.',
+  'files.count.attached': {
+    one: '{count} soubor',
+    few: '{count} soubory',
+    many: '{count} souboru',
+    other: '{count} souborů',
+  },
   'files.kind.document': 'Dokument',
   'files.kind.photo': 'Fotka',
   'files.kind.ticket': 'Lístek',

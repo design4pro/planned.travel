@@ -911,6 +911,32 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Berkas tidak dapat dimuat',
+  'files.page.empty': 'Belum ada lampiran',
+  'files.page.summary': '{files} · {size} dalam perjalanan ini',
+  'files.page.thisTrip': 'Perjalanan ini',
+  'files.page.workspaceStorage': 'Penyimpanan ruang kerja',
+  'files.page.photosCaption': 'Gambar dari perjalanan ini',
+  'files.page.documents': 'Tiket dan kuitansi',
+  'files.page.documentsCaption':
+    'Siap untuk pemeriksaan perbatasan dan pembukuan',
+  'files.count.filtered': '{shown} dari {total}',
+  'files.storage.meter': '{used} dari {limit}',
+  'files.storage.meterUnlimited': '{used} dari penyimpanan tak terbatas',
+  'files.storage.ofLimit': 'dari {limit}',
+  'files.storage.percentUsed': '{percent}% terpakai',
+  'files.storage.unlimited': 'tak terbatas',
+  'files.error.missingTripFile': 'Berkas itu tidak ada di perjalanan ini.',
+  'files.error.missingCopy':
+    'Salinan tersimpan dari berkas ini tidak ditemukan.',
+  'files.reject.empty': '“{name}” kosong, jadi tidak ada yang bisa disimpan.',
+  'files.reject.tooLarge':
+    'Ukuran “{name}” adalah {size}. Batas per berkas adalah {limit}.',
+  'files.reject.unsupportedType':
+    'Ruang kerja ini tidak menerima jenis berkas “{name}”. Coba gunakan PDF, gambar, dokumen, atau berkas kalender.',
+  'files.reject.quota':
+    'Untuk menyimpan “{name}” diperlukan {size}, tetapi hanya tersisa {remaining} dari {limit} dalam paket Anda. Hapus satu berkas atau tingkatkan paket Anda.',
+  'files.count.attached': { other: '{count} berkas' },
   'files.kind.document': 'Dokumen',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Tiket',

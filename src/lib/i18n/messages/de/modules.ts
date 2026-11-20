@@ -942,6 +942,31 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Die Dateien konnten nicht geladen werden',
+  'files.page.empty': 'Noch keine Anhänge',
+  'files.page.summary': '{files} · {size} für diese Reise',
+  'files.page.thisTrip': 'Diese Reise',
+  'files.page.workspaceStorage': 'Speicherplatz des Arbeitsbereichs',
+  'files.page.photosCaption': 'Bilder von dieser Reise',
+  'files.page.documents': 'Tickets und Belege',
+  'files.page.documentsCaption':
+    'Bereit für die Grenzkontrolle und die Buchhaltung',
+  'files.count.filtered': '{shown} von {total}',
+  'files.storage.meter': '{used} von {limit}',
+  'files.storage.meterUnlimited': '{used} bei unbegrenztem Speicher',
+  'files.storage.ofLimit': 'von {limit}',
+  'files.storage.percentUsed': '{percent} % belegt',
+  'files.storage.unlimited': 'unbegrenzt',
+  'files.error.missingTripFile': 'Diese Datei gehört nicht zu dieser Reise.',
+  'files.error.missingCopy': 'Die gespeicherte Kopie dieser Datei fehlt.',
+  'files.reject.empty': '„{name}“ ist leer, daher gibt es nichts zu speichern.',
+  'files.reject.tooLarge':
+    '„{name}“ ist {size} groß. Pro Datei sind höchstens {limit} erlaubt.',
+  'files.reject.unsupportedType':
+    'Der Arbeitsbereich akzeptiert den Dateityp von „{name}“ nicht. Versuche es mit einer PDF-, Bild-, Dokument- oder Kalenderdatei.',
+  'files.reject.quota':
+    'Für „{name}“ werden {size} benötigt, doch von den {limit} deines Tarifs sind nur noch {remaining} frei. Lösche eine Datei oder wechsle zu einem größeren Tarif.',
+  'files.count.attached': { one: '{count} Datei', other: '{count} Dateien' },
   'files.kind.document': 'Dokument',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Ticket',

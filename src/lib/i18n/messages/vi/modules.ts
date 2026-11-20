@@ -894,6 +894,31 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Không tải được tệp',
+  'files.page.empty': 'Chưa có tệp đính kèm',
+  'files.page.summary': '{files} · {size} trong chuyến đi này',
+  'files.page.thisTrip': 'Chuyến đi này',
+  'files.page.workspaceStorage': 'Dung lượng lưu trữ của không gian làm việc',
+  'files.page.photosCaption': 'Hình ảnh từ chuyến đi này',
+  'files.page.documents': 'Vé và biên lai',
+  'files.page.documentsCaption':
+    'Sẵn sàng cho kiểm tra tại biên giới và quyết toán',
+  'files.count.filtered': '{shown} trên {total}',
+  'files.storage.meter': '{used} trên {limit}',
+  'files.storage.meterUnlimited': '{used} trên dung lượng không giới hạn',
+  'files.storage.ofLimit': 'trên {limit}',
+  'files.storage.percentUsed': 'Đã dùng {percent}%',
+  'files.storage.unlimited': 'không giới hạn',
+  'files.error.missingTripFile': 'Tệp đó không thuộc chuyến đi này.',
+  'files.error.missingCopy': 'Bản lưu của tệp này bị thiếu.',
+  'files.reject.empty': 'Tệp “{name}” trống nên không có gì để lưu.',
+  'files.reject.tooLarge':
+    'Tệp “{name}” có kích thước {size}. Giới hạn cho mỗi tệp là {limit}.',
+  'files.reject.unsupportedType':
+    'Không gian làm việc này không chấp nhận loại tệp của “{name}”. Hãy thử tệp PDF, hình ảnh, tài liệu hoặc tệp lịch.',
+  'files.reject.quota':
+    'Cần {size} để lưu “{name}”, nhưng chỉ còn {remaining} trong tổng số {limit} của gói. Hãy xoá một tệp hoặc nâng cấp gói.',
+  'files.count.attached': { other: '{count} tệp' },
   'files.kind.document': 'Tài liệu',
   'files.kind.photo': 'Ảnh',
   'files.kind.ticket': 'Vé',

@@ -911,6 +911,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Dosyalar yüklenemedi',
+  'files.page.empty': 'Henüz ek yok',
+  'files.page.summary': '{files} · bu gezide {size}',
+  'files.page.thisTrip': 'Bu gezi',
+  'files.page.workspaceStorage': 'Çalışma alanı depolama alanı',
+  'files.page.photosCaption': 'Bu gezinin görselleri',
+  'files.page.documents': 'Biletler ve makbuzlar',
+  'files.page.documentsCaption': 'Sınır kontrolü ve muhasebe için hazır',
+  'files.count.filtered': '{total} öğeden {shown}',
+  'files.storage.meter': '{limit} alanın {used} kadarı',
+  'files.storage.meterUnlimited': 'Sınırsız alanın {used} kadarı',
+  'files.storage.ofLimit': '/ {limit}',
+  'files.storage.percentUsed': '%{percent} kullanıldı',
+  'files.storage.unlimited': 'sınırsız',
+  'files.error.missingTripFile': 'Bu dosya bu geziye ait değil.',
+  'files.error.missingCopy': 'Bu dosyanın kayıtlı kopyası eksik.',
+  'files.reject.empty': '“{name}” boş olduğundan kaydedilecek bir şey yok.',
+  'files.reject.tooLarge':
+    '“{name}” dosyasının boyutu {size}. Dosya başına sınır {limit}.',
+  'files.reject.unsupportedType':
+    'Bu çalışma alanı “{name}” dosyasının türünü kabul etmiyor. PDF, görsel, belge veya takvim dosyası deneyin.',
+  'files.reject.quota':
+    '“{name}” dosyasını saklamak için {size} gerekiyor ancak planınızdaki {limit} alanın yalnızca {remaining} kadarı boş. Bir dosyayı silin veya planınızı yükseltin.',
+  'files.count.attached': { one: '{count} dosya', other: '{count} dosya' },
   'files.kind.document': 'Belge',
   'files.kind.photo': 'Fotoğraf',
   'files.kind.ticket': 'Bilet',
