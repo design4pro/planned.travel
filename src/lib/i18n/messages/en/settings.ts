@@ -716,8 +716,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Name it, like Work phone',
   'passkeys.rename.saving': 'Saving the name',
   'passkeys.rename.saved': 'Name saved',
-  'passkeys.rename.failed': 'The name was not saved',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Cancel',
+  'passkeys.rename.save': 'Save',
+  'passkeys.rename.failed': 'The name was not saved. Try again.',
+  'passkeys.rename.missing':
+    'The name was not saved. Reload the page and check your passkey list.',
+  'passkeys.rename.unknown':
+    'The save could not be confirmed. Reload the page and check your passkey list.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Remove {name}',
   'passkeys.delete.title': 'Remove this passkey?',
   'passkeys.delete.body': 'You will no longer be able to sign in with {name}.',

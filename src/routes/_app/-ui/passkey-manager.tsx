@@ -26,6 +26,7 @@ import {
   renameFailureNotice,
 } from '../-lib/passkey-errors'
 import { PasskeyDeleteDialog } from './passkey-delete-dialog'
+import { PASSKEY_NAME_SLOT, PasskeyNameSentence } from './passkey-name-sentence'
 import { PasskeyRenameField } from './passkey-rename-field'
 import { SignInAgain } from './passkey-sign-in-again'
 
@@ -50,6 +51,7 @@ type ListState =
  */
 interface RenameState {
   readonly id: string
+  readonly instance: number
   readonly saving: boolean
   readonly error: PasskeyNotice | null
   readonly attention: number
@@ -187,8 +189,8 @@ function PasskeyRow({
   registerRemoveButton: (element: HTMLButtonElement | null) => void
   onStartRename: () => void
   onStartRemove: () => void
-  onSubmitName: (value: string, viaKey: boolean) => void
-  onCancelRename: (viaKey: boolean) => void
+  onSubmitName: (value: string, explicit: boolean) => void
+  onCancelRename: (explicit: boolean) => void
   onSignOutFailed: () => void
   signInRef: Ref<HTMLButtonElement>
 }) {
@@ -295,12 +297,15 @@ export function PasskeyManager() {
   const [enrolling, setEnrolling] = useState(false)
   // Set by the server's own refusal, for a count the list did not predict.
   const [limitHit, setLimitHit] = useState(false)
-  const [status, setStatus] = useState<PasskeyNotice | null>(null)
+  const [status, setStatus] = useState<
+    (PasskeyNotice & { passkeyName?: string }) | null
+  >(null)
   // Bumped by a repeated failure with the same text: a live region only announces a change, so the
   // text node is keyed on this and remounts.
   const [statusTick, setStatusTick] = useState(0)
   const [focusTarget, setFocusTarget] = useState<FocusTarget | null>(null)
   const [rename, setRename] = useState<RenameState | null>(null)
+  const renameInstance = useRef(0)
   // The row whose Rename control takes focus back once its rename mode has closed.
   const [renameFocusId, setRenameFocusId] = useState<string | null>(null)
   const renameButtons = useRef(new Map<string, HTMLButtonElement>())
@@ -455,12 +460,14 @@ export function PasskeyManager() {
   }
 
   function startRename(id: string): void {
+    const instance = ++renameInstance.current
     setRename((previous) => {
       // A save is running: the Rename control pressed meanwhile (a blur just started it) must not
       // make the field editable again.
       if (previous?.id === id && previous.saving) return previous
       return {
         id,
+        instance,
         saving: false,
         error: null,
         attention: previous?.id === id ? previous.attention + 1 : 0,
@@ -468,28 +475,34 @@ export function PasskeyManager() {
     })
   }
 
-  function closeRename(id: string, returnFocus: boolean): void {
-    setRename((previous) => (previous?.id === id ? null : previous))
-    // Another row took rename mode while this one saved: focus is theirs now.
-    const otherRowOpen =
-      renameRef.current !== null && renameRef.current.id !== id
-    if (returnFocus && !otherRowOpen) setRenameFocusId(id)
+  function closeRename(editor: RenameState, returnFocus: boolean): void {
+    setRename((previous) =>
+      previous?.instance === editor.instance ? null : previous,
+    )
+    if (returnFocus && renameRef.current?.instance === editor.instance) {
+      setRenameFocusId(editor.id)
+    }
   }
 
   async function submitName(
-    id: string,
+    passkey: PasskeySummary,
     value: string,
-    viaKey: boolean,
+    explicit: boolean,
   ): Promise<void> {
+    const editor = renameRef.current
+    const { id } = passkey
+    if (editor?.id !== id) return
+    const passkeyName = displayNameOf(passkey, i18n)
     setRename((previous) =>
-      previous?.id === id
+      previous?.instance === editor.instance
         ? { ...previous, saving: true, error: null }
         : previous,
     )
     setStatus(SAVING)
     const result = await renamePasskey(id, value)
-    // Focus follows the person: a key started this save, but they may have clicked elsewhere since.
-    const returnFocus = viaKey && focusIsInRenameField()
+    // Focus follows the person if they moved away during an explicit save.
+    const sameEditor = renameRef.current?.instance === editor.instance
+    const returnFocus = sameEditor && explicit && focusIsInRenameField()
 
     if (result.ok) {
       setList((previous) =>
@@ -502,18 +515,18 @@ export function PasskeyManager() {
             }
           : previous,
       )
-      closeRename(id, returnFocus)
+      closeRename(editor, returnFocus)
       setStatus(SAVED)
       return
     }
 
     const notice = renameFailureNotice(result.failure)
-    if (renameRef.current?.id === id) {
-      // The field is still on screen: the error sits beside it. A save started by a key takes focus
+    if (sameEditor) {
+      // The field is still on screen: the error sits beside it. An explicit save takes focus
       // back into the input; one started by a blur leaves it where the person moved it. The status
       // region says it too, once and without the sign-in action the row already carries.
       setRename((previous) =>
-        previous?.id === id
+        previous?.instance === editor.instance
           ? {
               ...previous,
               saving: false,
@@ -529,7 +542,7 @@ export function PasskeyManager() {
       return
     }
     // Another row took rename mode while this one saved: the status region says so instead.
-    setStatus(notice)
+    setStatus({ ...notice, passkeyName })
     setStatusTick((tick) => tick + 1)
   }
 
@@ -639,7 +652,17 @@ export function PasskeyManager() {
               key={statusTick}
               className={status.quiet ? 'sr-only' : undefined}
             >
-              {t(status.key)}
+              {status.passkeyName === undefined ? (
+                t(status.key)
+              ) : (
+                <PasskeyNameSentence
+                  name={status.passkeyName}
+                  sentence={t('settings.passkeys.rename.failedFor', {
+                    name: PASSKEY_NAME_SLOT,
+                    detail: t(status.key),
+                  })}
+                />
+              )}
             </span>
           )}
         </p>
@@ -735,11 +758,12 @@ export function PasskeyManager() {
                 onStartRemove={() => {
                   startRemove(passkey)
                 }}
-                onSubmitName={(value, viaKey) => {
-                  void submitName(passkey.id, value, viaKey)
+                onSubmitName={(value, explicit) => {
+                  void submitName(passkey, value, explicit)
                 }}
-                onCancelRename={(viaKey) => {
-                  closeRename(passkey.id, viaKey)
+                onCancelRename={(explicit) => {
+                  const editor = renameRef.current
+                  if (editor?.id === passkey.id) closeRename(editor, explicit)
                 }}
                 signInRef={signInRef}
                 onSignOutFailed={() => {

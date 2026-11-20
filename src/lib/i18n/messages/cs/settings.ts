@@ -647,8 +647,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Pojmenujte ho, například Pracovní telefon',
   'passkeys.rename.saving': 'Ukládáme název',
   'passkeys.rename.saved': 'Název byl uložen',
-  'passkeys.rename.failed': 'Název nebyl uložen',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Zrušit',
+  'passkeys.rename.save': 'Uložit',
+  'passkeys.rename.failed': 'Název se neuložil. Zkuste to znovu.',
+  'passkeys.rename.missing':
+    'Název se neuložil. Načtěte stránku znovu a zkontrolujte seznam přístupových klíčů.',
+  'passkeys.rename.unknown':
+    'Uložení se nepodařilo potvrdit. Načtěte stránku znovu a zkontrolujte seznam přístupových klíčů.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Odebrat {name}',
   'passkeys.delete.title': 'Odebrat tento přístupový klíč?',
   'passkeys.delete.body': 'Pomocí {name} se už nebudete moci přihlásit.',

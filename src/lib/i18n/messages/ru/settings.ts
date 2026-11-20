@@ -664,8 +664,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Дайте имя, например Рабочий телефон',
   'passkeys.rename.saving': 'Сохраняем название',
   'passkeys.rename.saved': 'Название сохранено',
-  'passkeys.rename.failed': 'Название не сохранено',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Отмена',
+  'passkeys.rename.save': 'Сохранить',
+  'passkeys.rename.failed': 'Не удалось сохранить имя. Попробуйте ещё раз.',
+  'passkeys.rename.missing':
+    'Не удалось сохранить имя. Перезагрузите страницу и проверьте список ключей доступа.',
+  'passkeys.rename.unknown':
+    'Не удалось подтвердить сохранение. Обновите страницу и проверьте список ключей доступа.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Удалить: {name}',
   'passkeys.delete.title': 'Удалить этот ключ доступа?',
   'passkeys.delete.body': 'Вы больше не сможете входить с помощью: {name}.',

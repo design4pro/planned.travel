@@ -538,8 +538,13 @@ const messages = {
   'passkeys.rename.placeholder': '取個名稱，例如「工作手機」',
   'passkeys.rename.saving': '正在儲存名稱',
   'passkeys.rename.saved': '名稱已儲存',
-  'passkeys.rename.failed': '名稱未能儲存',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': '取消',
+  'passkeys.rename.save': '儲存',
+  'passkeys.rename.failed': '未能儲存名稱。請再試一次。',
+  'passkeys.rename.missing': '未能儲存名稱。請重新載入頁面並檢查通行密鑰清單。',
+  'passkeys.rename.unknown':
+    '無法確認是否已儲存。請重新載入頁面並檢查通行密鑰清單。',
+  'passkeys.rename.failedFor': '{name}：{detail}',
   'passkeys.delete.action': '移除 {name}',
   'passkeys.delete.title': '移除這個密碼金鑰？',
   'passkeys.delete.body': '移除後，你將無法再使用 {name} 登入。',

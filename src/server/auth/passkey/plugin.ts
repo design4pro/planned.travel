@@ -13,6 +13,7 @@ import * as z from 'zod'
 import { queueAuthEmail } from '../email'
 import { PASSKEY_ERROR_CODES } from '#/lib/auth/passkey-error-codes'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
+import { hasVisibleCharacter } from '#/lib/workspace-name'
 import type { BetterAuthPlugin } from 'better-auth'
 import {
   base64UrlDecode,
@@ -59,6 +60,17 @@ const RENAME_PATH = '/passkey/rename'
 /** Removing a sign-in factor is as sensitive as renaming one and gets the same tight budget. */
 const DELETE_RATE_LIMIT = { window: 300, max: 5 } as const
 const DELETE_PATH = '/passkey/delete'
+
+// Require qualifying content without changing joiners, marks or other code points in a valid name.
+const passkeyName = z
+  .string()
+  .trim()
+  .min(1)
+  .max(64)
+  .refine(
+    hasVisibleCharacter,
+    'A passkey name must contain a visible character.',
+  )
 
 /** Stable refusal codes. The screen renders catalogue text chosen by code, never `message`. */
 export { PASSKEY_ERROR_CODES }
@@ -363,7 +375,7 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           use: [sessionMiddleware],
           body: z.object({
             credential: registrationCredentialSchema,
-            name: z.string().trim().min(1).max(64).optional(),
+            name: passkeyName.optional(),
           }),
         },
         async (ctx) => {
@@ -622,7 +634,7 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           use: [sessionMiddleware],
           body: z.strictObject({
             id: z.string().min(1),
-            name: z.string().trim().min(1).max(64),
+            name: passkeyName,
           }),
         },
         async (ctx) => {

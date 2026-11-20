@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { I18nProvider } from '#/lib/i18n'
 import settings from '#/lib/i18n/messages/en/settings'
+import shell from '#/lib/i18n/messages/en/shell'
 import { MAX_PASSKEYS_PER_USER } from '#/lib/auth/passkey-limit'
 import { PasskeyManager } from '../passkey-manager'
 
@@ -29,10 +30,13 @@ vi.mock('#/lib/auth/client', () => client)
 
 /** The shipped catalogue, namespaced the way the provider expects. */
 const EN: Catalogue = Object.fromEntries(
-  Object.entries(settings).map(([key, message]) => [
-    `settings.${key}`,
-    message,
-  ]),
+  [['settings', settings] as const, ['shell', shell] as const].flatMap(
+    ([namespace, messages]) =>
+      Object.entries(messages).map(([key, message]) => [
+        `${namespace}.${key}`,
+        message,
+      ]),
+  ),
 )
 
 function passkey(overrides: Partial<PasskeySummary> = {}): PasskeySummary {
@@ -959,6 +963,60 @@ describe('naming a passkey', () => {
       )
     })
 
+    it('keeps the draft when the window loses focus', async () => {
+      await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+      await userEvent.click(renameButton('Work phone'))
+      await userEvent.type(renameInput(), '2')
+      const focus = vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+
+      try {
+        fireEvent.blur(renameInput(), { relatedTarget: null })
+        expect(client.renamePasskey).not.toHaveBeenCalled()
+        expect((renameInput() as HTMLInputElement).value).toBe('Work phone2')
+      } finally {
+        focus.mockRestore()
+      }
+    })
+
+    it('cancels a changed draft when the Cancel button takes focus before activation', async () => {
+      await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+      await userEvent.click(renameButton('Work phone'))
+      await userEvent.type(renameInput(), '2')
+
+      const cancel = screen.getByRole('button', { name: 'Cancel' })
+      cancel.focus()
+      await userEvent.click(cancel)
+
+      expect(client.renamePasskey).not.toHaveBeenCalled()
+      expect(screen.queryByRole('textbox')).toBeNull()
+      expect(document.activeElement).toBe(renameButton('Work phone'))
+    })
+
+    it('submits once from Save and disables both actions while saving', async () => {
+      await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+      let finish: (value: unknown) => void = () => {}
+      client.renamePasskey.mockReturnValue(
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+      )
+      await userEvent.click(renameButton('Work phone'))
+      await userEvent.type(renameInput(), '2')
+      const save = screen.getByRole('button', { name: 'Save' })
+      await userEvent.click(save)
+
+      expect(save.hasAttribute('disabled')).toBe(true)
+      expect(
+        screen.getByRole('button', { name: 'Cancel' }).hasAttribute('disabled'),
+      ).toBe(true)
+      expect(client.renamePasskey).toHaveBeenCalledTimes(1)
+      expect(client.renamePasskey).toHaveBeenCalledWith('pk_1', 'Work phone2')
+
+      finish(renamed('pk_1', 'Work phone2'))
+      await screen.findByText('Work phone2')
+      expect(document.activeElement).toBe(renameButton('Work phone2'))
+    })
+
     it('saves a changed name on a blur and leaves focus where the person moved it', async () => {
       await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
       client.renamePasskey.mockResolvedValue(renamed('pk_1', 'Laptop'))
@@ -1052,7 +1110,9 @@ describe('naming a passkey', () => {
     it('keeps focus in the input, keeps the typed text and says so inline, never with the server message', async () => {
       await failWith(500)
 
-      await screen.findByText('The name was not saved', { selector: 'p' })
+      await screen.findByText('The name was not saved. Try again.', {
+        selector: 'p',
+      })
       expect((renameInput() as HTMLInputElement).value).toBe('Work phone2')
       await waitFor(() => expect(document.activeElement).toBe(renameInput()))
       expect(renameInput().getAttribute('aria-describedby') ?? '').toContain(
@@ -1063,20 +1123,35 @@ describe('naming a passkey', () => {
     })
 
     it.each([
-      [403, 'PASSKEY_IMPERSONATED'],
-      [404, 'PASSKEY_NOT_FOUND'],
-      [0, null],
-    ])('says "not saved" for a %i (%s)', async (status, code) => {
-      await failWith(status, code)
+      [403, 'PASSKEY_IMPERSONATED', 'The name was not saved. Try again.'],
+      [
+        404,
+        'PASSKEY_NOT_FOUND',
+        'The name was not saved. Reload the page and check your passkey list.',
+      ],
+      [
+        0,
+        null,
+        'The save could not be confirmed. Reload the page and check your passkey list.',
+      ],
+    ] as const)(
+      'shows recovery guidance for a %i (%s)',
+      async (status, code, guidance) => {
+        await failWith(status, code)
 
-      await screen.findByText('The name was not saved', { selector: 'p' })
-    })
+        await screen.findByText(guidance, {
+          selector: 'p',
+        })
+      },
+    )
 
     it('names a rate limit', async () => {
       await failWith(429)
 
       await screen.findByText(/Too many attempts/, { selector: 'p' })
-      expect(screen.queryByText('The name was not saved')).toBeNull()
+      expect(
+        screen.queryByText('The name was not saved. Try again.'),
+      ).toBeNull()
     })
 
     it('offers Sign in again beside the row for an ended session', async () => {
@@ -1096,7 +1171,9 @@ describe('naming a passkey', () => {
 
     it('can be tried again after a failure', async () => {
       await failWith(500)
-      await screen.findByText('The name was not saved', { selector: 'p' })
+      await screen.findByText('The name was not saved. Try again.', {
+        selector: 'p',
+      })
       client.renamePasskey.mockResolvedValue(renamed('pk_1', 'Work phone2'))
 
       await userEvent.keyboard('{Enter}')
@@ -1125,7 +1202,7 @@ describe('naming a passkey', () => {
       await screen.findByText(/Your session has ended/, { selector: 'p' })
       await userEvent.type(renameInput(), '3')
 
-      await userEvent.tab()
+      await userEvent.keyboard('{Tab}{Tab}{Tab}')
 
       expect(document.activeElement).toBe(
         screen.getByRole('button', { name: 'Sign in again' }),
@@ -1156,7 +1233,7 @@ describe('naming a passkey', () => {
       await failWith(401)
       await screen.findByText(/Your session has ended/, { selector: 'p' })
 
-      await userEvent.tab()
+      await userEvent.keyboard('{Tab}{Tab}{Tab}')
 
       const signIn = screen.getByRole('button', { name: 'Sign in again' })
       expect(document.activeElement).toBe(signIn)
@@ -1173,7 +1250,9 @@ describe('naming a passkey', () => {
 
       await userEvent.click(heading)
 
-      await screen.findByText('The name was not saved', { selector: 'p' })
+      await screen.findByText('The name was not saved. Try again.', {
+        selector: 'p',
+      })
       expect(document.activeElement).toBe(heading)
       expect((renameInput() as HTMLInputElement).value).toBe('Laptop')
     })
@@ -1244,7 +1323,9 @@ describe('naming a passkey', () => {
     client.renamePasskey.mockResolvedValueOnce(failure(500))
     await userEvent.click(renameButton('Work phone'))
     await userEvent.type(renameInput(), '2{Enter}')
-    await screen.findByText('The name was not saved', { selector: 'p' })
+    await screen.findByText('The name was not saved. Try again.', {
+      selector: 'p',
+    })
     let finish: (value: unknown) => void = () => {}
     client.renamePasskey.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -1254,9 +1335,83 @@ describe('naming a passkey', () => {
 
     await userEvent.type(renameInput(), '3{Enter}')
 
-    expect(screen.queryByText('The name was not saved')).toBeNull()
+    expect(screen.queryByText('The name was not saved. Try again.')).toBeNull()
     finish(failure(500))
-    await screen.findByText('The name was not saved', { selector: 'p' })
+    await screen.findByText('The name was not saved. Try again.', {
+      selector: 'p',
+    })
+  })
+
+  it('announces a late failure with the previous row name and keeps the current editor', async () => {
+    await mountWithRows(
+      passkey({ id: 'pk_1', name: 'Work phone' }),
+      passkey({ id: 'pk_2', name: 'Laptop' }),
+    )
+    let finish: (value: unknown) => void = () => {}
+    client.renamePasskey.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '2{Enter}')
+    await userEvent.click(renameButton('Laptop'))
+    await userEvent.type(renameInput(), '3')
+
+    finish(failure(500))
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-part="passkey-status"]')?.textContent,
+      ).toContain('Work phone: The name was not saved. Try again.'),
+    )
+    expect((renameInput() as HTMLInputElement).value).toBe('Laptop3')
+    expect(document.activeElement).toBe(renameInput())
+  })
+
+  it('does not attach an old failure to a reopened editor for the same passkey', async () => {
+    await mountWithRows(
+      passkey({ id: 'pk_1', name: 'Work phone' }),
+      passkey({ id: 'pk_2', name: 'Laptop' }),
+    )
+    let finish: (value: unknown) => void = () => {}
+    client.renamePasskey.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '2{Enter}')
+    await userEvent.click(renameButton('Laptop'))
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.type(renameInput(), '3')
+
+    finish(failure(0))
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-part="passkey-status"]')?.textContent,
+      ).toContain('Work phone: The save could not be confirmed.'),
+    )
+    expect(renameInput().getAttribute('aria-invalid')).not.toBe('true')
+    expect((renameInput() as HTMLInputElement).value).toBe('Work phone3')
+    expect(document.activeElement).toBe(renameInput())
+  })
+
+  it('keeps a blank Braille draft without sending it and supports Escape from Cancel', async () => {
+    await mountWithRows(passkey({ id: 'pk_1', name: 'Work phone' }))
+    await userEvent.click(renameButton('Work phone'))
+    await userEvent.clear(renameInput())
+    await userEvent.type(renameInput(), '\u2800{Enter}')
+    expect(client.renamePasskey).not.toHaveBeenCalled()
+    expect(
+      screen.getByText('Enter at least one visible character.'),
+    ).toBeDefined()
+    await userEvent.tab()
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Cancel' }),
+    )
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('textbox')).toBeNull()
+    expect(document.activeElement).toBe(renameButton('Work phone'))
   })
 
   it('does not hand focus to a row that finished saving after another row took rename mode', async () => {

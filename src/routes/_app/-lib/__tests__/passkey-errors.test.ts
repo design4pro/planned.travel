@@ -42,7 +42,11 @@ it('offers sign-in recovery when passkey removal may already have completed', ()
 // The strings below are what `/passkey/*` puts on the wire (asserted against the real endpoints in
 // `src/server/auth/passkey/__tests__/plugin-endpoints.test.ts`). They are literals on purpose: a
 // rename that touches the producer and this screen together must still fail here.
-const failure = (code: string, status = 400) => ({ code, status, message: '' })
+const failure = (code: string | null, status = 400) => ({
+  code,
+  status,
+  message: '',
+})
 
 it('branches on the wire code of each registration refusal', () => {
   expect(
@@ -100,11 +104,15 @@ it('keeps the already-absent removal code stable for the dialog', () => {
   expect(PASSKEY_NOT_FOUND).toBe('PASSKEY_NOT_FOUND')
 })
 
-it('names a failed rename generically for refusals other than 401 and 429', () => {
-  expect(renameFailureNotice(failure('PASSKEY_IMPERSONATED', 403)).key).toBe(
-    'settings.passkeys.rename.failed',
-  )
-  expect(renameFailureNotice(failure('PASSKEY_NOT_FOUND', 404)).key).toBe(
-    'settings.passkeys.rename.failed',
-  )
-})
+it.each([
+  ['PASSKEY_IMPERSONATED', 403, 'settings.passkeys.rename.failed'],
+  ['PASSKEY_NOT_FOUND', 404, 'settings.passkeys.rename.missing'],
+  [null, 0, 'settings.passkeys.rename.unknown'],
+  [null, 401, 'settings.passkeys.error.sessionEnded'],
+  [null, 429, 'settings.passkeys.error.rateLimited'],
+] as const)(
+  'maps a failed rename (%s, %i) to recovery guidance',
+  (code, status, key) => {
+    expect(renameFailureNotice(failure(code, status)).key).toBe(key)
+  },
+)

@@ -600,8 +600,15 @@ const messages = {
   'passkeys.rename.placeholder': '名前を入力（例: 仕事用スマホ）',
   'passkeys.rename.saving': '名前を保存しています',
   'passkeys.rename.saved': '名前を保存しました',
-  'passkeys.rename.failed': '名前を保存できませんでした',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'キャンセル',
+  'passkeys.rename.save': '保存',
+  'passkeys.rename.failed':
+    '名前を保存できませんでした。もう一度お試しください。',
+  'passkeys.rename.missing':
+    '名前を保存できませんでした。ページを再読み込みしてパスキーの一覧を確認してください。',
+  'passkeys.rename.unknown':
+    '保存できたか確認できませんでした。ページを再読み込みしてパスキーの一覧を確認してください。',
+  'passkeys.rename.failedFor': '{name}：{detail}',
   'passkeys.delete.action': '{name} を削除',
   'passkeys.delete.title': 'このパスキーを削除しますか？',
   'passkeys.delete.body': '{name} ではサインインできなくなります。',

@@ -20,37 +20,12 @@ import {
   SIGN_OUT_FAILED,
   deleteFailure,
 } from '../-lib/passkey-errors'
+import { PASSKEY_NAME_SLOT, PasskeyNameSentence } from './passkey-name-sentence'
 import { SignInAgain } from './passkey-sign-in-again'
 
 import type { FormEvent } from 'react'
 import type { PasskeySummary } from '#/lib/auth/client'
 import type { PasskeyNotice } from '../-lib/passkey-errors'
-
-/**
- * A character the catalogue never contains. The message is translated with it in place of the name,
- * then split on it, so the name can sit in its own `bdi` and a Latin-script name stays readable
- * inside Arabic text without the message layer growing a markup syntax.
- */
-const NAME_SLOT = ''
-
-/** A catalogue sentence with the passkey's name in an element that sets its own direction. */
-function NamedSentence({ sentence, name }: { sentence: string; name: string }) {
-  const [before, ...rest] = sentence.split(NAME_SLOT)
-  if (rest.length === 0) return before
-  return (
-    <>
-      {before}
-      {rest.map((after, index) => (
-        <span key={index}>
-          <bdi dir="auto" className="[overflow-wrap:anywhere]">
-            {name}
-          </bdi>
-          {after}
-        </span>
-      ))}
-    </>
-  )
-}
 
 /** A refusal on screen, and which element takes focus because of it. */
 interface Refusal {
@@ -152,8 +127,10 @@ export function PasskeyDeleteDialog({
         <DialogHeader>
           <DialogTitle>{t('settings.passkeys.delete.title')}</DialogTitle>
           <DialogDescription>
-            <NamedSentence
-              sentence={t('settings.passkeys.delete.body', { name: NAME_SLOT })}
+            <PasskeyNameSentence
+              sentence={t('settings.passkeys.delete.body', {
+                name: PASSKEY_NAME_SLOT,
+              })}
               name={displayName}
             />
           </DialogDescription>

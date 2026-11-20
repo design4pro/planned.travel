@@ -654,8 +654,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Ponle un nombre, como Móvil del trabajo',
   'passkeys.rename.saving': 'Guardando el nombre',
   'passkeys.rename.saved': 'Nombre guardado',
-  'passkeys.rename.failed': 'No se guardó el nombre',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Cancelar',
+  'passkeys.rename.save': 'Guardar',
+  'passkeys.rename.failed': 'No se ha guardado el nombre. Inténtalo de nuevo.',
+  'passkeys.rename.missing':
+    'No se ha guardado el nombre. Vuelve a cargar la página y comprueba la lista de llaves de acceso.',
+  'passkeys.rename.unknown':
+    'No se pudo confirmar el guardado. Vuelve a cargar la página y revisa tu lista de llaves de acceso.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Eliminar {name}',
   'passkeys.delete.title': '¿Eliminar esta clave de acceso?',
   'passkeys.delete.body': 'Ya no podrás iniciar sesión con {name}.',

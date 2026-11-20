@@ -646,8 +646,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Geef hem een naam, zoals Werktelefoon',
   'passkeys.rename.saving': 'Naam wordt opgeslagen',
   'passkeys.rename.saved': 'Naam opgeslagen',
-  'passkeys.rename.failed': 'De naam is niet opgeslagen',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Annuleren',
+  'passkeys.rename.save': 'Opslaan',
+  'passkeys.rename.failed': 'De naam is niet opgeslagen. Probeer het opnieuw.',
+  'passkeys.rename.missing':
+    'De naam is niet opgeslagen. Laad de pagina opnieuw en controleer je lijst met passkeys.',
+  'passkeys.rename.unknown':
+    'Het opslaan kon niet worden bevestigd. Laad de pagina opnieuw en controleer je lijst met toegangssleutels.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': '{name} verwijderen',
   'passkeys.delete.title': 'Deze toegangssleutel verwijderen?',
   'passkeys.delete.body': 'Je kunt dan niet meer inloggen met {name}.',

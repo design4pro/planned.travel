@@ -629,8 +629,14 @@ const messages = {
   'passkeys.rename.placeholder': 'Đặt tên, ví dụ Điện thoại công việc',
   'passkeys.rename.saving': 'Đang lưu tên',
   'passkeys.rename.saved': 'Đã lưu tên',
-  'passkeys.rename.failed': 'Chưa lưu được tên',
-  // 09-S1c: taking a passkey away.
+  'passkeys.rename.cancel': 'Hủy',
+  'passkeys.rename.save': 'Lưu',
+  'passkeys.rename.failed': 'Tên chưa được lưu. Hãy thử lại.',
+  'passkeys.rename.missing':
+    'Tên chưa được lưu. Hãy tải lại trang và kiểm tra danh sách khóa truy cập.',
+  'passkeys.rename.unknown':
+    'Không thể xác nhận đã lưu. Tải lại trang và kiểm tra danh sách khóa truy cập.',
+  'passkeys.rename.failedFor': '{name}: {detail}',
   'passkeys.delete.action': 'Xóa {name}',
   'passkeys.delete.title': 'Xóa khóa truy cập này?',
   'passkeys.delete.body': 'Bạn sẽ không thể đăng nhập bằng {name} nữa.',
