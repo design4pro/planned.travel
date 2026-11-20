@@ -435,6 +435,10 @@ export function FileLibrary({
     (file) => kindFilter === 'all' || file.kind === kindFilter,
   )
   const running = activeTasks(queue)
+  const uploadStatus =
+    running.length === 0
+      ? ''
+      : t('modules.files.status.uploadingCount', { count: running.length })
   const failed = failedTasks(queue)
   const ratio = limitBytes <= 0 ? 0 : workspaceBytes / limitBytes
   const full = Number.isFinite(limitBytes) && ratio >= 1
@@ -678,6 +682,10 @@ export function FileLibrary({
             </Button>
           </div>
 
+          <div role="status" className="sr-only">
+            {uploadStatus}
+          </div>
+
           {queue.tasks.length === 0 ? null : (
             <div className="mt-4 flex flex-col gap-3">
               {running.length === 0 ? null : (
@@ -686,9 +694,7 @@ export function FileLibrary({
                   max={1}
                   size="sm"
                   tone="brand"
-                  label={t('modules.files.status.uploadingCount', {
-                    count: running.length,
-                  })}
+                  label={uploadStatus}
                   valueText={`${Math.round(overallProgress(queue) * 100)}%`}
                 />
               )}

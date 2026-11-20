@@ -26,6 +26,53 @@ describe('Progress', () => {
     expect(bar.getAttribute('aria-valuemax')).toBe('100')
   })
 
+  it('associates each bar with its own visible label', () => {
+    render(
+      <>
+        <Progress value={30} label="Packed" />
+        <Progress value={20} label="Booked" />
+        <Progress value={10} />
+      </>,
+    )
+    for (const label of ['Packed', 'Booked']) {
+      const bar = screen.getByRole('progressbar', { name: label })
+      const labelId = bar.getAttribute('aria-labelledby')
+      expect(labelId).toBeTruthy()
+      expect(document.getElementById(labelId ?? '')).toBe(
+        screen.getByText(label),
+      )
+    }
+    expect(
+      screen
+        .getByRole('progressbar', { name: '' })
+        .hasAttribute('aria-labelledby'),
+    ).toBe(false)
+  })
+
+  it('preserves explicit names before falling back to the visible label', () => {
+    render(
+      <>
+        <span id="external-label">External name</span>
+        <Progress label="Visible" aria-label="Explicit" />
+        <Progress
+          label="Visible too"
+          aria-label="Fallback"
+          aria-labelledby="external-label"
+        />
+      </>,
+    )
+    expect(
+      screen
+        .getByRole('progressbar', { name: 'Explicit' })
+        .hasAttribute('aria-labelledby'),
+    ).toBe(false)
+    expect(
+      screen
+        .getByRole('progressbar', { name: 'External name' })
+        .getAttribute('aria-labelledby'),
+    ).toBe('external-label')
+  })
+
   it('clamps a value outside the range', () => {
     render(<Progress value={140} aria-label="Packing" />)
     expect(

@@ -5,6 +5,7 @@ import '#/components/ui/__tests__/test-env'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -20,6 +21,7 @@ import Modules from '#/lib/i18n/messages/en/modules'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
 import type { FileData } from '../types'
+import type { uploadFile } from '../upload'
 import { FileLibrary } from '../file-library'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -109,6 +111,7 @@ function overlayOf(zone: HTMLElement): Element {
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  stubs.upload.mockReset()
 })
 
 describe('the drop zone', () => {
@@ -386,6 +389,140 @@ it.each(['text/plain', 'text/uri-list'])(
     }
   },
 )
+
+function selectFiles(files: File[]): void {
+  const input = document.querySelector('input[type="file"]')
+  if (!input) throw new Error('the files screen rendered no file picker')
+  fireEvent.change(input, { target: { files } })
+}
+
+it.each(['pick', 'drop', 'paste'] as const)(
+  'announces active uploads from %s until the batch settles',
+  async (entry) => {
+    const file = new File(['bytes'], 'ticket.pdf', { type: 'application/pdf' })
+    const uploads: Array<{
+      options: Parameters<typeof uploadFile>[0]
+      finish: (value: Awaited<ReturnType<typeof uploadFile>>) => void
+    }> = []
+    stubs.upload.mockImplementation(
+      (options: Parameters<typeof uploadFile>[0]) =>
+        new Promise<Awaited<ReturnType<typeof uploadFile>>>((finish) => {
+          uploads.push({ options, finish })
+        }),
+    )
+    const success = vi.spyOn(toast, 'success')
+    try {
+      const zone = open()
+      const status = screen.getByRole('status')
+      expect(status.classList.contains('sr-only')).toBe(true)
+      expect(status.textContent).toBe('')
+      const next = new File(['bytes'], 'next.pdf', { type: 'application/pdf' })
+      const files = [file, next]
+      if (entry === 'pick') {
+        selectFiles(files)
+      } else if (entry === 'drop') {
+        fireEvent.drop(zone, { dataTransfer: { types: ['Files'], files } })
+      } else {
+        fireEvent.paste(document, {
+          clipboardData: {
+            files: [],
+            items: files.map((item) => ({
+              kind: 'file',
+              getAsFile: () => item,
+            })),
+          },
+        })
+      }
+
+      await waitFor(() => expect(uploads).toHaveLength(1))
+      expect(screen.getByRole('status')).toBe(status)
+      expect(status.textContent).toBe('Uploading 2 files')
+      const bar = screen.getByRole('progressbar', { name: 'Uploading 2 files' })
+      const mutations = new MutationObserver(() => {})
+      mutations.observe(status, {
+        characterData: true,
+        childList: true,
+        subtree: true,
+      })
+      try {
+        act(() => uploads[0].options.onProgress?.(0.5))
+        expect(bar.getAttribute('aria-valuenow')).toBe('0.25')
+        expect(mutations.takeRecords()).toHaveLength(0)
+      } finally {
+        mutations.disconnect()
+      }
+      expect(success).not.toHaveBeenCalled()
+      const finishUpload = (index: number) => {
+        const { options, finish } = uploads[index]
+        finish({
+          ok: true,
+          file: {
+            id: String(index),
+            filename: options.file.name,
+            contentType: options.file.type,
+            sizeBytes: options.file.size,
+            kind: 'document',
+          },
+        })
+      }
+      await act(async () => finishUpload(0))
+      expect(status.textContent).toBe('Uploading 1 file')
+      expect(success).not.toHaveBeenCalled()
+      expect(uploads).toHaveLength(2)
+      await act(async () => finishUpload(1))
+      expect(screen.getByRole('status')).toBe(status)
+      expect(status.textContent).toBe('')
+      expect(success).toHaveBeenCalledTimes(1)
+    } finally {
+      success.mockRestore()
+    }
+  },
+)
+
+it.each(['failure', 'cancellation'] as const)(
+  'clears the upload status after %s',
+  async (outcome) => {
+    stubs.upload.mockImplementation(
+      (options: Parameters<typeof uploadFile>[0]) =>
+        new Promise<Awaited<ReturnType<typeof uploadFile>>>((resolve) => {
+          if (outcome === 'failure') {
+            resolve({ ok: false, code: 'network', message: 'Upload failed' })
+          } else {
+            options.signal?.addEventListener('abort', () =>
+              resolve({
+                ok: false,
+                code: 'aborted',
+                message: 'Upload cancelled',
+              }),
+            )
+          }
+        }),
+    )
+    open()
+    const status = screen.getByRole('status')
+    selectFiles([
+      new File(['bytes'], 'ticket.pdf', { type: 'application/pdf' }),
+    ])
+    expect(status.textContent).toBe('Uploading 1 file')
+    if (outcome === 'cancellation') {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Cancel uploading ticket.pdf' }),
+      )
+    }
+    await waitFor(() => expect(status.textContent).toBe(''))
+    expect(screen.getByRole('status')).toBe(status)
+  },
+)
+
+it('keeps the upload status empty for rejected-only input', () => {
+  open()
+  const status = screen.getByRole('status')
+  selectFiles([
+    new File(['bytes'], 'app.exe', { type: 'application/octet-stream' }),
+  ])
+  expect(status.textContent).toBe('')
+  expect(stubs.upload).not.toHaveBeenCalled()
+})
 
 it('uploads an in-zone file exactly once without stopping propagation', async () => {
   stubs.upload.mockClear()
