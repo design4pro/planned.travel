@@ -233,6 +233,58 @@ describe('the import dialog at its boundary', () => {
       },
     ])
   })
+  it.each([
+    [
+      'FORBIDDEN',
+      'A viewer may not change this trip; requires one of: owner, editor.',
+    ],
+    [
+      'TRIP_ARCHIVED',
+      'This trip is archived. The trip owner must restore it before changes can be made.',
+    ],
+  ])('shows the authored %s refusal with no retry', async (code, message) => {
+    stubs.upload.mockResolvedValue({ ok: false, code, message })
+    open()
+
+    drop(
+      new File(['x'], 'first.ics', { type: 'text/calendar' }),
+      new File(['x'], 'second.ics', { type: 'text/calendar' }),
+    )
+
+    expect(
+      (await screen.findByText(message)).closest('[role=alert]'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
+    expect(stubs.upload).toHaveBeenCalledTimes(1)
+    expect(stubs.start).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [
+      'an unrelated failure code',
+      { ok: false, code: 'network', message: 'Network error' },
+    ],
+    ['missing refusal details', { ok: false, code: 'FORBIDDEN' }],
+    [
+      'a blank refusal message',
+      { ok: false, code: 'TRIP_ARCHIVED', message: ' ' },
+    ],
+    ['a rejected upload', undefined],
+  ])('offers retry after %s', async (_label, answer) => {
+    if (answer === undefined) {
+      stubs.upload.mockRejectedValue(new Error('Upload failed'))
+    } else {
+      stubs.upload.mockResolvedValue(answer)
+    }
+    open()
+
+    drop(new File(['x'], 'first.ics', { type: 'text/calendar' }))
+
+    expect(await screen.findByText('“first.ics” did not upload')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
+    expect(stubs.start).not.toHaveBeenCalled()
+  })
+
   it('words a start the server refused from the catalogue, and keeps the file’s alert', async () => {
     const error = vi.spyOn(toast, 'error').mockReturnValue('toast')
     stubs.upload.mockResolvedValue({ ok: true, file: { id: 'file-1' } })

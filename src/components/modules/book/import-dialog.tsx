@@ -82,6 +82,7 @@ type Stage =
   | { readonly kind: 'idle' }
   | { readonly kind: 'uploading'; readonly progress: number }
   | { readonly kind: 'uploadFailed'; readonly filename: string }
+  | { readonly kind: 'uploadRefused'; readonly message: string }
   | { readonly kind: 'reviewing' }
   | {
       readonly kind: 'partial'
@@ -239,6 +240,10 @@ export function ImportBookingsDialog({
       },
       afterStart: () => router.invalidate(),
     })
+    if (outcome.kind === 'uploadRefused') {
+      setStage(outcome)
+      return
+    }
     if (outcome.kind === 'startFailed') {
       reportFailure(outcome.cause)
     }
@@ -361,6 +366,10 @@ export function ImportBookingsDialog({
                 onRetry={reset}
               />
             )}
+
+            {stage.kind === 'uploadRefused' ? (
+              <Alert tone="danger" title={stage.message} lang="en" dir="ltr" />
+            ) : null}
 
             {stage.kind === 'uploadFailed' ? (
               <Alert

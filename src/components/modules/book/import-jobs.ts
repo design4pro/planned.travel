@@ -161,12 +161,16 @@ function writeBookImports(
  * that was not an answer, a failed `start` or `confirm` is handed back to the caller to word.
  */
 export interface BookImportPort {
-  /** The id of the stored file, or `null` when it did not upload. Never rejects in practice. */
+  /** The stored file id, the server's failure details, or `null` without an answer. */
   readonly upload: (input: {
     readonly file: File
     readonly tripId: string
     readonly onProgress: (fraction: number) => void
-  }) => Promise<{ readonly fileId: string } | null>
+  }) => Promise<
+    | { readonly fileId: string }
+    | { readonly code: string; readonly message: string }
+    | null
+  >
   readonly start: (input: {
     readonly tripId: string
     readonly fileId: string
@@ -207,7 +211,7 @@ const serverPort: BookImportPort = {
   upload: async ({ file, tripId, onProgress }) => {
     const { uploadFile } = await import('../files/upload')
     const answer = await uploadFile({ file, tripId, onProgress })
-    return answer.ok ? { fileId: answer.file.id } : null
+    return answer.ok ? { fileId: answer.file.id } : answer
   },
   start: async (data) => {
     const { startBookingImportFn } = await loadServerFns()
@@ -265,6 +269,7 @@ export type StartDropOutcome =
       readonly refreshFailures: ReadonlyArray<unknown>
     }
   | { readonly kind: 'uploadFailed'; readonly filename: string }
+  | { readonly kind: 'uploadRefused'; readonly message: string }
   | {
       readonly kind: 'startFailed'
       readonly filename: string
@@ -606,7 +611,17 @@ export function createBookImportJobs(
             },
           })
           .catch(() => null)
-        if (uploaded === null) {
+        if (
+          uploaded !== null &&
+          'code' in uploaded &&
+          (uploaded.code === 'FORBIDDEN' ||
+            uploaded.code === 'TRIP_ARCHIVED') &&
+          typeof uploaded.message === 'string' &&
+          uploaded.message.trim() !== ''
+        ) {
+          return { kind: 'uploadRefused', message: uploaded.message }
+        }
+        if (uploaded === null || !('fileId' in uploaded)) {
           return { kind: 'uploadFailed', filename: file.name }
         }
         let job: StartedBookingImport

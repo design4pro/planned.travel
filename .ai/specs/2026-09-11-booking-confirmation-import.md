@@ -386,6 +386,12 @@ Forty-one new keys in the `modules` namespace under `modules.book.import.*`, bes
 | `book.import.partial.body`  | The rest are still selected. Adding again writes only those.                                           |
 | `book.import.partial.retry` | Add the rest                                                                                           |
 
+If the initial upload returns `FORBIDDEN` or `TRIP_ARCHIVED` with its authored
+refusal sentence, the dialog displays that sentence without a retry button. The
+batch stops at the refused file and keeps previously started jobs available for
+review. Other upload failures use the catalogue's upload-failure message and
+retry button.
+
 Booking type names (`modules.book.type.*`) and status names (`modules.book.status.*`) are reused as they stand; this spec adds none and changes none.
 
 ## 📝 Edge Cases & Failure Scenarios

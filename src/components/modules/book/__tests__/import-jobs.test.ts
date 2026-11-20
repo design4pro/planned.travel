@@ -483,6 +483,32 @@ describe('starting a drop', () => {
     ])
   })
 
+  it.each(['FORBIDDEN', 'TRIP_ARCHIVED'])(
+    'stops the batch on %s and keeps the earlier job registered',
+    async (code) => {
+      const port = fakePort()
+      const message = 'The server refused this upload.'
+      port.upload
+        .mockResolvedValueOnce({ fileId: 'file-1' })
+        .mockResolvedValueOnce({ code, message })
+        .mockResolvedValue(null)
+      port.start.mockResolvedValue({ jobId: jobId('1'), delaySeconds: 0 })
+      const jobs = watched(port)
+
+      const outcome = await jobs.startDrop({
+        tripId: TRIP,
+        files: [file('first.ics'), file('second.ics'), file('third.ics')],
+      })
+
+      expect(outcome).toEqual({ kind: 'uploadRefused', message })
+      expect(port.upload).toHaveBeenCalledTimes(2)
+      expect(port.start).toHaveBeenCalledTimes(1)
+      expect(readBookImports(OWNER)).toEqual([
+        { jobId: jobId('1'), tripId: TRIP, filename: 'first.ics', delayMs: 0 },
+      ])
+    },
+  )
+
   it('keeps the jobs it already started when a later start is rejected, and hands back why', async () => {
     const port = fakePort()
     const refused = new Error('allowance spent')
