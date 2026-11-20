@@ -5,7 +5,7 @@
  * reachable, so it lives beside the screen that needs it rather than in a
  * feature module of its own.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate, useRouteContext, useRouter } from '@tanstack/react-router'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -23,10 +23,9 @@ import {
   DialogTrigger,
 } from '#/components/ui'
 import { messageOf } from '#/components/modules/shared'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { createTripFn } from '../-server/trip-lifecycle'
-import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
-import { attachCover } from './trip-cover-upload'
+import { attachCover, coverFailureMessage } from './trip-cover-upload'
 import {
   DEFAULT_REMINDER_DAYS,
   TripFormFields,
@@ -50,7 +49,7 @@ interface TripNotice {
   cover: {
     filename: string
     uploadedFileId: string | null
-    reason: string | null
+    reason: string
   } | null
 }
 
@@ -74,13 +73,18 @@ export function NewTripDialog({
   size = 'sm',
 }: NewTripDialogProps) {
   const t = useTranslate()
+  const locale = useLocale()
+  const noticeBodyId = useId()
   const router = useRouter()
   const navigate = useNavigate()
   // Only a workspace owner or admin can send an invitation, so only they are pointed at them.
   const { shell } = useRouteContext({ from: '/_app' })
 
   const [open, setOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [action, setAction] = useState<'create' | 'retry' | 'continue' | null>(
+    null,
+  )
+  const saving = action !== null
   const [error, setError] = useState<string | null>(null)
   const [coverProgress, setCoverProgress] = useState<number | null>(null)
   const [people, setPeople] = useState<Array<ChosenPerson>>([])
@@ -88,10 +92,10 @@ export function NewTripDialog({
   const noticeRef = useRef<HTMLDivElement>(null)
   // The form is replaced by the notice, so focus would otherwise fall to the dialog root.
   useEffect(() => {
-    if (notice !== null) {
+    if (notice !== null && !saving) {
       noticeRef.current?.focus()
     }
-  }, [notice])
+  }, [notice, saving])
   const form = useTripForm(
     {
       title: '',
@@ -148,7 +152,7 @@ export function NewTripDialog({
     uploadedFileId: string | null,
     notAdded: Array<NotAdded>,
   ): Promise<void> {
-    setCoverProgress(0)
+    if (uploadedFileId === null) setCoverProgress(0)
     const attached = await attachCover({
       tripId,
       file,
@@ -166,10 +170,7 @@ export function NewTripDialog({
       cover: {
         filename: attached.filename,
         uploadedFileId: attached.uploadedFileId,
-        reason:
-          attached.reason === TRIP_ARCHIVED_KEY
-            ? t(TRIP_ARCHIVED_KEY)
-            : attached.reason,
+        reason: coverFailureMessage(attached.failure, file, locale, t),
       },
     })
   }
@@ -184,7 +185,7 @@ export function NewTripDialog({
   }
 
   async function submit(): Promise<void> {
-    setSaving(true)
+    setAction('create')
     setError(null)
     try {
       const { tripId } = await createTripFn({
@@ -200,15 +201,20 @@ export function NewTripDialog({
     } catch (cause) {
       setError(messageOf(cause, t('shell.newTrip.error')))
     } finally {
-      setSaving(false)
+      setAction(null)
     }
   }
 
   async function retryCover(): Promise<void> {
-    if (notice === null || notice.cover === null || form.cover === null) {
+    if (
+      saving ||
+      notice === null ||
+      notice.cover === null ||
+      form.cover === null
+    ) {
       return
     }
-    setSaving(true)
+    setAction('retry')
     try {
       await addCover(
         notice.tripId,
@@ -217,7 +223,7 @@ export function NewTripDialog({
         notice.people,
       )
     } finally {
-      setSaving(false)
+      setAction(null)
     }
   }
 
@@ -263,7 +269,7 @@ export function NewTripDialog({
             className="flex flex-col gap-4"
             onSubmit={(event) => {
               event.preventDefault()
-              if (form.canSave) {
+              if (form.canSave && notice === null) {
                 void submit()
               }
             }}
@@ -290,18 +296,23 @@ export function NewTripDialog({
                 </fieldset>
               </>
             ) : (
-              <div ref={noticeRef} tabIndex={-1} className="outline-none">
-                <Alert tone="warning" title={noticeTitle(notice)}>
+              <Alert
+                ref={noticeRef}
+                role="group"
+                aria-live="off"
+                aria-label={noticeTitle(notice)}
+                aria-describedby={noticeBodyId}
+                tabIndex={-1}
+                tone="warning"
+                title={noticeTitle(notice)}
+              >
+                <div id={noticeBodyId} className="[overflow-wrap:anywhere]">
                   {notice.cover === null ? null : (
                     <>
                       {t('shell.newTrip.coverFailed', {
                         name: notice.cover.filename,
                       })}
-                      {notice.cover.reason === null ? null : (
-                        <span className="mt-1 block break-words">
-                          {notice.cover.reason}
-                        </span>
-                      )}
+                      <span className="mt-1 block">{notice.cover.reason}</span>
                     </>
                   )}
                   {notice.people.length === 0 ? null : (
@@ -315,8 +326,8 @@ export function NewTripDialog({
                       ))}
                     </ul>
                   )}
-                </Alert>
-              </div>
+                </div>
+              </Alert>
             )}
           </form>
         </DialogBody>
@@ -343,8 +354,12 @@ export function NewTripDialog({
               variant="primary"
               shape="pill"
               disabled={!form.canSave}
-              loading={saving}
-              loadingLabel={t('shell.newTrip.creating')}
+              loading={action === 'create'}
+              loadingLabel={
+                coverProgress === null
+                  ? t('shell.newTrip.creating')
+                  : t('shell.newTrip.coverUploading')
+              }
             >
               {t('shell.newTrip.submit')}
             </Button>
@@ -357,8 +372,12 @@ export function NewTripDialog({
                 variant="ghost"
                 shape="pill"
                 disabled={saving}
-                loading={saving}
-                loadingLabel={t('shell.newTrip.coverUploading')}
+                loading={action === 'retry'}
+                loadingLabel={
+                  notice.cover.uploadedFileId === null
+                    ? t('shell.newTrip.coverUploading')
+                    : t('shell.editTrip.saving')
+                }
                 onClick={() => {
                   void retryCover()
                 }}
@@ -374,11 +393,17 @@ export function NewTripDialog({
               variant="primary"
               shape="pill"
               disabled={saving}
+              loading={action === 'continue'}
+              loadingLabel={
+                notice.people.length === 0
+                  ? t('shell.newTrip.coverContinue')
+                  : t('shell.newTrip.peopleContinue')
+              }
               onClick={() => {
-                setSaving(true)
+                setAction('continue')
                 void finish(notice.tripId, notice.people.length > 0).finally(
                   () => {
-                    setSaving(false)
+                    setAction(null)
                   },
                 )
               }}

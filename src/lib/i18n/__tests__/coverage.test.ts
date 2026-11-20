@@ -37,17 +37,16 @@ const SOURCE = 'src/lib/i18n/messages/en'
  * is the normal case; adding one without a reader raises it, and wiring one up
  * lowers it and asks for this line to be lowered with it.
  *
- * The five that remain are `modules.files.error.*` (all but `tooMany`, which the
- * upload pre-flight renders, and `downloadFailed` and `downloadShape`, which the
- * export panel renders): authored in 23
- * languages, then blocked from being wired because the failure shapes they
- * describe are constructed from types `src/server/fns/files` owns.
+ * The remaining two are `modules.files.error.badAnswer` and `modules.files.error.refused`.
+ * The upload adapter still carries its own text for unreadable responses. The cover flows
+ * use a generic localized upload error for those responses and render the existing
+ * tailored messages for a timeout, an abort, and a dropped connection.
  *
  * Four more were a pair-shaped leftover — `untick` beside the `untickItem` that
  * replaced it, and three like it — which this test could not see until it
  * stopped matching keys as substrings. They are deleted.
  */
-const DEAD_KEYS = 5
+const DEAD_KEYS = 2
 
 /**
  * Keys reached by composition rather than by a literal.

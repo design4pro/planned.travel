@@ -10,7 +10,11 @@ import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Shell from '#/lib/i18n/messages/en/shell'
 import Ui from '#/lib/i18n/messages/en/ui'
-import { TripActionsMenu, useTripFavourite } from '../trip-actions'
+import {
+  TripActionsMenu,
+  TripDeleteDialog,
+  useTripFavourite,
+} from '../trip-actions'
 import { tripCard } from './fixtures'
 
 import type { Catalogue } from '#/lib/i18n'
@@ -248,4 +252,31 @@ describe('the trip action menu', () => {
     expect(enabled('Edit')).toBe(true)
     expect(screen.queryByText('Restore this trip to edit it.')).toBeNull()
   })
+})
+
+it('lists one file in the delete confirmation for a trip with only a cover file', async () => {
+  server.summary.mockResolvedValue({
+    title: 'Lisbon',
+    reservations: 0,
+    transports: 0,
+    expenses: 0,
+    files: 1,
+    members: 1,
+    requiresTitle: true,
+  })
+  render(
+    <I18nProvider locale="en" messages={EN}>
+      <TripDeleteDialog
+        trip={tripCard({
+          title: 'Lisbon',
+          coverImageUrl: '/api/trips/trip-1/cover?v=file-1',
+        })}
+        open
+        onOpenChange={vi.fn()}
+      />
+    </I18nProvider>,
+  )
+  const row = (await screen.findByText('file')).closest('li')
+  expect(row?.children[0]?.textContent).toBe('1')
+  expect(screen.queryByText('files')).toBeNull()
 })

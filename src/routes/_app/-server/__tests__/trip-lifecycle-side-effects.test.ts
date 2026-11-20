@@ -130,6 +130,7 @@ vi.mock('#/server/observability', async (importOriginal) => {
  * where that specifier does not resolve.
  */
 vi.mock('#/server/auth/env', () => ({
+  appUrl: () => 'https://planned.test',
   taskQueue: () => ({
     // Recorded like a batch of one: copy and byte-bounded purge envelopes go through `send`.
     // Assertions read every envelope the same way whichever verb sent it.
@@ -867,6 +868,23 @@ describe('the graduated delete confirmation', () => {
       expect(await canReadTrip(tenant.scope, tripId)).toBe(false)
     },
   )
+
+  it('counts the stored cover once when it is the trip’s sole file', async () => {
+    const tripId = await sketch()
+    const cover = await recordFile(tenant.scope, {
+      tripId,
+      storageKey: `trips/${tenant.organizationId}/${tripId}/cover.png`,
+      filename: 'cover.png',
+      contentType: 'image/png',
+      sizeBytes: 1024,
+    })
+    await updateTrip({ tripId, coverFileId: cover.id })
+
+    expect(await deleteSummary({ tripId })).toMatchObject({
+      files: 1,
+      requiresTitle: true,
+    })
+  })
 
   it('demands the title for a trip whose only weight is company', async () => {
     const tripId = await sketch()

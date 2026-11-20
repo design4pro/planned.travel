@@ -169,6 +169,37 @@ describe('TripCoverField', () => {
     expect(dropped.defaultPrevented).toBe(true)
   })
 
+  it('announces a fresh rejection when the same file is selected twice', () => {
+    mount()
+    const chooser = screen.getByRole('button', { name: 'Add a cover image' })
+    const drop = {
+      dataTransfer: {
+        types: ['Files'],
+        files: [image('doc.pdf', 'application/pdf')],
+      },
+    }
+    fireEvent.drop(chooser, drop)
+    const first = screen.getByRole('alert')
+    fireEvent.drop(chooser, drop)
+    const second = screen.getByRole('alert')
+    expect(second).not.toBe(first)
+    expect(second.textContent).toBe(first.textContent)
+  })
+
+  it('shows the chooser after a broken current cover and keeps Remove available', () => {
+    const { view } = mount({ currentUrl: '/api/trips/t/cover?v=f' })
+    const preview = view.container.querySelector('img')
+    if (preview === null) throw new Error('Missing cover image')
+    fireEvent.error(preview)
+    expect(view.container.querySelector('img')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Add a cover image' }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Remove the cover image' }),
+    ).toBeTruthy()
+  })
+
   it('shows the trip’s current cover, and nothing to remove once it is removed', () => {
     const { view } = mount({ currentUrl: '/api/trips/t/cover?v=f' })
     expect(view.container.querySelector('img')?.getAttribute('src')).toBe(

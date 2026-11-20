@@ -12,9 +12,9 @@ import { ImagePlus } from 'lucide-react'
 import { Button, Progress, focusRing } from '#/components/ui'
 import { cn } from '#/lib/cn'
 import { usePreventFileNavigation } from '#/lib/use-prevent-file-navigation'
-import { formatStorage } from '#/lib/plans'
+import { formatStorageSize } from '#/components/layout/storage-size'
 import { COVER_ACCEPT, isCoverContentType } from '#/lib/trip-cover'
-import { useTranslate } from '#/lib/i18n'
+import { useLocale, useTranslate } from '#/lib/i18n'
 import { MAX_FILE_BYTES } from '#/server/fns/file-policy'
 
 /** Why a file cannot be a cover, decided before a byte is sent. */
@@ -57,11 +57,15 @@ export function TripCoverField({
   onRemove,
 }: TripCoverFieldProps) {
   const t = useTranslate()
+  const locale = useLocale()
   const hintId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const regionRef = useRef<HTMLButtonElement>(null)
   const [dragging, setDragging] = useState(false)
+  const rejectionCount = useRef(0)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
   const [problem, setProblem] = useState<{
+    attempt: number
     kind: CoverProblem
     name: string
   } | null>(null)
@@ -82,7 +86,11 @@ export function TripCoverField({
 
   usePreventFileNavigation()
 
-  const shown = previewUrl ?? (removed ? null : currentUrl)
+  const imageUrl = previewUrl ?? (removed ? null : currentUrl)
+  const shown = imageUrl === failedUrl ? null : imageUrl
+  useEffect(() => {
+    setFailedUrl(null)
+  }, [imageUrl])
   const uploading = progress !== null
 
   function accept(files: ReadonlyArray<File>): void {
@@ -92,7 +100,12 @@ export function TripCoverField({
     }
     const found = coverProblem(first)
     if (found !== null) {
-      setProblem({ kind: found, name: first.name })
+      rejectionCount.current += 1
+      setProblem({
+        attempt: rejectionCount.current,
+        kind: found,
+        name: first.name,
+      })
       return
     }
     setProblem(null)
@@ -153,10 +166,12 @@ export function TripCoverField({
       >
         {shown === null ? null : (
           <img
+            key={shown}
             src={shown}
             alt=""
             loading="eager"
             className="absolute inset-0 size-full object-cover"
+            onError={() => setFailedUrl(shown)}
           />
         )}
         <span
@@ -176,8 +191,7 @@ export function TripCoverField({
 
       <p
         id={hintId}
-        aria-live="polite"
-        className="break-words text-caption text-ink-3"
+        className="[overflow-wrap:anywhere] text-caption text-ink-3"
       >
         {file === null
           ? t('shell.newTrip.coverHint')
@@ -193,12 +207,16 @@ export function TripCoverField({
       ) : null}
 
       {problem === null ? null : (
-        <p role="alert" className="break-words text-caption text-danger">
+        <p
+          key={problem.attempt}
+          role="alert"
+          className="[overflow-wrap:anywhere] text-caption text-danger"
+        >
           {problem.kind === 'type'
             ? t('shell.newTrip.coverTypeError', { name: problem.name })
             : t('shell.newTrip.coverSizeError', {
                 name: problem.name,
-                max: formatStorage(MAX_FILE_BYTES),
+                max: formatStorageSize(MAX_FILE_BYTES, locale),
               })}
         </p>
       )}

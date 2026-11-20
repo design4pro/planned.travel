@@ -68,7 +68,6 @@ import {
   useAction,
   useOptimistic,
 } from '#/components/modules/shared'
-import { uploadFile } from '#/components/modules/files/upload'
 import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
@@ -83,6 +82,7 @@ import {
   tripDeleteSummaryFn,
   updateTripFn,
 } from '../-server/trip-lifecycle'
+import { coverFailureMessage, uploadCover } from './trip-cover-upload'
 import { TripCopyDialog } from './trip-copy-dialog'
 import { TripFormFields, tripFormPayload, useTripForm } from './trip-form'
 
@@ -116,26 +116,31 @@ export function TripEditSheet({
   onOpenChange,
 }: TripEditSheetProps) {
   const t = useTranslate()
+  const locale = useLocale()
+  const failureBodyId = useId()
   const router = useRouter()
   const direction = useSheetDirection('end')
 
   // The sheet renders owner-only fields, and sends them, only when the payload's role says owner.
   const isOwner = trip.role === 'owner'
-  const [saving, setSaving] = useState(false)
+  const [action, setAction] = useState<'save' | 'retry' | 'continue' | null>(
+    null,
+  )
+  const saving = action !== null
   const [error, setError] = useState<string | null>(null)
   const [archivedRefusal, setArchivedRefusal] = useState(false)
   const [coverProgress, setCoverProgress] = useState<number | null>(null)
   /** The file that did not become the cover, named in the sentence that offers to go on without. */
   const [coverFailure, setCoverFailure] = useState<{
     name: string
-    reason: string | null
+    reason: string
   } | null>(null)
   const failureRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    if (coverFailure !== null) {
+    if (coverFailure !== null && !saving) {
       failureRef.current?.focus()
     }
-  }, [coverFailure])
+  }, [coverFailure, saving])
   const errorRef = useRef<HTMLDivElement>(null)
   // The re-read after a refusal can take the owner role away while Save or Retry holds focus; both
   // go (disabled, hidden), so focus moves to the refusal that explains it. An archived refusal
@@ -184,32 +189,36 @@ export function TripEditSheet({
       return uploaded.id
     }
     setCoverProgress(0)
-    const answer = await uploadFile({
+    const answer = await uploadCover({
       file: cover,
       tripId: trip.id,
-      kind: 'image',
       onProgress: setCoverProgress,
     })
     setCoverProgress(null)
     if (!answer.ok) {
-      setCoverFailure({ name: cover.name, reason: answer.message })
+      setCoverFailure({
+        name: cover.name,
+        reason: coverFailureMessage(answer, cover, locale, t),
+      })
       return 'failed'
     }
     setUploaded({ file: cover, id: answer.file.id })
     return answer.file.id
   }
 
-  async function submit({ skipCover = false } = {}): Promise<void> {
+  async function submit(
+    selected: NonNullable<typeof action> = 'save',
+  ): Promise<void> {
     // A refused save re-read the role; a sheet that outlived it must not write with it.
-    if (!isOwner) {
+    if (!isOwner || !form.canSave) {
       return
     }
-    setSaving(true)
+    setAction(selected)
     setError(null)
     setArchivedRefusal(false)
-    setCoverFailure(null)
+    let attachingCover = false
     try {
-      const coverFileId = await coverChange(skipCover)
+      const coverFileId = await coverChange(selected === 'continue')
       if (coverFileId === 'failed') {
         return
       }
@@ -218,6 +227,7 @@ export function TripEditSheet({
         creating: false,
         owner: isOwner,
       })
+      attachingCover = typeof coverFileId === 'string'
       await updateTripFn({
         data: {
           tripId: trip.id,
@@ -225,6 +235,8 @@ export function TripEditSheet({
           ...(coverFileId === undefined ? {} : { coverFileId }),
         },
       })
+      setCoverFailure(null)
+      attachingCover = false
       await router.invalidate()
       onOpenChange(false)
       toast.success(t('shell.editTrip.saved'))
@@ -232,11 +244,27 @@ export function TripEditSheet({
       // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
       // language of the screen it lands on. `current` is the currency the trip still has.
       const refusal = currencyRefusalOf(cause)
-      const archived = readPublicFailure(cause).message === TRIP_ARCHIVED_KEY
+      const failure = readPublicFailure(cause)
+      const archived = failure.message === TRIP_ARCHIVED_KEY
+      const cover =
+        attachingCover && !archived && refusal === null ? form.cover : null
       setArchivedRefusal(archived)
+      setCoverFailure(
+        cover === null
+          ? null
+          : {
+              name: cover.name,
+              reason: coverFailureMessage(
+                { code: 'rejected' },
+                cover,
+                locale,
+                t,
+              ),
+            },
+      )
       if (archived) {
         setError(t(TRIP_ARCHIVED_KEY))
-      } else {
+      } else if (cover === null) {
         setError(
           refusal === 'shell.editTrip.currencyLocked'
             ? t(refusal, { current: trip.currency })
@@ -245,11 +273,7 @@ export function TripEditSheet({
       }
       // Refresh permission refusals, but keep an archived trip's unsaved sheet: a reload removes
       // its list row and the editor it owns. Currency refusals also keep their current trip.
-      if (
-        !archived &&
-        refusal === null &&
-        readPublicFailure(cause).kind === 'refusal'
-      ) {
+      if (!archived && refusal === null && failure.kind === 'refusal') {
         try {
           await router.invalidate()
         } catch {
@@ -257,7 +281,7 @@ export function TripEditSheet({
         }
       }
     } finally {
-      setSaving(false)
+      setAction(null)
     }
   }
 
@@ -304,6 +328,7 @@ export function TripEditSheet({
                         variant="secondary"
                         size="sm"
                         shape="pill"
+                        disabled={!form.canSave}
                         onClick={() => {
                           if (form.canSave) void submit()
                         }}
@@ -319,47 +344,55 @@ export function TripEditSheet({
             )}
 
             {coverFailure === null ? null : (
-              <div ref={failureRef} tabIndex={-1} className="outline-none">
-                <Alert
-                  tone="warning"
-                  title={t('shell.newTrip.coverFailedTitle')}
-                  actions={
-                    isOwner ? (
-                      <>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          shape="pill"
-                          onClick={() => {
-                            if (form.canSave) void submit()
-                          }}
-                        >
-                          {t('shell.editTrip.retry')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          size="sm"
-                          shape="pill"
-                          onClick={() => {
-                            if (form.canSave) void submit({ skipCover: true })
-                          }}
-                        >
-                          {t('shell.editTrip.coverContinue')}
-                        </Button>
-                      </>
-                    ) : undefined
-                  }
-                >
+              <Alert
+                ref={failureRef}
+                tabIndex={-1}
+                role="group"
+                aria-live="off"
+                aria-label={t('shell.newTrip.coverFailedTitle')}
+                aria-describedby={failureBodyId}
+                tone="warning"
+                title={t('shell.newTrip.coverFailedTitle')}
+                actions={
+                  isOwner ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        shape="pill"
+                        disabled={!form.canSave}
+                        loading={action === 'retry'}
+                        loadingLabel={t(
+                          coverProgress === null
+                            ? 'shell.editTrip.saving'
+                            : 'shell.newTrip.coverUploading',
+                        )}
+                        onClick={() => void submit('retry')}
+                      >
+                        {t('shell.editTrip.retry')}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        shape="pill"
+                        disabled={!form.canSave}
+                        loading={action === 'continue'}
+                        loadingLabel={t('shell.editTrip.saving')}
+                        onClick={() => void submit('continue')}
+                      >
+                        {t('shell.editTrip.coverContinue')}
+                      </Button>
+                    </>
+                  ) : undefined
+                }
+              >
+                <div id={failureBodyId} className="[overflow-wrap:anywhere]">
                   {t('shell.editTrip.coverFailed', { name: coverFailure.name })}
-                  {coverFailure.reason === null ? null : (
-                    <span className="mt-1 block break-words">
-                      {coverFailure.reason}
-                    </span>
-                  )}
-                </Alert>
-              </div>
+                  <span className="mt-1 block">{coverFailure.reason}</span>
+                </div>
+              </Alert>
             )}
 
             <TripFormFields
@@ -389,8 +422,12 @@ export function TripEditSheet({
             variant="primary"
             shape="pill"
             disabled={!form.canSave || !isOwner}
-            loading={saving}
-            loadingLabel={t('shell.editTrip.saving')}
+            loading={action === 'save'}
+            loadingLabel={t(
+              coverProgress === null
+                ? 'shell.editTrip.saving'
+                : 'shell.newTrip.coverUploading',
+            )}
           >
             {t('shell.editTrip.submit')}
           </Button>

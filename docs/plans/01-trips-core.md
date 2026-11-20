@@ -3489,12 +3489,13 @@ Members are added **after** the trip exists, because a membership needs a trip i
 reported per person rather than failing the creation — a trip that was created is not un-created
 because one invitation could not be written.
 
-**The cover image is uploaded before the trip is saved, and stored after.** The file goes to R2 through
-the existing upload server function in `src/server/fns/files.ts`, which is `DOC-01`'s
-(`06-documents-and-media.md`, wave 1) and is reused rather than reimplemented; this stage writes only
-the returned key and URL onto the trip. The R2 ordering rule is `files.ts`'s and is not re-derived
-here: object first, `assertQuota` second, compensating delete if the assertion throws
-(`src/server/repos/files.ts:170-171`).
+**The trip exists before its chosen cover is uploaded.** The browser sends the image through the
+existing upload function in `src/server/fns/files.ts`, then saves the returned file ID as the cover.
+The create dialog keeps the trip when the cover fails. The edit sheet keeps the previous cover
+until the selected change is saved. Both abort the browser upload after 300 seconds and offer Retry
+or a way to continue without the new image. The timeout confirms a client-side interruption only.
+If the upload returned an ID and the cover write failed, Retry reuses the ID. Unavailable cover
+images use the existing no-cover treatment on the trip tile, dashboard hero and edit chooser.
 
 **Zod v4.** `z.strictObject()` with the `error` parameter; `z.iso.date()` for both dates; the currency
 validated as a three-letter uppercase code rather than against a hard-coded list, because the runtime's

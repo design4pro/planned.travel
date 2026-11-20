@@ -28,3 +28,27 @@ it('keeps the authored role refusal from a stale tab upload', async () => {
     }),
   ).resolves.toEqual({ ok: false, code: 'FORBIDDEN', message })
 })
+
+it('aborts the pending XHR when its caller cancels', async () => {
+  const abort = vi.fn()
+  class RequestStub extends EventTarget {
+    upload = new EventTarget()
+    open() {}
+    setRequestHeader() {}
+    send() {}
+    abort() {
+      abort()
+      this.dispatchEvent(new Event('abort'))
+    }
+  }
+  vi.stubGlobal('XMLHttpRequest', RequestStub)
+  const controller = new AbortController()
+  const pending = uploadFile({
+    tripId: 'trip-1',
+    file: new File(['cover'], 'cover.png', { type: 'image/png' }),
+    signal: controller.signal,
+  })
+  controller.abort()
+  await expect(pending).resolves.toMatchObject({ ok: false, code: 'aborted' })
+  expect(abort).toHaveBeenCalledOnce()
+})
