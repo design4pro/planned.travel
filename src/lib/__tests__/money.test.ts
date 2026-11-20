@@ -8,6 +8,7 @@ import {
   formatExchangeRate,
   formatMoney,
   formatMoneyPlain,
+  formatRateLine,
   formatSignedMoney,
   impliedRate,
   isSplitMethod,
@@ -23,7 +24,12 @@ import {
   toAmountInput,
 } from '../money'
 
-import { decimalMark, formatInverseRate, formatRateInput } from '../format'
+import {
+  decimalMark,
+  formatInverseRate,
+  formatRate,
+  formatRateInput,
+} from '../format'
 import { LOCALE_TAGS as LOCALES } from '../i18n/locales'
 
 import type { SplitInput } from '../money'
@@ -187,6 +193,47 @@ describe('impliedRate', () => {
       }),
     ).toBe('1 GBP = 195.00 JPY')
   })
+})
+
+describe('formatRate', () => {
+  it.each([
+    [0, '0.00'],
+    [0.0000345, '0.0000345'],
+    [0.000012345678, '0.0000123457'],
+    [0.00999999, '0.00999999'],
+    [0.01, '0.01'],
+    [195, '195.00'],
+    [1.234567, '1.2346'],
+  ])('formats %s as %s in English', (rate, expected) => {
+    expect(formatRate(rate, 'en')).toBe(expected)
+  })
+
+  it('uses the Polish decimal separator for a small rate', () => {
+    expect(formatRate(0.0000345, 'pl')).toBe('0,0000345')
+  })
+})
+
+describe('exchange rate hints', () => {
+  it.each([
+    ['en', '1 VND = 0.0000345 EUR'],
+    ['pl', '1 VND = 0,0000345 EUR'],
+  ] as const)(
+    'preserves the exchange rate precision in %s',
+    (locale, expected) => {
+      expect(
+        formatExchangeRate(
+          {
+            originalAmountMinor: 1_000_000,
+            originalCurrency: 'VND',
+            amountMinor: 3_450,
+            currency: 'EUR',
+          },
+          locale,
+        ),
+      ).toBe(expected)
+      expect(formatRateLine(0.0000345, 'VND', 'EUR', locale)).toBe(expected)
+    },
+  )
 })
 
 describe('parseMoney', () => {
