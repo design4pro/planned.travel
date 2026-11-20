@@ -227,6 +227,50 @@ describe('DayWeatherBadge', () => {
     expect(screen.queryByRole('button', { name: /^Forecast/ })).toBeNull()
   })
 
+  it('visibly distinguishes recorded weather from an identical forecast without a condition', () => {
+    render(
+      <>
+        <DayWeatherBadge
+          weather={recorded()}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+        <DayWeatherBadge
+          weather={{
+            dayId: 'd2',
+            status: 'ok',
+            reading: { ...READING, symbol: null, tempMaxC: 8.4, tempMinC: 1.9 },
+          }}
+          unit="metric"
+          dateLabel={DATE_LABEL}
+        />
+      </>,
+    )
+
+    const recordedButton = screen.getByRole('button', { name: /^Recorded/ })
+    const forecastButton = screen.getByRole('button', { name: /^Forecast/ })
+    expect(within(recordedButton).getByText('Recorded')).toBeDefined()
+    expect(within(forecastButton).queryByText('Recorded')).toBeNull()
+    expect(recordedButton.textContent).toContain('8°/2°C')
+    expect(forecastButton.textContent).toContain('8°/2°C')
+  })
+
+  it.each([
+    ['Recorded', recorded({ ...RECORDED, tempMaxC: null })],
+    ['Estimate', estimate({ ...ESTIMATE, tempMaxC: null })],
+  ] as const)(
+    'labels the lone low on a %s badge in Fahrenheit',
+    (kind, weather) => {
+      badge(weather, 'imperial')
+
+      const button = screen.getByRole('button', {
+        name: new RegExp(`^${kind}.*low 35°F`, 'i'),
+      })
+      expect(within(button).getByText('Low')).toBeDefined()
+      expect(button.textContent).toContain('35°F')
+    },
+  )
+
   it('draws a recorded day in Fahrenheit for an imperial reader', () => {
     badge(recorded(), 'imperial')
 
@@ -239,7 +283,8 @@ describe('DayWeatherBadge', () => {
     badge(recorded({ ...RECORDED, tempMinC: null }))
 
     const button = screen.getByRole('button', { name: 'Recorded: high 8°C' })
-    expect(button.textContent).toBe('8°C')
+    expect(within(button).getByText('High')).toBeDefined()
+    expect(button.textContent).toContain('8°C')
   })
 
   it('draws a recorded day with neither temperature as the unavailable dash, never as a zero', () => {
@@ -300,7 +345,8 @@ describe('DayWeatherBadge', () => {
     const button = screen.getByRole('button', {
       name: 'Estimate: typical high 8°C',
     })
-    expect(button.textContent).toBe('≈8°C')
+    expect(within(button).getByText('High')).toBeDefined()
+    expect(button.textContent).toContain('≈8°C')
   })
 
   it('draws an estimate with neither temperature as the unavailable dash, never as a zero', () => {
@@ -410,7 +456,7 @@ describe('the fuller forecast behind the badge', () => {
     expect(panel.getByText('12° / 4°C')).toBeDefined()
     expect(panel.getByText('Precipitation')).toBeDefined()
     expect(panel.getByText('5.1 mm · 70% chance')).toBeDefined()
-    expect(panel.getByText('Wind')).toBeDefined()
+    expect(panel.getByText('Maximum wind')).toBeDefined()
     expect(panel.getByText('18 km/h')).toBeDefined()
   })
 
@@ -484,6 +530,7 @@ describe('the fuller reading of a recorded day', () => {
     expect(within(dialog).queryByText('Through the day')).toBeNull()
     expect(within(dialog).queryByText(/chance/)).toBeNull()
     expect(within(dialog).getByText('8° / 2°C')).toBeDefined()
+    expect(within(dialog).getByText('Mean wind')).toBeDefined()
   })
 
   it('says the values were measured and credits NASA POWER, not MET Norway', async () => {
@@ -603,7 +650,7 @@ describe('the fuller reading of an estimated day', () => {
   it('has no wind, no slots region and no chance of rain', async () => {
     const { dialog } = await open()
 
-    expect(within(dialog).queryByText('Wind')).toBeNull()
+    expect(within(dialog).queryByText(/^(Maximum|Mean) wind$/)).toBeNull()
     expect(within(dialog).queryByRole('list')).toBeNull()
     expect(within(dialog).queryByText(/chance/)).toBeNull()
   })
@@ -762,7 +809,7 @@ describe('DayWeatherPanel', () => {
     )
 
     expect(screen.queryByText('Precipitation')).toBeNull()
-    expect(screen.queryByText('Wind')).toBeNull()
+    expect(screen.queryByText(/^(Maximum|Mean) wind$/)).toBeNull()
     expect(screen.getByText('High / low')).toBeDefined()
   })
 

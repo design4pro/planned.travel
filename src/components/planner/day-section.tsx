@@ -218,12 +218,12 @@ export function DaySection({
             {day.dayNumber}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="flex min-w-0 items-baseline gap-2">
-              <span className="min-w-0 truncate font-display text-label font-bold tracking-tight text-ink">
+            <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+              <span className="min-w-[min(5ch,100%)] flex-1 truncate font-display text-label font-bold tracking-tight text-ink">
                 {day.title}
               </span>
               {day.dateLabel === null ? null : (
-                <span className="shrink-0 text-caption tabular-nums text-ink-3">
+                <span className="max-w-full shrink-0 text-caption wrap-anywhere tabular-nums text-ink-3">
                   {day.dateLabel}
                 </span>
               )}

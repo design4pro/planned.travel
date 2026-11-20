@@ -85,7 +85,13 @@ export function DayWeatherPanel({
           </Row>
         )}
         {model.windMs === null ? null : (
-          <Row label={t('trips.plan.weather.panel.wind')}>
+          <Row
+            label={t(
+              model.kind === 'recorded'
+                ? 'trips.plan.weather.panel.meanWind'
+                : 'trips.plan.weather.panel.maximumWind',
+            )}
+          >
             {formatSpeed(model.windMs, unit, locale)}
           </Row>
         )}

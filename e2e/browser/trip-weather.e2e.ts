@@ -2,7 +2,7 @@ import { tabNavigationKey } from '../driver/keyboard'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { expect, browserTest } from '../driver/test'
-import type { Locator, Page } from '@playwright/test'
+import type { BrowserContext, Locator, Page } from '@playwright/test'
 import { visit, watchConsole } from '../helpers/console.ts'
 import type { Theme } from '../helpers/routes.ts'
 import { onRoute, planRoute, tripIdByName } from '../helpers/places-and-maps.ts'
@@ -125,18 +125,20 @@ test.describe('DOC-08 — the weather of a day', () => {
 
       // The header is where it was: a late answer fills a box that was already there.
       const after = await first.boundingBox()
+      const weatherAfter = await recorded
+        .locator('[data-part="day-weather"]')
+        .boundingBox()
       await test.info().attach('weather-header-geometry', {
         body: JSON.stringify({
           before,
           after,
           weatherBefore,
-          weatherAfter: await recorded
-            .locator('[data-part="day-weather"]')
-            .boundingBox(),
+          weatherAfter,
         }),
         contentType: 'application/json',
       })
       expect(after).toEqual(before)
+      expect(weatherAfter).toEqual(weatherBefore)
       // WebKit publishes no layout shifts: there an empty list proves nothing, so it is not asserted.
       if (await layoutShiftsReported(page)) {
         expect(
@@ -160,6 +162,7 @@ test.describe('DOC-08 — the weather of a day', () => {
       await page.close()
     }
 
+    await expectEnlargedWeatherLayout(context, tripId)
     expect(
       await vendorCalls(context),
       'the Worker called a weather service: the allowance was meant to be spent',
@@ -345,6 +348,63 @@ test.describe('DOC-08 — evidence', () => {
     },
   )
 })
+
+async function expectEnlargedWeatherLayout(
+  context: BrowserContext,
+  tripId: string,
+): Promise<void> {
+  const page = await context.newPage()
+  try {
+    await page.setViewportSize({ width: 360, height: 800 })
+    const held = await holdWeatherRead(page)
+    await visit(page, planRoute(tripId), 'light')
+    await showDays(page)
+    await page.addStyleTag({
+      content: `
+        [data-part="day-weather"] { font-size: 1.5rem !important; }
+        [data-part="day-weather"] > button { font-size: inherit !important; }
+      `,
+    })
+    const day = dayRegion(page, LISBON_DAYS.recorded)
+    const slot = day.locator('[data-part="day-weather"]')
+    await expect(slot.getByRole('img', { name: LOADING })).toBeVisible()
+    await settleMutations(page)
+    const header = dayHeader(day)
+    const before = await header.boundingBox()
+    const slotBefore = await slot.boundingBox()
+    expect(before).not.toBeNull()
+    expect(slotBefore).not.toBeNull()
+
+    held.release()
+    const badge = slot.getByRole('button', { name: BADGE.recorded })
+    await expect(badge).toBeVisible()
+    await settleMutations(page)
+
+    expect(await header.boundingBox()).toEqual(before)
+    expect(await slot.boundingBox()).toEqual(slotBefore)
+    const title = header.getByText(LISBON_DAYS.recorded, { exact: true })
+    expect((await title.boundingBox())?.width).toBeGreaterThan(30)
+    const geometry = await badge.evaluate((button) => {
+      const trigger = button.getBoundingClientRect()
+      const slotRect = button.parentElement?.getBoundingClientRect()
+      return {
+        triggerWithinSlot:
+          slotRect !== undefined &&
+          trigger.left >= slotRect.left - 0.5 &&
+          trigger.right <= slotRect.right + 0.5,
+        horizontalOverflow: button.scrollWidth - button.clientWidth,
+        verticalOverflow: button.scrollHeight - button.clientHeight,
+      }
+    })
+    expect(geometry).toEqual({
+      triggerWithinSlot: true,
+      horizontalOverflow: 0,
+      verticalOverflow: 0,
+    })
+  } finally {
+    await page.close()
+  }
+}
 
 /** Every Lisbon day, by what a traveller reads on it. */
 async function expectLisbonStates(page: Page): Promise<void> {

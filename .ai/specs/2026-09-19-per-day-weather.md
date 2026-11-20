@@ -387,21 +387,20 @@ export const loadTripWeather: ServerFn<
 
 ## 📝 UI/UX
 
-- **Badge** (`day-weather-badge.tsx`), placed **beside** the day header button in `day-section.tsx`,
-  never inside it. The date label (`:161-166`) sits inside the header `<button>` (`:134-171`), so the
-  badge cannot go there. The header button and the badge become siblings in a new
-  `flex items-center` wrapper: the button's `w-full` (`:139`) becomes `flex-1 min-w-0`, its contents
-  and the inner `flex-1` span (`:156`) are untouched, and the badge sits at the row's end, vertically
-  centred. This narrows the day header's click target by the badge's width, which is the price of one
-  button per action. It shows a condition icon for a forecast, a
-  thermometer for recorded or estimated days, the max/min pair in `tabular-nums`, and the unit. Its
-  box is **reserved at final size** from first paint: a skeleton while loading, and nothing but empty
-  space for `none`. A late reading never shifts the itinerary (SPEC §2, zero layout shift).
+- **Badge** (`day-weather-badge.tsx`), placed beside the day header button in `day-section.tsx` so
+  each button has one action. The header and badge are siblings in the same flex row. The header
+  can shrink, with the date moving below the title when both need more room. The badge sits at the
+  row's end and shows a condition icon for a forecast, a thermometer for estimated days and
+  condition-less forecasts, and visible “Recorded” text for recorded days. It shows the max/min
+  pair in `tabular-nums`, or labels a lone temperature “High” or “Low”, and includes the unit.
+  An empty or loading day reserves the same space from first paint. The slot scales with caption
+  text and takes at most 45% of the row, with long label text wrapping within the trigger.
 - **The estimate marker** is not decoration. An estimated badge carries a `≈` prefix and a dashed
   outline in `--color-info`, and its accessible name starts with "Estimate". A recorded badge's name
   starts with "Recorded". A reader must never pack for an estimate believing it is a forecast.
 - **Fuller reading**: activating the badge opens a `Popover` (`src/components/ui/popover.tsx`) with:
-  - the min/max, precipitation (with probability when forecast), wind, and sunrise/sunset;
+  - the min/max, precipitation (with probability when forecast), maximum wind for forecasts or
+    mean wind for recorded readings, and sunrise/sunset;
   - for a forecast, the four 6-hour slots (night, morning, afternoon, evening);
   - for an estimate, one line explaining that it is a long-term monthly average and not a forecast;
   - an attribution line that names MET Norway (with CC BY 4.0) or NASA POWER.
@@ -475,6 +474,7 @@ locales in the same change (`i18n-messages` skill).
 | Key                                     | en text                                                    |
 | --------------------------------------- | ---------------------------------------------------------- |
 | `plan.weather.badge.forecast`           | `Forecast: {figures}, {condition} (high {max}, low {min})` |
+| `plan.weather.badge.recordedLabel`      | `Recorded`                                                 |
 | `plan.weather.badge.recorded`           | `Recorded: high {max}, low {min}`                          |
 | `plan.weather.badge.estimate`           | `Estimate: typical high {max}, low {min}`                  |
 | `plan.weather.badge.unavailable`        | `Weather unavailable for this day`                         |
@@ -487,7 +487,8 @@ locales in the same change (`i18n-messages` skill).
 | `plan.weather.panel.typicalLow`         | `Typical low`                                              |
 | `plan.weather.panel.precipitation`      | `Precipitation`                                            |
 | `plan.weather.panel.probability`        | `{percent} chance`                                         |
-| `plan.weather.panel.wind`               | `Wind`                                                     |
+| `plan.weather.panel.maximumWind`        | `Maximum wind`                                             |
+| `plan.weather.panel.meanWind`           | `Mean wind`                                                |
 | `plan.weather.panel.sunrise`            | `Sunrise`                                                  |
 | `plan.weather.panel.sunset`             | `Sunset`                                                   |
 | `plan.weather.panel.slot.night`         | `Night`                                                    |
@@ -583,7 +584,8 @@ them.
   settling, and the first day header's `boundingBox()` is identical before and after.
 - **AC10** A foreign workspace's trip id resolves no day locations (`tenant-isolation.test.ts`).
 - **AC11** An estimate badge's accessible name begins with "Estimate"; a recorded badge's with
-  "Recorded".
+  "Recorded", which is also visible on the badge. A lone temperature is visibly labelled “High”
+  or “Low”.
 - **AC12** No MET request URL carries more than 4 decimal places of latitude or longitude.
 - **AC13** After a vendor error, the next resolution for that location spends no rate unit and makes
   no outbound call while the `wx:v1:fail:` entry lives.
@@ -798,7 +800,7 @@ What ships in #1004 (phase 2, the forecast slice, #820) differs from the design 
 6. **A trip with no effective time zone (stored, or derived by amendment 33) is bucketed in UTC.** Never the reader's zone, so two members of one trip see one answer.
 7. **The allowance is spent once per request.** The cache is read for every place first, then one read and one write of the tally grants as many lookups as are left, earliest day first (`spendRateUnits`). Serial per-place spends wrote one KV key several times a second, which KV does not honour. A place the grant does not reach is `unavailable`, the same as a spent month.
 8. **`nasa-power` is registered as a metered provider ahead of its client** (#823), as the ticket lists both slugs; there is no CHECK on the slug column, so no migration.
-9. **A dated day with no forecast keeps an empty, reserved box**, so a late answer shifts nothing; an undated day draws nothing. The box's width is a floor (`min-w-20`), so a rare wide reading widens it instead of painting over the day header.
+9. **A dated day with no forecast keeps an empty, reserved box**, so a late answer shifts nothing; an undated day draws nothing. The slot scales with caption text and reserves its width before the reading arrives. The trigger stays within its share of the row, and the date wraps below the title when they cannot fit together. A one-temperature estimate stacks its label above the figure beside its icon.
 10. **The plan screen asks again when the plan is edited.** The weather query is keyed by trip only, so the screen invalidates it when the board's data is reloaded; an answer already in hand survives a failed refetch.
 11. **Daily highs and lows come from the `instant` temperatures only.** The `compact` product carries no `air_temperature_max/min` for its six-hour steps, so beyond the hourly stretch a day's extremes are the extremes of the steps present (at most four a day) and can understate the true peak. Recorded as a known limit; #821 (re-validation, failure memory, the resolution log) did not take up whether another product is worth its size, so it stays a limit until a ticket asks for it.
 12. **Attribution is not on screen yet.** CC BY 4.0 requires it with the reading; it lands with the popover (#822) and must precede any promotion to `main`. _Closed by the popover below (#822)._
