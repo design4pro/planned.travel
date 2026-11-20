@@ -18,6 +18,7 @@ import {
 } from '#/lib/atlas/place-name'
 import { VISITED_REGIONS_MAX_PER_TRAVELLER } from '#/lib/atlas/limits'
 import { cn } from '#/lib/cn'
+import { LocalizedActionError } from '#/lib/errors'
 import {
   loadCountryRegionsFn,
   markRegionVisitedFn,
@@ -206,7 +207,7 @@ export function RegionRecord({
         result = await markRegionVisitedFn(args)
       } catch {
         await reconcile()
-        throw new Error(t('atlas.regions.error.uncertain'))
+        throw new LocalizedActionError(t('atlas.regions.error.uncertain'))
       }
       await refresh()
       return result
@@ -222,12 +223,13 @@ export function RegionRecord({
         result = await unmarkRegionVisitedFn(args)
       } catch {
         const snapshot = await reconcile()
-        if (!snapshot) throw new Error(t('atlas.regions.error.uncertain'))
+        if (!snapshot)
+          throw new LocalizedActionError(t('atlas.regions.error.uncertain'))
         const remaining = snapshot.regions.find(
           (row) => row.id === args.data.regionId,
         )
         if (remaining)
-          throw new Error(
+          throw new LocalizedActionError(
             t('atlas.regions.error.remove', { region: remaining.name }),
           )
         result = snapshot

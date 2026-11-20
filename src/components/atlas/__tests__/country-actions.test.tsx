@@ -8,6 +8,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { toast } from '#/components/ui'
+import { encodePublicFailure } from '#/lib/errors'
 import { CountryActions } from '../country-actions'
 
 import type { CountryActionsProps } from '../country-actions'
@@ -550,11 +551,18 @@ describe('between the write and the loader', () => {
   })
 })
 
+function refusal(copy: string): Error {
+  return new Error(encodePublicFailure({ kind: 'refusal', message: copy }))
+}
+
+const WRITE_FALLBACK =
+  'The change did not reach the server. Try again in a moment.'
+
 describe('when a write fails', () => {
   it('rolls the painted state back and keeps the reason on screen', async () => {
     const user = userEvent.setup()
     const failure = vi.spyOn(toast, 'error')
-    atlas.mark.mockRejectedValue(new Error('Your plan does not allow that.'))
+    atlas.mark.mockRejectedValue(refusal('Your plan does not allow that.'))
     const { container } = block()
 
     await user.click(visitButton())
@@ -579,7 +587,7 @@ describe('when a write fails', () => {
 
     await user.click(goalButton())
 
-    await waitFor(() => expect(screen.getByText('Offline.')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(WRITE_FALLBACK)).toBeTruthy())
     expect(goalButton().getAttribute('aria-busy')).toBeNull()
     expect((goalButton() as HTMLButtonElement).disabled).toBe(false)
     expect((visitButton() as HTMLButtonElement).disabled).toBe(false)
@@ -593,7 +601,7 @@ describe('when a write fails', () => {
 
     await user.click(goalButton())
 
-    await waitFor(() => expect(screen.getByText('Offline.')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(WRITE_FALLBACK)).toBeTruthy())
     expect(message(container)?.className).toBe(resting)
   })
 
@@ -627,7 +635,7 @@ describe('when a write fails', () => {
     const { container } = block()
 
     await user.click(goalButton())
-    await waitFor(() => expect(screen.getByText('Offline.')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(WRITE_FALLBACK)).toBeTruthy())
 
     await user.click(goalButton())
     await waitFor(() =>
@@ -976,7 +984,7 @@ describe('where the reader is left afterwards', () => {
     await user.keyboard('{Enter}')
     dropFocus()
 
-    pending.reject(new Error('Your plan is at its ceiling.'))
+    pending.reject(refusal('Your plan is at its ceiling.'))
     await waitFor(() => expect(document.activeElement).toBe(visitButton()))
     expect(message(view.container)?.textContent).toContain(
       'Your plan is at its ceiling.',
@@ -1015,7 +1023,7 @@ describe('where the reader is left afterwards', () => {
       configurable: true,
       value: scrollIntoView,
     })
-    atlas.add.mockRejectedValue(new Error('The server said no.'))
+    atlas.add.mockRejectedValue(refusal('The server said no.'))
     const view = block()
 
     expect(scrollIntoView).not.toHaveBeenCalled()
@@ -1046,7 +1054,7 @@ describe('when a confirmed removal fails', () => {
   it('stands the question down so the reason is on screen', async () => {
     const user = userEvent.setup()
     const failure = vi.spyOn(toast, 'error')
-    atlas.unmark.mockRejectedValue(new Error('The row is gone already.'))
+    atlas.unmark.mockRejectedValue(refusal('The row is gone already.'))
     const view = block({ visit: HISTORY })
 
     await user.click(visitButton())
@@ -1143,7 +1151,7 @@ describe('the composition a narrow host gets', () => {
     await user.click(goalButton())
     expect(row('goal-row').hasAttribute('data-set')).toBe(true)
 
-    pending.reject(new Error('The server said no.'))
+    pending.reject(refusal('The server said no.'))
     await waitFor(() =>
       expect(row('goal-row').hasAttribute('data-set')).toBe(false),
     )
@@ -1188,7 +1196,7 @@ describe('the composition a narrow host gets', () => {
 describe('the motion under the rows', () => {
   it('enters and leaves on the same curve, on transform and opacity only', async () => {
     const user = userEvent.setup()
-    atlas.mark.mockRejectedValue(new Error('The server said no.'))
+    atlas.mark.mockRejectedValue(refusal('The server said no.'))
     const view = block()
 
     await user.click(visitButton())
@@ -1264,7 +1272,6 @@ it('keeps a confirmed country cascade actionable and confirmed when the loader r
     '1 region you recorded in France stays on your record.',
   )
 })
-
 
 it('offers the shared visit editor and submits a correction without marking again', async () => {
   atlas.loadVisit.mockResolvedValue({

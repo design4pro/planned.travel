@@ -11,7 +11,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 
-import { encodePublicFailure } from '#/lib/errors'
+import { encodePublicFailure, LocalizedActionError } from '#/lib/errors'
 import { WORKSPACE_CHANGED_KEY } from '#/lib/workspace-claim'
 import {
   dismissWorkspaceNotice,
@@ -63,19 +63,60 @@ describe('messageOf', () => {
     expect(messageOf(cause, FALLBACK)).not.toContain('planned-travel/failure')
   })
 
-  it('keeps a client-side throw, which never crossed the boundary', () => {
-    expect(messageOf(new Error('Pick a date first.'), FALLBACK)).toBe(
-      'Pick a date first.',
-    )
-    expect(messageOf('Pick a date first.', FALLBACK)).toBe('Pick a date first.')
+  it.each([
+    new Error('Unexpected detail'),
+    new TypeError('Failed to fetch'),
+    new Error('<html>Service unavailable</html>'),
+    'Unexpected detail',
+    new Error('planned-travel/failure/1 {invalid'),
+    new Error(encodePublicFailure({ kind: 'unexpected' })),
+  ])('uses fallback for an unrecognised failure (%s)', (cause) => {
+    expect(messageOf(cause, FALLBACK)).toBe(FALLBACK)
+  })
+
+  it('preserves local catalogue copy', () => {
+    const copy = 'Najpierw wybierz datę.'
+    expect(messageOf(new LocalizedActionError(copy), FALLBACK)).toBe(copy)
   })
 
   it('falls back on anything with nothing to say', () => {
+    expect(messageOf(new LocalizedActionError(''), FALLBACK)).toBe(FALLBACK)
     expect(messageOf(new Error(''), FALLBACK)).toBe(FALLBACK)
     expect(messageOf('', FALLBACK)).toBe(FALLBACK)
     expect(messageOf(undefined, FALLBACK)).toBe(FALLBACK)
     expect(messageOf({ message: 'not an Error' }, FALLBACK)).toBe(FALLBACK)
   })
+})
+
+describe('useAction failure copy', () => {
+  beforeEach(() => notify.error.mockClear())
+  afterEach(() => notify.error.mockClear())
+
+  it.each([
+    { cause: new TypeError('Failed to fetch'), expected: 'Spróbuj za chwilę.' },
+    {
+      cause: new LocalizedActionError('Najpierw wybierz datę.'),
+      expected: 'Najpierw wybierz datę.',
+    },
+  ])(
+    'puts the same safe copy in the toast and inline error ($cause)',
+    async ({ cause, expected }) => {
+      const fn = vi.fn().mockRejectedValue(cause)
+      const onError = vi.fn()
+      const fallback = 'Spróbuj za chwilę.'
+      const { result } = renderHook(() => useAction(fn, { fallback, onError }))
+
+      await act(async () => {
+        await result.current.run(undefined)
+      })
+
+      expect(result.current.error).toBe(expected)
+      expect(notify.error).toHaveBeenCalledWith(expect.any(String), {
+        description: expected,
+      })
+      expect(onError).toHaveBeenCalledWith(cause)
+    },
+  )
 })
 
 describe("a call refused because the tab's workspace is not the session's", () => {

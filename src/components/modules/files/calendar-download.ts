@@ -5,6 +5,7 @@
  * `Response` and the browser saves it from a blob. The name comes from the response's own
  * `content-disposition`, so the file is called what the server named it.
  */
+import { LocalizedActionError } from '#/lib/errors'
 import { downloadTripIcsFn } from '#/server/fns/calendar'
 import { saveBlob } from './download'
 
@@ -36,7 +37,7 @@ export async function downloadTripCalendar(input: {
   const response = await downloadTripIcsFn({ data: { tripId: input.tripId } })
 
   if (!(response instanceof Response) || !response.ok) {
-    throw new Error(input.unavailable)
+    throw new LocalizedActionError(input.unavailable)
   }
 
   const filename = filenameFrom(response.headers.get('content-disposition'))

@@ -1,5 +1,5 @@
 import { downloadTripPlacesFn } from '#/server/fns/places-download'
-import { readPublicFailure } from '#/lib/errors'
+import { LocalizedActionError, readPublicFailure } from '#/lib/errors'
 import { saveBlob } from './download'
 
 /** `filename*=UTF-8''<name>` out of a `content-disposition` value, decoded. */
@@ -38,7 +38,7 @@ export async function downloadTripPlaces(input: {
       },
     })
     if (!(response instanceof Response) || !response.ok) {
-      throw new Error(input.unavailable)
+      throw new LocalizedActionError(input.unavailable)
     }
     let omitted: number | undefined
     let total: number | undefined
@@ -50,11 +50,11 @@ export async function downloadTripPlaces(input: {
           !/^\d+$/.test(value) ||
           !Number.isSafeInteger(Number(value))
         )
-          throw new Error(input.unavailable)
+          throw new LocalizedActionError(input.unavailable)
         return Number(value)
       })
       ;[omitted, total] = counts
-      if (omitted > total) throw new Error(input.unavailable)
+      if (omitted > total) throw new LocalizedActionError(input.unavailable)
     }
     const filename = filenameFrom(
       response.headers.get('content-disposition'),
@@ -64,6 +64,6 @@ export async function downloadTripPlaces(input: {
     return { filename, ...(omitted === undefined ? {} : { omitted, total }) }
   } catch (error) {
     if (readPublicFailure(error).kind !== 'unexpected') throw error
-    throw new Error(input.unavailable)
+    throw new LocalizedActionError(input.unavailable)
   }
 }

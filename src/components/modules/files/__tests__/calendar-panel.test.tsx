@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { toast } from '#/components/ui'
-import { encodePublicFailure } from '#/lib/errors'
+import { encodePublicFailure, LocalizedActionError } from '#/lib/errors'
 import { I18nProvider } from '#/lib/i18n'
 import { namespaceCatalogue } from '#/lib/i18n/__tests__/namespace-translate'
 import Modules from '#/lib/i18n/messages/en/modules'
@@ -62,6 +62,21 @@ describe('CalendarPanel', () => {
     expect(error.mock.calls[0]?.[1]).toEqual({
       description: 'We couldn’t prepare the file. Try again.',
     })
+  })
+
+  it('shows the localised copy carried by a download rejection', async () => {
+    const error = vi.spyOn(toast, 'error').mockImplementation(() => 'toast')
+    const copy = 'The calendar file is unavailable.'
+    stubs.download.mockRejectedValueOnce(new LocalizedActionError(copy))
+    mount()
+
+    await userEvent.click(screen.getByRole('button', { name: ACTION }))
+
+    await waitFor(() =>
+      expect(error).toHaveBeenCalledWith('The download did not start', {
+        description: copy,
+      }),
+    )
   })
 
   it('says what the file is and that it is a snapshot', () => {
@@ -144,7 +159,7 @@ describe('CalendarPanel', () => {
     await waitFor(() => expect(error).toHaveBeenCalled())
     expect(error.mock.calls[0]?.[0]).toBe('The download did not start')
     expect(error.mock.calls[0]?.[1]).toEqual({
-      description: 'boom',
+      description: 'We couldn’t prepare the file. Try again.',
     })
     await waitFor(() =>
       expect(

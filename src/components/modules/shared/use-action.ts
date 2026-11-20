@@ -12,40 +12,18 @@ import { useCallback, useState } from 'react'
 import { useRouter } from '@tanstack/react-router'
 
 import { toast } from '#/components/ui'
-import { readPublicFailure } from '#/lib/errors'
+import { LocalizedActionError, readPublicFailure } from '#/lib/errors'
 import { reopenNoticeFor } from '#/lib/workspace-claim-store'
 
 /**
- * Pulls a line the reader is allowed to see out of whatever the server threw.
- *
- * It used to return `error.message` verbatim, which meant a failed statement put the query in a
- * toast. The server now decides which messages are authored copy - a refusal, or a validation
- * message naming the field to fix - and only those are shown. A diagnostic becomes the caller's
- * fallback; the reference it was recorded under is on the error panel, which is where somebody
- * reporting a problem is looking.
+ * Shows locale catalogue copy from a local action or a decoded public failure.
+ * Other failures use the caller's fallback, including browser and platform errors.
  */
 export function messageOf(error: unknown, fallback: string): string {
-  // A catalogue key, not a sentence: printing it would show the key itself. The workspace notice
-  // (`workspace-changed-notice.tsx`) is the surface that explains it, and a form that reads the
-  // failure here is the reader's own action, so it comes back if "Not now" had closed it.
+  // Reopen the workspace notice after an action without displaying its catalogue key.
   if (reopenNoticeFor(error)) return fallback
-  const failure = readPublicFailure(error)
-  if (failure.kind !== 'unexpected' && failure.message !== undefined) {
-    return failure.message
-  }
-  if (failure.reference !== undefined) {
-    return fallback
-  }
-
-  // Not from a server function: a client-side throw never crosses the redaction boundary. Its
-  // message is ours by construction - `use-action` is only ever given our own rejections here.
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message
-  }
-  if (typeof error === 'string' && error.length > 0) {
-    return error
-  }
-  return fallback
+  if (error instanceof LocalizedActionError) return error.message || fallback
+  return readPublicFailure(error).message ?? fallback
 }
 
 export interface ActionOptions<TResult> {
@@ -55,7 +33,7 @@ export interface ActionOptions<TResult> {
   readonly description?: string | ((result: TResult) => string)
   /** Toast title on failure. */
   readonly failure?: string
-  /** Fallback body when the thrown error carries no message. */
+  /** Fallback body when the failure carries no recognised display copy. */
   readonly fallback?: string
   /**
    * The sentence for a refusal the caller owns, in the reader's locale, or `null` for any other

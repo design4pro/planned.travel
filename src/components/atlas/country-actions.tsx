@@ -17,6 +17,7 @@ import {
 } from '#/components/modules/shared'
 import { useAtlasI18n } from '#/components/map'
 import { cn } from '#/lib/cn'
+import { LocalizedActionError } from '#/lib/errors'
 import { countryName } from '#/lib/atlas/country-names'
 import { visitSpan } from '#/lib/atlas/visit-span'
 import { formatNumber } from '#/lib/format'
@@ -526,17 +527,7 @@ function visitLossLine(
 const TRANSPORT_FAILURE =
   /failed to fetch|load failed|network ?error|network request failed/i
 
-/**
- * Wraps a write so a transport failure arrives in our own voice.
- *
- * Everything the server itself refuses already carries a sentence written to be
- * read — a plan ceiling names its metric, a collision says to try again — and
- * those are forwarded untouched. What is not written for a reader is the
- * browser's own three words for a dropped connection, and they would otherwise
- * land in the toast and in the strip under the rows verbatim. Wrapping rather
- * than repairing the rendered string keeps the toast and the strip saying the
- * same thing, which is the point of there being one message at all.
- */
+/** Gives recognised offline failures the Atlas catalogue sentence. */
 function readable<TInput, TResult>(
   write: (input: TInput) => Promise<TResult>,
   offline: () => string,
@@ -546,7 +537,7 @@ function readable<TInput, TResult>(
       return await write(input)
     } catch (cause) {
       if (cause instanceof Error && TRANSPORT_FAILURE.test(cause.message)) {
-        throw new Error(offline(), { cause })
+        throw new LocalizedActionError(offline(), { cause })
       }
       throw cause
     }

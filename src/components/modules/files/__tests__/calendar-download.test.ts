@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { messageOf } from '../../shared/use-action'
 import { downloadTripIcsFn } from '#/server/fns/calendar'
 import { downloadTripCalendar } from '../calendar-download'
 
@@ -88,12 +89,27 @@ describe('downloadTripCalendar', () => {
     ).toBe('trip.ics')
   })
 
-  it('throws, and saves nothing, when the answer is not a file', async () => {
-    answer({ status: 404 })
+  it('leaves a transport rejection for the caller to handle', async () => {
+    const cause = new TypeError('Failed to fetch')
+    vi.mocked(downloadTripIcsFn).mockRejectedValue(cause)
 
     await expect(
       downloadTripCalendar({ tripId: 'trip-1', unavailable: UNAVAILABLE }),
-    ).rejects.toThrow(UNAVAILABLE)
+    ).rejects.toBe(cause)
+    expect(saved).toEqual([])
+  })
+
+  it('carries the caller’s localised copy and saves nothing when the server returns a non-file response', async () => {
+    answer({ status: 404 })
+
+    const failure = downloadTripCalendar({
+      tripId: 'trip-1',
+      unavailable: UNAVAILABLE,
+    })
+
+    await expect(failure).rejects.toSatisfy(
+      (cause: unknown) => messageOf(cause, 'Try again.') === UNAVAILABLE,
+    )
     expect(saved).toEqual([])
   })
 })

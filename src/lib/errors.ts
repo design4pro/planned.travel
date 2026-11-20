@@ -33,6 +33,12 @@
  * a sentence it could have shown.
  */
 
+/**
+ * An in-process action failure carrying copy the app has already resolved from the locale
+ * catalogue. Construct it where that copy is chosen, using only the catalogue sentence.
+ */
+export class LocalizedActionError extends Error {}
+
 export type PublicFailureKind =
   /** Authored refusal copy. Safe to show verbatim. */
   | 'refusal'
