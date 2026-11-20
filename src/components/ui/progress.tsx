@@ -72,11 +72,15 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
       tone = 'brand',
       label,
       valueText,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledBy,
       ...props
     },
     ref,
   ) => {
     const { locale } = useUiI18n()
+    const labelId = React.useId()
+    const hasLabel = Boolean(label) || label === 0
     const indeterminate = value === null
     const clamped = indeterminate ? 0 : Math.min(Math.max(value, 0), max)
     const percent = max === 0 ? 0 : (clamped / max) * 100
@@ -88,10 +92,13 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
 
     return (
       <div className="w-full">
-        {label || valueText ? (
+        {hasLabel || valueText ? (
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            {label ? (
-              <span className="text-caption font-medium text-ink-2">
+            {hasLabel ? (
+              <span
+                id={labelId}
+                className="text-caption font-medium text-ink-2"
+              >
                 {label}
               </span>
             ) : null}
@@ -109,6 +116,11 @@ export const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
           ref={ref}
           value={indeterminate ? null : clamped}
           max={max}
+          aria-label={ariaLabel}
+          aria-labelledby={
+            ariaLabelledBy ??
+            (ariaLabel === undefined && hasLabel ? labelId : undefined)
+          }
           className={cn(
             'relative w-full overflow-hidden rounded-full bg-surface-inset',
             // The fill moves along the x axis — the one thing in this directory
