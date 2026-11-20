@@ -950,6 +950,35 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'No s’han pogut carregar els fitxers',
+  'files.page.empty': 'Encara no hi ha fitxers adjunts',
+  'files.page.summary': '{files} · {size} en aquest viatge',
+  'files.page.thisTrip': 'Aquest viatge',
+  'files.page.workspaceStorage': 'Emmagatzematge de l’espai de treball',
+  'files.page.photosCaption': 'Imatges d’aquest viatge',
+  'files.page.documents': 'Bitllets i rebuts',
+  'files.page.documentsCaption':
+    'A punt per al control fronterer i la comptabilitat',
+  'files.count.filtered': '{shown} de {total}',
+  'files.storage.meter': '{used} de {limit}',
+  'files.storage.meterUnlimited': '{used} d’emmagatzematge il·limitat',
+  'files.storage.ofLimit': 'de {limit}',
+  'files.storage.percentUsed': '{percent} % utilitzat',
+  'files.storage.unlimited': 'sense límit',
+  'files.error.missingTripFile': 'Aquest fitxer no forma part del viatge.',
+  'files.error.missingCopy': 'Falta la còpia desada d’aquest fitxer.',
+  'files.reject.empty': '«{name}» és buit i no hi ha res per desar.',
+  'files.reject.tooLarge':
+    '«{name}» ocupa {size}. El límit per fitxer és de {limit}.',
+  'files.reject.unsupportedType':
+    'Aquest espai de treball no admet el tipus de fitxer de «{name}». Prova un PDF, una imatge, un document o un fitxer de calendari.',
+  'files.reject.quota':
+    'Desar «{name}» requereix {size}, però només queden {remaining} dels {limit} del teu pla. Suprimeix un fitxer o passa a un pla superior.',
+  'files.count.attached': {
+    one: '{count} fitxer',
+    many: '{count} fitxers',
+    other: '{count} fitxers',
+  },
   'files.kind.document': 'Document',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Entrada',

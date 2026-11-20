@@ -951,6 +951,35 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'No se pudieron cargar los archivos',
+  'files.page.empty': 'Aún no hay archivos adjuntos',
+  'files.page.summary': '{files} · {size} en este viaje',
+  'files.page.thisTrip': 'Este viaje',
+  'files.page.workspaceStorage': 'Almacenamiento del espacio de trabajo',
+  'files.page.photosCaption': 'Imágenes de este viaje',
+  'files.page.documents': 'Billetes y recibos',
+  'files.page.documentsCaption':
+    'Listos para el control fronterizo y la contabilidad',
+  'files.count.filtered': '{shown} de {total}',
+  'files.storage.meter': '{used} de {limit}',
+  'files.storage.meterUnlimited': '{used} de almacenamiento ilimitado',
+  'files.storage.ofLimit': 'de {limit}',
+  'files.storage.percentUsed': '{percent} % utilizado',
+  'files.storage.unlimited': 'sin límite',
+  'files.error.missingTripFile': 'Ese archivo no pertenece a este viaje.',
+  'files.error.missingCopy': 'Falta la copia guardada de este archivo.',
+  'files.reject.empty': '«{name}» está vacío, así que no hay nada que guardar.',
+  'files.reject.tooLarge':
+    '«{name}» ocupa {size}. El límite por archivo es de {limit}.',
+  'files.reject.unsupportedType':
+    'Este espacio de trabajo no admite el tipo de archivo de «{name}». Prueba con un PDF, una imagen, un documento o un archivo de calendario.',
+  'files.reject.quota':
+    'Guardar «{name}» requiere {size}, pero de los {limit} de tu plan solo quedan {remaining}. Elimina un archivo o cambia a un plan superior.',
+  'files.count.attached': {
+    one: '{count} archivo',
+    many: '{count} archivos',
+    other: '{count} archivos',
+  },
   'files.kind.document': 'Documento',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Entrada',

@@ -959,6 +959,37 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'تعذّر تحميل الملفات',
+  'files.page.empty': 'لا توجد مرفقات حتى الآن',
+  'files.page.summary': '{files} · {size} في هذه الرحلة',
+  'files.page.thisTrip': 'هذه الرحلة',
+  'files.page.workspaceStorage': 'مساحة تخزين مساحة العمل',
+  'files.page.photosCaption': 'صور من هذه الرحلة',
+  'files.page.documents': 'التذاكر والإيصالات',
+  'files.page.documentsCaption': 'جاهزة للتدقيق على الحدود وللمحاسبة',
+  'files.count.filtered': '{shown} من {total}',
+  'files.storage.meter': '{used} من {limit}',
+  'files.storage.meterUnlimited': '{used} من مساحة تخزين غير محدودة',
+  'files.storage.ofLimit': 'من {limit}',
+  'files.storage.percentUsed': 'استُخدم {percent}٪',
+  'files.storage.unlimited': 'غير محدود',
+  'files.error.missingTripFile': 'هذا الملف لا يخص هذه الرحلة.',
+  'files.error.missingCopy': 'النسخة المحفوظة من هذا الملف مفقودة.',
+  'files.reject.empty': 'الملف «{name}» فارغ، فلا شيء لتخزينه.',
+  'files.reject.tooLarge':
+    'حجم الملف «{name}» هو {size}. الحد الأقصى لكل ملف هو {limit}.',
+  'files.reject.unsupportedType':
+    'لا تقبل مساحة العمل نوع الملف «{name}». جرّب ملف PDF أو صورة أو مستندًا أو ملف تقويم.',
+  'files.reject.quota':
+    'يتطلب تخزين «{name}» مساحة {size}، ولم يتبقَّ سوى {remaining} من أصل {limit} في خطتك. احذف ملفًا أو رقِّ خطتك.',
+  'files.count.attached': {
+    zero: '{count} ملفات',
+    one: 'ملف واحد ({count})',
+    two: 'ملفان ({count})',
+    few: '{count} ملفات',
+    many: '{count} ملفًا',
+    other: '{count} ملف',
+  },
   'files.kind.document': 'مستند',
   'files.kind.photo': 'صورة',
   'files.kind.ticket': 'تذكرة',

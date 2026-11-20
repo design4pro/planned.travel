@@ -926,6 +926,31 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'A fájlokat nem sikerült betölteni',
+  'files.page.empty': 'Még nincsenek mellékletek',
+  'files.page.summary': '{files} · {size} ezen az utazáson',
+  'files.page.thisTrip': 'Ez az utazás',
+  'files.page.workspaceStorage': 'A munkaterület tárhelye',
+  'files.page.photosCaption': 'Az utazáshoz tartozó képek',
+  'files.page.documents': 'Jegyek és nyugták',
+  'files.page.documentsCaption':
+    'Kéznél a határellenőrzéshez és a könyveléshez',
+  'files.count.filtered': '{shown} / {total}',
+  'files.storage.meter': '{used} / {limit}',
+  'files.storage.meterUnlimited': '{used} a korlátlan tárhelyből',
+  'files.storage.ofLimit': 'a(z) {limit} keretből',
+  'files.storage.percentUsed': '{percent}% felhasználva',
+  'files.storage.unlimited': 'korlátlan',
+  'files.error.missingTripFile': 'Ez a fájl nem tartozik ehhez az utazáshoz.',
+  'files.error.missingCopy': 'A fájl mentett példánya hiányzik.',
+  'files.reject.empty': 'A(z) „{name}” üres, ezért nincs mit menteni.',
+  'files.reject.tooLarge':
+    'A(z) „{name}” mérete {size}. Egy fájl legfeljebb {limit} lehet.',
+  'files.reject.unsupportedType':
+    'A munkaterület nem támogatja a(z) „{name}” fájltípusát. Próbálkozz PDF-fel, képpel, dokumentummal vagy naptárfájllal.',
+  'files.reject.quota':
+    'A(z) „{name}” tárolásához {size} kell, de a csomagod {limit} keretéből csak {remaining} maradt. Törölj egy fájlt, vagy válts magasabb csomagra.',
+  'files.count.attached': { one: '{count} fájl', other: '{count} fájl' },
   'files.kind.document': 'Dokumentum',
   'files.kind.photo': 'Fénykép',
   'files.kind.ticket': 'Jegy',

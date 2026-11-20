@@ -934,6 +934,33 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Δεν ήταν δυνατή η φόρτωση των αρχείων',
+  'files.page.empty': 'Δεν υπάρχουν ακόμη συνημμένα',
+  'files.page.summary': '{files} · {size} σε αυτό το ταξίδι',
+  'files.page.thisTrip': 'Αυτό το ταξίδι',
+  'files.page.workspaceStorage': 'Χώρος αποθήκευσης του χώρου εργασίας',
+  'files.page.photosCaption': 'Εικόνες από αυτό το ταξίδι',
+  'files.page.documents': 'Εισιτήρια και αποδείξεις',
+  'files.page.documentsCaption':
+    'Έτοιμα για τον έλεγχο στα σύνορα και το λογιστήριο',
+  'files.count.filtered': '{shown} από {total}',
+  'files.storage.meter': '{used} από {limit}',
+  'files.storage.meterUnlimited': '{used} σε απεριόριστο χώρο',
+  'files.storage.ofLimit': 'από {limit}',
+  'files.storage.percentUsed': 'Χρήση {percent}%',
+  'files.storage.unlimited': 'απεριόριστος',
+  'files.error.missingTripFile': 'Αυτό το αρχείο δεν ανήκει σε αυτό το ταξίδι.',
+  'files.error.missingCopy':
+    'Λείπει το αποθηκευμένο αντίγραφο αυτού του αρχείου.',
+  'files.reject.empty':
+    'Το «{name}» είναι κενό, οπότε δεν υπάρχει τίποτα για αποθήκευση.',
+  'files.reject.tooLarge':
+    'Το μέγεθος του «{name}» είναι {size}. Το όριο ανά αρχείο είναι {limit}.',
+  'files.reject.unsupportedType':
+    'Ο χώρος εργασίας δεν δέχεται τον τύπο αρχείου του «{name}». Δοκιμάστε ένα PDF, μια εικόνα, ένα έγγραφο ή ένα αρχείο ημερολογίου.',
+  'files.reject.quota':
+    'Η αποθήκευση του «{name}» απαιτεί {size}, αλλά απομένουν μόνο {remaining} από τα {limit} του προγράμματός σας. Αφαιρέστε ένα αρχείο ή αναβαθμίστε το πρόγραμμα.',
+  'files.count.attached': { one: '{count} αρχείο', other: '{count} αρχεία' },
   'files.kind.document': 'Έγγραφο',
   'files.kind.photo': 'Φωτογραφία',
   'files.kind.ticket': 'Εισιτήριο',

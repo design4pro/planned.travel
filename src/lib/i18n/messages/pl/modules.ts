@@ -961,6 +961,35 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Nie udało się wczytać plików',
+  'files.page.empty': 'Nie ma jeszcze załączników',
+  'files.page.summary': '{files} · {size} w tej podróży',
+  'files.page.thisTrip': 'Ta podróż',
+  'files.page.workspaceStorage': 'Miejsce w obszarze roboczym',
+  'files.page.photosCaption': 'Obrazy z tej podróży',
+  'files.page.documents': 'Bilety i paragony',
+  'files.page.documentsCaption': 'Gotowe do kontroli granicznej i rozliczeń',
+  'files.count.filtered': '{shown} z {total}',
+  'files.storage.meter': '{used} z {limit}',
+  'files.storage.meterUnlimited': '{used} z nieograniczonego limitu',
+  'files.storage.ofLimit': 'z {limit}',
+  'files.storage.percentUsed': 'Wykorzystano {percent}%',
+  'files.storage.unlimited': 'bez limitu',
+  'files.error.missingTripFile': 'Tego pliku nie ma w tej podróży.',
+  'files.error.missingCopy': 'Brakuje zapisanej kopii tego pliku.',
+  'files.reject.empty': 'Plik „{name}” jest pusty, więc nie ma czego zapisać.',
+  'files.reject.tooLarge':
+    'Plik „{name}” zajmuje {size}. Limit na plik to {limit}.',
+  'files.reject.unsupportedType':
+    'Obszar roboczy nie obsługuje typu pliku „{name}”. Spróbuj dodać PDF, obraz, dokument lub plik kalendarza.',
+  'files.reject.quota':
+    'Zapisanie pliku „{name}” wymaga {size}, a z {limit} w Twoim planie zostało tylko {remaining}. Usuń plik lub przejdź na wyższy plan.',
+  'files.count.attached': {
+    one: '{count} plik',
+    few: '{count} pliki',
+    many: '{count} plików',
+    other: '{count} pliku',
+  },
   'files.kind.document': 'Dokument',
   'files.kind.photo': 'Zdjęcie',
   'files.kind.ticket': 'Bilet',

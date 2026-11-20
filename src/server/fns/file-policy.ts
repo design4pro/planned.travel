@@ -447,6 +447,7 @@ export function checkUpload(
   if (candidate.sizeBytes <= 0) {
     return {
       code: 'empty',
+      params: { name: candidate.filename },
       message: `“${candidate.filename}” is empty, so there is nothing to store.`,
     }
   }
@@ -458,14 +459,18 @@ export function checkUpload(
     }
   }
   if (candidate.sizeBytes > MAX_FILE_BYTES) {
+    const size = formatStorage(candidate.sizeBytes)
+    const limit = formatStorage(MAX_FILE_BYTES)
     return {
       code: 'too-large',
-      message: `“${candidate.filename}” is ${formatStorage(candidate.sizeBytes)}. Single files are limited to ${formatStorage(MAX_FILE_BYTES)}.`,
+      message: `“${candidate.filename}” is ${size}. Single files are limited to ${limit}.`,
+      params: { name: candidate.filename, size, limit },
     }
   }
   if (resolveContentType(candidate.filename, candidate.contentType) === null) {
     return {
       code: 'unsupported-type',
+      params: { name: candidate.filename },
       message: `“${candidate.filename}” is not a file type this workspace accepts. Try a PDF, an image, a document or a calendar file.`,
     }
   }
@@ -475,13 +480,20 @@ export function checkUpload(
     const projected =
       budget.usedBytes + (budget.pendingBytes ?? 0) + candidate.sizeBytes
     if (projected > limit) {
-      const remaining = Math.max(
-        limit - budget.usedBytes - (budget.pendingBytes ?? 0),
-        0,
+      const remaining = formatStorage(
+        Math.max(limit - budget.usedBytes - (budget.pendingBytes ?? 0), 0),
       )
+      const size = formatStorage(candidate.sizeBytes)
+      const formattedLimit = formatStorage(limit)
       return {
         code: 'quota',
-        message: `Storing “${candidate.filename}” needs ${formatStorage(candidate.sizeBytes)} but only ${formatStorage(remaining)} of your plan's ${formatStorage(limit)} is left. Remove a file or upgrade the plan.`,
+        message: `Storing “${candidate.filename}” needs ${size} but only ${remaining} of your plan's ${formattedLimit} is left. Remove a file or upgrade the plan.`,
+        params: {
+          name: candidate.filename,
+          size,
+          remaining,
+          limit: formattedLimit,
+        },
       }
     }
   }

@@ -952,6 +952,36 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Не вдалося завантажити файли',
+  'files.page.empty': 'Вкладень поки немає',
+  'files.page.summary': '{files} · {size} у цій подорожі',
+  'files.page.thisTrip': 'Ця подорож',
+  'files.page.workspaceStorage': 'Сховище робочого простору',
+  'files.page.photosCaption': 'Зображення з цієї подорожі',
+  'files.page.documents': 'Квитки й чеки',
+  'files.page.documentsCaption':
+    'Готові для прикордонного контролю та бухгалтерії',
+  'files.count.filtered': '{shown} з {total}',
+  'files.storage.meter': '{used} з {limit}',
+  'files.storage.meterUnlimited': '{used} у сховищі без обмежень',
+  'files.storage.ofLimit': 'з {limit}',
+  'files.storage.percentUsed': 'Використано {percent}%',
+  'files.storage.unlimited': 'без обмежень',
+  'files.error.missingTripFile': 'Цей файл не належить до цієї подорожі.',
+  'files.error.missingCopy': 'Збережена копія цього файлу відсутня.',
+  'files.reject.empty': 'Файл «{name}» порожній, тож зберігати нічого.',
+  'files.reject.tooLarge':
+    'Розмір файлу «{name}» становить {size}. Ліміт на один файл — {limit}.',
+  'files.reject.unsupportedType':
+    'У цьому робочому просторі не підтримується тип файлу «{name}». Спробуйте PDF, зображення, документ або файл календаря.',
+  'files.reject.quota':
+    'Для збереження файлу «{name}» потрібно {size}, але з {limit} за вашим тарифом залишилося лише {remaining}. Видаліть файл або перейдіть на вищий тариф.',
+  'files.count.attached': {
+    one: '{count} файл',
+    few: '{count} файли',
+    many: '{count} файлів',
+    other: '{count} файлу',
+  },
   'files.kind.document': 'Документ',
   'files.kind.photo': 'Фото',
   'files.kind.ticket': 'Квиток',

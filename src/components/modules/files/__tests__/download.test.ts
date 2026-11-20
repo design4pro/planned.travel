@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { createTranslator, loadCatalogue } from '#/lib/i18n'
 import { downloadTripFileFn } from '#/server/fns/files'
 import { downloadTripFile, fetchTripFileBytes } from '../download'
 
 // The real module reaches `cloudflare:workers`; this suite is about what the browser does with
 // the response, not about the handler that makes it.
 vi.mock('#/server/fns/files', () => ({ downloadTripFileFn: vi.fn() }))
+
+const EN = createTranslator('en', await loadCatalogue('en'))
 
 const INPUT = { tripId: 'trip-1', fileId: 'file-1', filename: 'saved-file' }
 
@@ -34,10 +37,15 @@ afterEach(() => {
 })
 
 async function download(storedType: string): Promise<Blob> {
-  vi.mocked(downloadTripFileFn).mockResolvedValue(
-    new Response('bytes', { headers: { 'content-type': storedType } }),
+  const response = new Response('bytes', {
+    headers: { 'content-type': storedType },
+  })
+  // Match the browser, where the Response blob and the save Blob share a realm.
+  vi.spyOn(response, 'blob').mockResolvedValue(
+    new Blob(['bytes'], { type: storedType }),
   )
-  await downloadTripFile(INPUT)
+  vi.mocked(downloadTripFileFn).mockResolvedValue(response)
+  await downloadTripFile(INPUT, EN)
   const [blob] = blobs
   if (blob === undefined) {
     throw new Error('No object URL was made.')
@@ -46,6 +54,36 @@ async function download(storedType: string): Promise<Blob> {
 }
 
 describe('downloadTripFile', () => {
+  it.each([
+    [404, '{"error":"That file is not on this trip."}', 'missingTripFile'],
+    [
+      410,
+      '{"error":"The stored copy of this file is missing."}',
+      'missingCopy',
+    ],
+    [404, '{"error":"internal details"}', 'downloadFailed'],
+    [502, '{"error":42}', 'downloadFailed'],
+    [502, '<html>internal details</html>', 'downloadFailed'],
+  ] as const)('localizes HTTP %s with body %s', async (status, body, key) => {
+    const t = createTranslator('pl', await loadCatalogue('pl'))
+    vi.mocked(downloadTripFileFn).mockResolvedValue(
+      new Response(body, { status }),
+    )
+    await expect(downloadTripFile(INPUT, t)).rejects.toMatchObject({
+      status,
+      message: t(`modules.files.error.${key}`, { status }),
+    })
+    expect(blobs).toEqual([])
+  })
+
+  it('localizes an unexpected result', async () => {
+    const t = createTranslator('pl', await loadCatalogue('pl'))
+    vi.mocked(downloadTripFileFn).mockResolvedValue({} as Response)
+    await expect(downloadTripFile(INPUT, t)).rejects.toThrow(
+      t('modules.files.error.downloadShape'),
+    )
+  })
+
   it.each([
     'text/html',
     'image/svg+xml',
@@ -99,7 +137,9 @@ describe('fetchTripFileBytes', () => {
     ) {
       filename = this.download
     })
-    expect(await downloadTripFile(INPUT)).toEqual({ filename: INPUT.filename })
+    expect(await downloadTripFile(INPUT, EN)).toEqual({
+      filename: INPUT.filename,
+    })
     expect(filename).toBe(INPUT.filename)
   })
 })
