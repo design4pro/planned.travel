@@ -463,6 +463,27 @@ describe('the comparison this gate makes', () => {
 })
 
 describe('the shipped catalogues', () => {
+  it.each([
+    ['cs', 'Tarif, členové a faktury'],
+    ['hu', 'Csomag, tagok és számlák'],
+    ['nl', 'Abonnement, leden en facturen'],
+    ['pl', 'Plan, członkowie i faktury'],
+    ['ru', 'Тариф, участники и счета'],
+    ['sv', 'Abonnemang, medlemmar och fakturor'],
+    ['uk', 'Тариф, учасники та рахунки'],
+  ] as const)(
+    'names workspace members in the %s billing navigation hint',
+    (locale, hint) => {
+      expect(catalogues.get(locale)?.['settings.nav.billing.hint']).toBe(hint)
+    },
+  )
+
+  it('uses the Polish trips label vocabulary in the places quota hint', () => {
+    expect(catalogues.get('pl')?.['settings.billing.quota.placesHint']).toBe(
+      'We wszystkich wyjazdach tej przestrzeni roboczej',
+    )
+  })
+
   it('live under a shipped locale tag and one of the eleven namespaces', () => {
     const strayLocales = new Set<string>()
     const strayNamespaces = new Set<string>()

@@ -71,7 +71,7 @@ const messages = {
   'nav.admin': 'Werkruimteconsole',
   'nav.admin.hint': 'Leden, uitnodigingen en recente activiteit',
   'nav.billing': 'Facturering',
-  'nav.billing.hint': 'Abonnement, plaatsen en facturen',
+  'nav.billing.hint': 'Abonnement, leden en facturen',
 
   /* ----------------------------------------------------------------- shared */
   'action.save': 'Wijzigingen opslaan',

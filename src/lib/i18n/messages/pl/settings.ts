@@ -75,7 +75,7 @@ const messages = {
   'nav.admin': 'Konsola przestrzeni roboczej',
   'nav.admin.hint': 'Członkowie, zaproszenia i ostatnia aktywność',
   'nav.billing': 'Płatności',
-  'nav.billing.hint': 'Plan, miejsca i faktury',
+  'nav.billing.hint': 'Plan, członkowie i faktury',
 
   /* ----------------------------------------------------------------- shared */
   'action.save': 'Zapisz zmiany',
@@ -448,7 +448,7 @@ const messages = {
   'billing.quota.unlimited': 'Bez limitu',
   'billing.quota.places': 'Miejsca',
   'billing.quota.placesHint':
-    'We wszystkich podróżach tej przestrzeni roboczej',
+    'We wszystkich wyjazdach tej przestrzeni roboczej',
   'billing.quota.exhausted.places': 'Limit miejsc został wykorzystany',
   'billing.quota.over.places': 'Limit miejsc przekroczony o {value}',
   'billing.quota.noLimit': 'W tym planie bez limitu',
