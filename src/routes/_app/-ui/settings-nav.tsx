@@ -1,7 +1,7 @@
 /**
  * The settings section index, and the frame every settings section renders in.
  *
- * Kept out of the route file so the seven sections can share it without
+ * Kept out of the route file so the settings sections can share it without
  * importing from each other's route modules.
  *
  * The index carries message *keys* rather than sentences. A `SECTIONS` array of
@@ -16,6 +16,7 @@ import {
   Building2,
   CreditCard,
   Languages,
+  History,
   Palette,
   ShieldCheck,
   UserRound,
@@ -42,6 +43,7 @@ interface SettingsSectionLink {
     | '/settings/notifications'
     | '/settings/organization'
     | '/settings/billing'
+    | '/settings/releases'
   readonly label: MessageKey
   readonly description: MessageKey
   readonly icon: LucideIcon
@@ -93,6 +95,12 @@ const SECTIONS: ReadonlyArray<SettingsSectionLink> = [
     description: 'settings.nav.billing.hint',
     icon: CreditCard,
   },
+  {
+    to: '/settings/releases',
+    label: 'settings.nav.releases',
+    description: 'settings.nav.releases.hint',
+    icon: History,
+  },
 ]
 
 const ITEM_CLASS = cn(
@@ -128,7 +136,15 @@ export function SettingsNav() {
   const { shell } = useRouteContext({ from: '/_app' })
 
   return (
-    <nav aria-label={t('settings.nav.label')} className="min-w-0">
+    <nav
+      aria-label={t('settings.nav.label')}
+      className="min-w-0"
+      onFocusCapture={(event) => {
+        if (event.target instanceof HTMLElement) {
+          event.target.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+        }
+      }}
+    >
       <ul className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0">
         {SECTIONS.map((section) => (
           <li key={section.to} className="shrink-0 lg:min-w-0 lg:shrink">
@@ -169,7 +185,7 @@ export interface SettingsSectionProps {
   className?: string
 }
 
-/** The card every settings section sits in, so all seven are framed identically. */
+/** The card every settings section sits in, so every section is framed identically. */
 export function SettingsSection({
   title,
   description,

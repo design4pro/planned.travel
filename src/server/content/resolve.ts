@@ -18,7 +18,7 @@ export function resolveReleaseContent(
     translation.reviewAuditId != null
   return {
     ...releaseBodySchema.parse(translated ? translation.body : source),
-    contentLocale: translated ? locale : 'en',
+    contentLocale: translated ? locale : ('en' as const),
     sourceLocale: 'en' as const,
     usedFallback: locale !== 'en' && !translated,
   }

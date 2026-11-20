@@ -33,6 +33,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Versionsverlauf',
+  'nav.releases.hint': 'Entdecke die Verbesserungen',
+  'releases.title': 'Versionsverlauf',
+  'releases.description':
+    'Veröffentlichte Verbesserungen und Fehlerbehebungen in planned.travel.',
+  'releases.version': 'Ausgabe {version}',
+  'releases.shipped': 'Veröffentlicht am {date}',
+  'releases.updated': 'Hinweise aktualisiert am {date}',
+  'releases.features': 'Verbesserungen',
+  'releases.fixes': 'Fehlerbehebungen',
+  'releases.empty.title': 'Noch keine Versionshinweise',
+  'releases.empty.body':
+    'Hier erscheinen veröffentlichte Verbesserungen und Fehlerbehebungen.',
+  'releases.error':
+    'Der Versionsverlauf konnte nicht geladen werden. Versuche es erneut.',
+  'releases.olderError':
+    'Ältere Versionen konnten nicht geladen werden. Deine aktuelle Liste bleibt erhalten.',
+  'releases.retry': 'Erneut versuchen',
+  'releases.loading': 'Versionsverlauf wird geladen…',
+  'releases.older': 'Ältere Versionen anzeigen',
+  'releases.fallback': 'Diese Hinweise sind auf Englisch verfügbar.',
+  'releases.loaded': {
+    one: 'Geladene ältere Versionen: {value}.',
+    other: 'Geladene ältere Versionen: {value}.',
+  },
+
   'workspace.invite.invite': 'Einladen',
   'workspace.invite.resend': 'Erneut senden',
   'workspace.invite.revoke': 'Widerrufen',

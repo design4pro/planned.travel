@@ -31,6 +31,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Historique des versions',
+  'nav.releases.hint': 'Découvrez les améliorations',
+  'releases.title': 'Historique des versions',
+  'releases.description':
+    'Améliorations et corrections publiées dans planned.travel.',
+  'releases.version': 'Version n° {version}',
+  'releases.shipped': 'Publiée le {date}',
+  'releases.updated': 'Notes mises à jour le {date}',
+  'releases.features': 'Améliorations',
+  'releases.fixes': 'Corrections',
+  'releases.empty.title': 'Aucune note de version pour le moment',
+  'releases.empty.body':
+    'Les améliorations et corrections publiées apparaîtront ici.',
+  'releases.error':
+    'Impossible de charger l’historique des versions. Réessayez.',
+  'releases.olderError':
+    'Impossible de charger les anciennes versions. Votre liste actuelle reste disponible.',
+  'releases.retry': 'Réessayer',
+  'releases.loading': 'Chargement de l’historique des versions…',
+  'releases.older': 'Afficher les anciennes versions',
+  'releases.fallback': 'Ces notes sont disponibles en anglais.',
+  'releases.loaded': {
+    one: 'Anciennes versions chargées : {value}.',
+    many: 'Anciennes versions chargées : {value}.',
+    other: 'Anciennes versions chargées : {value}.',
+  },
+
   'workspace.invite.invite': 'Inviter',
   'workspace.invite.resend': 'Renvoyer',
   'workspace.invite.revoke': 'Révoquer',

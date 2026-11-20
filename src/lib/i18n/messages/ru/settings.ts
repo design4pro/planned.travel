@@ -33,6 +33,33 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'История выпусков',
+  'nav.releases.hint': 'Посмотрите, что улучшилось',
+  'releases.title': 'История выпусков',
+  'releases.description':
+    'Улучшения и исправления, выпущенные в planned.travel.',
+  'releases.version': 'Версия {version}',
+  'releases.shipped': 'Выпущено {date}',
+  'releases.updated': 'Описание обновлено {date}',
+  'releases.features': 'Улучшения',
+  'releases.fixes': 'Исправления',
+  'releases.empty.title': 'Описаний выпусков пока нет',
+  'releases.empty.body':
+    'Здесь появятся опубликованные улучшения и исправления.',
+  'releases.error': 'Не удалось загрузить историю выпусков. Повторите попытку.',
+  'releases.olderError':
+    'Не удалось загрузить старые выпуски. Текущий список сохранён.',
+  'releases.retry': 'Повторить',
+  'releases.loading': 'Загрузка истории выпусков…',
+  'releases.older': 'Показать старые выпуски',
+  'releases.fallback': 'Эти описания доступны на английском языке.',
+  'releases.loaded': {
+    one: 'Загружен {value} старый выпуск.',
+    few: 'Загружено {value} старых выпуска.',
+    many: 'Загружено {value} старых выпусков.',
+    other: 'Загружено {value} старого выпуска.',
+  },
+
   'workspace.invite.invite': 'Пригласить',
   'workspace.invite.resend': 'Отправить повторно',
   'workspace.invite.revoke': 'Отозвать',

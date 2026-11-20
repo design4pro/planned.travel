@@ -48,6 +48,7 @@ import { Route as AppSettingsBillingRouteImport } from './routes/_app/settings/b
 import { Route as AppSettingsLanguageRouteImport } from './routes/_app/settings/language'
 import { Route as AppSettingsNotificationsRouteImport } from './routes/_app/settings/notifications'
 import { Route as AppSettingsOrganizationRouteImport } from './routes/_app/settings/organization'
+import { Route as AppSettingsReleasesRouteImport } from './routes/_app/settings/releases'
 import { Route as AppSettingsSecurityRouteImport } from './routes/_app/settings/security'
 import { Route as AppSettingsTwoFactorRouteImport } from './routes/_app/settings/two-factor'
 import { Route as AppTripsIndexRouteImport } from './routes/_app/trips/index'
@@ -271,6 +272,11 @@ const AppSettingsOrganizationRoute = AppSettingsOrganizationRouteImport.update({
   path: '/organization',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
+const AppSettingsReleasesRoute = AppSettingsReleasesRouteImport.update({
+  id: '/releases',
+  path: '/releases',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
 const AppSettingsSecurityRoute = AppSettingsSecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -428,6 +434,7 @@ export interface FileRoutesByFullPath {
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
+  '/settings/releases': typeof AppSettingsReleasesRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -487,6 +494,7 @@ export interface FileRoutesByTo {
   '/settings/language': typeof AppSettingsLanguageRoute
   '/settings/notifications': typeof AppSettingsNotificationsRoute
   '/settings/organization': typeof AppSettingsOrganizationRoute
+  '/settings/releases': typeof AppSettingsReleasesRoute
   '/settings/security': typeof AppSettingsSecurityRoute
   '/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -553,6 +561,7 @@ export interface FileRoutesById {
   '/_app/settings/language': typeof AppSettingsLanguageRoute
   '/_app/settings/notifications': typeof AppSettingsNotificationsRoute
   '/_app/settings/organization': typeof AppSettingsOrganizationRoute
+  '/_app/settings/releases': typeof AppSettingsReleasesRoute
   '/_app/settings/security': typeof AppSettingsSecurityRoute
   '/_app/settings/two-factor': typeof AppSettingsTwoFactorRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -619,6 +628,7 @@ export interface FileRouteTypes {
     | '/settings/language'
     | '/settings/notifications'
     | '/settings/organization'
+    | '/settings/releases'
     | '/settings/security'
     | '/settings/two-factor'
     | '/api/auth/$'
@@ -678,6 +688,7 @@ export interface FileRouteTypes {
     | '/settings/language'
     | '/settings/notifications'
     | '/settings/organization'
+    | '/settings/releases'
     | '/settings/security'
     | '/settings/two-factor'
     | '/api/auth/$'
@@ -743,6 +754,7 @@ export interface FileRouteTypes {
     | '/_app/settings/language'
     | '/_app/settings/notifications'
     | '/_app/settings/organization'
+    | '/_app/settings/releases'
     | '/_app/settings/security'
     | '/_app/settings/two-factor'
     | '/api/auth/$'
@@ -1074,6 +1086,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsOrganizationRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
+    '/_app/settings/releases': {
+      id: '/_app/settings/releases'
+      path: '/releases'
+      fullPath: '/settings/releases'
+      preLoaderRoute: typeof AppSettingsReleasesRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
     '/_app/settings/security': {
       id: '/_app/settings/security'
       path: '/security'
@@ -1299,6 +1318,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsLanguageRoute: typeof AppSettingsLanguageRoute
   AppSettingsNotificationsRoute: typeof AppSettingsNotificationsRoute
   AppSettingsOrganizationRoute: typeof AppSettingsOrganizationRoute
+  AppSettingsReleasesRoute: typeof AppSettingsReleasesRoute
   AppSettingsSecurityRoute: typeof AppSettingsSecurityRoute
   AppSettingsTwoFactorRoute: typeof AppSettingsTwoFactorRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
@@ -1310,6 +1330,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsLanguageRoute: AppSettingsLanguageRoute,
   AppSettingsNotificationsRoute: AppSettingsNotificationsRoute,
   AppSettingsOrganizationRoute: AppSettingsOrganizationRoute,
+  AppSettingsReleasesRoute: AppSettingsReleasesRoute,
   AppSettingsSecurityRoute: AppSettingsSecurityRoute,
   AppSettingsTwoFactorRoute: AppSettingsTwoFactorRoute,
   AppSettingsIndexRoute: AppSettingsIndexRoute,

@@ -114,6 +114,7 @@ export const APP_ROUTES: ReadonlyArray<RouteCase> = [
     ready: 'main',
   },
   { name: 'settings-language', path: '/settings/language', ready: 'main' },
+  { name: 'settings-releases', path: '/settings/releases', ready: 'main' },
 ]
 
 /**

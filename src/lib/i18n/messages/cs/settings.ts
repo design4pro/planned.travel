@@ -33,6 +33,31 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Historie vydání',
+  'nav.releases.hint': 'Podívejte se na vylepšení',
+  'releases.title': 'Historie vydání',
+  'releases.description': 'Vylepšení a opravy vydané v planned.travel.',
+  'releases.version': 'Verze {version}',
+  'releases.shipped': 'Vydáno {date}',
+  'releases.updated': 'Poznámky aktualizovány {date}',
+  'releases.features': 'Vylepšení',
+  'releases.fixes': 'Opravy',
+  'releases.empty.title': 'Zatím žádné poznámky k vydání',
+  'releases.empty.body': 'Zde se objeví zveřejněná vylepšení a opravy.',
+  'releases.error': 'Historii vydání se nepodařilo načíst. Zkuste to znovu.',
+  'releases.olderError':
+    'Starší vydání se nepodařilo načíst. Aktuální seznam je stále k dispozici.',
+  'releases.retry': 'Zkusit znovu',
+  'releases.loading': 'Načítání historie vydání…',
+  'releases.older': 'Zobrazit starší vydání',
+  'releases.fallback': 'Tyto poznámky jsou dostupné v angličtině.',
+  'releases.loaded': {
+    one: 'Načteno {value} starší vydání.',
+    few: 'Načtena {value} starší vydání.',
+    many: 'Načteno {value} staršího vydání.',
+    other: 'Načteno {value} starších vydání.',
+  },
+
   'workspace.invite.invite': 'Pozvat',
   'workspace.invite.resend': 'Odeslat znovu',
   'workspace.invite.revoke': 'Odvolat',

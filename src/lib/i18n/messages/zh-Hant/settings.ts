@@ -16,6 +16,25 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': '版本歷史',
+  'nav.releases.hint': '查看改進內容',
+  'releases.title': '版本歷史',
+  'releases.description': 'planned.travel 已發佈的改進和修正。',
+  'releases.version': '版本 {version}',
+  'releases.shipped': '發佈於 {date}',
+  'releases.updated': '說明更新於 {date}',
+  'releases.features': '改進',
+  'releases.fixes': '修正',
+  'releases.empty.title': '尚無版本說明',
+  'releases.empty.body': '已發佈的改進和修正將顯示於此處。',
+  'releases.error': '無法載入版本歷史。請重試。',
+  'releases.olderError': '無法載入更早的版本。目前清單仍然保留。',
+  'releases.retry': '重試',
+  'releases.loading': '正在載入版本歷史…',
+  'releases.older': '顯示更早的版本',
+  'releases.fallback': '這些說明提供英文版本。',
+  'releases.loaded': { other: '已載入 {value} 個更早的版本。' },
+
   'workspace.invite.invite': '邀請',
   'workspace.invite.resend': '重新傳送',
   'workspace.invite.revoke': '撤銷',

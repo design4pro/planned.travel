@@ -16,6 +16,27 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': '릴리스 기록',
+  'nav.releases.hint': '개선 사항 살펴보기',
+  'releases.title': '릴리스 기록',
+  'releases.description':
+    'planned.travel에 출시된 개선 사항과 수정 사항입니다.',
+  'releases.version': '버전 {version}',
+  'releases.shipped': '출시일 {date}',
+  'releases.updated': '노트 수정일 {date}',
+  'releases.features': '개선 사항',
+  'releases.fixes': '수정 사항',
+  'releases.empty.title': '아직 릴리스 노트가 없습니다',
+  'releases.empty.body': '게시된 개선 사항과 수정 사항이 여기에 표시됩니다.',
+  'releases.error': '릴리스 기록을 불러올 수 없습니다. 다시 시도해 주세요.',
+  'releases.olderError':
+    '이전 릴리스를 불러올 수 없습니다. 현재 목록은 그대로 유지됩니다.',
+  'releases.retry': '다시 시도',
+  'releases.loading': '릴리스 기록을 불러오는 중…',
+  'releases.older': '이전 릴리스 보기',
+  'releases.fallback': '이 노트는 영어로 제공됩니다.',
+  'releases.loaded': { other: '이전 릴리스 {value}개를 불러왔습니다.' },
+
   'workspace.invite.invite': '초대',
   'workspace.invite.resend': '다시 보내기',
   'workspace.invite.revoke': '취소',

@@ -2575,6 +2575,14 @@ reservation or delete pending cleanup records to unblock an account.
 
 ## Release history import and editorial review
 
+The authenticated `/settings/releases` reader accepts only verified evidence whose stored
+`release_deployments.target` is exactly `production`. Local-preview, staging and unknown
+values remain invisible; a published pointer alone is insufficient. This is the canonical
+production-target representation for the future separately reviewed evidence adapter, not
+permission to write it. Without that adapter, the reader safely shows its empty state.
+Local browser fixtures simulate production evidence directly in the isolated local database;
+requests cannot select a target or enable preview visibility.
+
 The #1874 operator slice supplies local preview, tested import/review logic and an authenticated
 transport. **Deployed sync remains disabled:** `/api/releases/sync` has neither a trusted Git
 adapter nor a write capability. An authenticated platform admin receives `pending-evidence`;

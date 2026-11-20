@@ -29,6 +29,30 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Versionshistorik',
+  'nav.releases.hint': 'Se vad som har förbättrats',
+  'releases.title': 'Versionshistorik',
+  'releases.description':
+    'Förbättringar och rättningar som har släppts i planned.travel.',
+  'releases.version': 'Utgåva {version}',
+  'releases.shipped': 'Släppt {date}',
+  'releases.updated': 'Anteckningar uppdaterade {date}',
+  'releases.features': 'Förbättringar',
+  'releases.fixes': 'Rättningar',
+  'releases.empty.title': 'Inga versionsanteckningar ännu',
+  'releases.empty.body': 'Publicerade förbättringar och rättningar visas här.',
+  'releases.error': 'Versionshistoriken kunde inte laddas. Försök igen.',
+  'releases.olderError':
+    'Äldre versioner kunde inte laddas. Din nuvarande lista finns kvar.',
+  'releases.retry': 'Försök igen',
+  'releases.loading': 'Laddar versionshistorik…',
+  'releases.older': 'Visa äldre versioner',
+  'releases.fallback': 'Dessa anteckningar finns på engelska.',
+  'releases.loaded': {
+    one: 'Inlästa äldre versioner: {value}.',
+    other: 'Inlästa äldre versioner: {value}.',
+  },
+
   'workspace.invite.invite': 'Bjud in',
   'workspace.invite.resend': 'Skicka igen',
   'workspace.invite.revoke': 'Återkalla',

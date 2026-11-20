@@ -21,6 +21,32 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'Ιστορικό εκδόσεων',
+  'nav.releases.hint': 'Δείτε τις βελτιώσεις',
+  'releases.title': 'Ιστορικό εκδόσεων',
+  'releases.description':
+    'Βελτιώσεις και διορθώσεις που κυκλοφόρησαν στο planned.travel.',
+  'releases.version': 'Έκδοση {version}',
+  'releases.shipped': 'Κυκλοφόρησε στις {date}',
+  'releases.updated': 'Οι σημειώσεις ενημερώθηκαν στις {date}',
+  'releases.features': 'Βελτιώσεις',
+  'releases.fixes': 'Διορθώσεις',
+  'releases.empty.title': 'Δεν υπάρχουν ακόμη σημειώσεις έκδοσης',
+  'releases.empty.body':
+    'Εδώ θα εμφανίζονται οι δημοσιευμένες βελτιώσεις και διορθώσεις.',
+  'releases.error':
+    'Δεν ήταν δυνατή η φόρτωση του ιστορικού εκδόσεων. Δοκιμάστε ξανά.',
+  'releases.olderError':
+    'Δεν ήταν δυνατή η φόρτωση παλαιότερων εκδόσεων. Η τρέχουσα λίστα παραμένει διαθέσιμη.',
+  'releases.retry': 'Δοκιμάστε ξανά',
+  'releases.loading': 'Φόρτωση ιστορικού εκδόσεων…',
+  'releases.older': 'Εμφάνιση παλαιότερων εκδόσεων',
+  'releases.fallback': 'Αυτές οι σημειώσεις είναι διαθέσιμες στα αγγλικά.',
+  'releases.loaded': {
+    one: 'Παλαιότερες εκδόσεις που φορτώθηκαν: {value}.',
+    other: 'Παλαιότερες εκδόσεις που φορτώθηκαν: {value}.',
+  },
+
   'workspace.invite.invite': 'Πρόσκληση',
   'workspace.invite.resend': 'Επαναποστολή',
   'workspace.invite.revoke': 'Ανάκληση',

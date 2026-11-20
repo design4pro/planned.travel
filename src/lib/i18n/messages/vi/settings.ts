@@ -44,6 +44,28 @@ import type En from '../en/settings'
 import type { TranslationOf } from '../../types'
 
 const messages = {
+  'nav.releases': 'Lịch sử phiên bản',
+  'nav.releases.hint': 'Xem những cải tiến',
+  'releases.title': 'Lịch sử phiên bản',
+  'releases.description':
+    'Các cải tiến và bản sửa lỗi đã phát hành trên planned.travel.',
+  'releases.version': 'Phiên bản {version}',
+  'releases.shipped': 'Phát hành {date}',
+  'releases.updated': 'Cập nhật ghi chú {date}',
+  'releases.features': 'Cải tiến',
+  'releases.fixes': 'Sửa lỗi',
+  'releases.empty.title': 'Chưa có ghi chú phát hành',
+  'releases.empty.body':
+    'Các cải tiến và bản sửa lỗi đã công bố sẽ xuất hiện ở đây.',
+  'releases.error': 'Không thể tải lịch sử phiên bản. Vui lòng thử lại.',
+  'releases.olderError':
+    'Không thể tải các phiên bản cũ. Danh sách hiện tại vẫn được giữ nguyên.',
+  'releases.retry': 'Thử lại',
+  'releases.loading': 'Đang tải lịch sử phiên bản…',
+  'releases.older': 'Hiện phiên bản cũ',
+  'releases.fallback': 'Các ghi chú này có sẵn bằng tiếng Anh.',
+  'releases.loaded': { other: 'Số phiên bản cũ đã tải: {value}.' },
+
   'workspace.invite.invite': 'Mời',
   'workspace.invite.resend': 'Gửi lại',
   'workspace.invite.revoke': 'Thu hồi',

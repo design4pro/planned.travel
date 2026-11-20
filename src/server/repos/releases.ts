@@ -311,6 +311,10 @@ const listingSchema = z.strictObject({
   limit: z.number().int().min(1).max(50).default(20),
 })
 
+/**
+ * Trusted deployment evidence uses target = 'production'. No runtime writer is introduced here;
+ * preview fixture receipts never qualify, even when their outcome is verified.
+ */
 /** Authenticated platform projection; organization, collection and status are not selectors. */
 export async function listReleaseHistory(
   db: Database,
@@ -367,7 +371,7 @@ export async function listReleaseHistory(
         isNotNull(releasePublications.firstShippedAt),
         isNotNull(releasePublications.visibleReviewedAt),
         eq(releasePublications.environment, 'production'),
-        sql`exists(select 1 from ${releaseDeploymentEntries} as proof join ${releaseDeployments} as deployment on deployment.id = proof.deployment_id where proof.publication_id = ${releasePublications.id} and proof.version_id = ${contentVersions.id} and deployment.outcome = 'verified')`,
+        sql`exists(select 1 from ${releaseDeploymentEntries} as proof join ${releaseDeployments} as deployment on deployment.id = proof.deployment_id where proof.publication_id = ${releasePublications.id} and proof.version_id = ${contentVersions.id} and deployment.outcome = 'verified' and deployment.target = 'production')`,
         cursor
           ? or(
               lt(

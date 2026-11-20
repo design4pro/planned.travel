@@ -7,7 +7,7 @@
  * file — so a typo here is a compile error at the call site rather than English
  * leaking onto a Polish screen (§8.2 bans the silent fallback outright).
  *
- * **What is here.** Every word the seven settings routes and the settings
+ * **What is here.** Every word the settings routes and the settings
  * section index put on the screen: headings, hints, option labels, badge text,
  * toast copy and the accessible names that only a screen reader hears. Nothing
  * in `src/routes/_app/settings/**` may hold an English literal, which is what
@@ -46,6 +46,29 @@
 import type { NamespaceMessages } from '../../types'
 
 const messages = {
+  'nav.releases': 'Release history',
+  'nav.releases.hint': 'See what has improved',
+  'releases.title': 'Release history',
+  'releases.description': 'Improvements and fixes shipped in planned.travel.',
+  'releases.version': 'Version {version}',
+  'releases.shipped': 'Released {date}',
+  'releases.updated': 'Notes updated {date}',
+  'releases.features': 'Improvements',
+  'releases.fixes': 'Fixes',
+  'releases.empty.title': 'No release notes yet',
+  'releases.empty.body': 'Published improvements and fixes will appear here.',
+  'releases.error': 'Release history could not be loaded. Try again.',
+  'releases.olderError':
+    'Older releases could not be loaded. Your current list is still here.',
+  'releases.retry': 'Retry',
+  'releases.loading': 'Loading release history…',
+  'releases.older': 'Show older releases',
+  'releases.fallback': 'These notes are available in English.',
+  'releases.loaded': {
+    one: '{value} older release loaded.',
+    other: '{value} older releases loaded.',
+  },
+
   'workspace.invite.invite': 'Invite',
   'workspace.invite.resend': 'Resend',
   'workspace.invite.revoke': 'Revoke',

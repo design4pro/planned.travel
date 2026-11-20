@@ -31,6 +31,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Versiegeschiedenis',
+  'nav.releases.hint': 'Bekijk de verbeteringen',
+  'releases.title': 'Versiegeschiedenis',
+  'releases.description':
+    'Verbeteringen en oplossingen die in planned.travel zijn uitgebracht.',
+  'releases.version': 'Versie {version}',
+  'releases.shipped': 'Uitgebracht op {date}',
+  'releases.updated': 'Notities bijgewerkt op {date}',
+  'releases.features': 'Verbeteringen',
+  'releases.fixes': 'Oplossingen',
+  'releases.empty.title': 'Nog geen versienotities',
+  'releases.empty.body':
+    'Gepubliceerde verbeteringen en oplossingen verschijnen hier.',
+  'releases.error':
+    'De versiegeschiedenis kon niet worden geladen. Probeer het opnieuw.',
+  'releases.olderError':
+    'Oudere versies konden niet worden geladen. Je huidige lijst blijft beschikbaar.',
+  'releases.retry': 'Opnieuw proberen',
+  'releases.loading': 'Versiegeschiedenis laden…',
+  'releases.older': 'Oudere versies tonen',
+  'releases.fallback': 'Deze notities zijn beschikbaar in het Engels.',
+  'releases.loaded': {
+    one: 'Geladen oudere versies: {value}.',
+    other: 'Geladen oudere versies: {value}.',
+  },
+
   'workspace.invite.invite': 'Uitnodigen',
   'workspace.invite.resend': 'Opnieuw versturen',
   'workspace.invite.revoke': 'Intrekken',

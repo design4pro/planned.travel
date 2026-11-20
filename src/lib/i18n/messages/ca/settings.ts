@@ -30,6 +30,32 @@ import type { TranslationOf } from '../../types'
 import type En from '../en/settings'
 
 const messages = {
+  'nav.releases': 'Historial de versions',
+  'nav.releases.hint': 'Descobreix les millores',
+  'releases.title': 'Historial de versions',
+  'releases.description': 'Millores i correccions publicades a planned.travel.',
+  'releases.version': 'Versió {version}',
+  'releases.shipped': 'Publicada el {date}',
+  'releases.updated': 'Notes actualitzades el {date}',
+  'releases.features': 'Millores',
+  'releases.fixes': 'Correccions',
+  'releases.empty.title': 'Encara no hi ha notes de versió',
+  'releases.empty.body':
+    'Aquí apareixeran les millores i correccions publicades.',
+  'releases.error':
+    'No s’ha pogut carregar l’historial de versions. Torna-ho a provar.',
+  'releases.olderError':
+    'No s’han pogut carregar les versions anteriors. La llista actual continua aquí.',
+  'releases.retry': 'Torna-ho a provar',
+  'releases.loading': 'S’està carregant l’historial de versions…',
+  'releases.older': 'Mostra versions anteriors',
+  'releases.fallback': 'Aquestes notes estan disponibles en anglès.',
+  'releases.loaded': {
+    one: 'Versions anteriors carregades: {value}.',
+    many: 'Versions anteriors carregades: {value}.',
+    other: 'Versions anteriors carregades: {value}.',
+  },
+
   'workspace.invite.invite': 'Convida',
   'workspace.invite.resend': 'Torna a enviar',
   'workspace.invite.revoke': 'Revoca',
