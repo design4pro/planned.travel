@@ -489,8 +489,14 @@ export function formatNumber(
   return numberFormatter(locale).format(value)
 }
 
+const significantRateOptions = {
+  style: 'decimal',
+  maximumSignificantDigits: 6,
+} satisfies Intl.NumberFormatOptions
+
 /**
- * An exchange rate: two fraction digits at least, four at most.
+ * An exchange rate: up to six significant digits for positive rates below
+ * 0.01, and two to four fraction digits otherwise.
  *
  * A rate is not money — it has no currency and so none of the currency layout
  * the frozen table carries — but it does take the locale's decimal mark and
@@ -501,6 +507,9 @@ export function formatRate(
   value: number,
   locale: Locale = DEFAULT_LOCALE,
 ): string {
+  if (value > 0 && value < 0.01) {
+    return makeNumberFormat(locale, significantRateOptions).format(value)
+  }
   return makeNumberFormat(locale, {
     style: 'decimal',
     minimumFractionDigits: 2,
@@ -510,17 +519,13 @@ export function formatRate(
 
 /**
  * The other way round of a rate, for the sentence that lets a reader see a rate typed the wrong way
- * round: six significant digits, grouped, so `1 / 52631` reads `0.0000190` and not `0.00`, where
- * {@link formatRate}'s four fraction digits would round it away.
+ * round: up to six significant digits, grouped, regardless of the rate's magnitude.
  */
 export function formatInverseRate(
   value: number,
   locale: Locale = DEFAULT_LOCALE,
 ): string {
-  return makeNumberFormat(locale, {
-    style: 'decimal',
-    maximumSignificantDigits: 6,
-  }).format(value)
+  return makeNumberFormat(locale, significantRateOptions).format(value)
 }
 
 /**
