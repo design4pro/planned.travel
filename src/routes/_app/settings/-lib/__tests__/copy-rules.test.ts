@@ -133,6 +133,15 @@ function shippedSources(): ReadonlyArray<Source> {
   }
 
   walk(SETTINGS_DIR)
+  // Workspace deletion receipts consume Settings copy outside the screen tree.
+  const deletionDelivery = join(
+    process.cwd(),
+    'src/server/workspace-deletion/delivery.ts',
+  )
+  files.push({
+    path: deletionDelivery,
+    text: readFileSync(deletionDelivery, 'utf8'),
+  })
   // Factor lifecycle refusals use the shared auth error mapping.
   const authErrors = join(process.cwd(), 'src/routes/(auth)/-lib/errors.ts')
   files.push({ path: authErrors, text: readFileSync(authErrors, 'utf8') })
@@ -376,7 +385,7 @@ describe('the module reads correctly in Arabic', () => {
 describe('the catalogue and the screens agree', () => {
   const used = new Set<string>()
   for (const source of SOURCES) {
-    for (const match of source.text.matchAll(/'settings\.([\w.]+)'/g)) {
+    for (const match of source.text.matchAll(/'settings\.([\w.-]+)'/g)) {
       used.add(match[1])
     }
   }

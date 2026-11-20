@@ -810,6 +810,20 @@ const messages = {
     'Aktualisiere diese Seite, um die neuen Sicherheitsprüfungen zu verwenden.',
   'twoFactor.security.unavailable':
     'Sicherheitsänderungen sind nicht verfügbar. Lade die Seite zur erneuten Prüfung neu.',
+  'workspace.delete.email.deleted': 'Arbeitsbereich gelöscht',
+  'workspace.delete.email.receipt':
+    '{name} wurde dauerhaft gelöscht. Dein Konto bleibt aktiv.',
+  'workspace.delete.email.refused': 'Löschung des Arbeitsbereichs abgelehnt',
+  'workspace.delete.email.refusal':
+    '{name} konnte nicht gelöscht werden. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Die Abrechnung konnte nicht überprüft werden. Bitte versuche es erneut.',
+  'workspace.delete.email.live-subscription':
+    'Ein laufendes Abonnement verhindert die Löschung.',
+  'workspace.delete.email.has-other-members':
+    'Andere Mitglieder gehören noch zu diesem Arbeitsbereich.',
+  'workspace.delete.email.footer':
+    'Du hast die Löschung dieses Arbeitsbereichs angefordert.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

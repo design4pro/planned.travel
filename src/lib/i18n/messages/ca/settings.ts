@@ -811,6 +811,19 @@ const messages = {
     'Actualitza aquesta pàgina per utilitzar les comprovacions de seguretat noves.',
   'twoFactor.security.unavailable':
     'Els canvis de seguretat no estan disponibles. Torna a carregar per comprovar-ho.',
+  'workspace.delete.email.deleted': 'Espai de treball suprimit',
+  'workspace.delete.email.receipt':
+    '{name} s’ha suprimit permanentment. El teu compte continua actiu.',
+  'workspace.delete.email.refused': 'Supressió de l’espai rebutjada',
+  'workspace.delete.email.refusal': 'No s’ha pogut suprimir {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'No s’ha pogut verificar la facturació. Torna-ho a provar.',
+  'workspace.delete.email.live-subscription':
+    'Una subscripció vigent impedeix la supressió.',
+  'workspace.delete.email.has-other-members':
+    'Encara hi ha altres membres en aquest espai.',
+  'workspace.delete.email.footer':
+    'Has sol·licitat suprimir aquest espai de treball.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

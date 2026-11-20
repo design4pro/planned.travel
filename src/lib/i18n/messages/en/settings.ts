@@ -871,6 +871,18 @@ const messages = {
     'Refresh this page to use the updated security checks.',
   'twoFactor.security.unavailable':
     'Security changes are unavailable. Reload to check again.',
+  'workspace.delete.email.deleted': 'Workspace deleted',
+  'workspace.delete.email.receipt':
+    '{name} has been permanently deleted. Your account remains active.',
+  'workspace.delete.email.refused': 'Workspace deletion refused',
+  'workspace.delete.email.refusal': '{name} could not be deleted. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Billing could not be verified. Please try again.',
+  'workspace.delete.email.live-subscription':
+    'A live subscription prevents deletion.',
+  'workspace.delete.email.has-other-members':
+    'Other members still belong to this workspace.',
+  'workspace.delete.email.footer': 'You requested deletion of this workspace.',
 } as const satisfies NamespaceMessages
 
 export default messages

@@ -814,6 +814,19 @@ const messages = {
     'Actualisez cette page pour utiliser les nouveaux contrôles de sécurité.',
   'twoFactor.security.unavailable':
     'Les changements de sécurité sont indisponibles. Rechargez pour vérifier à nouveau.',
+  'workspace.delete.email.deleted': 'Espace de travail supprimé',
+  'workspace.delete.email.receipt':
+    '{name} a été supprimé définitivement. Votre compte reste actif.',
+  'workspace.delete.email.refused': 'Suppression de l’espace refusée',
+  'workspace.delete.email.refusal': 'Impossible de supprimer {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'La facturation n’a pas pu être vérifiée. Veuillez réessayer.',
+  'workspace.delete.email.live-subscription':
+    'Un abonnement en cours empêche la suppression.',
+  'workspace.delete.email.has-other-members':
+    'D’autres membres appartiennent encore à cet espace.',
+  'workspace.delete.email.footer':
+    'Vous avez demandé la suppression de cet espace de travail.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

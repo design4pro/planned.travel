@@ -673,6 +673,14 @@ const messages = {
   'twoFactor.security.stale': '安全状态已更改。开始另一项更改前请重新加载。',
   'twoFactor.security.upgrade': '请刷新页面以使用更新后的安全检查。',
   'twoFactor.security.unavailable': '暂时无法更改安全设置。请重新加载后再试。',
+  'workspace.delete.email.deleted': '工作区已删除',
+  'workspace.delete.email.receipt': '{name}已永久删除。你的账户仍然有效。',
+  'workspace.delete.email.refused': '工作区删除被拒绝',
+  'workspace.delete.email.refusal': '无法删除{name}。{reason}',
+  'workspace.delete.email.billing-unavailable': '无法验证账单信息。请重试。',
+  'workspace.delete.email.live-subscription': '正在使用的订阅阻止了删除。',
+  'workspace.delete.email.has-other-members': '此工作区中仍有其他成员。',
+  'workspace.delete.email.footer': '你请求删除此工作区。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

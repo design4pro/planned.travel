@@ -171,6 +171,7 @@ describe('the sweep over registered places', () => {
       'workspace_deletions.requested_by',
       'workspace_deletions.receipt_to',
       'workspace_deletions.receipt_name',
+      'workspace_deletions.receipt_locale',
       'platform_audit_log.entity_id',
     ])
   })

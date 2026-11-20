@@ -1,3 +1,4 @@
+import { LOCALE_TAGS } from '#/lib/i18n/locales'
 /** Global state only. The workspace-deletion driver is the sole production state writer. */
 import { and, asc, eq, isNull, lt, lte, or, sql } from 'drizzle-orm'
 import { z } from 'zod'
@@ -35,6 +36,7 @@ const requestSchema = z.discriminatedUnion('initiator', [
     requestedBy: z.string().min(1),
     receiptTo: z.email().max(320).optional(),
     receiptName: z.string().max(60).optional(),
+    receiptLocale: z.enum(LOCALE_TAGS).optional(),
     snapshot: snapshotSchema.optional(),
   }),
   z.strictObject({
@@ -351,7 +353,7 @@ export async function transitionWorkspaceDeletion(
       ...(next === 'swept' && expected !== next ? { sweptAt: now } : {}),
       ...(next === 'done' && expected !== next ? { doneAt: now } : {}),
       ...(receiptQueued || ['done', 'refused'].includes(next)
-        ? { receiptTo: null, receiptName: null }
+        ? { receiptTo: null, receiptName: null, receiptLocale: null }
         : {}),
     })
     .where(
@@ -398,4 +400,18 @@ export async function pruneWorkspaceDeletions(db: Database, now = new Date()) {
     )
     .returning({ id: ledger.id })
   return rows.length
+}
+
+/** Driver request/recovery projection only; never exposes receipt identity. */
+export async function readWorkspaceDeletionOutcome(db: Database, id: string) {
+  const rows = await db
+    .select({
+      state: ledger.state,
+      reason: ledger.refusalReason,
+      locale: ledger.receiptLocale,
+    })
+    .from(ledger)
+    .where(eq(ledger.id, id))
+    .limit(1)
+  return rows[0] ?? null
 }

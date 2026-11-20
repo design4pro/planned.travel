@@ -92,3 +92,31 @@ writes remain catalog-owned; unrelated ordinary reads gain no lookup. Both `requ
 `done` refuse preview operations; `refused` lifts the fence, and another workspace's ledger
 cannot affect the caller's preview. Independent security and tenancy approval accepted this
 narrow amendment with actual local D1 coverage as a condition.
+
+### Owner request activation (#1742)
+
+The Phase 7 candidate adds the new strict `deleteWorkspaceFn` POST interface and the plain
+`workspace-delete-writes.ts` module. Only its named request entry can reach driver composition;
+requests never import or construct the reserved system scope directly. The driver owns owner
+admission and reads only state/refusal/receipt-locale progress from catalog. Owner, impersonation,
+expected workspace id, trimmed NFC case-sensitive name and step-up checks precede admission.
+The existing passkey deletion proof retains its codes and ordering. Workspace password proofs
+use the secondary-storage per-user five-attempt/300-second window; KV eventual consistency and
+concurrent read/modify/write can undercount, so this is not an atomic hard ceiling.
+
+The additive nullable `receipt_locale` column preserves the supported owner locale for later
+receipt/refusal delivery. New owner admission always supplies it; erasure input permits no receipt
+identity or locale. Legacy rows without a supported locale fail closed at delivery and require
+explicit repair. Accepted enqueue or terminal refusal clears locale with name/address. Emails use
+the existing rendered `email` envelope with stable per-deletion receipt/refusal identities and all
+23 catalogues, including HTML language/direction. Request, queue and cron use the same delivery
+composition when activated; erasure wake remains unavailable under the separate #1060 hold.
+
+`workspaceDeletionActivated()` remains false. No deployment or activation is claimed. Before
+opening this latch, record each environment's completed consumer deployment revision and time
+for both queue handlers, and retire all older unfenced Workers and in-flight destructive work.
+The existing email consumer accepts rendered payloads; no new email kind is introduced. Owner
+requests refuse before ledger writes while closed, and webhook late-subscription production is
+also closed. When activated the webhook only enqueues the existing validated ids; deleted-workspace
+subscription events still acknowledge without tenant writes or outbound provider calls. Roll back
+producers first and never restore an unfenced destructive writer. A merge is not deployment evidence.

@@ -549,6 +549,7 @@ export const ERASURE_REGISTRY: ReadonlyArray<ErasureEntry> = [
   userRef('workspace_deletions', 'requested_by', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Deletion attribution survives until the terminal ledger prune at 30 days; unfinished recovery is never pruned.'),
   embedded('workspace_deletions', 'receipt_to', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary receipt address, cleared when queued or refused; terminal retention is 30 days.'),
   embedded('workspace_deletions', 'receipt_name', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary workspace receipt name, cleared when queued or refused; terminal retention is 30 days.'),
+  embedded('workspace_deletions', 'receipt_locale', 'src/server/catalog/workspace-deletions.ts', 'keep', 'Temporary receipt language, cleared with recipient identity on accepted enqueue or terminal refusal; terminal retention is 30 days.'),
 
   /* ------------------------------------------------- auth tables (go with the user row) -- */
   {

@@ -1,3 +1,4 @@
+import { verifyStepUp } from '../step-up'
 /**
  * Passkey (WebAuthn) support as a first-party Better Auth plugin.
  *
@@ -693,23 +694,32 @@ export function passkey(options: PasskeyPluginOptions): BetterAuthPlugin {
           }
 
           const passwordHash = await findPasswordHash(ctx, user.id)
-          if (passwordHash === null) {
-            assertFreshSession(ctx, 'Sign in again to remove a passkey.')
-          } else if (ctx.body.password === undefined) {
-            throw ctx.error('BAD_REQUEST', {
-              code: PASSKEY_ERROR_CODES.passwordRequired,
-              message: 'Enter your password to remove a passkey.',
-            })
-          } else if (
-            !(await ctx.context.password.verify({
-              hash: passwordHash,
-              password: ctx.body.password,
-            }))
-          ) {
-            throw ctx.error('BAD_REQUEST', {
-              code: PASSKEY_ERROR_CODES.invalidPassword,
-              message: 'That password is not right.',
-            })
+          const proof = await verifyStepUp(
+            {
+              passwordHash,
+              verify: (input) => ctx.context.password.verify(input),
+              createdAt: ctx.context.session.session.createdAt,
+              freshAge: ctx.context.sessionConfig.freshAge,
+              now: Date.now(),
+            },
+            ctx.body.password,
+          )
+          if (proof !== null) {
+            const errors = {
+              'password-required': {
+                code: PASSKEY_ERROR_CODES.passwordRequired,
+                message: 'Enter your password to remove a passkey.',
+              },
+              'invalid-password': {
+                code: PASSKEY_ERROR_CODES.invalidPassword,
+                message: 'That password is not right.',
+              },
+              'session-not-fresh': {
+                code: PASSKEY_ERROR_CODES.sessionNotFresh,
+                message: 'Sign in again to remove a passkey.',
+              },
+            }
+            throw ctx.error('BAD_REQUEST', errors[proof])
           }
 
           const removed = await ctx.context.adapter.consumeOne<StoredPasskey>({

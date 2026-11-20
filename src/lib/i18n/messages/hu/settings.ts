@@ -797,6 +797,18 @@ const messages = {
     'Frissítse az oldalt az új biztonsági ellenőrzések használatához.',
   'twoFactor.security.unavailable':
     'A biztonsági módosítások nem érhetők el. Töltse be újra az oldalt.',
+  'workspace.delete.email.deleted': 'Munkaterület törölve',
+  'workspace.delete.email.receipt':
+    'A(z) {name} véglegesen törölve lett. A fiókod továbbra is aktív.',
+  'workspace.delete.email.refused': 'A munkaterület törlése elutasítva',
+  'workspace.delete.email.refusal': 'A(z) {name} nem törölhető. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'A számlázást nem sikerült ellenőrizni. Próbáld újra.',
+  'workspace.delete.email.live-subscription':
+    'Egy élő előfizetés megakadályozza a törlést.',
+  'workspace.delete.email.has-other-members':
+    'Más tagok még mindig ehhez a munkaterülethez tartoznak.',
+  'workspace.delete.email.footer': 'Kérted ennek a munkaterületnek a törlését.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

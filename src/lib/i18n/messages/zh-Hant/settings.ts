@@ -679,6 +679,14 @@ const messages = {
   'twoFactor.security.stale': '安全狀態已變更。開始另一項變更前請重新載入。',
   'twoFactor.security.upgrade': '請重新整理頁面以使用更新後的安全檢查。',
   'twoFactor.security.unavailable': '暫時無法變更安全設定。請重新載入後再試。',
+  'workspace.delete.email.deleted': '工作區已刪除',
+  'workspace.delete.email.receipt': '{name}已永久刪除。你的帳戶仍然有效。',
+  'workspace.delete.email.refused': '工作區刪除遭拒',
+  'workspace.delete.email.refusal': '無法刪除{name}。{reason}',
+  'workspace.delete.email.billing-unavailable': '無法驗證帳單資訊。請重試。',
+  'workspace.delete.email.live-subscription': '使用中的訂閱阻止了刪除。',
+  'workspace.delete.email.has-other-members': '此工作區仍有其他成員。',
+  'workspace.delete.email.footer': '你要求刪除此工作區。',
 } satisfies TranslationOf<typeof En>
 
 export default messages

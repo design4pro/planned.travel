@@ -805,6 +805,20 @@ const messages = {
     'Obnovte stránku a použijte nové bezpečnostní kontroly.',
   'twoFactor.security.unavailable':
     'Změny zabezpečení nejsou dostupné. Obnovte stránku a zkuste to znovu.',
+  'workspace.delete.email.deleted': 'Pracovní prostor odstraněn',
+  'workspace.delete.email.receipt':
+    'Prostor {name} byl trvale odstraněn. Váš účet zůstává aktivní.',
+  'workspace.delete.email.refused': 'Odstranění prostoru odmítnuto',
+  'workspace.delete.email.refusal':
+    'Prostor {name} se nepodařilo odstranit. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Fakturaci se nepodařilo ověřit. Zkuste to znovu.',
+  'workspace.delete.email.live-subscription':
+    'Aktivní předplatné brání odstranění.',
+  'workspace.delete.email.has-other-members':
+    'Do tohoto prostoru stále patří další členové.',
+  'workspace.delete.email.footer':
+    'Požádali jste o odstranění tohoto pracovního prostoru.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

@@ -2573,6 +2573,17 @@ An authorized native account deletion reserves its account before teardown, refu
 is pending, and resumes an interrupted reservation after one minute. Never manually clear a deletion
 reservation or delete pending cleanup records to unblock an account.
 
+## Owner workspace deletion release latch (#1742)
+
+The owner request and late-subscription webhook producers remain disabled in
+`src/server/workspace-deletion/activation.ts`. Do not enable them from merge evidence. Record
+the prior completed consumer deployment revision and time for each target environment, confirm
+both deletion handlers are deployed, and retire every unfenced Worker and in-flight destructive
+execution before activation. Apply the additive receipt-locale migration first. Legacy owner rows
+without supported locale require explicit repair before delivery; no language is guessed.
+No production deployment or activation has been performed by this implementation. See ADR 0048
+and BACKWARD_COMPATIBILITY.md for the delivery and rollback contract.
+
 ## Release history import and editorial review
 
 The #1874 operator slice supplies local preview, tested import/review logic and an authenticated

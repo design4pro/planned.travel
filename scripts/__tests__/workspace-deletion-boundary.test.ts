@@ -14,7 +14,14 @@ import {
 it('pins every production ledger reader and admits state writers only inside the driver', () => {
   const allowed: Record<string, ReadonlyArray<string>> = {
     'server/workspace-deletion/scope.ts': ['WorkspaceDeletionAuthority'],
-    'server/workspace-deletion/runtime.ts': ['listStaleWorkspaceDeletions'],
+    'server/workspace-deletion/runtime.ts': [
+      'listStaleWorkspaceDeletions',
+      'readWorkspaceDeletionOutcome',
+    ],
+    'server/workspace-deletion/request.ts': [
+      'insertWorkspaceDeletion',
+      'readWorkspaceDeletionOutcome',
+    ],
     'server/workspace-deletion/erasure.ts': [
       'consumeWorkspaceDeletionErasure',
       'readWorkspaceDeletionErasureState',
@@ -81,16 +88,34 @@ it('pins every production ledger reader and admits state writers only inside the
   )
 })
 
-it('excludes the system scope from request imports, including indirect imports', () => {
+it('excludes reserved scope from requests except the pinned owner runtime composition', () => {
   const factory = join(SOURCE_ROOT, 'server/workspace-deletion/scope.ts')
   const roots = [
     ...modulesUnder(join(SOURCE_ROOT, 'routes'), { tests: false }),
     ...modulesUnder(join(SOURCE_ROOT, 'server/fns'), { tests: false }),
   ]
   expect(roots.length).toBeGreaterThan(0)
-  expect(moduleGraphFrom(roots, WORKER_CONDITIONS).modules).not.toContain(
-    factory,
-  )
+  const entry = join(SOURCE_ROOT, 'server/fns/workspace-delete.ts')
+  const entryCode = codeOf(readFileSync(entry, 'utf8'))
+  expect(
+    scanSpecifiers(entryCode)
+      .specifiers.filter((specifier) =>
+        specifier.startsWith('#/server/workspace-deletion/'),
+      )
+      .sort(),
+  ).toEqual([
+    '#/server/workspace-deletion/activation',
+    '#/server/workspace-deletion/request',
+    '#/server/workspace-deletion/runtime',
+  ])
+  expect(entryCode).not.toContain('createWorkspaceDeletionScope')
+
+  expect(
+    moduleGraphFrom(
+      roots.filter((file) => !file.endsWith('/server/fns/workspace-delete.ts')),
+      WORKER_CONDITIONS,
+    ).modules,
+  ).not.toContain(factory)
   const probe = mkdtempSync(join(tmpdir(), 'workspace-deletion-import-probe-'))
   try {
     const entry = join(probe, 'entry.ts')

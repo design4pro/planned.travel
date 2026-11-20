@@ -81,6 +81,7 @@ function fixture() {
     snapshot: {},
     receiptTo: null,
     receiptName: null,
+    receiptLocale: null,
     requestedAt: start,
     updatedAt: start,
     sweptAt: null,

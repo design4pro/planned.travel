@@ -823,6 +823,20 @@ const messages = {
     'Odśwież stronę, aby użyć nowych mechanizmów zabezpieczeń.',
   'twoFactor.security.unavailable':
     'Zmiany zabezpieczeń są niedostępne. Odśwież stronę, aby sprawdzić ponownie.',
+  'workspace.delete.email.deleted': 'Obszar roboczy usunięty',
+  'workspace.delete.email.receipt':
+    'Obszar roboczy {name} został trwale usunięty. Twoje konto pozostaje aktywne.',
+  'workspace.delete.email.refused': 'Odmowa usunięcia obszaru roboczego',
+  'workspace.delete.email.refusal':
+    'Nie udało się usunąć obszaru roboczego {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Nie udało się zweryfikować rozliczeń. Spróbuj ponownie.',
+  'workspace.delete.email.live-subscription':
+    'Aktywna subskrypcja uniemożliwia usunięcie.',
+  'workspace.delete.email.has-other-members':
+    'Do tego obszaru roboczego nadal należą inni członkowie.',
+  'workspace.delete.email.footer':
+    'Poproszono o usunięcie tego obszaru roboczego.',
 } satisfies TranslationOf<typeof En>
 
 export default messages

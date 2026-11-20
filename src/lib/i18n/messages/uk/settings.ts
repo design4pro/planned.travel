@@ -810,6 +810,19 @@ const messages = {
     'Оновіть сторінку, щоб скористатися новими перевірками безпеки.',
   'twoFactor.security.unavailable':
     'Зміни безпеки недоступні. Оновіть сторінку, щоб перевірити знову.',
+  'workspace.delete.email.deleted': 'Робочий простір видалено',
+  'workspace.delete.email.receipt':
+    'Простір {name} видалено назавжди. Ваш обліковий запис залишається активним.',
+  'workspace.delete.email.refused': 'Видалення простору відхилено',
+  'workspace.delete.email.refusal': 'Не вдалося видалити {name}. {reason}',
+  'workspace.delete.email.billing-unavailable':
+    'Не вдалося перевірити оплату. Спробуйте ще раз.',
+  'workspace.delete.email.live-subscription':
+    'Чинна підписка перешкоджає видаленню.',
+  'workspace.delete.email.has-other-members':
+    'У цьому просторі ще є інші учасники.',
+  'workspace.delete.email.footer':
+    'Ви надіслали запит на видалення цього робочого простору.',
 } satisfies TranslationOf<typeof En>
 
 export default messages
