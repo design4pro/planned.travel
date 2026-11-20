@@ -47,16 +47,16 @@ producer for the export handler, no feed endpoint, no weather anything.
 
 ### The eight rows
 
-| Row      | Stage        | Wave | Moves                                                                     |
-| -------- | ------------ | ---- | ------------------------------------------------------------------------- |
-| `DOC-01` | `06-S1`      | 1    | partial → done                                                            |
-| `DOC-03` | `06-S2`      | 2    | absent → done                                                             |
-| `DOC-06` | `06-S3`      | 2    | partial → done for the trip plan; the journey book stays open and unowned |
-| `DOC-02` | `06-S4`      | 3    | partial → done                                                            |
-| `DOC-07` | `06-S5`      | 3    | absent → done                                                             |
-| `DOC-04` | `06-S6`      | 4    | partial → done, both entry points: the file side and the booking side     |
-| `DOC-08` | `06-S7`      | 6    | absent → done, unblocked by ADR 0038                                      |
-| `DOC-05` | **no stage** | —    | out-of-scope; see below                                                   |
+| Row      | Stage            | Wave | Moves                                                                 |
+| -------- | ---------------- | ---- | --------------------------------------------------------------------- |
+| `DOC-01` | `06-S1`          | 1    | partial → done                                                        |
+| `DOC-03` | `06-S2`          | 2    | absent → done                                                         |
+| `DOC-06` | `06-S3`, `06-S8` | 2, 7 | Trip plan delivered by 06-S3; Journey book planned by 06-S8           |
+| `DOC-02` | `06-S4`          | 3    | partial → done                                                        |
+| `DOC-07` | `06-S5`          | 3    | absent → done                                                         |
+| `DOC-04` | `06-S6`          | 4    | partial → done, both entry points: the file side and the booking side |
+| `DOC-08` | `06-S7`          | 6    | absent → done, unblocked by ADR 0038                                  |
+| `DOC-05` | **no stage**     | —    | out-of-scope; see below                                               |
 
 **`DOC-05` is excluded from this plan and is planned nowhere in it.** It is the connection to a
 photo library running on the operator's own private network, and it is one of the ten hosted-model
@@ -791,13 +791,8 @@ distance between a finished piece of infrastructure and a thing a traveller can 
   gap**: "`repo-platform.md` §4 confirms nothing enqueues it and there is no UI trigger". A complete
   queue handler with no producer is not a half-built feature, it is a whole feature nobody can reach,
   and this stage builds the producer and the entry point it was missing.
-- **The journey-book variant of `DOC-06` is left OPEN, owned by nobody, and named here as unowned.**
-  The row's name also asks for "journey book (A4 landscape, count-driven photo layouts)". This stage
-  does not build it and **does not defer it to another stage either**, because the only candidate,
-  `08-S7` (`08-product-modules.md`, wave 2, which closes `ADD-08`), plans no export of any kind: it
-  never mentions PDF, this row, or this stage. Writing "deferred to `08-S7`" would have marked a
-  behaviour done in this plan while it was planned in neither — which is precisely the defect this
-  file was rejected for at `06-S6`, and it is not going to be repeated here in different words.
+- **The Journey book portion of `DOC-06` is outside 06-S3 and is owned by [06-S8](#stage-06-s8--export-the-journey-book).**
+  08-S7 delivers Journey authoring and reading, which the export uses.
 
 **Why the journey book is genuinely a different piece of work rather than a section this stage could
 have added, in two measurements.** Both are properties of `src/server/queue/types.ts`, which this
@@ -813,12 +808,8 @@ stage must not edit — `00-S4` (`00-foundations.md`, wave 0) and `07-S8`
    stages hold, and this stage's own rule — one payload schema, never a second — forbids the obvious
    workaround of declaring a parallel one in `fns/`.
 
-So the honest disposition is **open, with an owner to be assigned**: a later stage must widen
-`exportDocumentSchema` in the wave that owns `queue/types.ts`, and mount its entry point on the
-journal screen in a wave `08-S3` (w1), `08-S7` (w2) and `08-S10` (w3) do not hold — wave 4 or later
-for `src/routes/_app/journey/$journeyId.tsx`. That is a stage-shaped piece of work and it is written
-down here so the next planning round can carve it, rather than being hidden inside a row this plan
-calls done.
+06-S8 owns the separate queue discriminator and in-process Journey document, with the consumer
+deployed before the producer. Its Journey screen changes follow 08-S3, 08-S7 and 08-S10.
 
 `gap-rows.json` records `DOC-06 → ADD-07`. That edge is carried entirely by the open journey-book
 variant; the trip-plan export reads trips, days, assignments, places and reservations, none of which
@@ -1142,11 +1133,8 @@ The `docs/SPEC.md` §2 visual clauses, ticked for every surface this stage ships
   artifact by its real format rather than promising a PDF it may not have. Adding the binding is a
   cost-model change and the user's decision; it improves fidelity and changes nothing this stage
   builds.
-- **The journey-book variant of `DOC-06` is open and unowned**, for the two schema reasons measured
-  under **Reference rows**. Disposition: **defer, with no owner named**, because naming an owner that
-  has not planned the work is what turns a deferral into a lie. It blocks nothing this stage ships —
-  the trip-plan document is a complete, reachable feature on its own — and it is carried out of this
-  plan as work for the next planning round rather than left implied by a row's status.
+- **The Journey book portion of `DOC-06` is assigned to [06-S8](#stage-06-s8--export-the-journey-book).**
+  The trip plan stays in 06-S3.
 - **`12-verification-protocol.md` §7.2 and §7.3** are inherited as `06-S1` records them: this stage
   baselines the same trip tab.
 
@@ -2504,6 +2492,22 @@ by moving the spec to `implemented/`.
 
 ---
 
+## Stage 06-S8 — Export the Journey book
+
+`06-S8` · Wave 7 · effort **L**.
+
+Own the Journey book portion of DOC-06. Follow 00-S4 and 07-S8 for the shared queue
+contract and 08-S3, 08-S7 and 08-S10 for the Journey screen. Deploy the additive consumer
+before the producer, connect the private text-book flow, then add the count-driven photo
+layout and enable admission after verification.
+
+Owned paths include `src/server/queue/types.ts`, `src/server/queue/consumer.ts` and
+`src/routes/_app/journey/$journeyId.tsx` in this wave. The
+[Journey book specification](../../.ai/specs/2026-11-20-export-the-journey-book.md)
+defines the contract, acceptance, security review and dependent slices.
+
+---
+
 ## Cross-plan collisions
 
 Two stages in the same wave that both take an exclusive disposition on one file clobber each other,
@@ -2584,6 +2588,7 @@ invisible to the check:
 | `06-S5` | 3    | L      | `DOC-07` |
 | `06-S6` | 4    | M      | `DOC-04` |
 | `06-S7` | 6    | L      | `DOC-08` |
+| `06-S8` | 7    | L      | `DOC-06` |
 
 **The four stages the report says have no parseable wave are not in this file.** `11-S1`, `11-S2` and
 `11-S3` belong to the register plan, which writes its wave in prose rather than in the `` `id` · Wave

@@ -283,7 +283,9 @@ keep one source of truth and because those summaries are recon prose about the r
 | 6    | `03-reservations-and-transport.md` | BKG-05                                                         | 1   |
 | 6    | `06-documents-and-media.md`        | DOC-08                                                         | 1   |
 
-Wave totals: **36 · 19 · 14 · 9 · 8 · 3 = 89**.
+Wave totals: **36 · 19 · 14 · 9 · 8 · 3 = 89**. The DOC-06 row counts the original trip-plan
+placement. Its remaining Journey book work is assigned to
+[06-S8 in wave 7](06-documents-and-media.md#stage-06-s8--export-the-journey-book).
 
 Two placements are editorial rather than mechanical, and both are stated so a reader does not go
 looking for a missing edge:
