@@ -305,6 +305,34 @@ const messages = {
   'footer.link.createAccount': 'Buat akun',
   'footer.link.terms': 'Ketentuan layanan',
   'footer.link.privacy': 'Pemberitahuan privasi',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Perjalanan yang layak dijelajahi',
+  'gallery.heading': 'Temukan ide berikutnya',
+  'gallery.intro':
+    'Jelajahi rencana perjalanan yang dibagikan sesama pelancong.',
+  'gallery.read': 'Baca rencana perjalanan',
+  'gallery.by': 'Dibagikan oleh {name}',
+  'gallery.published': 'Diterbitkan {date}',
+  'gallery.searchLabel': 'Cari di galeri',
+  'gallery.searchPlaceholder': 'Judul, pelancong, atau negara',
+  'gallery.clearSearch': 'Hapus pencarian',
+  'gallery.emptyTitle': 'Galeri menantikan perjalanan pertamanya',
+  'gallery.emptyBody':
+    'Admin ruang kerja yang memiliki akses ke perjalanan dapat mengajukannya untuk ditinjau dari tab Collab perjalanan tersebut.',
+  'gallery.noResults':
+    'Tidak ada perjalanan yang cocok dengan “{query}”. Coba pencarian lain.',
+  'gallery.errorTitle': 'Galeri tidak dapat dimuat',
+  'gallery.errorBody': 'Coba lagi sebentar lagi.',
+  'gallery.loading': 'Memuat galeri',
+  'gallery.searchNoscript': 'Pencarian tersedia saat JavaScript diaktifkan.',
+  'gallery.noTripsFound': 'Tidak ada perjalanan ditemukan',
+  'gallery.days': { other: '{value} hari' },
+  'gallery.places': { other: '{value} tempat' },
+  'gallery.results': { other: 'Ditemukan {value} perjalanan' },
+  'gallery.rateLimited': {
+    other: 'Terlalu banyak permintaan. Coba lagi dalam {seconds} detik.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

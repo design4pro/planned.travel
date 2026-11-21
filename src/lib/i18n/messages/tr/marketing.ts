@@ -308,6 +308,38 @@ const messages = {
   'footer.link.createAccount': 'Hesap oluştur',
   'footer.link.terms': 'Hizmet koşulları',
   'footer.link.privacy': 'Gizlilik bildirimi',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Keşfetmeye değer geziler',
+  'gallery.heading': 'Bir sonraki fikrinizi bulun',
+  'gallery.intro': 'Diğer gezginlerin paylaştığı gezi planlarını keşfedin.',
+  'gallery.read': 'Gezi planını oku',
+  'gallery.by': 'Paylaşan: {name}',
+  'gallery.published': 'Yayınlanma: {date}',
+  'gallery.searchLabel': 'Galeride ara',
+  'gallery.searchPlaceholder': 'Başlık, gezgin veya ülke',
+  'gallery.clearSearch': 'Aramayı temizle',
+  'gallery.emptyTitle': 'Galeri ilk gezisini bekliyor',
+  'gallery.emptyBody':
+    'Geziye erişimi olan bir çalışma alanı yöneticisi, gezinin Collab sekmesinden inceleme için gönderebilir.',
+  'gallery.noResults':
+    '“{query}” ile eşleşen gezi yok. Başka bir arama deneyin.',
+  'gallery.errorTitle': 'Galeri yüklenemedi',
+  'gallery.errorBody': 'Biraz sonra tekrar deneyin.',
+  'gallery.loading': 'Galeri yükleniyor',
+  'gallery.searchNoscript':
+    'JavaScript etkinleştirildiğinde arama kullanılabilir.',
+  'gallery.noTripsFound': 'Gezi bulunamadı',
+  'gallery.days': { one: '{value} gün', other: '{value} gün' },
+  'gallery.places': { one: '{value} yer', other: '{value} yer' },
+  'gallery.results': {
+    one: '{value} gezi bulundu',
+    other: '{value} gezi bulundu',
+  },
+  'gallery.rateLimited': {
+    one: 'Çok fazla istek. {seconds} saniye sonra tekrar deneyin.',
+    other: 'Çok fazla istek. {seconds} saniye sonra tekrar deneyin.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

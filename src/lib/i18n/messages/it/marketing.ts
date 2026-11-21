@@ -326,6 +326,48 @@ const messages = {
   'footer.link.createAccount': 'Crea un account',
   'footer.link.terms': 'Termini di servizio',
   'footer.link.privacy': 'Informativa sulla privacy',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Viaggi da scoprire',
+  'gallery.heading': 'Trova la tua prossima idea',
+  'gallery.intro': 'Esplora gli itinerari condivisi da altri viaggiatori.',
+  'gallery.read': 'Leggi l’itinerario',
+  'gallery.by': 'Condiviso da {name}',
+  'gallery.published': 'Pubblicato il {date}',
+  'gallery.searchLabel': 'Cerca nella galleria',
+  'gallery.searchPlaceholder': 'Titolo, viaggiatore o paese',
+  'gallery.clearSearch': 'Cancella ricerca',
+  'gallery.emptyTitle': 'La galleria aspetta il suo primo viaggio',
+  'gallery.emptyBody':
+    'Un amministratore dello spazio di lavoro con accesso a un viaggio può inviarlo in revisione dalla sua scheda Collab.',
+  'gallery.noResults':
+    'Nessun viaggio corrisponde a «{query}». Prova un’altra ricerca.',
+  'gallery.errorTitle': 'Impossibile caricare la galleria',
+  'gallery.errorBody': 'Riprova tra un momento.',
+  'gallery.loading': 'Caricamento della galleria',
+  'gallery.searchNoscript':
+    'La ricerca è disponibile con JavaScript abilitato.',
+  'gallery.noTripsFound': 'Nessun viaggio trovato',
+  'gallery.days': {
+    one: '{value} giorno',
+    other: '{value} giorni',
+    many: '{value} giorni',
+  },
+  'gallery.places': {
+    one: '{value} luogo',
+    other: '{value} luoghi',
+    many: '{value} luoghi',
+  },
+  'gallery.results': {
+    one: '{value} viaggio trovato',
+    other: '{value} viaggi trovati',
+    many: '{value} viaggi trovati',
+  },
+  'gallery.rateLimited': {
+    one: 'Troppe richieste. Riprova tra {seconds} secondo.',
+    other: 'Troppe richieste. Riprova tra {seconds} secondi.',
+    many: 'Troppe richieste. Riprova tra {seconds} secondi.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

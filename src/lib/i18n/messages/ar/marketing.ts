@@ -333,6 +333,58 @@ const messages = {
   'footer.link.createAccount': 'إنشاء حساب',
   'footer.link.terms': 'شروط الخدمة',
   'footer.link.privacy': 'إشعار الخصوصية',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'رحلات تستحق الاستكشاف',
+  'gallery.heading': 'اعثر على فكرتك القادمة',
+  'gallery.intro': 'استكشف مسارات رحلات شاركها مسافرون آخرون.',
+  'gallery.read': 'اقرأ مسار الرحلة',
+  'gallery.by': 'شاركها {name}',
+  'gallery.published': 'نُشرت في {date}',
+  'gallery.searchLabel': 'ابحث في المعرض',
+  'gallery.searchPlaceholder': 'العنوان أو المسافر أو البلد',
+  'gallery.clearSearch': 'مسح البحث',
+  'gallery.emptyTitle': 'ينتظر المعرض رحلته الأولى',
+  'gallery.emptyBody':
+    'يمكن لمسؤول مساحة العمل الذي لديه صلاحية الوصول إلى الرحلة إرسالها للمراجعة من علامة تبويب Collab الخاصة بها.',
+  'gallery.noResults': 'لا توجد رحلات تطابق «{query}». جرّب بحثًا آخر.',
+  'gallery.errorTitle': 'تعذّر تحميل المعرض',
+  'gallery.errorBody': 'حاول مرة أخرى بعد قليل.',
+  'gallery.loading': 'جارٍ تحميل المعرض',
+  'gallery.searchNoscript': 'يتوفر البحث عند تفعيل JavaScript.',
+  'gallery.noTripsFound': 'لم يتم العثور على رحلات',
+  'gallery.days': {
+    zero: '{value} يوم',
+    one: '{value} يوم',
+    two: '{value} يومان',
+    few: '{value} أيام',
+    many: '{value} يومًا',
+    other: '{value} يوم',
+  },
+  'gallery.places': {
+    zero: '{value} مكان',
+    one: '{value} مكان',
+    two: '{value} مكانان',
+    few: '{value} أماكن',
+    many: '{value} مكانًا',
+    other: '{value} مكان',
+  },
+  'gallery.results': {
+    zero: 'تم العثور على {value} رحلة',
+    one: 'تم العثور على {value} رحلة',
+    two: 'تم العثور على {value} رحلتين',
+    few: 'تم العثور على {value} رحلات',
+    many: 'تم العثور على {value} رحلة',
+    other: 'تم العثور على {value} رحلة',
+  },
+  'gallery.rateLimited': {
+    zero: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثانية.',
+    one: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثانية.',
+    two: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثانيتين.',
+    few: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثوانٍ.',
+    many: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثانية.',
+    other: 'طلبات كثيرة جدًا. حاول مرة أخرى بعد {seconds} ثانية.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

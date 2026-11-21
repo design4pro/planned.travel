@@ -317,6 +317,38 @@ const messages = {
   'footer.link.createAccount': 'Konto erstellen',
   'footer.link.terms': 'Nutzungsbedingungen',
   'footer.link.privacy': 'Datenschutzhinweis',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Reisen, die es zu entdecken lohnt',
+  'gallery.heading': 'Finde deine nächste Idee',
+  'gallery.intro': 'Entdecke Reisepläne, die andere Reisende geteilt haben.',
+  'gallery.read': 'Reiseplan lesen',
+  'gallery.by': 'Geteilt von {name}',
+  'gallery.published': 'Veröffentlicht am {date}',
+  'gallery.searchLabel': 'Galerie durchsuchen',
+  'gallery.searchPlaceholder': 'Titel, Reisende oder Land',
+  'gallery.clearSearch': 'Suche löschen',
+  'gallery.emptyTitle': 'Die Galerie wartet auf ihre erste Reise',
+  'gallery.emptyBody':
+    'Ein Administrator des Arbeitsbereichs mit Zugriff auf eine Reise kann sie im Tab Collab zur Prüfung einreichen.',
+  'gallery.noResults':
+    'Keine Reise passt zu „{query}“. Versuche eine andere Suche.',
+  'gallery.errorTitle': 'Die Galerie konnte nicht geladen werden',
+  'gallery.errorBody': 'Versuche es gleich noch einmal.',
+  'gallery.loading': 'Galerie wird geladen',
+  'gallery.searchNoscript':
+    'Die Suche ist mit aktiviertem JavaScript verfügbar.',
+  'gallery.noTripsFound': 'Keine Reisen gefunden',
+  'gallery.days': { one: '{value} Tag', other: '{value} Tage' },
+  'gallery.places': { one: '{value} Ort', other: '{value} Orte' },
+  'gallery.results': {
+    one: '{value} Reise gefunden',
+    other: '{value} Reisen gefunden',
+  },
+  'gallery.rateLimited': {
+    one: 'Zu viele Anfragen. Versuche es in {seconds} Sekunde erneut.',
+    other: 'Zu viele Anfragen. Versuche es in {seconds} Sekunden erneut.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

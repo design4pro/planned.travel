@@ -327,6 +327,51 @@ const messages = {
   'footer.link.createAccount': 'Створити обліковий запис',
   'footer.link.terms': 'Умови обслуговування',
   'footer.link.privacy': 'Повідомлення про приватність',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Подорожі, які варто відкрити',
+  'gallery.heading': 'Знайдіть ідею для наступної подорожі',
+  'gallery.intro': 'Переглядайте маршрути, якими поділилися інші мандрівники.',
+  'gallery.read': 'Читати маршрут',
+  'gallery.by': 'Поділився: {name}',
+  'gallery.published': 'Опубліковано {date}',
+  'gallery.searchLabel': 'Пошук у галереї',
+  'gallery.searchPlaceholder': 'Назва, мандрівник або країна',
+  'gallery.clearSearch': 'Очистити пошук',
+  'gallery.emptyTitle': 'Галерея чекає на свою першу подорож',
+  'gallery.emptyBody':
+    'Адміністратор робочого простору з доступом до подорожі може надіслати її на перевірку з вкладки Collab.',
+  'gallery.noResults':
+    'Немає подорожей за запитом «{query}». Спробуйте інший запит.',
+  'gallery.errorTitle': 'Не вдалося завантажити галерею',
+  'gallery.errorBody': 'Спробуйте знову за мить.',
+  'gallery.loading': 'Завантаження галереї',
+  'gallery.searchNoscript': 'Пошук доступний, коли JavaScript увімкнено.',
+  'gallery.noTripsFound': 'Подорожей не знайдено',
+  'gallery.days': {
+    one: '{value} день',
+    few: '{value} дні',
+    many: '{value} днів',
+    other: '{value} дня',
+  },
+  'gallery.places': {
+    one: '{value} місце',
+    few: '{value} місця',
+    many: '{value} місць',
+    other: '{value} місця',
+  },
+  'gallery.results': {
+    one: 'Знайдено {value} подорож',
+    few: 'Знайдено {value} подорожі',
+    many: 'Знайдено {value} подорожей',
+    other: 'Знайдено {value} подорожі',
+  },
+  'gallery.rateLimited': {
+    one: 'Забагато запитів. Спробуйте знову через {seconds} секунду.',
+    few: 'Забагато запитів. Спробуйте знову через {seconds} секунди.',
+    many: 'Забагато запитів. Спробуйте знову через {seconds} секунд.',
+    other: 'Забагато запитів. Спробуйте знову через {seconds} секунди.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

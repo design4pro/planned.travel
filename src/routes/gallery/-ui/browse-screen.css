@@ -1,0 +1,16 @@
+@keyframes gallery-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .gallery-card {
+    animation: gallery-enter var(--duration) var(--ease-out-quint) backwards;
+  }
+}

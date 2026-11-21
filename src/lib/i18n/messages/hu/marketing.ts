@@ -312,6 +312,38 @@ const messages = {
   'footer.link.createAccount': 'Fiók létrehozása',
   'footer.link.terms': 'Szolgáltatási feltételek',
   'footer.link.privacy': 'Adatvédelmi tájékoztató',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Felfedezésre váró utazások',
+  'gallery.heading': 'Találja meg a következő ötletét',
+  'gallery.intro': 'Fedezze fel más utazók megosztott útiterveit.',
+  'gallery.read': 'Útiterv elolvasása',
+  'gallery.by': 'Megosztotta: {name}',
+  'gallery.published': 'Közzétéve: {date}',
+  'gallery.searchLabel': 'Keresés a galériában',
+  'gallery.searchPlaceholder': 'Cím, utazó vagy ország',
+  'gallery.clearSearch': 'Keresés törlése',
+  'gallery.emptyTitle': 'A galéria az első utazására vár',
+  'gallery.emptyBody':
+    'Az utazáshoz hozzáférő munkaterület-adminisztrátor a Collab lapról küldheti be ellenőrzésre az utazást.',
+  'gallery.noResults':
+    'Nincs a(z) „{query}” keresésnek megfelelő utazás. Próbáljon másként keresni.',
+  'gallery.errorTitle': 'A galéria nem tölthető be',
+  'gallery.errorBody': 'Próbálja újra egy kis idő múlva.',
+  'gallery.loading': 'Galéria betöltése',
+  'gallery.searchNoscript':
+    'A keresés engedélyezett JavaScript mellett érhető el.',
+  'gallery.noTripsFound': 'Nem található utazás',
+  'gallery.days': { one: '{value} nap', other: '{value} nap' },
+  'gallery.places': { one: '{value} hely', other: '{value} hely' },
+  'gallery.results': {
+    one: '{value} utazás található',
+    other: '{value} utazás található',
+  },
+  'gallery.rateLimited': {
+    one: 'Túl sok kérés. Próbálja újra {seconds} másodperc múlva.',
+    other: 'Túl sok kérés. Próbálja újra {seconds} másodperc múlva.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages

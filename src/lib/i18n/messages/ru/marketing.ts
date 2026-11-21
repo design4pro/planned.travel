@@ -328,6 +328,52 @@ const messages = {
   'footer.link.createAccount': 'Создать аккаунт',
   'footer.link.terms': 'Условия обслуживания',
   'footer.link.privacy': 'Уведомление о конфиденциальности',
+
+  /* Gallery browse */
+  'gallery.eyebrow': 'Путешествия, которые стоит открыть',
+  'gallery.heading': 'Найдите идею для новой поездки',
+  'gallery.intro':
+    'Изучайте маршруты, которыми поделились другие путешественники.',
+  'gallery.read': 'Читать маршрут',
+  'gallery.by': 'Поделился: {name}',
+  'gallery.published': 'Опубликовано {date}',
+  'gallery.searchLabel': 'Поиск в галерее',
+  'gallery.searchPlaceholder': 'Название, путешественник или страна',
+  'gallery.clearSearch': 'Очистить поиск',
+  'gallery.emptyTitle': 'Галерея ждёт своего первого путешествия',
+  'gallery.emptyBody':
+    'Администратор рабочего пространства с доступом к поездке может отправить её на проверку на вкладке Collab.',
+  'gallery.noResults':
+    'Нет поездок по запросу «{query}». Попробуйте другой запрос.',
+  'gallery.errorTitle': 'Не удалось загрузить галерею',
+  'gallery.errorBody': 'Повторите попытку через некоторое время.',
+  'gallery.loading': 'Загрузка галереи',
+  'gallery.searchNoscript': 'Поиск доступен при включённом JavaScript.',
+  'gallery.noTripsFound': 'Поездки не найдены',
+  'gallery.days': {
+    one: '{value} день',
+    few: '{value} дня',
+    many: '{value} дней',
+    other: '{value} дня',
+  },
+  'gallery.places': {
+    one: '{value} место',
+    few: '{value} места',
+    many: '{value} мест',
+    other: '{value} места',
+  },
+  'gallery.results': {
+    one: 'Найдена {value} поездка',
+    few: 'Найдены {value} поездки',
+    many: 'Найдено {value} поездок',
+    other: 'Найдено {value} поездки',
+  },
+  'gallery.rateLimited': {
+    one: 'Слишком много запросов. Повторите попытку через {seconds} секунду.',
+    few: 'Слишком много запросов. Повторите попытку через {seconds} секунды.',
+    many: 'Слишком много запросов. Повторите попытку через {seconds} секунд.',
+    other: 'Слишком много запросов. Повторите попытку через {seconds} секунды.',
+  },
 } satisfies TranslationOf<typeof En>
 
 export default messages
