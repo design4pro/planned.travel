@@ -4,7 +4,21 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
-import { describePortHolders, procFields } from '../dev-server-process.mjs'
+import {
+  describePortHolders,
+  procArgs,
+  procFields,
+} from '../dev-server-process.mjs'
+
+it('retains empty arguments and removes only the final command-line separator', () => {
+  expect(procArgs('node\0\0vite.js\0dev\0')).toEqual([
+    'node',
+    '',
+    'vite.js',
+    'dev',
+  ])
+  expect(procArgs('')).toEqual([])
+})
 
 it('diagnoses an orphaned holder without terminating it', async () => {
   const cwd = mkdtempSync(join(tmpdir(), 'orphan-port-test-'))

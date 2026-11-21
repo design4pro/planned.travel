@@ -1,5 +1,5 @@
 import '#/components/ui/__tests__/test-env'
-import { beforeEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CountryVisitEditor } from '../country-visit-editor'
@@ -47,6 +47,41 @@ beforeEach(() => {
   api.load.mockResolvedValue({ country: { visit }, today: '2026-08-20' })
   api.save.mockResolvedValue({ country: { visit }, errors: null })
   api.invalidate.mockResolvedValue(undefined)
+})
+afterEach(() => vi.restoreAllMocks())
+it('keeps focus moved elsewhere while the visit is loading', async () => {
+  let finish: (value: unknown) => void = () => {}
+  api.load.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finish = resolve
+    }),
+  )
+  mount()
+  const other = document.createElement('button')
+  document.body.appendChild(other)
+  try {
+    await userEvent.click(screen.getByRole('button', { name: 'Edit visit' }))
+    other.focus()
+    finish({ country: { visit }, today: '2026-08-20' })
+    await screen.findByLabelText('First visit')
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    expect(document.activeElement).toBe(other)
+  } finally {
+    other.remove()
+  }
+})
+it('does not steal focus from a draft before the opening frame runs', async () => {
+  let frame: FrameRequestCallback = () => {}
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    frame = callback
+    return 1
+  })
+  mount()
+  await open()
+  const note = screen.getByLabelText('Note')
+  note.focus()
+  frame(0)
+  expect(document.activeElement).toBe(note)
 })
 it('loads the server clock, cancels without writing and restores focus', async () => {
   mount()
@@ -203,10 +238,23 @@ it('refreshes Atlas after a save completes for a closed country without replacin
       onPendingChange={() => {}}
     />,
   )
+  let openingFrame: FrameRequestCallback = () => {}
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    openingFrame = callback
+    return 1
+  })
   await open()
-  await userEvent.type(screen.getByLabelText('Note'), 'Tokyo')
+  const note = screen.getByLabelText('Note')
+  await userEvent.type(note, 'To')
+  openingFrame(0)
+  await userEvent.keyboard('kyo')
+  expect(document.activeElement).toBe(note)
+  expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe(
+    'Tokyo',
+  )
   resolve({ country: { visit: { ...visit, note: 'Paris' } }, errors: null })
   await waitFor(() => expect(api.invalidate).toHaveBeenCalled())
+  expect(document.activeElement).toBe(note)
   expect((screen.getByLabelText('Note') as HTMLTextAreaElement).value).toBe(
     'Tokyo',
   )
