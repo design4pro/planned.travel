@@ -9,10 +9,9 @@
  *
  * `autoInject: false` is the load-bearing option. Left on its default the integration injects its
  * own button the moment it is added, with the SDK's English labels frozen in at that point. Off, we
- * create the button ourselves through `createWidget(overrides)` - the one API that takes per-widget
- * option overrides, and therefore the only way the form speaks the reader's language. The button it
- * returns is still Sentry's own, shadow DOM and all; what we take over is when it is created and
- * what it says. See `src/components/layout/feedback-widget.tsx`.
+ * create the button ourselves through `createWidget(overrides)` and pass the same translated
+ * options to `createForm(overrides)`. The button and form are still Sentry's own; the component
+ * owns their lifecycle. See `src/components/layout/feedback-widget.tsx`.
  */
 
 import { addIntegration, feedbackIntegration } from '@sentry/react'
@@ -24,8 +23,8 @@ let feedback: Feedback | undefined
 /**
  * Register the integration once and hand it back.
  *
- * Only the structural options are set here. Every label is an override on `createWidget`, because
- * these are read once at construction and the locale can change without a reload.
+ * Only structural options are set here. Labels are supplied when creating the widget and form,
+ * because the locale can change without a reload.
  */
 export function startFeedback(): Feedback {
   if (feedback === undefined) {

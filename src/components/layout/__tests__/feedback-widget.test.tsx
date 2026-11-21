@@ -105,7 +105,12 @@ beforeEach(() => {
   // have to be re-established here - `restoreMocks` does neither for a bare `vi.fn()`.
   vi.clearAllMocks()
   route.href = '/trips'
-  createWidget.mockReturnValue({ removeFromDom })
+  createWidget.mockReturnValue({
+    el: document.createElement('button'),
+    removeFromDom,
+    hide: vi.fn(),
+    show: vi.fn(),
+  })
   startFeedback.mockReturnValue({ createWidget, setTheme })
 })
 
@@ -116,6 +121,318 @@ afterEach(() => {
 })
 
 describe('FeedbackWidget', () => {
+  it('returns focus to the trigger when the form closes', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const createForm = vi.fn().mockResolvedValue(form)
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(createForm).toHaveBeenCalled())
+    const options = createForm.mock.calls[0]?.[0] as { onFormClose: () => void }
+    options.onFormClose()
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
+  })
+
+  it('does not steal focus when a late form close follows another interaction', async () => {
+    const trigger = document.createElement('button')
+    const other = document.createElement('button')
+    document.body.appendChild(trigger)
+    document.body.appendChild(other)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const createForm = vi.fn().mockResolvedValue(form)
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    other.focus()
+    const options = createForm.mock.calls[0]?.[0] as { onFormClose: () => void }
+    options.onFormClose()
+    expect(document.activeElement).toBe(other)
+    trigger.remove()
+    other.remove()
+  })
+
+  it('does not reveal a form that resolves after navigation to a sensitive page', async () => {
+    const trigger = document.createElement('button')
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    let resolve: (value: typeof form) => void = () => {}
+    const createForm = vi.fn().mockReturnValue(
+      new Promise((done) => {
+        resolve = done
+      }),
+    )
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    const { speak } = await mount()
+    await widgetOptions()
+    trigger.click()
+    route.href = '/reset-password?token=secret'
+    await speak('pl')
+    resolve(form)
+    await Promise.resolve()
+    expect(form.open).not.toHaveBeenCalled()
+    expect(form.appendToDom).not.toHaveBeenCalled()
+  })
+
+  it('focuses the main landmark when a sensitive navigation removes an open form', async () => {
+    const main = document.createElement('main')
+    document.body.appendChild(main)
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom: () => trigger.remove(),
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const createForm = vi.fn().mockResolvedValue(form)
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    const { speak } = await mount()
+    await widgetOptions()
+    trigger.focus()
+    trigger.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    route.href = '/reset-password?token=secret'
+    await speak('pl')
+    expect(document.activeElement).toBe(main)
+    main.remove()
+  })
+
+  it('ignores an old close callback after the form has reopened', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const first = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const second = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const createForm = vi
+      .fn()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(second)
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(first.open).toHaveBeenCalled())
+    const old = createForm.mock.calls[0]?.[0] as { onFormClose: () => void }
+    old.onFormClose()
+    trigger.click()
+    await waitFor(() => expect(second.open).toHaveBeenCalled())
+    old.onFormClose()
+    expect(second.close).not.toHaveBeenCalled()
+    trigger.remove()
+  })
+
+  it('closes the active form on Escape and returns focus', async () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    startFeedback.mockReturnValue({
+      createWidget,
+      createForm: vi.fn().mockResolvedValue(form),
+      setTheme,
+    })
+    await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    )
+    expect(form.close).toHaveBeenCalledOnce()
+    expect(form.removeFromDom).toHaveBeenCalledOnce()
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
+  })
+
+  it('closes an open form when navigating between ordinary pages', async () => {
+    const trigger = document.createElement('button')
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    startFeedback.mockReturnValue({
+      createWidget,
+      createForm: vi.fn().mockResolvedValue(form),
+      setTheme,
+    })
+    const { speak } = await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    route.href = '/dashboard'
+    await speak('pl')
+    expect(form.close).toHaveBeenCalledOnce()
+  })
+
+  it('uses the main landmark when the trigger is inert', async () => {
+    const main = document.createElement('main')
+    const trigger = document.createElement('button')
+    document.body.appendChild(main)
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom,
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    const createForm = vi.fn().mockResolvedValue(form)
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    await mount()
+    await widgetOptions()
+    trigger.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    trigger.setAttribute('inert', '')
+    const options = createForm.mock.calls[0]?.[0] as { onFormClose: () => void }
+    options.onFormClose()
+    expect(document.activeElement).toBe(main)
+    trigger.remove()
+    main.remove()
+  })
+
+  it('restores a landmark when navigation interrupts form creation', async () => {
+    const main = document.createElement('main')
+    const trigger = document.createElement('button')
+    document.body.appendChild(main)
+    document.body.appendChild(trigger)
+    createWidget.mockReturnValue({
+      el: trigger,
+      removeFromDom: () => trigger.remove(),
+      hide: vi.fn(),
+      show: vi.fn(),
+    })
+    const createForm = vi.fn().mockReturnValue(new Promise(() => {}))
+    startFeedback.mockReturnValue({ createWidget, createForm, setTheme })
+    const { speak } = await mount()
+    await widgetOptions()
+    trigger.focus()
+    trigger.click()
+    route.href = '/reset-password?token=secret'
+    await speak('pl')
+    expect(document.activeElement).toBe(main)
+    main.remove()
+  })
+
+  it('returns focus to the replacement trigger after a language change', async () => {
+    const main = document.createElement('main')
+    document.body.appendChild(main)
+    const triggers: HTMLButtonElement[] = []
+    createWidget.mockImplementation(() => {
+      const trigger = document.createElement('button')
+      document.body.appendChild(trigger)
+      triggers.push(trigger)
+      return {
+        el: trigger,
+        removeFromDom: () => trigger.remove(),
+        hide: vi.fn(),
+        show: vi.fn(),
+      }
+    })
+    const form = {
+      appendToDom: vi.fn(),
+      open: vi.fn(),
+      close: vi.fn(),
+      removeFromDom: vi.fn(),
+    }
+    startFeedback.mockReturnValue({
+      createWidget,
+      createForm: vi.fn().mockResolvedValue(form),
+      setTheme,
+    })
+    const { speak, unmount } = await mount()
+    await widgetOptions()
+    triggers[0]?.focus()
+    triggers[0]?.click()
+    await waitFor(() => expect(form.open).toHaveBeenCalled())
+    await speak('en')
+    await waitFor(() => expect(triggers).toHaveLength(2))
+    expect(document.activeElement).toBe(triggers[1])
+    unmount()
+    main.remove()
+  })
+
   it('builds the widget in the reader’s language and tags it with the locale', async () => {
     await mount({ locale: 'pl' })
 
