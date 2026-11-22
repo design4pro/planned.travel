@@ -664,6 +664,10 @@ const messages = {
   'editTrip.currencyLocked':
     'Tato cesta už obsahuje ceny, proto tady nejde změnit měnu rozpočtu. Použijte na záložce Náklady tlačítko „Změnit měnu rozpočtu“, nebo nastavte zpět {current} a uložte ostatní změny.',
   'editTrip.currencyReadonly': 'Měna rozpočtu se mění na záložce Náklady.',
+  'editTrip.currencyUnsaved':
+    'Před otevřením záložky Náklady změny uložte nebo zrušte.',
+  'editTrip.currencyArchived':
+    'Měnu rozpočtu nelze změnit, dokud je cesta archivovaná.',
   'editTrip.currencyLink': 'Otevřít záložku Náklady',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Smazat „{title}“ nadobro?',

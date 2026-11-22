@@ -658,6 +658,10 @@ const messages = {
     'Aquest viatge ja té preus, per això la moneda del pressupost no es pot canviar aquí. Fes servir «Canvia la moneda del pressupost» a la pestanya Despeses o torna a posar {current} per desar els altres canvis.',
   'editTrip.currencyReadonly':
     'La moneda del pressupost es canvia des de la pestanya Despeses.',
+  'editTrip.currencyUnsaved':
+    'Desa o cancel·la els canvis abans d’obrir la pestanya Despeses.',
+  'editTrip.currencyArchived':
+    'No es pot canviar la moneda del pressupost mentre el viatge estigui arxivat.',
   'editTrip.currencyLink': 'Obre la pestanya Despeses',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': 'Vols eliminar «{title}» per sempre?',

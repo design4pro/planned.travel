@@ -13,26 +13,53 @@ import {
 } from '#/server/fns/file-policy'
 
 import type { FileKind, StorageBudget } from '#/server/fns/file-policy'
+import type { MessageKey } from '#/lib/i18n'
 import type { DeferredMessage } from '../shared/deferred-message'
 
-/**
- * The words a traveller reads for a refusal, chosen by its `code`.
- *
- * One code at a time moves into the catalogue: a blocked type does today, and every other code
- * keeps the English `fallback` it came with (`empty`, `too-large`, `unsupported-type` and `quota`
- * are built in `file-policy.ts`). The pre-flight and the server's answer both come through here,
- * so a file only the server refuses is worded the same as one the browser caught.
- */
+const REJECTION_MESSAGES: ReadonlyMap<
+  string,
+  { readonly key: MessageKey; readonly required: ReadonlyArray<string> }
+> = new Map([
+  [
+    'blocked-type',
+    { key: 'modules.files.reject.blockedType', required: ['name'] },
+  ],
+  ['empty', { key: 'modules.files.reject.empty', required: ['name'] }],
+  [
+    'too-large',
+    {
+      key: 'modules.files.reject.tooLarge',
+      required: ['name', 'size', 'limit'],
+    },
+  ],
+  [
+    'unsupported-type',
+    { key: 'modules.files.reject.unsupportedType', required: ['name'] },
+  ],
+  [
+    'quota',
+    {
+      key: 'modules.files.reject.quota',
+      required: ['name', 'size', 'remaining', 'limit'],
+    },
+  ],
+])
+
+/** Maps refusals from both pre-flight and the server to the same catalogue messages. */
 export function describeRejection(
   code: string,
   params: Readonly<Record<string, string | number>> | undefined,
   fallback: string,
 ): DeferredMessage | string {
-  // Without the name the catalogue sentence would print a bare `{name}`; the English fallback
-  // already names the file.
-  return code === 'blocked-type' && params?.name !== undefined
-    ? { key: 'modules.files.reject.blockedType', params }
-    : fallback
+  const message = REJECTION_MESSAGES.get(code)
+  if (
+    !message ||
+    !params ||
+    !message.required.every((name) => params[name] !== undefined)
+  ) {
+    return fallback
+  }
+  return { key: message.key, params }
 }
 
 /**

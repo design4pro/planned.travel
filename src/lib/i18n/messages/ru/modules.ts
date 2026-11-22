@@ -953,6 +953,36 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Не удалось загрузить файлы',
+  'files.page.empty': 'Пока нет вложений',
+  'files.page.summary': '{files} · {size} в этой поездке',
+  'files.page.thisTrip': 'Эта поездка',
+  'files.page.workspaceStorage': 'Хранилище рабочего пространства',
+  'files.page.photosCaption': 'Изображения из этой поездки',
+  'files.page.documents': 'Билеты и чеки',
+  'files.page.documentsCaption':
+    'Готовы для пограничного контроля и бухгалтерии',
+  'files.count.filtered': '{shown} из {total}',
+  'files.storage.meter': '{used} из {limit}',
+  'files.storage.meterUnlimited': '{used} в хранилище без ограничений',
+  'files.storage.ofLimit': 'из {limit}',
+  'files.storage.percentUsed': 'Использовано {percent}%',
+  'files.storage.unlimited': 'без ограничений',
+  'files.error.missingTripFile': 'Этот файл не относится к данной поездке.',
+  'files.error.missingCopy': 'Сохранённая копия этого файла отсутствует.',
+  'files.reject.empty': 'Файл «{name}» пуст, поэтому сохранять нечего.',
+  'files.reject.tooLarge':
+    'Размер файла «{name}» — {size}. Ограничение на один файл — {limit}.',
+  'files.reject.unsupportedType':
+    'Рабочее пространство не поддерживает тип файла «{name}». Попробуйте загрузить PDF, изображение, документ или файл календаря.',
+  'files.reject.quota':
+    'Для сохранения файла «{name}» нужно {size}, а из {limit} по вашему тарифу осталось только {remaining}. Удалите файл или перейдите на более высокий тариф.',
+  'files.count.attached': {
+    one: '{count} файл',
+    few: '{count} файла',
+    many: '{count} файлов',
+    other: '{count} файла',
+  },
   'files.kind.document': 'Документ',
   'files.kind.photo': 'Фото',
   'files.kind.ticket': 'Билет',

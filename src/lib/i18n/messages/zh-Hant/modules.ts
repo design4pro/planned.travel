@@ -840,6 +840,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': '無法載入檔案',
+  'files.page.empty': '尚無附件',
+  'files.page.summary': '{files} · 此行程使用 {size}',
+  'files.page.thisTrip': '此行程',
+  'files.page.workspaceStorage': '工作區儲存空間',
+  'files.page.photosCaption': '此行程的圖片',
+  'files.page.documents': '票券與收據',
+  'files.page.documentsCaption': '隨時供邊境查驗和會計核銷使用',
+  'files.count.filtered': '共 {total} 項，顯示 {shown} 項',
+  'files.storage.meter': '已用 {used}，上限 {limit}',
+  'files.storage.meterUnlimited': '已用 {used}，容量不限',
+  'files.storage.ofLimit': '/ {limit}',
+  'files.storage.percentUsed': '已用 {percent}%',
+  'files.storage.unlimited': '不限',
+  'files.error.missingTripFile': '此檔案不屬於此行程。',
+  'files.error.missingCopy': '找不到此檔案的已儲存副本。',
+  'files.reject.empty': '「{name}」是空檔案，沒有任何內容可儲存。',
+  'files.reject.tooLarge':
+    '「{name}」的大小為 {size}。單一檔案的上限為 {limit}。',
+  'files.reject.unsupportedType':
+    '此工作區不支援「{name}」的檔案類型。請嘗試使用 PDF、圖片、文件或行事曆檔案。',
+  'files.reject.quota':
+    '儲存「{name}」需要 {size}，但方案的 {limit} 容量只剩下 {remaining}。請刪除一個檔案或升級方案。',
+  'files.count.attached': { other: '{count} 個檔案' },
   'files.kind.document': '文件',
   'files.kind.photo': '照片',
   'files.kind.ticket': '票券',

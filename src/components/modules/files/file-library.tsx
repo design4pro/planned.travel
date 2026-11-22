@@ -219,11 +219,15 @@ export function FileLibrary({
     failure: t('modules.files.toast.removeFailed'),
     onSuccess: () => setConfirm(null),
   })
-  const download = useAction(downloadTripFile, {
-    success: (result) =>
-      t('modules.files.status.downloadingOf', { name: result.filename }),
-    failure: t('modules.files.toast.downloadFailed'),
-  })
+  const download = useAction(
+    (input: Parameters<typeof downloadTripFile>[0]) =>
+      downloadTripFile(input, t),
+    {
+      success: (result) =>
+        t('modules.files.status.downloadingOf', { name: result.filename }),
+      failure: t('modules.files.toast.downloadFailed'),
+    },
+  )
 
   // Relative timestamps are only honest if they move. One minute is the coarsest
   // grain the column shows, so that is how often it is recomputed.
@@ -792,7 +796,10 @@ export function FileLibrary({
       ) : (
         <ModulePanel
           label={t('modules.files.heading')}
-          count={`${visible.length} of ${files.length}`}
+          count={t('modules.files.count.filtered', {
+            shown: visible.length,
+            total: files.length,
+          })}
           toolbar={
             kinds.length < 2 ? undefined : (
               <FilterRow>
@@ -1024,12 +1031,19 @@ export function StorageMeter({
   usedBytes: number
   limitBytes: number
 }) {
+  const t = useTranslate()
+  const used = formatStorage(usedBytes)
+  const hasLimit = Number.isFinite(limitBytes) && limitBytes >= 0
   const ratio = limitBytes <= 0 ? 0 : Math.min(usedBytes / limitBytes, 1)
   return (
     <span className="inline-flex h-7 items-center gap-2 rounded-full bg-surface-2 px-3 text-caption font-medium tabular-nums text-ink-2">
       <HardDrive aria-hidden className="size-3.5 text-ink-4" />
-      {formatStorage(usedBytes)} of{' '}
-      {Number.isFinite(limitBytes) ? formatStorage(limitBytes) : 'unlimited'}
+      {hasLimit
+        ? t('modules.files.storage.meter', {
+            used,
+            limit: formatStorage(limitBytes),
+          })
+        : t('modules.files.storage.meterUnlimited', { used })}
       <span
         aria-hidden
         className={cn(

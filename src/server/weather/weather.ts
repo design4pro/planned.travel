@@ -92,6 +92,9 @@ import type { DayReading, DaySlot, ForecastReading } from '#/lib/weather'
 import type { OutboundRuntime } from '#/server/metering/outbound'
 import type { RateCounterStore } from '#/server/metering/rate'
 
+// Keep the server-function route's solar imports on this module to avoid a cold SSR stall.
+export { calendarSunTimes } from '#/lib/sun'
+
 /* ---------------------------------------------------------------- vocabulary */
 
 /** A point on the earth, as a place stores it. */

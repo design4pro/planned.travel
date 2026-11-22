@@ -466,6 +466,7 @@ const messages = {
   'plan.weather.panel.sunset': '일몰',
   'plan.weather.panel.noSunrise': '일출 없음',
   'plan.weather.panel.noSunset': '일몰 없음',
+  'plan.weather.panel.sunsetNextDay': '(다음 날)',
   'plan.weather.panel.slots': '시간대별',
   'plan.weather.panel.slot.night': '새벽',
   'plan.weather.panel.slot.morning': '오전',

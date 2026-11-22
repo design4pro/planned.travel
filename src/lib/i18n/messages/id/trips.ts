@@ -473,6 +473,7 @@ const messages = {
   'plan.weather.panel.sunset': 'Matahari terbenam',
   'plan.weather.panel.noSunrise': 'Tidak ada matahari terbit',
   'plan.weather.panel.noSunset': 'Tidak ada matahari terbenam',
+  'plan.weather.panel.sunsetNextDay': '(keesokan harinya)',
   'plan.weather.panel.slots': 'Sepanjang hari',
   'plan.weather.panel.slot.night': 'Dini hari',
   'plan.weather.panel.slot.morning': 'Pagi',

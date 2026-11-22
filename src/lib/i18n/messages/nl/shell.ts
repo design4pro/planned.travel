@@ -637,6 +637,10 @@ const messages = {
     'Deze reis bevat al prijzen, dus de valuta van het budget kan hier niet worden gewijzigd. Gebruik Valuta van het budget wijzigen op het tabblad Kosten, of zet het terug op {current} om je andere wijzigingen op te slaan.',
   'editTrip.currencyReadonly':
     'De valuta van het budget wijzig je op het tabblad Kosten.',
+  'editTrip.currencyUnsaved':
+    'Sla je wijzigingen op of annuleer ze voordat je het tabblad Kosten opent.',
+  'editTrip.currencyArchived':
+    'De budgetvaluta kan niet worden gewijzigd zolang de reis is gearchiveerd.',
   'editTrip.currencyLink': 'Tabblad Kosten openen',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '“{title}” voorgoed verwijderen?',

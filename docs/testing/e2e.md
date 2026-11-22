@@ -8,6 +8,9 @@ standalone assertion library; its test runner and configuration are removed.
 The [inventory](e2e-inventory.json) records all 240 original Chromium instances
 and their replacements. See [execution evidence](e2e-verification.md).
 
+`app-shell-fonts.e2e.ts` holds real font requests on the plan and settings routes
+in Chromium at desktop and mobile widths, then checks layout and keyboard access.
+
 ## Run locally
 
 Use Node 24.x (at least 24.8), matching GitHub Actions, and the committed pnpm
@@ -137,7 +140,7 @@ does not permit deleting assertions or narrowing the browser/theme matrix.
 | `product-modules`                      | Leave persistence and collection drafts across Back/reload/logout/workspace changes.               | Split domains, own account/preferences and negotiate actual RTL locale.                                             |
 | `stop-menu-reflow`                     | Scrollable destination menu and correct reorder request in pl/de/ar.                               | Own language per target; preserve RTL arrow direction, mobile tap and exact request payload.                        |
 | `trip-room-sign-out`                   | One device signs out; the other reconnects without losing its unsent draft.                        | Keep real contexts, socket close/welcome and queue eviction; API seed may replace only setup.                       |
-| `trip-weather`                         | Deferred weather has no layout shift, disclosure semantics and no vendor allowance spend.          | Retain Worker provider ledger as well as browser requests; scope layout-shift attribution.                          |
+| `trip-weather`                         | Cold plan and deferred weather have zero shift, with disclosure and no vendor allowance spend.     | Retain the Worker ledger and separate whole-visit and weather-only layout-shift assertions.                          |
 | `trips-core`                           | Client navigation memory versus cold default, persisted planner notes and drag recovery.           | Split navigation, editing, notes, roles and widgets; keep request-count and keyboard announcements.                 |
 | `wide-layout`                          | Preference synchronizes tabs, survives denied storage and renders before hydration.                | Preserve pre-hydration evidence, three widths and Arabic; wait on the specific widget.                              |
 | `workspace-claim`                      | Stale tabs cannot write; room recovery preserves mounted draft identity.                           | Keep routeWebSocket and DOM identity probes; split stale-write, notifications and verify-in-place.                  |

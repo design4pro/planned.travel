@@ -882,6 +882,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'ファイルを読み込めませんでした',
+  'files.page.empty': '添付ファイルはまだありません',
+  'files.page.summary': '{files} · この旅行で {size}',
+  'files.page.thisTrip': 'この旅行',
+  'files.page.workspaceStorage': 'ワークスペースのストレージ',
+  'files.page.photosCaption': 'この旅行の画像',
+  'files.page.documents': 'チケットと領収書',
+  'files.page.documentsCaption': '入国審査や経費精算にすぐ使えます',
+  'files.count.filtered': '{total} 件中 {shown} 件',
+  'files.storage.meter': '{limit} 中 {used}',
+  'files.storage.meterUnlimited': '無制限のうち {used}',
+  'files.storage.ofLimit': '/ {limit}',
+  'files.storage.percentUsed': '{percent}% 使用済み',
+  'files.storage.unlimited': '無制限',
+  'files.error.missingTripFile': 'そのファイルはこの旅行に含まれていません。',
+  'files.error.missingCopy': 'このファイルの保存済みコピーが見つかりません。',
+  'files.reject.empty': '「{name}」は空なので、保存する内容がありません。',
+  'files.reject.tooLarge':
+    '「{name}」のサイズは {size} です。ファイルごとの上限は {limit} です。',
+  'files.reject.unsupportedType':
+    '「{name}」のファイル形式はこのワークスペースでサポートされていません。PDF、画像、文書、またはカレンダーファイルをお試しください。',
+  'files.reject.quota':
+    '「{name}」の保存には {size} が必要ですが、プランの容量 {limit} のうち空きは {remaining} しかありません。ファイルを削除するか、プランをアップグレードしてください。',
+  'files.count.attached': { other: 'ファイル {count} 件' },
   'files.kind.document': '書類',
   'files.kind.photo': '写真',
   'files.kind.ticket': 'チケット',

@@ -946,6 +946,36 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Não foi possível carregar os arquivos',
+  'files.page.empty': 'Nenhum anexo por enquanto',
+  'files.page.summary': '{files} · {size} nesta viagem',
+  'files.page.thisTrip': 'Esta viagem',
+  'files.page.workspaceStorage': 'Armazenamento do espaço de trabalho',
+  'files.page.photosCaption': 'Imagens desta viagem',
+  'files.page.documents': 'Passagens e recibos',
+  'files.page.documentsCaption':
+    'Prontos para o controle de fronteira e a contabilidade',
+  'files.count.filtered': '{shown} de {total}',
+  'files.storage.meter': '{used} de {limit}',
+  'files.storage.meterUnlimited': '{used} de armazenamento ilimitado',
+  'files.storage.ofLimit': 'de {limit}',
+  'files.storage.percentUsed': '{percent}% usado',
+  'files.storage.unlimited': 'ilimitado',
+  'files.error.missingTripFile': 'Esse arquivo não faz parte desta viagem.',
+  'files.error.missingCopy': 'A cópia salva deste arquivo está ausente.',
+  'files.reject.empty':
+    '“{name}” está vazio, portanto não há nada para armazenar.',
+  'files.reject.tooLarge':
+    '“{name}” ocupa {size}. O limite por arquivo é de {limit}.',
+  'files.reject.unsupportedType':
+    'Este espaço de trabalho não aceita o tipo de arquivo de “{name}”. Tente usar um PDF, uma imagem, um documento ou um arquivo de calendário.',
+  'files.reject.quota':
+    'Para armazenar “{name}”, são necessários {size}, mas dos {limit} do seu plano só restam {remaining}. Remova um arquivo ou mude para um plano superior.',
+  'files.count.attached': {
+    one: '{count} arquivo',
+    many: '{count} arquivos',
+    other: '{count} arquivos',
+  },
   'files.kind.document': 'Documento',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Ingresso',

@@ -918,6 +918,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Det gick inte att läsa in filerna',
+  'files.page.empty': 'Inga bilagor än',
+  'files.page.summary': '{files} · {size} på den här resan',
+  'files.page.thisTrip': 'Den här resan',
+  'files.page.workspaceStorage': 'Arbetsytans lagringsutrymme',
+  'files.page.photosCaption': 'Bilder från den här resan',
+  'files.page.documents': 'Biljetter och kvitton',
+  'files.page.documentsCaption': 'Redo för gränskontrollen och bokföringen',
+  'files.count.filtered': '{shown} av {total}',
+  'files.storage.meter': '{used} av {limit}',
+  'files.storage.meterUnlimited': '{used} av obegränsat utrymme',
+  'files.storage.ofLimit': 'av {limit}',
+  'files.storage.percentUsed': '{percent} % använt',
+  'files.storage.unlimited': 'obegränsat',
+  'files.error.missingTripFile': 'Filen hör inte till den här resan.',
+  'files.error.missingCopy': 'Den sparade kopian av filen saknas.',
+  'files.reject.empty': '”{name}” är tom, så det finns inget att spara.',
+  'files.reject.tooLarge':
+    '”{name}” är {size} stor. Gränsen per fil är {limit}.',
+  'files.reject.unsupportedType':
+    'Arbetsytan stöder inte filtypen för ”{name}”. Prova en PDF, en bild, ett dokument eller en kalenderfil.',
+  'files.reject.quota':
+    'För att spara ”{name}” behövs {size}, men bara {remaining} av planens {limit} återstår. Ta bort en fil eller uppgradera planen.',
+  'files.count.attached': { one: '{count} fil', other: '{count} filer' },
   'files.kind.document': 'Dokument',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Biljett',

@@ -511,7 +511,9 @@ number>.optional(), from: <currency code>.optional() })`; `rate` is required unl
   `currencyRefusalOf` and `t()`; its other fallbacks are not this stage's.
 - **Edit sheet** (Phase 5, after PR #779 merges and Phase 4 ships): the currency renders as read-only
   text with `shell.editTrip.currencyReadonly` and a link to the Costs tab (`shell.editTrip.currencyLink`
-  names the link; the sentence is not itself the only link text); the form stops offering the select
+  names the link; the sentence is not itself the only link text). The link is available on a live trip
+  when the draft matches its opening state and no save is in progress (#1269). Archived trips show
+  the currency and explain that it cannot be changed while archived. The form stops offering the select
   on edit. Creation is unchanged. Until then (Phases 1 to 3) the select stays and the Phase 1
   refusal tells the owner the currency cannot be changed because the trip has prices, without
   naming a button that does not exist yet.
@@ -824,6 +826,10 @@ Touches `screen.tsx`, held by other stages; rebase on develop first.
    creation keeps the select. Test both modes.
 2. Copy: `shell.editTrip.currencyReadonly` and `shell.editTrip.currencyLink` in all 23 locales.
    Rebase on develop first: #779 owns these files until it merges.
+
+Follow-up #1268 removes the Phase 1 currency-specific handler from the edit sheet. The sheet
+omits currency from its saves and uses the standard failure handling. The server still applies
+the Phase 1 refusal to callers that submit a changed currency for a trip with priced rows.
 
 ## Verification
 

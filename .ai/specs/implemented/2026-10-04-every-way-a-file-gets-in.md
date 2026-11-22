@@ -703,3 +703,13 @@ GPX type is bound to `.gpx` when an extension is present, and the download helpe
 blobs (including parameterized types, extensionless claims and existing objects) to
 `application/octet-stream` without changing bytes or filenames. The original decisions above
 describe the HTML/SVG scope.
+
+## Amendment: Files screen localization (#1282)
+
+The Files screen resolves all five upload-policy refusals through the catalogue on both the
+browser pre-flight and server-answer paths. The English fallback stays on the response for
+logging and for clients that receive a refusal without its interpolation parameters.
+
+The Files page and attachment library also localize headings, counts, storage limits and
+usage. Download failures use catalogue copy for the two existing server reasons and a
+status-based message for other HTTP responses. The download response contract is unchanged.

@@ -655,6 +655,10 @@ const messages = {
     'Este viaje ya tiene precios, así que su moneda del presupuesto no se puede cambiar aquí. Usa Cambiar la moneda del presupuesto en la pestaña Gastos o vuelve a poner {current} para guardar tus otros cambios.',
   'editTrip.currencyReadonly':
     'La moneda del presupuesto se cambia desde la pestaña Gastos.',
+  'editTrip.currencyUnsaved':
+    'Guarda o cancela los cambios antes de abrir la pestaña Gastos.',
+  'editTrip.currencyArchived':
+    'La moneda del presupuesto no se puede cambiar mientras el viaje esté archivado.',
   'editTrip.currencyLink': 'Abrir la pestaña Gastos',
   /* ------------------------------ the delete-trip dialog */
   'deleteTrip.title': '¿Eliminar «{title}» para siempre?',

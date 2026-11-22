@@ -956,6 +956,35 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'Non è stato possibile caricare i file',
+  'files.page.empty': 'Nessun allegato per ora',
+  'files.page.summary': '{files} · {size} per questo viaggio',
+  'files.page.thisTrip': 'Questo viaggio',
+  'files.page.workspaceStorage': 'Spazio di archiviazione dell’area di lavoro',
+  'files.page.photosCaption': 'Immagini di questo viaggio',
+  'files.page.documents': 'Biglietti e ricevute',
+  'files.page.documentsCaption':
+    'Pronti per il controllo di frontiera e la contabilità',
+  'files.count.filtered': '{shown} di {total}',
+  'files.storage.meter': '{used} su {limit}',
+  'files.storage.meterUnlimited': '{used} su spazio illimitato',
+  'files.storage.ofLimit': 'su {limit}',
+  'files.storage.percentUsed': '{percent}% utilizzato',
+  'files.storage.unlimited': 'illimitato',
+  'files.error.missingTripFile': 'Quel file non fa parte di questo viaggio.',
+  'files.error.missingCopy': 'Manca la copia salvata di questo file.',
+  'files.reject.empty': '«{name}» è vuoto, quindi non c’è nulla da salvare.',
+  'files.reject.tooLarge':
+    '«{name}» occupa {size}. Il limite per ogni file è di {limit}.',
+  'files.reject.unsupportedType':
+    'Il tipo di file di «{name}» non è supportato in quest’area di lavoro. Prova un PDF, un’immagine, un documento o un file di calendario.',
+  'files.reject.quota':
+    'Per salvare «{name}» servono {size}, ma dei {limit} del tuo piano restano solo {remaining}. Elimina un file o passa a un piano superiore.',
+  'files.count.attached': {
+    one: '{count} file',
+    many: '{count} file',
+    other: '{count} file',
+  },
   'files.kind.document': 'Documento',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Biglietto',

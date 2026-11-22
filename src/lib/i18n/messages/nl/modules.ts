@@ -931,6 +931,34 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': 'De bestanden konden niet worden geladen',
+  'files.page.empty': 'Nog geen bijlagen',
+  'files.page.summary': '{files} · {size} voor deze reis',
+  'files.page.thisTrip': 'Deze reis',
+  'files.page.workspaceStorage': 'Opslagruimte van de werkruimte',
+  'files.page.photosCaption': 'Afbeeldingen van deze reis',
+  'files.page.documents': 'Tickets en bonnetjes',
+  'files.page.documentsCaption':
+    'Klaar voor de grenscontrole en de boekhouding',
+  'files.count.filtered': '{shown} van {total}',
+  'files.storage.meter': '{used} van {limit}',
+  'files.storage.meterUnlimited': '{used} bij onbeperkte opslag',
+  'files.storage.ofLimit': 'van {limit}',
+  'files.storage.percentUsed': '{percent}% gebruikt',
+  'files.storage.unlimited': 'onbeperkt',
+  'files.error.missingTripFile': 'Dat bestand hoort niet bij deze reis.',
+  'files.error.missingCopy': 'De opgeslagen kopie van dit bestand ontbreekt.',
+  'files.reject.empty': '‘{name}’ is leeg, dus er valt niets op te slaan.',
+  'files.reject.tooLarge':
+    '‘{name}’ is {size} groot. Per bestand geldt een limiet van {limit}.',
+  'files.reject.unsupportedType':
+    'Deze werkruimte ondersteunt het bestandstype van ‘{name}’ niet. Probeer een pdf, afbeelding, document of agendabestand.',
+  'files.reject.quota':
+    'Voor ‘{name}’ is {size} nodig, maar van de {limit} in je abonnement is nog maar {remaining} vrij. Verwijder een bestand of kies een ruimer abonnement.',
+  'files.count.attached': {
+    one: '{count} bestand',
+    other: '{count} bestanden',
+  },
   'files.kind.document': 'Document',
   'files.kind.photo': 'Foto',
   'files.kind.ticket': 'Kaartje',

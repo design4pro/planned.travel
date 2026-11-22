@@ -840,6 +840,30 @@ const messages = {
   },
 
   /* ------------------------------------------- files: the library */
+  'files.page.error': '无法加载文件',
+  'files.page.empty': '还没有附件',
+  'files.page.summary': '{files} · 此行程占用 {size}',
+  'files.page.thisTrip': '此行程',
+  'files.page.workspaceStorage': '工作区存储空间',
+  'files.page.photosCaption': '此行程的图片',
+  'files.page.documents': '票券和收据',
+  'files.page.documentsCaption': '随时用于边境检查和财务报销',
+  'files.count.filtered': '共 {total} 项，显示 {shown} 项',
+  'files.storage.meter': '已用 {used}，上限 {limit}',
+  'files.storage.meterUnlimited': '已用 {used}，容量不限',
+  'files.storage.ofLimit': '/ {limit}',
+  'files.storage.percentUsed': '已用 {percent}%',
+  'files.storage.unlimited': '不限',
+  'files.error.missingTripFile': '此文件不属于此行程。',
+  'files.error.missingCopy': '找不到此文件的已保存副本。',
+  'files.reject.empty': '“{name}”是空文件，没有内容可保存。',
+  'files.reject.tooLarge':
+    '“{name}”的大小为 {size}。单个文件的上限为 {limit}。',
+  'files.reject.unsupportedType':
+    '此工作区不支持“{name}”的文件类型。请尝试上传 PDF、图片、文档或日历文件。',
+  'files.reject.quota':
+    '保存“{name}”需要 {size}，但套餐的 {limit} 容量仅剩 {remaining}。请删除一个文件或升级套餐。',
+  'files.count.attached': { other: '{count} 个文件' },
   'files.kind.document': '文件',
   'files.kind.photo': '照片',
   'files.kind.ticket': '票据',

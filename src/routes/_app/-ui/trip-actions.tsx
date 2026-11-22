@@ -69,7 +69,6 @@ import {
   useOptimistic,
 } from '#/components/modules/shared'
 import { uploadFile } from '#/components/modules/files/upload'
-import { currencyRefusalOf } from '#/lib/currency-refusals'
 import { readPublicFailure } from '#/lib/errors'
 import { useLocale, useTranslate } from '#/lib/i18n'
 import { TRIP_ARCHIVED_KEY } from '#/lib/trip-refusals'
@@ -149,21 +148,28 @@ export function TripEditSheet({
   const [uploaded, setUploaded] = useState<{ file: File; id: string } | null>(
     null,
   )
-  const form = useTripForm(
-    {
-      title: trip.title,
-      summary: trip.summary ?? '',
-      destination: trip.destination ?? '',
-      startDate: trip.startDate ?? '',
-      endDate: trip.endDate ?? '',
-      duration:
-        inclusiveDays(trip.startDate ?? '', trip.endDate ?? '')?.toString() ??
-        '',
-      currency: trip.currency,
-      reminderDays: trip.reminderDays,
-    },
-    saving,
-  )
+  const [initialValues] = useState(() => ({
+    title: trip.title,
+    summary: trip.summary ?? '',
+    destination: trip.destination ?? '',
+    startDate: trip.startDate ?? '',
+    endDate: trip.endDate ?? '',
+    duration:
+      inclusiveDays(trip.startDate ?? '', trip.endDate ?? '')?.toString() ?? '',
+    currency: trip.currency,
+    reminderDays: trip.reminderDays,
+  }))
+  const form = useTripForm(initialValues, saving)
+  const { values } = form
+  const hasUnsavedChanges =
+    values.title !== initialValues.title ||
+    values.summary !== initialValues.summary ||
+    values.destination !== initialValues.destination ||
+    values.startDate !== initialValues.startDate ||
+    values.endDate !== initialValues.endDate ||
+    values.reminderDays !== initialValues.reminderDays ||
+    form.cover !== null ||
+    form.coverRemoved
 
   /**
    * The cover change this save carries: a file id once the chosen image is stored, `null` to drop the
@@ -229,27 +235,16 @@ export function TripEditSheet({
       onOpenChange(false)
       toast.success(t('shell.editTrip.saved'))
     } catch (cause) {
-      // A refused currency change arrives as a catalogue key, not a sentence, so it reads in the
-      // language of the screen it lands on. `current` is the currency the trip still has.
-      const refusal = currencyRefusalOf(cause)
-      const archived = readPublicFailure(cause).message === TRIP_ARCHIVED_KEY
+      const failure = readPublicFailure(cause)
+      const archived = failure.message === TRIP_ARCHIVED_KEY
       setArchivedRefusal(archived)
-      if (archived) {
-        setError(t(TRIP_ARCHIVED_KEY))
-      } else {
-        setError(
-          refusal === 'shell.editTrip.currencyLocked'
-            ? t(refusal, { current: trip.currency })
-            : messageOf(cause, t('shell.editTrip.error')),
-        )
-      }
-      // Refresh permission refusals, but keep an archived trip's unsaved sheet: a reload removes
-      // its list row and the editor it owns. Currency refusals also keep their current trip.
-      if (
-        !archived &&
-        refusal === null &&
-        readPublicFailure(cause).kind === 'refusal'
-      ) {
+      setError(
+        archived
+          ? t(TRIP_ARCHIVED_KEY)
+          : messageOf(cause, t('shell.editTrip.error')),
+      )
+      // Keep an archived trip's unsaved sheet: a reload removes its list row and editor.
+      if (!archived && failure.kind === 'refusal') {
         try {
           await router.invalidate()
         } catch {
@@ -367,6 +362,8 @@ export function TripEditSheet({
               undatedDays={false}
               owner={isOwner}
               tripId={trip.id}
+              archived={trip.isArchived}
+              hasUnsavedChanges={hasUnsavedChanges}
               currentCoverUrl={trip.coverImageUrl}
               coverProgress={coverProgress}
             />
